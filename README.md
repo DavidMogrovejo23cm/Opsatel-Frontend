@@ -44,4 +44,20 @@ Diseño moderno basado en **Glassmorphism**:
 - **Sincronización Total de Cobro**: Implementada la suma lógica de `Monto + Adicional` en el envío para garantizar que el abono cubra todos los nuevos cargos simultáneamente.
 
 ---
+## 6. Actualizaciones de Seguridad y Análisis (Marzo 2024)
+
+### Panel de Control (Dashboard.jsx)
+Se optimizó el panel informativo con visualizaciones específicas para la directiva:
+- **Gráficas de Recaudación Segmentada**: Dos nuevos gráficos de pastel muestran el dinero recolectado en el mes actual desglosado por banco (**Efectivo**, **Pichincha**, **JEP**) tanto para los planes de **Internet** como para servicios **IP TV**.
+- **Tarjetas Informativas**: Nuevos indicadores con el total a cobrar del mes.
+
+### Seguridad (PIN Modal)
+Para proteger la integridad de los datos en la **Vista General**, se implementó un sistema de autorización por PIN:
+- **Validación Requerida**: Cualquier edición (Inline o Selección) solicita un **PIN de Seguridad** (`1234566`) mediante un modal de diseño premium antes de guardar.
+- **Detección Automática**: El sistema valida el PIN localmente antes de intentar la actualización en el servidor, mejorando la respuesta de la interfaz.
+
+### Cambios de Terminología
+- **Renombrado General**: El concepto de "Plus" ha sido actualizado a **"IP TV"** en todas las tablas administrativas y formularios de pago para reflejar mejor los servicios ofrecidos.
+
+---
 *Última actualización: Marzo 2024*
