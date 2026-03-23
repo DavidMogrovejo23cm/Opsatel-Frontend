@@ -1,8 +1,27 @@
-import React, { useState } from 'react';
-import { clienteService } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Ventas = () => {
+  const [parroquiasList, setParroquiasList] = useState([]);
+  const [planesList, setPlanesList] = useState([]);
+
+  useEffect(() => {
+    const fetchSelects = async () => {
+      try {
+        const [paRes, plRes] = await Promise.all([
+          configuracionService.getParroquias(),
+          configuracionService.getPlanes()
+        ]);
+        setParroquiasList(paRes.data);
+        setPlanesList(plRes.data);
+      } catch (error) {
+        console.error("Error fetching configuraciones", error);
+      }
+    };
+    fetchSelects();
+  }, []);
+
   const [formData, setFormData] = useState({
     nombre: '',
     cedula: '',
@@ -12,8 +31,13 @@ const Ventas = () => {
     parroquia: '',
     plan: '',
     plus: '0',
+    cedula_tipo: '',
+    ubicacion: '',
     fecha_firma: new Date().toISOString().split('T')[0]
   });
+  
+  const [fileFrontal, setFileFrontal] = useState(null);
+  const [filePosterior, setFilePosterior] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -22,18 +46,62 @@ const Ventas = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const convertToDMS = (decimal, type) => {
+    const absDecimal = Math.abs(decimal);
+    const degrees = Math.floor(absDecimal);
+    const minutesDecimal = (absDecimal - degrees) * 60;
+    const minutes = Math.floor(minutesDecimal);
+    const seconds = ((minutesDecimal - minutes) * 60).toFixed(2);
+    
+    let direction = "";
+    if (type === "lat") {
+      direction = decimal >= 0 ? "N" : "S";
+    } else {
+      direction = decimal >= 0 ? "E" : "W";
+    }
+    
+    return `${degrees}°${minutes}'${seconds}"${direction}`;
+  };
+
+  const handleGetGPS = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const latDMS = convertToDMS(position.coords.latitude, "lat");
+        const lngDMS = convertToDMS(position.coords.longitude, "lng");
+        setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS}` });
+      }, (error) => {
+        alert("Error al obtener ubicación. Asegúrate de dar permisos.");
+      });
+    } else {
+      alert("Geolocalización no disponible en este navegador.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
     try {
       const response = await clienteService.crear(formData);
-      setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${response.data.id}` });
+      const clienteId = response.data.id;
+
+      // Subir fotos si existen
+      if (fileFrontal || filePosterior) {
+        const uploadData = new FormData();
+        if (fileFrontal) uploadData.append('frontal', fileFrontal);
+        if (filePosterior) uploadData.append('posterior', filePosterior);
+        await clienteService.uploadCedula(clienteId, uploadData);
+      }
+
+      setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', parroquia: '', plan: '',
+        direccion: '', parroquia: '', plan: '', plus: '0',
+        cedula_tipo: '', ubicacion: '',
         fecha_firma: new Date().toISOString().split('T')[0]
       });
+      setFileFrontal(null);
+      setFilePosterior(null);
     } catch (error) {
       setMessage({ type: 'error', text: 'Error al crear el cliente. Verifique los datos.' });
     } finally {
@@ -50,7 +118,11 @@ const Ventas = () => {
       <h1 style={{ marginBottom: '24px', fontSize: '1.8rem' }}>Registro de Nuevo Cliente</h1>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="grid-2-resp" style={{ 
+          display: 'grid', 
+          gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', 
+          gap: '20px' 
+        }}>
           <div className="input-group">
             <label className="label">Nombre Completo</label>
             <input className="input" name="nombre" value={formData.nombre} onChange={handleChange} required />
@@ -67,27 +139,55 @@ const Ventas = () => {
             <label className="label">Correo Electrónico</label>
             <input className="input" type="email" name="correo" value={formData.correo} onChange={handleChange} />
           </div>
-          <div className="input-group" style={{ gridColumn: 'span 2' }}>
+          <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
             <label className="label">Dirección</label>
             <input className="input" name="direccion" value={formData.direccion} onChange={handleChange} required />
           </div>
           <div className="input-group">
             <label className="label">Parroquia</label>
-            <input className="input" name="parroquia" value={formData.parroquia} onChange={handleChange} required />
+            <select className="input" name="parroquia" value={formData.parroquia} onChange={handleChange} required style={{ appearance: 'none' }}>
+              <option value="">Seleccione parroquia</option>
+              {parroquiasList.map(p => (
+                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+              ))}
+            </select>
           </div>
           <div className="input-group">
             <label className="label">Plan Contratado</label>
             <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
               <option value="">Seleccione un plan</option>
-              <option value="100mb">100mb ($17.25)</option>
-              <option value="600mb">600mb ($17.87)</option>
-              <option value="700mb">700mb ($21.73)</option>
-              <option value="800mb">800mb ($32.20)</option>
+              {planesList.map(p => (
+                <option key={p.id} value={p.nombre}>{p.nombre} (${p.precio})</option>
+              ))}
             </select>
           </div>
           <div className="input-group">
             <label className="label">Plus (Plan adicional $)</label>
             <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} placeholder="0.00" />
+          </div>
+          <div className="input-group">
+            <label className="label">Tipo de Cédula (Cedula_Tipo)</label>
+            <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>
+              <option value="">Seleccione tipo</option>
+              <option value="Física">Física</option>
+              <option value="Digital">Digital</option>
+              <option value="Pasaporte">Pasaporte</option>
+            </select>
+          </div>
+          <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+            <label className="label">Coordenadas (Ubicación)</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input className="input" name="ubicacion" value={formData.ubicacion} onChange={handleChange} placeholder="Lat, Long (Manual o GPS)" style={{ flex: 1 }} />
+              <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
+            </div>
+          </div>
+          <div className="input-group">
+              <label className="label">Foto Cédula Frontal (Max 2 fotos total)</label>
+              <input type="file" className="input" onChange={(e) => setFileFrontal(e.target.files[0])} accept="image/*" />
+          </div>
+          <div className="input-group">
+              <label className="label">Foto Cédula Posterior</label>
+              <input type="file" className="input" onChange={(e) => setFilePosterior(e.target.files[0])} accept="image/*" />
           </div>
         </div>
 

@@ -1,52 +1,134 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, setIsOpen }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const menuItems = [
-    { path: '/', label: 'Overview', icon: '📊' },
-    { path: '/general', label: 'General', icon: '📋' },
-    { path: '/ventas', label: 'Contrato', icon: '📝' },
-    { path: '/tecnica', label: 'Tecnico', icon: '🔧' },
-    { path: '/admin', label: 'Administración', icon: '💰' },
+    { path: '/', label: 'Overview', icon: '📊', roles: ['administrador', 'secretario', 'tecnico'] },
+    { path: '/general', label: 'General', icon: '📋', roles: ['administrador', 'secretario', 'tecnico'] },
+    { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador', 'secretario', 'tecnico'] },
+    { path: '/tecnica', label: 'Tecnico', icon: '🔧', roles: ['administrador', 'tecnico', 'instalador'] },
+
+    { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador', 'secretario'] },
+    { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'secretario'] },
+    { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador', 'secretario'] },
+    { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
   ];
 
+  // Filtrar items según el rol del usuario
+  const filteredItems = menuItems.filter(item => 
+    !item.roles || (user && item.roles.includes(user.rol))
+  );
+
+  const sidebarStyle = {
+    width: 'var(--sidebar-width)',
+    height: '100vh',
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '24px',
+    zIndex: 100,
+    transition: 'transform 0.3s ease',
+  };
+
   return (
-    <div className="sidebar glass" style={{ width: 'var(--sidebar-width)', height: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', padding: '24px', zIndex: 100 }}>
-      <div className="logo" style={{ marginBottom: '40px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          OPSATEL
-        </h2>
-      </div>
+    <>
+      <div className={`sidebar glass ${isOpen ? 'show-mobile' : ''}`} style={{
+        ...sidebarStyle,
+        width: '260px',
+        transform: (window.innerWidth <= 1024 && !isOpen) ? 'translateX(-100%)' : 'translateX(0)',
+        display: (window.innerWidth <= 1024 && !isOpen) ? 'none' : 'flex'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div className="logo">
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              OPSATEL
+            </h2>
+          </div>
+          {window.innerWidth <= 1024 && (
+             <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+          )}
+        </div>
 
-      <nav style={{ flex: 1 }}>
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            style={({ isActive }) => ({
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              marginBottom: '8px',
-              transition: 'all 0.3s ease',
-              background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
-              color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
-            })}
-          >
-            <span>{item.icon}</span>
-            <span style={{ fontWeight: 500 }}>{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.05)', 
+          padding: '12px', 
+          borderRadius: '12px', 
+          marginBottom: '24px',
+          border: '1px solid var(--glass-border)'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Sesión como:</div>
+          <div style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>{user?.username}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '500' }}>{user?.rol}</div>
+        </div>
 
-      <div className="footer" style={{ marginTop: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-        v1.0.0
+        <nav style={{ flex: 1 }}>
+          {filteredItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => { if (window.innerWidth <= 1024) setIsOpen(false); }}
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                marginBottom: '8px',
+                transition: 'all 0.3s ease',
+                background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
+                color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
+              })}
+            >
+              <span>{item.icon}</span>
+              <span style={{ fontWeight: 500 }}>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            marginTop: 'auto', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#f87171',
+            padding: '12px',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          🚪 Cerrar Sesión
+        </button>
       </div>
-    </div>
+      
+      <style>{`
+        @media (max-width: 1024px) {
+          .sidebar {
+            position: fixed !important;
+            transform: ${isOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
+            display: flex !important;
+            width: 280px !important;
+            z-index: 1000 !important;
+          }
+        }
+      `}</style>
+    </>
   );
 };
 

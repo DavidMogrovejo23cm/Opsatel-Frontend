@@ -1,75 +1,47 @@
-# React + TypeScript + Vite
+# DOCUMENTACIÓN DE OPSATEL FRONTEND (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este documento detalla todas las funcionalidades, componentes y mejoras de diseño implementadas para la gestión ISP de Opsatel.
 
-Currently, two official plugins are available:
+## 1. Panel de Control (Dashboard.jsx)
+Se implementó un sistema de visualización interactiva para el seguimiento de la red:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Tarjetas de Estado Clickables**: Las tarjetas de **Servicios por Activar** y **Servicios Inactivos** ahora abren un modal detallado con la lista de clientes correspondientes.
+- **Gráficos en Tiempo Real**: 
+  - **Distribución**: Gráfico de pastel para estados de servicios.
+  - **Recaudación**: Gráfico de área para la tendencia histórica de ingresos totales.
+- **Lista de Pagos Recientes**: Visualización rápida de los últimos cobros realizados (Monto, ID, Método de Pago).
 
-## React Compiler
+## 2. Vista General de Clientes (General.jsx)
+Mejorada para ser el centro de reportes y seguimiento rápido:
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- **Edición Inline (En Vivo)**: Todos los campos son editables mediante doble clic.
+- **Nuevos Estados**: Integración de estados **"En Proceso"** (Amarillo) y **"Jurídico"** (Fucsia).
+- **Columna Observaciones**: Nueva columna al lado de Estado para notas generales persistentes.
+- **Resumen de Pago Inteligente**: La columna de Plus muestra el valor actual o el valor ya pagado si el campo fue limpiado durante el cobro.
 
-Note: This will impact Vite dev & build performances.
+## 3. Administración y Cobros (Admin.jsx)
+Funcionalidad refinada para una gestión financiera sin errores:
 
-## Expanding the ESLint configuration
+- **Modal de Pagos Rediseñado**:
+  - **Título Dinámico**: Incluye el nombre del cliente en el encabezado.
+  - **Desglose de Costos**: Muestra claramente el precio del **Plan Base** + **Plus** actual.
+  - **Pre-llenado de Monto**: El sistema detecta el plan del cliente y rellena automáticamente el costo base esperado.
+  - **Botón de Acuerdo**: El botón de confirmación suma dinámicamente el total pagado (Monto Internet + Adicional) para dejar el saldo en cero.
+- **Gestión de Saldos**:
+  - Eliminación de la columna `Total Mes` para priorizar el estado de **Pendiente** (Saldo neto).
+  - Colores condicionales: **Rojo** para deudas, **Verde** para excedentes (Saldo a favor).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 4. Estética y UX (index.css)
+Diseño moderno basado en **Glassmorphism**:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Barras de Desplazamiento Personalizadas**: Barras delgadas y sutiles dentro de los modales para una mejor estética.
+- **Grids Responsivos**: Los paneles y tablas se adaptan a diferentes tamaños de pantalla.
+- **Micro-animaciones**: Transiciones suaves al abrir modales y cargar componentes dinámicos.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 5. Historial de Correcciones (Bugfixes)
+- **ReferenceError (Dashboard)**: Se restauró el estado de `recentPagos` que causaba el fallo de carga del panel.
+- **Error de Excedente (Saldo)**: Ajustada la lógica de visualización para que el vaciado de campos de Plus/Adicional no se interprete como una rebaja de la factura, manteniendo el saldo en cero tras el pago.
+- **Sincronización Total de Cobro**: Implementada la suma lógica de `Monto + Adicional` en el envío para garantizar que el abono cubra todos los nuevos cargos simultáneamente.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+*Última actualización: Marzo 2024*

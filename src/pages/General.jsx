@@ -7,9 +7,14 @@ const General = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // States for inline editing
-  const [editingCell, setEditingCell] = useState(null); // { id, col }
+  // Actúa como el motor de edición "en vivo" (Inline Editing)
+  const [editingCell, setEditingCell] = useState(null);
   const [tempValue, setTempValue] = useState('');
+
+  // Estados para el PIN de seguridad
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -27,27 +32,57 @@ const General = () => {
   }, []);
 
   const handleStartEdit = (id, col, value) => {
-    if (col === 'id') return; // ID is not editable
+    // Reglas maestras de bloqueo: No permite editar ID ni activar clientes pendientes desde aquí.
+    if (col === 'id') return;
+    if (col === 'estado' && value?.toLowerCase() === 'pendiente') return;
+
     setEditingCell({ id, col });
     setTempValue(value || '');
   };
 
   const handleSaveEdit = async (id, col) => {
     if (!editingCell) return;
-    try {
-      // Check if value actually changed
-      const original = clientes.find(c => c.id === id)[col];
-      if (tempValue === original) {
-        setEditingCell(null);
-        return;
-      }
 
-      await clienteService.actualizar(id, { [col]: tempValue });
+    const original = clientes.find(c => c.id === id)[col];
+    if (tempValue === original) {
       setEditingCell(null);
+      return;
+    }
+
+    setPendingAction({ type: 'edit', id, col, value: tempValue });
+    setShowPinModal(true);
+    setPinInput('');
+  };
+
+  const handleSaveDropdown = async (id, col, newValue) => {
+    if (newValue === clientes.find(c => c.id === id)[col]) {
+      setEditingCell(null);
+      return;
+    }
+
+    setPendingAction({ type: 'dropdown', id, col, value: newValue });
+    setShowPinModal(true);
+    setPinInput('');
+  };
+
+  const executePendingAction = async () => {
+    if (pinInput !== "1234566") {
+      alert("PIN Incorrecto");
+      setPinInput('');
+      return;
+    }
+
+    try {
+      const { type, id, col, value } = pendingAction;
+      await clienteService.actualizar(id, { [col]: value });
+      setEditingCell(null);
+      setShowPinModal(false);
+      setPendingAction(null);
       fetchData();
     } catch (error) {
       console.error(error);
       alert("Error al guardar cambio");
+      setShowPinModal(false);
       setEditingCell(null);
     }
   };
@@ -67,11 +102,11 @@ const General = () => {
   );
 
   const allColumns = [
-    "id", "nombre", "celular", "cedula", "correo", "direccion", "parroquia", "plan",
-    "estado", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
+    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "parroquia", "plan",
+    "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave",
     "tiempo", "arrienda", "cuenta", "facturas", "internet_payment", "app", "payment_date", 
-    "client_payment_date", "bank", "cod", "plus", "bank_plus", "saldo"
+    "client_payment_date", "bank", "cod", "plus", "bank_plus", "adicional", "saldo", "comentarios", "total"
   ];
 
   return (
@@ -80,7 +115,7 @@ const General = () => {
         <div>
           <h1>Vista General de Clientes</h1>
           <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginTop: '4px' }}>
-            💡 Haz doble clic en cualquier celda para editar el valor manualmente.
+            💡 Haz doble clic en cualquier celda (o un clic en Estado) para editar el valor.
           </p>
         </div>
         <input 
@@ -113,7 +148,12 @@ const General = () => {
                     return (
                       <td 
                         key={col} 
-                        onDoubleClick={() => handleStartEdit(c.id, col, c[col])}
+                        onClick={() => {
+                          if (col === 'estado') handleStartEdit(c.id, col, c[col]);
+                        }}
+                        onDoubleClick={() => {
+                          if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
+                        }}
                         style={{ 
                           padding: '6px 12px', 
                           whiteSpace: 'nowrap', 
@@ -123,27 +163,77 @@ const General = () => {
                         }}
                       >
                         {isEditing ? (
-                          <input 
-                            autoFocus
-                            className="input"
-                            style={{ 
-                              padding: '4px 8px', 
-                              height: '28px', 
-                              fontSize: '0.8rem',
-                              background: '#1e1b4b',
-                              border: '1px solid var(--primary)'
-                            }}
-                            value={tempValue}
-                            onChange={(e) => setTempValue(e.target.value)}
-                            onBlur={() => handleSaveEdit(c.id, col)}
-                            onKeyDown={(e) => handleKeyDown(e, c.id, col)}
-                          />
+                          col === 'estado' ? (
+                            <select
+                              autoFocus
+                              className="input"
+                              style={{ 
+                                padding: '4px 8px', 
+                                height: '28px', 
+                                fontSize: '0.8rem',
+                                background: '#1e1b4b',
+                                border: '1px solid var(--primary)',
+                                outline: 'none',
+                                appearance: 'none'
+                              }}
+                              value={tempValue}
+                              onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                              onBlur={() => setEditingCell(null)}
+                            >
+                              {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO'].includes(tempValue) && (
+                                <option value={tempValue}>{tempValue}</option>
+                              )}
+                              <option value="Activo">Activo</option>
+                              <option value="Inactivo">Inactivo</option>
+                              <option value="En Proceso">En Proceso</option>
+                              <option value="Juridico">Juridico</option>
+                            </select>
+                          ) : (
+                            <input 
+                              autoFocus
+                              className="input"
+                              style={{ 
+                                padding: '4px 8px', 
+                                height: '28px', 
+                                fontSize: '0.8rem',
+                                background: '#1e1b4b',
+                                border: '1px solid var(--primary)'
+                              }}
+                              value={tempValue}
+                              onChange={(e) => setTempValue(e.target.value)}
+                              onBlur={() => handleSaveEdit(c.id, col)}
+                              onKeyDown={(e) => handleKeyDown(e, c.id, col)}
+                            />
+                          )
                         ) : (
                           <span style={{ 
-                            color: col === 'estado' ? (c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' : '#fbbf24') : 'inherit',
+                            color: col === 'estado' ? (
+                              c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' : 
+                              c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
+                              c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
+                              c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
+                            ) : 'inherit',
                             fontWeight: col === 'id' ? '600' : 'normal'
                           }}>
-                            {col === 'saldo' ? `$${parseFloat(c[col]).toFixed(2)}` : (c[col] || '-')}
+                            {col === 'total' ? (
+                              `$${(parseFloat(c.total_pago) || 0).toFixed(2)}`
+                            ) : col === 'saldo' ? (
+                              parseFloat(c.pago_mensual || 0) <= 0 ? (
+                                <span style={{ color: '#f87171' }}>Pendiente</span>
+                              ) : (
+                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.pago_mensual).toFixed(2)})</span>
+                              )
+                            ) : col === 'plus' ? (
+                                c.plus || (parseFloat(c.plus_pagado) > 0 ? c.plus_pagado.toFixed(2) : '-')
+                            ) : col === 'fotos_cedula' ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer">Frontal</a>}
+                                    {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer">Posterior</a>}
+                                    {!c.cedula_frontal && !c.cedula_posterior && '-'}
+                                </div>
+                            ) : (
+                                c[col] || '-'
+                            )}
                           </span>
                         )}
                       </td>
@@ -159,6 +249,57 @@ const General = () => {
         <span>Total: {filteredClientes.length} clientes encontrados.</span>
         <span>Presiona Enter para guardar / Esc para cancelar</span>
       </div>
+
+      {showPinModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="glass" 
+            style={{ width: '100%', maxWidth: '320px', padding: '32px', borderRadius: '24px', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🔐</div>
+            <h2 style={{ marginBottom: '8px' }}>PIN de Seguridad</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Confirmación requerida para modificar datos.
+            </p>
+            
+            <input 
+              autoFocus
+              type="password"
+              className="input"
+              placeholder="••••••"
+              style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', marginBottom: '24px' }}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') executePendingAction();
+                if (e.key === 'Escape') setShowPinModal(false);
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ flex: 1 }}
+                onClick={() => setShowPinModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ flex: 1 }}
+                onClick={executePendingAction}
+              >
+                Confirmar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };

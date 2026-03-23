@@ -1,25 +1,78 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import General from './pages/General';
 import Ventas from './pages/Ventas';
 import Tecnica from './pages/Tecnica';
 import Admin from './pages/Admin';
+import Administrar from './pages/Administrar';
+import Reportes from './pages/Reportes';
+import Configuraciones from './pages/Configuraciones';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="general" element={<General />} />
-          <Route path="ventas" element={<Ventas />} />
-          <Route path="tecnica" element={<Tecnica />} />
-          <Route path="admin" element={<Admin />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="general" element={<General />} />
+            
+            {/* Rutas de Ventas/Secretaría */}
+            <Route path="ventas" element={
+              <ProtectedRoute roles={['administrador', 'secretario', 'tecnico']}>
+                <Ventas />
+              </ProtectedRoute>
+            } />
+            
+            {/* Rutas Técnicas */}
+            <Route path="tecnica" element={
+              <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
+                <Tecnica />
+              </ProtectedRoute>
+            } />
+
+            
+            {/* Rutas de Administración/Cobros */}
+            <Route path="admin" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <Admin />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="administrar" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <Administrar />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="reportes" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <Reportes />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="config" element={
+              <ProtectedRoute roles={['administrador']}>
+                <Configuraciones />
+              </ProtectedRoute>
+            } />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
