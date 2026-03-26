@@ -96,6 +96,9 @@ export const configuracionService = {
   crearUsuario: (data) => api.post('/auth/register', data),
   actualizarUsuario: (id, data) => api.patch(`/auth/usuarios/${id}`, data),
   eliminarUsuario: (id) => api.delete(`/auth/usuarios/${id}`),
+  // Finanzas Base
+  getFinanzasBase: () => api.get('/configuraciones/finanzas-base'),
+  actualizarFinanzasBase: (data) => api.put('/configuraciones/finanzas-base', data),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

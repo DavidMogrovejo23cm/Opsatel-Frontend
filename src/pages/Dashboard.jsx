@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 const Dashboard = () => {
   const [stats, setStats] = useState({
     total: 0,
@@ -17,7 +16,8 @@ const Dashboard = () => {
   const [revenueData, setRevenueData] = useState([]);
   const [financeStats, setFinanceStats] = useState({
     internet: { Efectivo: 0, Pichincha: 0, JEP: 0 },
-    plus: { Efectivo: 0, Pichincha: 0 }
+    plus: { Efectivo: 0, Pichincha: 0 },
+    finanzas_globales: { "Caja Chica": 0, "Pichincha": 0, "JEP": 0 }
   });
 
   const [loading, setLoading] = useState(true);
@@ -262,6 +262,42 @@ const Dashboard = () => {
                 <ReTooltip contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
                 <Legend />
               </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        <div className="glass-card glass" style={{ padding: '24px' }}>
+          <h3 style={{ marginBottom: '24px' }}>📊 Cuentas Globales</h3>
+          <div style={{ width: '100%', height: '240px' }}>
+            <ResponsiveContainer>
+              <BarChart
+                data={[
+                  { name: 'Caja Chica', Total: financeStats.finanzas_globales["Caja Chica"] || 0 },
+                  { name: 'Pichincha', Total: financeStats.finanzas_globales["Pichincha"] || 0 },
+                  { name: 'JEP', Total: financeStats.finanzas_globales["JEP"] || 0 }
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={(value) => "$" + value} />
+                <ReTooltip 
+                  contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value) => ["$" + value.toFixed(2), 'Total']}
+                />
+                <Bar dataKey="Total" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={40}>
+                  {
+                    [
+                      { name: 'Caja Chica', color: '#10b981' },
+                      { name: 'Pichincha', color: '#fbbf24' },
+                      { name: 'JEP', color: '#6366f1' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))
+                  }
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

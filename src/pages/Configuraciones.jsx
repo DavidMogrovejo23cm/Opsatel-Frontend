@@ -11,6 +11,7 @@ const Configuraciones = () => {
     const [bancos, setBancos] = useState([]);
     const [puertos, setPuertos] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
+    const [finanzasBase, setFinanzasBase] = useState({ caja_chica: '0.00', pichincha: '0.00', jep: '0.00' });
 
     // Form states
     const [newParroquia, setNewParroquia] = useState({ nombre: '', base_ip: '' });
@@ -31,17 +32,26 @@ const Configuraciones = () => {
 
         try {
             // Reemplazo Promise.all por peticiones con manejo de error individual para que no se rompa todo si falla una (ej: 401/403 de usuarios)
-            const [paRes, plRes, baRes, puRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, finRes] = await Promise.all([
                 configuracionService.getParroquias().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
                 configuracionService.getPuertos().catch(e => ({ data: [] })),
+                configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } }))
             ]);
             
             setParroquias(paRes.data);
             setPlanes(plRes.data);
             setBancos(baRes.data);
             setPuertos(puRes.data);
+            
+            if (finRes.data) {
+                setFinanzasBase({
+                    caja_chica: String(finRes.data.caja_chica),
+                    pichincha: String(finRes.data.pichincha),
+                    jep: String(finRes.data.jep)
+                });
+            }
 
             // Solo intentar traer usuarios si el rol es administrador
             if (isAdmin) {
@@ -132,6 +142,14 @@ const Configuraciones = () => {
                 }
                 setNewUsuario({ username: '', password: '', rol: 'tecnico' });
                 setIsEditingUser(null);
+            } else if (type === 'Finanzas Base') {
+                const fData = {
+                    caja_chica: parseFloat(finanzasBase.caja_chica) || 0,
+                    pichincha: parseFloat(finanzasBase.pichincha) || 0,
+                    jep: parseFloat(finanzasBase.jep) || 0,
+                };
+                await configuracionService.actualizarFinanzasBase(fData);
+                alert('Finanzas base actualizadas correctamente');
             }
             fetchData();
         } catch (error) {
@@ -184,7 +202,7 @@ const Configuraciones = () => {
         setActiveTab('Puertos');
     };
 
-    const tabs = ['Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios'];
+    const tabs = ['Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
 
     const renderTable = (data, columns, type) => (
         <div style={{ marginTop: '20px', overflowX: 'auto' }}>
@@ -387,6 +405,30 @@ const Configuraciones = () => {
                             )}
                         </div>
                         {renderTable(usuarios, ['id', 'username', 'rol'], 'Usuarios')}
+                    </div>
+                )}
+
+                {activeTab === 'Finanzas Base' && (
+                    <div>
+                        <h3>Configurar Montos Establecidos de Cuentas</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
+                            Estos valores se utilizarán como base para sumar y reflejar en las estadísticas del Dashboard global de finanzas.
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Caja Chica (Efectivo)</label>
+                                <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={finanzasBase.caja_chica} onChange={e => setFinanzasBase({ ...finanzasBase, caja_chica: e.target.value })} placeholder="Ej. 100.00" />
+                            </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Pichincha</label>
+                                <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={finanzasBase.pichincha} onChange={e => setFinanzasBase({ ...finanzasBase, pichincha: e.target.value })} placeholder="Ej. 50.00" />
+                            </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">JEP</label>
+                                <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={finanzasBase.jep} onChange={e => setFinanzasBase({ ...finanzasBase, jep: e.target.value })} placeholder="Ej. 50.00" />
+                            </div>
+                            <button className="btn btn-primary" onClick={() => handleCreate('Finanzas Base')}>Guardar Valores Base</button>
+                        </div>
                     </div>
                 )}
             </div>
