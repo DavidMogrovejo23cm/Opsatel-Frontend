@@ -91,7 +91,7 @@ const Dashboard = () => {
           activos: activosCount,
           inactivos: inactivosCount,
           porActivar: porActivarCount,
-          saldoPendiente: clientes.reduce((acc, c) => acc + (parseFloat(c.saldo) || 0), 0),
+          saldoPendiente: clientes.reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0),
           recaudacionMes: totalThisMonth,
           tendencia
         });
@@ -134,7 +134,14 @@ const Dashboard = () => {
       clickable: true,
       onClick: () => handleShowList('Servicios Inactivos', c => c.estado?.toUpperCase() === 'INACTIVO')
     },
-    { title: 'Saldo Pendiente', value: `$${stats.saldoPendiente.toFixed(2)}`, icon: '💰', color: '#f43f5e' },
+    {
+      title: 'Saldo Pendiente',
+      value: `$${stats.saldoPendiente.toFixed(2)}`,
+      icon: '💰',
+      color: '#f43f5e',
+      clickable: true,
+      onClick: () => handleShowList('Clientes con Saldo Pendiente', c => parseFloat(c.total_pago || 0) > 0)
+    },
     {
       title: 'Recaudación Mensual',
       value: `$${stats.recaudacionMes.toFixed(2)}`,
@@ -369,7 +376,11 @@ const Dashboard = () => {
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                       <th style={{ textAlign: 'left', padding: '12px' }}>ID</th>
                       <th style={{ textAlign: 'left', padding: '12px' }}>Nombre</th>
-                      <th style={{ textAlign: 'left', padding: '12px' }}>Plan</th>
+                      {modalTitle.includes('Saldo') ? (
+                        <th style={{ textAlign: 'left', padding: '12px' }}>Deuda</th>
+                      ) : (
+                        <th style={{ textAlign: 'left', padding: '12px' }}>Plan</th>
+                      )}
                       <th style={{ textAlign: 'left', padding: '12px' }}>Estado</th>
                     </tr>
                   </thead>
@@ -378,7 +389,11 @@ const Dashboard = () => {
                       <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
                         <td style={{ padding: '12px', color: 'var(--primary)', fontWeight: 'bold' }}>{c.id}</td>
                         <td style={{ padding: '12px' }}>{c.nombre}</td>
-                        <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{c.plan}</td>
+                        {modalTitle.includes('Saldo') ? (
+                          <td style={{ padding: '12px', color: '#f87171', fontWeight: 'bold' }}>${parseFloat(c.total_pago || 0).toFixed(2)}</td>
+                        ) : (
+                          <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{c.plan}</td>
+                        )}
                         <td style={{ padding: '12px' }}>
                           <span style={{
                             padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem',
