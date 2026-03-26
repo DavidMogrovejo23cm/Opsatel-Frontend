@@ -51,7 +51,6 @@ const Administrar = () => {
       plan: cliente.plan || '',
       plus: cliente.plus || '0',
       estado: cliente.estado || '',
-      tiempo: cliente.tiempo || '',
       arrienda: cliente.arrienda || '',
       cuenta: cliente.cuenta || ''
     });
@@ -157,7 +156,6 @@ const Administrar = () => {
                 <th style={cellStyle}>Plan</th>
                 <th style={cellStyle}>Plus</th>
                 <th style={cellStyle}>Estado</th>
-                <th style={cellStyle}>Tiempo</th>
                 <th style={cellStyle}>Arrienda</th>
                 <th style={cellStyle}>Cuenta</th>
                 <th style={cellStyle}>Acciones</th>
@@ -201,7 +199,6 @@ const Administrar = () => {
                           <option value="Inactivo" style={{ background: '#1e1b4b' }}>Inactivo</option>
                         </select>
                       </td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '70px'}} value={editData.tiempo} onChange={(e) => handleEditChange('tiempo', e.target.value)} /></td>
                       <td style={cellStyle}><input style={{...inputStyle, width: '70px'}} value={editData.arrienda} onChange={(e) => handleEditChange('arrienda', e.target.value)} /></td>
                       <td style={cellStyle}><input style={{...inputStyle, width: '80px'}} value={editData.cuenta} onChange={(e) => handleEditChange('cuenta', e.target.value)} /></td>
                       <td style={cellStyle}>
@@ -230,7 +227,6 @@ const Administrar = () => {
                           {c.estado}
                         </span>
                       </td>
-                      <td style={cellStyle}>{c.tiempo || '-'}</td>
                       <td style={cellStyle}>{c.arrienda || '-'}</td>
                       <td style={cellStyle}>{c.cuenta || '-'}</td>
                       <td style={cellStyle}>

@@ -31,6 +31,7 @@ const Ventas = () => {
     parroquia: '',
     plan: '',
     plus: '0',
+    tiempo: '12',
     cedula_tipo: '',
     ubicacion: '',
     fecha_firma: new Date().toISOString().split('T')[0]
@@ -96,7 +97,7 @@ const Ventas = () => {
       setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', parroquia: '', plan: '', plus: '0',
+        direccion: '', parroquia: '', plan: '', plus: '0', tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         fecha_firma: new Date().toISOString().split('T')[0]
       });
@@ -155,15 +156,19 @@ const Ventas = () => {
           <div className="input-group">
             <label className="label">Plan Contratado</label>
             <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
-              <option value="">Seleccione un plan</option>
+              <option value="">Seleccione plan</option>
               {planesList.map(p => (
-                <option key={p.id} value={p.nombre}>{p.nombre} (${p.precio})</option>
+                <option key={p.id} value={p.nombre}>{p.nombre} - ${p.precio}</option>
               ))}
             </select>
           </div>
           <div className="input-group">
-            <label className="label">IP TV (Plan adicional $)</label>
-            <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} placeholder="0.00" />
+            <label className="label">Tiempo de Contrato (Meses)</label>
+            <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
+          </div>
+          <div className="input-group">
+            <label className="label">IP TV (Monto Mensual)</label>
+            <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} required />
           </div>
           <div className="input-group">
             <label className="label">Tipo de Cédula (Cedula_Tipo)</label>
