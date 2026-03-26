@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService } from '../services/api';
+import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const General = () => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Actúa como el motor de edición "en vivo" (Inline Editing)
   const [editingCell, setEditingCell] = useState(null);
   const [tempValue, setTempValue] = useState('');
@@ -16,10 +16,14 @@ const General = () => {
   const [pinInput, setPinInput] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
 
+  const [planesList, setPlanesList] = useState([]);
+
   const fetchData = async () => {
     try {
       const response = await clienteService.listar();
       setClientes(response.data);
+      const planesResp = await configuracionService.getPlanes();
+      setPlanesList(planesResp.data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -95,18 +99,18 @@ const General = () => {
     }
   };
 
-  const filteredClientes = clientes.filter(c => 
+  const filteredClientes = clientes.filter(c =>
     c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.cedula?.includes(searchTerm) ||
     c.id.toString().includes(searchTerm)
   );
 
   const allColumns = [
-    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "parroquia", "plan",
+    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "parroquia",
     "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave",
-    "tiempo", "arrienda", "cuenta", "facturas", "internet_payment", "app", "payment_date", 
-    "client_payment_date", "bank", "cod", "plus", "bank_plus", "adicional", "saldo", "comentarios", "total"
+    "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
+    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "saldo", "total_pago", "comentarios", "total"
   ];
 
   return (
@@ -118,9 +122,9 @@ const General = () => {
             💡 Haz doble clic en cualquier celda (o un clic en Estado) para editar el valor.
           </p>
         </div>
-        <input 
-          className="input" 
-          placeholder="Buscar por ID, Nombre o Cédula..." 
+        <input
+          className="input"
+          placeholder="Buscar por ID, Nombre o Cédula..."
           style={{ maxWidth: '300px' }}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -134,7 +138,7 @@ const General = () => {
               <tr>
                 {allColumns.map(col => (
                   <th key={col} style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textTransform: 'uppercase', whiteSpace: 'nowrap', textAlign: 'left' }}>
-                    {col.replace('_', ' ')}
+                    {col === 'saldo' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col.replace('_', ' ')}
                   </th>
                 ))}
               </tr>
@@ -144,19 +148,19 @@ const General = () => {
                 <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   {allColumns.map(col => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
-                    
+
                     return (
-                      <td 
-                        key={col} 
+                      <td
+                        key={col}
                         onClick={() => {
                           if (col === 'estado') handleStartEdit(c.id, col, c[col]);
                         }}
                         onDoubleClick={() => {
                           if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
                         }}
-                        style={{ 
-                          padding: '6px 12px', 
-                          whiteSpace: 'nowrap', 
+                        style={{
+                          padding: '6px 12px',
+                          whiteSpace: 'nowrap',
                           minWidth: '100px',
                           background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                           cursor: col === 'id' ? 'default' : 'pointer'
@@ -167,9 +171,9 @@ const General = () => {
                             <select
                               autoFocus
                               className="input"
-                              style={{ 
-                                padding: '4px 8px', 
-                                height: '28px', 
+                              style={{
+                                padding: '4px 8px',
+                                height: '28px',
                                 fontSize: '0.8rem',
                                 background: '#1e1b4b',
                                 border: '1px solid var(--primary)',
@@ -189,34 +193,63 @@ const General = () => {
                               <option value="Juridico">Juridico</option>
                             </select>
                           ) : (
-                            <input 
-                              autoFocus
-                              className="input"
-                              style={{ 
-                                padding: '4px 8px', 
-                                height: '28px', 
-                                fontSize: '0.8rem',
-                                background: '#1e1b4b',
-                                border: '1px solid var(--primary)'
-                              }}
-                              value={tempValue}
-                              onChange={(e) => setTempValue(e.target.value)}
-                              onBlur={() => handleSaveEdit(c.id, col)}
-                              onKeyDown={(e) => handleKeyDown(e, c.id, col)}
-                            />
+                            col === 'plan' ? (
+                              <select
+                                className="input"
+                                style={{ padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
+                                value={tempValue}
+                                onChange={(e) => {
+                                  setTempValue(e.target.value);
+                                  handleSaveDropdown(c.id, col, e.target.value);
+                                }}
+                                onBlur={() => setEditingCell(null)}
+                                autoFocus
+                              >
+                                <option value="">- Seleccionar -</option>
+                                {planesList.map(p => (
+                                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                autoFocus
+                                className="input"
+                                style={{
+                                  padding: '4px 8px',
+                                  height: '28px',
+                                  fontSize: '0.8rem',
+                                  background: '#1e1b4b',
+                                  border: '1px solid var(--primary)'
+                                }}
+                                value={tempValue}
+                                onChange={(e) => setTempValue(e.target.value)}
+                                onBlur={() => handleSaveEdit(c.id, col)}
+                                onKeyDown={(e) => handleKeyDown(e, c.id, col)}
+                              />
+                            )
                           )
                         ) : (
-                          <span style={{ 
+                          <span style={{
                             color: col === 'estado' ? (
-                              c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' : 
-                              c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
-                              c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
-                              c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
+                              c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
+                                c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
+                                  c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
+                                    c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
                             ) : 'inherit',
                             fontWeight: col === 'id' ? '600' : 'normal'
                           }}>
                             {col === 'total' ? (
-                              `$${(parseFloat(c.total_pago) || 0).toFixed(2)}`
+                              (() => {
+                                const totalCobrado = parseFloat(c.pago_mensual || 0) + parseFloat(c.plus_pagado || 0) + parseFloat(c.adicional_pagado || 0);
+                                return (
+                                  <span style={{
+                                    color: totalCobrado > 0 ? '#4ade80' : 'var(--text-muted)',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    ${totalCobrado.toFixed(2)}
+                                  </span>
+                                );
+                              })()
                             ) : col === 'saldo' ? (
                               parseFloat(c.pago_mensual || 0) <= 0 ? (
                                 <span style={{ color: '#f87171' }}>Pendiente</span>
@@ -224,15 +257,53 @@ const General = () => {
                                 <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.pago_mensual).toFixed(2)})</span>
                               )
                             ) : col === 'plus' ? (
-                                c.plus || (parseFloat(c.plus_pagado) > 0 ? c.plus_pagado.toFixed(2) : '-')
+                              parseFloat(c.plus_pagado || 0) > 0 ? (
+                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.plus_pagado).toFixed(2)})</span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>{c.plus || '0'}</span>
+                              )
+                            ) : col === 'adicional' ? (
+                              parseFloat(c.adicional_pagado || 0) > 0 ? (
+                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.adicional_pagado).toFixed(2)})</span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>{c.adicional || '0'}</span>
+                              )
+                            ) : col === 'internet_payment' ? (
+                              (() => {
+                                const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                return (
+                                  <span style={{ color: 'var(--text-muted)' }}>
+                                    {plan ? `$${parseFloat(plan.precio).toFixed(2)}` : '-'}
+                                  </span>
+                                );
+                              })()
+                            ) : col === 'total_pago' ? (
+                              <span style={{
+                                color: parseFloat(c.total_pago || 0) > 0 ? '#f87171' : 'var(--text-muted)',
+                                fontWeight: 'bold'
+                              }}>
+                                ${parseFloat(c.total_pago || 0).toFixed(2)}
+                              </span>
+                            ) : col === 'plan' ? (
+                              (() => {
+                                const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                return (
+                                  <span style={{ 
+                                    color: plan ? '#fbbf24' : 'var(--text-muted)',
+                                    fontWeight: plan ? '600' : 'normal'
+                                  }}>
+                                    {plan ? `$${parseFloat(plan.precio).toFixed(2)}` : '-'}
+                                  </span>
+                                );
+                              })()
                             ) : col === 'fotos_cedula' ? (
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer">Frontal</a>}
-                                    {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer">Posterior</a>}
-                                    {!c.cedula_frontal && !c.cedula_posterior && '-'}
-                                </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer">Frontal</a>}
+                                {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer">Posterior</a>}
+                                {!c.cedula_frontal && !c.cedula_posterior && '-'}
+                              </div>
                             ) : (
-                                c[col] || '-'
+                              c[col] || '-'
                             )}
                           </span>
                         )}
@@ -256,9 +327,9 @@ const General = () => {
           backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
         }}>
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="glass" 
+            className="glass"
             style={{ width: '100%', maxWidth: '320px', padding: '32px', borderRadius: '24px', textAlign: 'center' }}
           >
             <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🔐</div>
@@ -266,8 +337,8 @@ const General = () => {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>
               Confirmación requerida para modificar datos.
             </p>
-            
-            <input 
+
+            <input
               autoFocus
               type="password"
               className="input"
@@ -282,15 +353,15 @@ const General = () => {
             />
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 style={{ flex: 1 }}
                 onClick={() => setShowPinModal(false)}
               >
                 Cancelar
               </button>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 style={{ flex: 1 }}
                 onClick={executePendingAction}
               >

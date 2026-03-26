@@ -238,7 +238,7 @@ const Dashboard = () => {
         </div>
 
         <div className="glass-card glass" style={{ padding: '24px' }}>
-          <h3 style={{ marginBottom: '24px' }}>➕ Recaudación Plus</h3>
+          <h3 style={{ marginBottom: '24px' }}>➕ Recaudación IP TV</h3>
           <div style={{ width: '100%', height: '240px' }}>
             <ResponsiveContainer>
               <PieChart>

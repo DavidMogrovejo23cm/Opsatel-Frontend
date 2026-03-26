@@ -1,63 +1,88 @@
-# DOCUMENTACIÓN DE OPSATEL FRONTEND (React + Vite)
+# 🎨 OPSATEL FRONTEND - INTERFAZ DE GESTIÓN ISP
 
-Este documento detalla todas las funcionalidades, componentes y mejoras de diseño implementadas para la gestión ISP de Opsatel.
-
-## 1. Panel de Control (Dashboard.jsx)
-Se implementó un sistema de visualización interactiva para el seguimiento de la red:
-
-- **Tarjetas de Estado Clickables**: Las tarjetas de **Servicios por Activar** y **Servicios Inactivos** ahora abren un modal detallado con la lista de clientes correspondientes.
-- **Gráficos en Tiempo Real**: 
-  - **Distribución**: Gráfico de pastel para estados de servicios.
-  - **Recaudación**: Gráfico de área para la tendencia histórica de ingresos totales.
-- **Lista de Pagos Recientes**: Visualización rápida de los últimos cobros realizados (Monto, ID, Método de Pago).
-
-## 2. Vista General de Clientes (General.jsx)
-Mejorada para ser el centro de reportes y seguimiento rápido:
-
-- **Edición Inline (En Vivo)**: Todos los campos son editables mediante doble clic.
-- **Nuevos Estados**: Integración de estados **"En Proceso"** (Amarillo) y **"Jurídico"** (Fucsia).
-- **Columna Observaciones**: Nueva columna al lado de Estado para notas generales persistentes.
-- **Resumen de Pago Inteligente**: La columna de Plus muestra el valor actual o el valor ya pagado si el campo fue limpiado durante el cobro.
-
-## 3. Administración y Cobros (Admin.jsx)
-Funcionalidad refinada para una gestión financiera sin errores:
-
-- **Modal de Pagos Rediseñado**:
-  - **Título Dinámico**: Incluye el nombre del cliente en el encabezado.
-  - **Desglose de Costos**: Muestra claramente el precio del **Plan Base** + **Plus** actual.
-  - **Pre-llenado de Monto**: El sistema detecta el plan del cliente y rellena automáticamente el costo base esperado.
-  - **Botón de Acuerdo**: El botón de confirmación suma dinámicamente el total pagado (Monto Internet + Adicional) para dejar el saldo en cero.
-- **Gestión de Saldos**:
-  - Eliminación de la columna `Total Mes` para priorizar el estado de **Pendiente** (Saldo neto).
-  - Colores condicionales: **Rojo** para deudas, **Verde** para excedentes (Saldo a favor).
-
-## 4. Estética y UX (index.css)
-Diseño moderno basado en **Glassmorphism**:
-
-- **Barras de Desplazamiento Personalizadas**: Barras delgadas y sutiles dentro de los modales para una mejor estética.
-- **Grids Responsivos**: Los paneles y tablas se adaptan a diferentes tamaños de pantalla.
-- **Micro-animaciones**: Transiciones suaves al abrir modales y cargar componentes dinámicos.
-
-## 5. Historial de Correcciones (Bugfixes)
-- **ReferenceError (Dashboard)**: Se restauró el estado de `recentPagos` que causaba el fallo de carga del panel.
-- **Error de Excedente (Saldo)**: Ajustada la lógica de visualización para que el vaciado de campos de Plus/Adicional no se interprete como una rebaja de la factura, manteniendo el saldo en cero tras el pago.
-- **Sincronización Total de Cobro**: Implementada la suma lógica de `Monto + Adicional` en el envío para garantizar que el abono cubra todos los nuevos cargos simultáneamente.
+Este repositorio contiene la aplicación frontend del sistema **Opsatel**, una plataforma de gestión integral para proveedores de servicios de internet (ISP). La interfaz está diseñada con un enfoque en la estética moderna (**Glassmorphism**) y una experiencia de usuario fluida y reactiva.
 
 ---
-## 6. Actualizaciones de Seguridad y Análisis (Marzo 2024)
 
-### Panel de Control (Dashboard.jsx)
-Se optimizó el panel informativo con visualizaciones específicas para la directiva:
-- **Gráficas de Recaudación Segmentada**: Dos nuevos gráficos de pastel muestran el dinero recolectado en el mes actual desglosado por banco (**Efectivo**, **Pichincha**, **JEP**) tanto para los planes de **Internet** como para servicios **IP TV**.
-- **Tarjetas Informativas**: Nuevos indicadores con el total a cobrar del mes.
-
-### Seguridad (PIN Modal)
-Para proteger la integridad de los datos en la **Vista General**, se implementó un sistema de autorización por PIN:
-- **Validación Requerida**: Cualquier edición (Inline o Selección) solicita un **PIN de Seguridad** (`1234566`) mediante un modal de diseño premium antes de guardar.
-- **Detección Automática**: El sistema valida el PIN localmente antes de intentar la actualización en el servidor, mejorando la respuesta de la interfaz.
-
-### Cambios de Terminología
-- **Renombrado General**: El concepto de "Plus" ha sido actualizado a **"IP TV"** en todas las tablas administrativas y formularios de pago para reflejar mejor los servicios ofrecidos.
+## 🚀 Tecnologías Principales
+*   **React 19:** Biblioteca base para la construcción de interfaces de usuario.
+*   **Vite:** Herramienta de construcción ultra rápida para el desarrollo.
+*   **Framer Motion:** Motor de animaciones para transiciones suaves y micro-interacciones.
+*   **Recharts:** Visualización de datos y estadísticas financieras mediante gráficos dinámicos.
+*   **Axios:** Cliente HTTP para la comunicación eficiente con el backend FastAPI.
+*   **CSS Moderno (Variables & Glassmorphism):** Sistema de diseño personalizado sin dependencias de frameworks externos pesados.
 
 ---
-*Última actualización: Marzo 2024*
+
+## ⚙️ Instalación y Desarrollo
+Para ejecutar el proyecto en tu máquina local, sigue estos pasos:
+
+1.  **Clonar el repositorio.**
+2.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
+3.  **Iniciar el servidor de desarrollo:**
+    ```bash
+    npm run dev
+    ```
+4.  **Acceder a la app:** Abre [http://localhost:5173](http://localhost:5173) en tu navegador.
+
+---
+
+## 📂 Estructura del Código
+*   **`src/pages/`:** Contiene las vistas principales de la aplicación (Dashboard, Ventas, Técnica, etc.).
+*   **`src/components/`:** Componentes reutilizables como la Barra Lateral (Sidebar), Tarjetas (Cards), Formularios y Modales.
+*   **`src/services/`:** Archivo `api.js` que centraliza todas las peticiones al backend.
+*   **`src/assets/`:** Imágenes, logos y recursos estáticos.
+*   **`src/index.css`:** Sistema de diseño centralizado con variables raíz y estilos globales de Glassmorphism.
+
+---
+
+## 🖥️ Módulos y Funcionalidades
+
+### 📊 1. Dashboard Inteligente
+Vista panorámica que muestra el estado actual del negocio:
+*   Contadores de clientes en diferentes estados.
+*   Gráficos circulares de métodos de pago (Efectivo vs. Bancos).
+*   Métricas de recaudación mensual para planes de Internet y servicios Plus.
+
+### 📝 2. Módulo de Ventas
+Optimizado para el registro rápido de nuevos prospectos:
+*   Formularios validados para captura de datos.
+*   Gestión de ubicación geográfica por parroquias.
+
+### 🔧 3. Módulo Técnico (Activaciones)
+Herramienta avanzada para el equipo de campo:
+*   Cálculo automático de **IPs** y **ONT IDs** para evitar colisiones.
+*   Generador de **Scripts GPON** (comandos Huawei OLT) listos para copiar.
+*   Registro de potencia óptica (dBm) y geolocalización de cajas NAP.
+
+### 💰 4. Gestión General y Administrativa
+Panel centralizado para el control financiero:
+*   Historial de clientes con búsqueda y filtrado multivariable.
+*   Registro de pagos simplificado con vinculación automática de saldo.
+*   Carga de fotos de cédulas para seguridad de contratos.
+
+### 📑 5. Reportes y Cierres
+Gestión de la continuidad del negocio:
+*   Visualización de historiales de cierres pasados.
+*   Generación de reportes Excel de recaudación con un solo clic.
+
+---
+
+## 🔐 Autenticación y Seguridad
+La aplicación implementa un sistema de protección de rutas basado en **JWT**. 
+*   **Roles admitidos:** Administrador, Secretario, Técnico e Instalador.
+*   Las interfaces se adaptan dinámicamente según el rol del usuario logueado, ocultando o mostrando herramientas específicas.
+
+---
+
+## 🎨 Diseño y Estética
+La aplicación utiliza un sistema de **Glassmorphism** premium:
+*   **Fondos con gradientes profundos:** Uso de paletas HSL (Indigo, Violet, Slate).
+*   **Efectos de desenfoque (Blur):** Transparencias elegantes en tarjetas y barras laterales.
+*   **Responsive Pro:** Adaptación total para dispositivos móviles y tablets utilizando media queries personalizadas.
+
+---
+**Opsatel ISP Management System** - Elevando el estándar de las interfaces para gestión de infraestructura.

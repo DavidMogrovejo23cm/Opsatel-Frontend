@@ -310,6 +310,25 @@ const Tecnica = () => {
 
               <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setSelectedCliente(null)}>Cancelar</button>
+                <button 
+                  type="button" 
+                  className="btn" 
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#f87171' }}
+                  onClick={async () => {
+                    if (window.confirm(`¿Está seguro de eliminar a ${selectedCliente.nombre}? Esta acción liberará su ID.`)) {
+                      try {
+                        await clienteService.eliminar(selectedCliente.id);
+                        alert('Cliente eliminado y ID liberado.');
+                        setSelectedCliente(null);
+                        fetchData();
+                      } catch (error) {
+                        alert('Error al eliminar: ' + (error.response?.data?.detail || error.message));
+                      }
+                    }
+                  }}
+                >
+                  Eliminar
+                </button>
                 <button type="submit" className="btn btn-primary">Completar Activación</button>
               </div>
             </form>

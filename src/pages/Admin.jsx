@@ -55,8 +55,8 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    const saldoPendiente = parseFloat(cliente.saldo || 0);
-    const montoInicial = saldoPendiente > 0 ? saldoPendiente.toFixed(2) : '0.00';
+    const montoTotalPendiente = parseFloat(cliente.total_pago || 0);
+    const montoInicial = montoTotalPendiente > 0 ? montoTotalPendiente.toFixed(2) : '0.00';
 
     const planInfo = planesList.find(p => p.nombre.toLowerCase() === (cliente.plan || '').toLowerCase());
     const precioPlan = planInfo ? parseFloat(planInfo.precio).toFixed(2) : '20.00';
@@ -80,14 +80,16 @@ const Admin = () => {
 
   const handleRegistrarPago = async () => {
     if (!pagoData.monto || isNaN(pagoData.monto)) return alert("Ingrese un monto válido");
+    if (parseFloat(pagoData.monto) < 0) return alert("El monto del pago no puede ser negativo");
 
     // Helper para marcar campos vacíos como "NONE"
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
 
     try {
-      const totalPagado = parseFloat(pagoData.monto) + (parseFloat(pagoData.adicional) || 0);
+      // Según v1.2, pagoData.monto es el efectivo total recibido. 
+      // El backend desglosará el adicional independientemente.
       await clienteService.pagar(selectedCliente.id, {
-        monto: totalPagado,
+        monto: parseFloat(pagoData.monto),
         metodo_pago: pagoData.metodo,
         mes_correspondiente: new Date().toISOString().slice(0, 7),
         referencia: `Pago vía Admin - ${pagoData.metodo}`,
@@ -126,6 +128,15 @@ const Admin = () => {
       fetchData();
     } catch (error) {
       alert("Error al actualizar plus");
+    }
+  };
+
+  const handleAdicionalChange = async (clienteId, nuevoAdicional) => {
+    try {
+      await clienteService.updateAdmin(clienteId, { adicional: nuevoAdicional });
+      fetchData();
+    } catch (error) {
+      alert("Error al actualizar adicional");
     }
   };
 
@@ -281,13 +292,13 @@ const Admin = () => {
                     {c.comentarios || '-'}
                   </td>
                   <td style={{ fontWeight: 'bold' }}>
-                    {parseFloat(c.saldo) < 0 ? (
+                    {parseFloat(c.total_pago) < 0 ? (
                       <span style={{ color: '#4ade80' }}>
-                        Excedente (${Math.abs(parseFloat(c.saldo)).toFixed(2)})
+                        Excedente (${Math.abs(parseFloat(c.total_pago)).toFixed(2)})
                       </span>
                     ) : (
-                      <span style={{ color: parseFloat(c.saldo) > 0 ? '#f87171' : 'var(--text-muted)' }}>
-                        ${parseFloat(c.saldo).toFixed(2)}
+                      <span style={{ color: parseFloat(c.total_pago) > 0 ? '#f87171' : 'var(--text-muted)' }}>
+                        ${parseFloat(c.total_pago).toFixed(2)}
                       </span>
                     )}
                   </td>
@@ -331,15 +342,43 @@ const Admin = () => {
             </div>
 
             <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--glass-border)' }}>
+              {parseFloat(selectedCliente.saldo || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
+                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                    ${parseFloat(selectedCliente.saldo).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Plan Actual + Plus:</span>
-                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '8px', paddingTop: '8px' }}>
-                <span>Total a registrar:</span>
-                <span style={{ color: '#4ade80' }}>
-                  ${((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0)).toFixed(2)}
+                <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
+                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                  ${(parseFloat(planesList.find(p => p.nombre.toLowerCase() === (selectedCliente.plan || '').toLowerCase())?.precio || 0)).toFixed(2)}
                 </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
+                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                  ${(parseFloat(selectedCliente.plus || 0)).toFixed(2)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Monto Adicional:</span>
+                <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                  ${(parseFloat(pagoData.adicional || 0)).toFixed(2)}
+                </span>
+              </div>
+
+              <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
+                  <span>Pendiente Principal (Internet/TV):</span>
+                  <span style={{ color: parseFloat(selectedCliente.total_pago) > 0 ? '#f87171' : '#4ade80' }}>
+                    ${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -380,10 +419,6 @@ const Admin = () => {
               <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Fecha Pago</label>
                 <input type="date" className="input" value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Fecha P. Cliente</label>
-                <input className="input" value={pagoData.client_payment_date} onChange={(e) => setPagoData({ ...pagoData, client_payment_date: e.target.value })} />
               </div>
               <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Bank Plus</label>

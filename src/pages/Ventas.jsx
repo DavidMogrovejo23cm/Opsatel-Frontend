@@ -35,7 +35,7 @@ const Ventas = () => {
     ubicacion: '',
     fecha_firma: new Date().toISOString().split('T')[0]
   });
-  
+
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
 
@@ -52,14 +52,14 @@ const Ventas = () => {
     const minutesDecimal = (absDecimal - degrees) * 60;
     const minutes = Math.floor(minutesDecimal);
     const seconds = ((minutesDecimal - minutes) * 60).toFixed(2);
-    
+
     let direction = "";
     if (type === "lat") {
       direction = decimal >= 0 ? "N" : "S";
     } else {
       direction = decimal >= 0 ? "E" : "W";
     }
-    
+
     return `${degrees}°${minutes}'${seconds}"${direction}`;
   };
 
@@ -118,10 +118,10 @@ const Ventas = () => {
       <h1 style={{ marginBottom: '24px', fontSize: '1.8rem' }}>Registro de Nuevo Cliente</h1>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid-2-resp" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', 
-          gap: '20px' 
+        <div className="grid-2-resp" style={{
+          display: 'grid',
+          gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr',
+          gap: '20px'
         }}>
           <div className="input-group">
             <label className="label">Nombre Completo</label>
@@ -162,7 +162,7 @@ const Ventas = () => {
             </select>
           </div>
           <div className="input-group">
-            <label className="label">Plus (Plan adicional $)</label>
+            <label className="label">IP TV (Plan adicional $)</label>
             <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} placeholder="0.00" />
           </div>
           <div className="input-group">
@@ -182,12 +182,12 @@ const Ventas = () => {
             </div>
           </div>
           <div className="input-group">
-              <label className="label">Foto Cédula Frontal (Max 2 fotos total)</label>
-              <input type="file" className="input" onChange={(e) => setFileFrontal(e.target.files[0])} accept="image/*" />
+            <label className="label">Foto Cédula Frontal </label>
+            <input type="file" className="input" onChange={(e) => setFileFrontal(e.target.files[0])} accept="image/*" />
           </div>
           <div className="input-group">
-              <label className="label">Foto Cédula Posterior</label>
-              <input type="file" className="input" onChange={(e) => setFilePosterior(e.target.files[0])} accept="image/*" />
+            <label className="label">Foto Cédula Posterior</label>
+            <input type="file" className="input" onChange={(e) => setFilePosterior(e.target.files[0])} accept="image/*" />
           </div>
         </div>
 
