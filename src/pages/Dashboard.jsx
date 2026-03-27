@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService } from '../services/api';
+import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, LabelList } from 'recharts';
 const Dashboard = () => {
   const [stats, setStats] = useState({
     total: 0,
@@ -26,6 +26,10 @@ const Dashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalData, setModalData] = useState([]);
+
+  const [showEditBaseModal, setShowEditBaseModal] = useState(false);
+  const [editBaseData, setEditBaseData] = useState({ caja_chica: 0, pichincha: 0, jep: 0 });
+  const [savingBase, setSavingBase] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -185,6 +189,41 @@ const Dashboard = () => {
     setShowFinanceModal(true);
   };
 
+  const handleEditFinanzasBase = async () => {
+    try {
+      const res = await configuracionService.getFinanzasBase();
+      setEditBaseData({
+        caja_chica: res.data.caja_chica || 0,
+        pichincha: res.data.pichincha || 0,
+        jep: res.data.jep || 0
+      });
+      setShowEditBaseModal(true);
+    } catch (err) {
+      console.error(err);
+      alert('Error al cargar finanzas base');
+    }
+  };
+
+  const handleSaveFinanzasBase = async () => {
+    setSavingBase(true);
+    try {
+      await configuracionService.actualizarFinanzasBase({
+        caja_chica: parseFloat(editBaseData.caja_chica) || 0,
+        pichincha: parseFloat(editBaseData.pichincha) || 0,
+        jep: parseFloat(editBaseData.jep) || 0
+      });
+      setShowEditBaseModal(false);
+      // Recargar stats de finanzas
+      const financeRes = await clienteService.getDashboardStats();
+      setFinanceStats(financeRes.data);
+    } catch (err) {
+      console.error(err);
+      alert('Error al guardar');
+    } finally {
+      setSavingBase(false);
+    }
+  };
+
 
   return (
     <div>
@@ -224,22 +263,35 @@ const Dashboard = () => {
           <h3 style={{ marginBottom: '24px' }}>🌐 Recaudación Internet</h3>
           <div style={{ width: '100%', height: '240px' }}>
             <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Efectivo', value: financeStats.internet.Efectivo },
-                    { name: 'Pichincha', value: financeStats.internet.Pichincha },
-                    { name: 'JEP', value: financeStats.internet.JEP }
-                  ]}
-                  innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none"
-                >
-                  <Cell fill="#10b981" />
-                  <Cell fill="#fbbf24" />
-                  <Cell fill="#6366f1" />
-                </Pie>
-                <ReTooltip contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                <Legend />
-              </PieChart>
+              <BarChart
+                data={[
+                  { name: 'Efectivo', value: financeStats.internet.Efectivo },
+                  { name: 'Pichincha', value: financeStats.internet.Pichincha },
+                  { name: 'JEP', value: financeStats.internet.JEP }
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={(value) => "$" + value} />
+                <ReTooltip 
+                  contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value) => ["$" + value.toFixed(2), 'Total']}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                  {
+                    [
+                      { name: 'Efectivo', color: '#10b981' },
+                      { name: 'Pichincha', color: '#fbbf24' },
+                      { name: 'JEP', color: '#6366f1' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))
+                  }
+                  <LabelList dataKey="value" position="top" fill="#e2e8f0" formatter={(value) => "$" + value.toFixed(2)} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -248,26 +300,48 @@ const Dashboard = () => {
           <h3 style={{ marginBottom: '24px' }}>➕ Recaudación IP TV</h3>
           <div style={{ width: '100%', height: '240px' }}>
             <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Efectivo', value: financeStats.plus.Efectivo },
-                    { name: 'Pichincha', value: financeStats.plus.Pichincha }
-                  ]}
-                  innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none"
-                >
-                  <Cell fill="#10b981" />
-                  <Cell fill="#fbbf24" />
-                </Pie>
-                <ReTooltip contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} />
-                <Legend />
-              </PieChart>
+              <BarChart
+                data={[
+                  { name: 'Efectivo', value: financeStats.plus.Efectivo },
+                  { name: 'Pichincha', value: financeStats.plus.Pichincha }
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={(value) => "$" + value} />
+                <ReTooltip 
+                  contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value) => ["$" + value.toFixed(2), 'Total']}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                  {
+                    [
+                      { name: 'Efectivo', color: '#10b981' },
+                      { name: 'Pichincha', color: '#fbbf24' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))
+                  }
+                  <LabelList dataKey="value" position="top" fill="#e2e8f0" formatter={(value) => "$" + value.toFixed(2)} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         
         <div className="glass-card glass" style={{ padding: '24px' }}>
-          <h3 style={{ marginBottom: '24px' }}>📊 Cuentas Globales</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0 }}>📊 Cuentas Globales</h3>
+            <button 
+              onClick={handleEditFinanzasBase}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}
+              title="Editar saldos iniciales"
+            >
+              ✏️
+            </button>
+          </div>
           <div style={{ width: '100%', height: '240px' }}>
             <ResponsiveContainer>
               <BarChart
@@ -296,6 +370,7 @@ const Dashboard = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))
                   }
+                  <LabelList dataKey="Total" position="top" fill="#e2e8f0" formatter={(value) => "$" + value.toFixed(2)} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -489,6 +564,70 @@ const Dashboard = () => {
 
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setShowFinanceModal(false)}>Cerrar</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showEditBaseModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="glass"
+            style={{ width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px', position: 'relative' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0 }}>Editar Saldos Iniciales</h2>
+              <button
+                onClick={() => setShowEditBaseModal(false)}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>Caja Chica</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editBaseData.caja_chica}
+                  onChange={(e) => setEditBaseData({ ...editBaseData, caja_chica: e.target.value })}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>Pichincha</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editBaseData.pichincha}
+                  onChange={(e) => setEditBaseData({ ...editBaseData, pichincha: e.target.value })}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontWeight: 'bold' }}>JEP</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editBaseData.jep}
+                  onChange={(e) => setEditBaseData({ ...editBaseData, jep: e.target.value })}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowEditBaseModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSaveFinanzasBase} disabled={savingBase} style={{ background: 'var(--primary)', color: 'white' }}>
+                {savingBase ? 'Guardando...' : 'Guardar'}
+              </button>
             </div>
           </motion.div>
         </div>

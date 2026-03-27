@@ -14,6 +14,7 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
+  const [efectivoRecibido, setEfectivoRecibido] = useState('');
 
   // Controlan la transaccionabilidad y UI del modal sobrepuesto de pagos
   const [pagoData, setPagoData] = useState({
@@ -75,6 +76,7 @@ const Admin = () => {
       adicional: cliente.adicional || '',
       comentarios: cliente.comentarios || ''
     });
+    setEfectivoRecibido('');
     setShowPagoModal(true);
   };
 
@@ -378,6 +380,61 @@ const Admin = () => {
                   <span style={{ color: parseFloat(selectedCliente.total_pago) > 0 ? '#f87171' : '#4ade80' }}>
                     ${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}
                   </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              marginTop: '-10px', 
+              marginBottom: '20px',
+              padding: '16px', 
+              background: 'rgba(99, 102, 241, 0.1)', 
+              borderRadius: '16px', 
+              border: '1px dashed rgba(99, 102, 241, 0.3)' 
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>🧮</span> Calculadora de Vuelto
+                </span>
+                {efectivoRecibido && (
+                  <button 
+                    onClick={() => setEfectivoRecibido('')}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
+                  <input 
+                    type="number" 
+                    className="input" 
+                    value={efectivoRecibido} 
+                    onChange={(e) => setEfectivoRecibido(e.target.value)}
+                    placeholder="0.00"
+                    style={{ marginBottom: 0, fontSize: '1rem', height: '42px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vuelto a entregar</label>
+                  <div style={{ 
+                    height: '42px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '0 12px', 
+                    background: 'rgba(15, 23, 42, 0.5)', 
+                    borderRadius: '8px',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    color: (parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))) >= 0 ? '#4ade80' : '#f87171',
+                    border: '1px solid rgba(255,255,255,0.05)'
+                  }}>
+                    <span>$</span>
+                    <span>{(parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))).toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             </div>

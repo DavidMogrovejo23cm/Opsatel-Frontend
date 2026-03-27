@@ -8,10 +8,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Se comenta la carga automática para que siempre pida login al entrar/refrescar
+    /*
     const storedUser = authService.getCurrentUser();
     if (storedUser) {
       setUser(storedUser);
     }
+    */
     setLoading(false);
   }, []);
 
