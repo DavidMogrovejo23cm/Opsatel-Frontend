@@ -39,9 +39,42 @@ const Ventas = () => {
 
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
+  const [previewFrontal, setPreviewFrontal] = useState(null);
+  const [previewPosterior, setPreviewPosterior] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    if (fileFrontal) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewFrontal(reader.result);
+      reader.readAsDataURL(fileFrontal);
+    } else {
+      setPreviewFrontal(null);
+    }
+  }, [fileFrontal]);
+
+  useEffect(() => {
+    if (filePosterior) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewPosterior(reader.result);
+      reader.readAsDataURL(filePosterior);
+    } else {
+      setPreviewPosterior(null);
+    }
+  }, [filePosterior]);
+
+  const handlePaste = (e, setFile) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        setFile(file);
+        break;
+      }
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -187,12 +220,85 @@ const Ventas = () => {
             </div>
           </div>
           <div className="input-group">
-            <label className="label">Foto Cédula Frontal </label>
-            <input type="file" className="input" onChange={(e) => setFileFrontal(e.target.files[0])} accept="image/*" />
+            <label className="label">Foto Cédula Frontal</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input 
+                className="input" 
+                placeholder="Pegar imagen (Ctrl+V)" 
+                style={{ flex: 1, marginBottom: 0 }}
+                onPaste={(e) => handlePaste(e, setFileFrontal)}
+                readOnly
+              />
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
+                onClick={() => document.getElementById('file-frontal').click()}
+              >
+                📁 Subir
+              </button>
+            </div>
+            <input 
+              id="file-frontal"
+              type="file" 
+              style={{ display: 'none' }} 
+              onChange={(e) => setFileFrontal(e.target.files[0])} 
+              accept="image/*" 
+            />
+            {fileFrontal && previewFrontal && (
+              <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
+                <img src={previewFrontal} alt="Vista previa frontal" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
+                <button 
+                  type="button" 
+                  onClick={() => setFileFrontal(null)}
+                  style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+                >✕</button>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {fileFrontal?.name || 'Imagen Pegada'}
+                </div>
+              </div>
+            )}
           </div>
+
           <div className="input-group">
             <label className="label">Foto Cédula Posterior</label>
-            <input type="file" className="input" onChange={(e) => setFilePosterior(e.target.files[0])} accept="image/*" />
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input 
+                className="input" 
+                placeholder="Pegar imagen (Ctrl+V)" 
+                style={{ flex: 1, marginBottom: 0 }}
+                onPaste={(e) => handlePaste(e, setFilePosterior)}
+                readOnly
+              />
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
+                onClick={() => document.getElementById('file-posterior').click()}
+              >
+                📁 Subir
+              </button>
+            </div>
+            <input 
+              id="file-posterior"
+              type="file" 
+              style={{ display: 'none' }} 
+              onChange={(e) => setFilePosterior(e.target.files[0])} 
+              accept="image/*" 
+            />
+            {filePosterior && previewPosterior && (
+              <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
+                <img src={previewPosterior} alt="Vista previa posterior" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
+                <button 
+                  type="button" 
+                  onClick={() => setFilePosterior(null)}
+                  style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+                >✕</button>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {filePosterior?.name || 'Imagen Pegada'}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
