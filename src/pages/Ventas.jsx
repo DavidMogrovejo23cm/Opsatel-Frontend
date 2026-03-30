@@ -102,12 +102,29 @@ const Ventas = () => {
       navigator.geolocation.getCurrentPosition((position) => {
         const latDMS = convertToDMS(position.coords.latitude, "lat");
         const lngDMS = convertToDMS(position.coords.longitude, "lng");
-        setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS}` });
+        // Formato solicitado: 2°55'51.44"S, 79° 2'43.37"W
+        setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
       }, (error) => {
         alert("Error al obtener ubicación. Asegúrate de dar permisos.");
       });
     } else {
       alert("Geolocalización no disponible en este navegador.");
+    }
+  };
+
+  const handleConvertManual = () => {
+    const val = formData.ubicacion.trim();
+    const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
+    const match = val.match(regexDD);
+
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      const latDMS = convertToDMS(lat, "lat");
+      const lngDMS = convertToDMS(lng, "lng");
+      setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
+    } else {
+      alert("Formato inválido. Asegúrate de usar: latitud, longitud (Ej: -2.93, -79.04)");
     }
   };
 
@@ -215,7 +232,54 @@ const Ventas = () => {
           <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
             <label className="label">Coordenadas (Ubicación)</label>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <input className="input" name="ubicacion" value={formData.ubicacion} onChange={handleChange} placeholder="Lat, Long (Manual o GPS)" style={{ flex: 1 }} />
+              <input 
+                className="input" 
+                name="ubicacion" 
+                value={formData.ubicacion} 
+                onChange={handleChange} 
+                onPaste={(e) => {
+                  const pastedData = e.clipboardData.getData('text').trim();
+                  
+                  // 1. Detectar coordenadas decimales: -2.930955, -79.045381
+                  const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
+                  // 2. Extraer de URL de Google Maps: .../@-2.930955,-79.045381,15z
+                  const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+                  // 3. Detectar DMS estándar (Google Maps): 2°55'51.4"S 79°02'43.4"W
+                  const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
+                  
+                  let latDecimal, lngDecimal;
+                  
+                  const matchDD = pastedData.match(regexDD);
+                  const matchURL = pastedData.match(regexURL);
+                  const matchDMS = pastedData.match(regexDMS);
+
+                  if (matchDD) {
+                    latDecimal = parseFloat(matchDD[1]);
+                    lngDecimal = parseFloat(matchDD[2]);
+                  } else if (matchURL) {
+                    latDecimal = parseFloat(matchURL[1]);
+                    lngDecimal = parseFloat(matchURL[2]);
+                  } else if (matchDMS) {
+                    e.preventDefault();
+                    // Si ya es DMS, solo ajustamos el formato (coma y espacio)
+                    const latPart = matchDMS[1];
+                    const lngPart = matchDMS[2].replace('°', '° ');
+                    setFormData({ ...formData, ubicacion: `${latPart}, ${lngPart}` });
+                    return;
+                  }
+
+                  if (latDecimal !== undefined && lngDecimal !== undefined) {
+                    e.preventDefault();
+                    const latDMS = convertToDMS(latDecimal, "lat");
+                    const lngDMS = convertToDMS(lngDecimal, "lng");
+                    // Ajustar el formato: 2°55'51.44"S, 79° 2'43.37"W
+                    setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
+                  }
+                }}
+                placeholder="Lat, Long (Manual o GPS)" 
+                style={{ flex: 1 }} 
+              />
+              <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
               <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
             </div>
           </div>

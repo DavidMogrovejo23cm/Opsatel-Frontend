@@ -258,7 +258,7 @@ const Tecnica = () => {
               </div>
 
               <div className="input-group">
-                <label className="label">Potencia</label>
+                <label className="label">Potencia (Rango: -6 a -27)</label>
                 <input 
                   className="input" 
                   name="potencia" 
@@ -267,15 +267,24 @@ const Tecnica = () => {
                   required 
                   placeholder="-21.5" 
                   style={{
-                    borderColor: parseFloat(formData.potencia?.replace(',', '.')) < -26 ? '#f87171' : 'var(--glass-border)',
+                    borderColor: (() => {
+                      const val = parseFloat(formData.potencia?.replace(',', '.'));
+                      if (isNaN(val)) return 'var(--glass-border)';
+                      return (val < -27 || val > -6) ? '#f87171' : '#4ade80';
+                    })(),
                     outline: 'none'
                   }}
                 />
-                {parseFloat(formData.potencia?.replace(',', '.')) < -26 && (
-                  <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '4px', fontWeight: 'bold' }}>
-                    ⚠️ ALERTA: Potencia Crítica (Máx -26.0)
-                  </span>
-                )}
+                {(() => {
+                  const val = parseFloat(formData.potencia?.replace(',', '.'));
+                  if (isNaN(val) && formData.potencia) return <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '4px' }}>Formato inválido</span>;
+                  if (val < -27 || val > -6) return (
+                    <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '4px', fontWeight: 'bold' }}>
+                      ⚠️ Rango Permitido: -6.0 a -27.0
+                    </span>
+                  );
+                  return null;
+                })()}
               </div>
 
               <div className="input-group">
@@ -329,7 +338,26 @@ const Tecnica = () => {
                 >
                   Eliminar
                 </button>
-                <button type="submit" className="btn btn-primary">Completar Activación</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={(() => {
+                    const val = parseFloat(formData.potencia?.replace(',', '.'));
+                    return isNaN(val) || val < -27 || val > -6;
+                  })()}
+                  style={{
+                    opacity: (() => {
+                      const val = parseFloat(formData.potencia?.replace(',', '.'));
+                      return (isNaN(val) || val < -27 || val > -6) ? 0.5 : 1;
+                    })(),
+                    cursor: (() => {
+                      const val = parseFloat(formData.potencia?.replace(',', '.'));
+                      return (isNaN(val) || val < -27 || val > -6) ? 'not-allowed' : 'pointer';
+                    })()
+                  }}
+                >
+                  Completar Activación
+                </button>
               </div>
             </form>
           </motion.div>
