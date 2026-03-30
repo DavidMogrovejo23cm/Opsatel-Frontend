@@ -3,10 +3,10 @@ import { configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Configuraciones = () => {
-    const [activeTab, setActiveTab] = useState('Parroquias');
+    const [activeTab, setActiveTab] = useState('Nodos');
 
     // States for data
-    const [parroquias, setParroquias] = useState([]);
+    const [nodos, setNodos] = useState([]);
     const [planes, setPlanes] = useState([]);
     const [bancos, setBancos] = useState([]);
     const [puertos, setPuertos] = useState([]);
@@ -14,14 +14,14 @@ const Configuraciones = () => {
     const [finanzasBase, setFinanzasBase] = useState({ caja_chica: '0.00', pichincha: '0.00', jep: '0.00' });
 
     // Form states
-    const [newParroquia, setNewParroquia] = useState({ nombre: '', base_ip: '' });
+    const [newNodo, setNewNodo] = useState({ nombre: '', base_ip: '' });
     const [newPlan, setNewPlan] = useState({ nombre: '', megas: '', precio: '' });
     const [newBanco, setNewBanco] = useState({ nombre: '' });
-    const [newPuerto, setNewPuerto] = useState({ numero: '', parroquia_id: '' });
+    const [newPuerto, setNewPuerto] = useState({ numero: '', nodo_id: '' });
     const [searchPuerto, setSearchPuerto] = useState('');
     const [newUsuario, setNewUsuario] = useState({ username: '', password: '', rol: 'tecnico' });
     const [isEditingUser, setIsEditingUser] = useState(null);
-    const [isEditingParroquia, setIsEditingParroquia] = useState(null);
+    const [isEditingNodo, setIsEditingNodo] = useState(null);
     const [isEditingPlan, setIsEditingPlan] = useState(null);
     const [isEditingBanco, setIsEditingBanco] = useState(null);
     const [isEditingPuerto, setIsEditingPuerto] = useState(null);
@@ -33,14 +33,14 @@ const Configuraciones = () => {
         try {
             // Reemplazo Promise.all por peticiones con manejo de error individual para que no se rompa todo si falla una (ej: 401/403 de usuarios)
             const [paRes, plRes, baRes, puRes, finRes] = await Promise.all([
-                configuracionService.getParroquias().catch(e => ({ data: [] })),
+                configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
                 configuracionService.getPuertos().catch(e => ({ data: [] })),
                 configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } }))
             ]);
             
-            setParroquias(paRes.data);
+            setNodos(paRes.data);
             setPlanes(plRes.data);
             setBancos(baRes.data);
             setPuertos(puRes.data);
@@ -75,16 +75,16 @@ const Configuraciones = () => {
 
     const handleCreate = async (type) => {
         try {
-            if (type === 'Parroquias') {
-                if (isEditingParroquia) {
-                    await configuracionService.actualizarParroquia(isEditingParroquia, newParroquia);
-                    alert('Parroquia actualizada');
+            if (type === 'Nodos') {
+                if (isEditingNodo) {
+                    await configuracionService.actualizarNodo(isEditingNodo, newNodo);
+                    alert('Nodo actualizado');
                 } else {
-                    await configuracionService.crearParroquia(newParroquia);
-                    alert('Parroquia creada');
+                    await configuracionService.crearNodo(newNodo);
+                    alert('Nodo creado');
                 }
-                setNewParroquia({ nombre: '', base_ip: '' });
-                setIsEditingParroquia(null);
+                setNewNodo({ nombre: '', base_ip: '' });
+                setIsEditingNodo(null);
             } else if (type === 'Planes') {
                 const planData = { 
                     nombre: newPlan.nombre, 
@@ -111,24 +111,24 @@ const Configuraciones = () => {
                 setNewBanco({ nombre: '' });
                 setIsEditingBanco(null);
             } else if (type === 'Puertos') {
-                if (!newPuerto.numero || !newPuerto.parroquia_id) return alert('Llene todos los campos');
+                if (!newPuerto.numero || !newPuerto.nodo_id) return alert('Llene todos los campos');
 
                 const nombreEsperado = 'Puerto ' + newPuerto.numero;
-                const parroquiaId = parseInt(newPuerto.parroquia_id);
+                const nodoId = parseInt(newPuerto.nodo_id);
 
                 if (isEditingPuerto) {
-                    await configuracionService.actualizarPuerto(isEditingPuerto, { nombre: nombreEsperado, parroquia_id: parroquiaId });
+                    await configuracionService.actualizarPuerto(isEditingPuerto, { nombre: nombreEsperado, nodo_id: nodoId });
                     alert('Puerto actualizado');
                 } else {
-                    // Verificar si ya existe un puerto con ese número en esa parroquia
-                    const existePuerto = puertos.some(p => p.nombre.toLowerCase() === nombreEsperado.toLowerCase() && p.parroquia_id === parroquiaId);
+                    // Verificar si ya existe un puerto con ese número en esa zona
+                    const existePuerto = puertos.some(p => p.nombre.toLowerCase() === nombreEsperado.toLowerCase() && p.nodo_id === nodoId);
                     if (existePuerto) {
                         return alert(`¡Error! El ${nombreEsperado} ya se encuentra registrado en esa zona.`);
                     }
-                    await configuracionService.crearPuerto({ nombre: nombreEsperado, parroquia_id: parroquiaId });
+                    await configuracionService.crearPuerto({ nombre: nombreEsperado, nodo_id: nodoId });
                     alert('Puerto creado');
                 }
-                setNewPuerto({ numero: '', parroquia_id: '' });
+                setNewPuerto({ numero: '', nodo_id: '' });
                 setIsEditingPuerto(null);
             } else if (type === 'Usuarios') {
                 if (!newUsuario.username || (!isEditingUser && !newUsuario.password)) return alert('Llene todos los campos');
@@ -160,7 +160,7 @@ const Configuraciones = () => {
     const handleDelete = async (type, id) => {
         if (!window.confirm('¿Seguro que deseas eliminar este registro?')) return;
         try {
-            if (type === 'Parroquias') await configuracionService.eliminarParroquia(id);
+            if (type === 'Nodos') await configuracionService.eliminarNodo(id);
             if (type === 'Planes') await configuracionService.eliminarPlan(id);
             if (type === 'Bancos') await configuracionService.eliminarBanco(id);
             if (type === 'Puertos') await configuracionService.eliminarPuerto(id);
@@ -177,10 +177,10 @@ const Configuraciones = () => {
         setActiveTab('Usuarios');
     };
 
-    const handleEditParroquia = (parr) => {
-        setIsEditingParroquia(parr.id);
-        setNewParroquia({ nombre: parr.nombre, base_ip: parr.base_ip });
-        setActiveTab('Parroquias');
+    const handleEditNodo = (nod) => {
+        setIsEditingNodo(nod.id);
+        setNewNodo({ nombre: nod.nombre, base_ip: nod.base_ip });
+        setActiveTab('Nodos');
     };
 
     const handleEditPlan = (plan) => {
@@ -198,11 +198,11 @@ const Configuraciones = () => {
     const handleEditPuerto = (puerto) => {
         setIsEditingPuerto(puerto.id);
         const numeroMatch = puerto.nombre.match(/\d+/);
-        setNewPuerto({ numero: numeroMatch ? numeroMatch[0] : '', parroquia_id: puerto.parroquia_id });
+        setNewPuerto({ numero: numeroMatch ? numeroMatch[0] : '', nodo_id: puerto.nodo_id });
         setActiveTab('Puertos');
     };
 
-    const tabs = ['Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
+    const tabs = ['Nodos', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
 
     const renderTable = (data, columns, type) => (
         <div style={{ marginTop: '20px', overflowX: 'auto' }}>
@@ -218,15 +218,15 @@ const Configuraciones = () => {
                         <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             {columns.map(col => (
                                 <td key={col} style={{ padding: '12px' }}>
-                                    {col === 'parroquia_id' ? parroquias.find(p => p.id === row[col])?.nombre : row[col]}
+                                    {col === 'nodo_id' ? nodos.find(p => p.id === row[col])?.nombre : row[col]}
                                 </td>
                             ))}
                             <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
                                 {type === 'Usuarios' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditUser(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                 )}
-                                {type === 'Parroquias' && (
-                                    <button className="btn btn-secondary" onClick={() => handleEditParroquia(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
+                                {type === 'Nodos' && (
+                                    <button className="btn btn-secondary" onClick={() => handleEditNodo(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                 )}
                                 {type === 'Planes' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditPlan(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
@@ -267,24 +267,24 @@ const Configuraciones = () => {
             </div>
 
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '12px' }}>
-                {activeTab === 'Parroquias' && (
+                {activeTab === 'Nodos' && (
                     <div>
-                        <h3>Añadir Parroquia</h3>
+                        <h3>Añadir Nodo</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre</label>
-                                <input className="input" style={{ margin: 0 }} value={newParroquia.nombre} onChange={e => setNewParroquia({ ...newParroquia, nombre: e.target.value.toUpperCase() })} placeholder="Ej. SAYAUSÍ" />
+                                <input className="input" style={{ margin: 0 }} value={newNodo.nombre} onChange={e => setNewNodo({ ...newNodo, nombre: e.target.value.toUpperCase() })} placeholder="Ej. SAYAUSÍ" />
                             </div>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Base IP</label>
-                                <input className="input" style={{ margin: 0 }} value={newParroquia.base_ip} onChange={e => setNewParroquia({ ...newParroquia, base_ip: e.target.value })} placeholder="Ej. 172.16" />
+                                <input className="input" style={{ margin: 0 }} value={newNodo.base_ip} onChange={e => setNewNodo({ ...newNodo, base_ip: e.target.value })} placeholder="Ej. 172.16" />
                             </div>
-                            <button className="btn btn-primary" onClick={() => handleCreate('Parroquias')}>{isEditingParroquia ? 'Actualizar' : 'Guardar'}</button>
-                            {isEditingParroquia && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingParroquia(null); setNewParroquia({ nombre: '', base_ip: '' }); }}>Cancelar</button>
+                            <button className="btn btn-primary" onClick={() => handleCreate('Nodos')}>{isEditingNodo ? 'Actualizar' : 'Guardar'}</button>
+                            {isEditingNodo && (
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingNodo(null); setNewNodo({ nombre: '', base_ip: '' }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable(parroquias, ['id', 'nombre', 'base_ip'], 'Parroquias')}
+                        {renderTable(nodos, ['id', 'nombre', 'base_ip'], 'Nodos')}
                     </div>
                 )}
 
@@ -332,13 +332,13 @@ const Configuraciones = () => {
 
                 {activeTab === 'Puertos' && (
                     <div>
-                        <h3>Añadir Puerto por Parroquia</h3>
+                        <h3>Añadir Puerto por Nodo</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
-                                <label className="label">Parroquia</label>
-                                <select className="input" style={{ margin: 0 }} value={newPuerto.parroquia_id} onChange={e => setNewPuerto({ ...newPuerto, parroquia_id: e.target.value })}>
+                                <label className="label">Nodo</label>
+                                <select className="input" style={{ margin: 0 }} value={newPuerto.nodo_id} onChange={e => setNewPuerto({ ...newPuerto, nodo_id: e.target.value })}>
                                     <option value="">Seleccione...</option>
-                                    {parroquias.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                                    {nodos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                                 </select>
                             </div>
                             <div className="input-group" style={{ margin: 0 }}>
@@ -350,13 +350,13 @@ const Configuraciones = () => {
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Puertos')}>{isEditingPuerto ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingPuerto && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingPuerto(null); setNewPuerto({ numero: '', parroquia_id: '' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingPuerto(null); setNewPuerto({ numero: '', nodo_id: '' }); }}>Cancelar</button>
                             )}
                         </div>
                         <div style={{ marginTop: '20px' }}>
                             <input
                                 className="input"
-                                placeholder="🔍 Buscar por nombre, ID o Parroquia..."
+                                placeholder="🔍 Buscar por nombre, ID o Nodo..."
                                 value={searchPuerto}
                                 onChange={(e) => setSearchPuerto(e.target.value)}
                                 style={{ width: '100%', maxWidth: '350px' }}
@@ -364,15 +364,15 @@ const Configuraciones = () => {
                         </div>
                         {renderTable(
                             puertos.filter(p => {
-                                const parroquiaName = parroquias.find(parq => parq.id === p.parroquia_id)?.nombre || '';
+                                const nodoName = nodos.find(nod => nod.id === p.nodo_id)?.nombre || '';
                                 const search = searchPuerto.toLowerCase();
                                 return (
                                     p.id.toString().includes(search) ||
                                     p.nombre.toLowerCase().includes(search) ||
-                                    parroquiaName.toLowerCase().includes(search)
+                                    nodoName.toLowerCase().includes(search)
                                 );
                             }),
-                            ['id', 'nombre', 'parroquia_id'], 'Puertos'
+                            ['id', 'nombre', 'nodo_id'], 'Puertos'
                         )}
                     </div>
                 )}

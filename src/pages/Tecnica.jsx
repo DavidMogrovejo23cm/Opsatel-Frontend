@@ -14,8 +14,9 @@ const Tecnica = () => {
     red: '', clave: ''
   });
   const [hasBreach, setHasBreach] = useState(false);
+  const [editUbicacion, setEditUbicacion] = useState(false);
 
-  const [parroquiasList, setParroquiasList] = useState([]);
+  const [nodosList, setNodosList] = useState([]);
   const [puertosList, setPuertosList] = useState([]);
 
   const fetchData = async () => {
@@ -27,10 +28,10 @@ const Tecnica = () => {
       ));
 
       const [paRes, puRes] = await Promise.all([
-        configuracionService.getParroquias(),
+        configuracionService.getNodos(),
         configuracionService.getPuertos()
       ]);
-      setParroquiasList(paRes.data);
+      setNodosList(paRes.data);
       setPuertosList(puRes.data);
     } catch (error) {
       console.error("Error fetching data", error);
@@ -43,10 +44,10 @@ const Tecnica = () => {
 
   // Realiza la consulta centralizada al backend y recibe las fórmulas GPON resueltas
   const fetchValoresTecnicos = async (puerto, mac, breach) => {
-    if (!puerto || !selectedCliente?.parroquia) return;
+    if (!puerto || !selectedCliente?.nodo) return;
     try {
       const res = await clienteService.getNextTecnicoValues(
-        selectedCliente.parroquia,
+        selectedCliente.nodo,
         puerto,
         mac || '',
         selectedCliente.nombre || '',
@@ -70,6 +71,7 @@ const Tecnica = () => {
   const handleSelect = (cliente) => {
     setSelectedCliente(cliente);
     setHasBreach(false);
+    setEditUbicacion(false);
     setFormData({
       mac: '',
       puerto: '', ont: '', servicio: '', breach: '',
@@ -121,10 +123,10 @@ const Tecnica = () => {
   };
 
   const getPuertosDisponibles = () => {
-    if (!selectedCliente || !selectedCliente.parroquia) return [];
-    const parroquiaObj = parroquiasList.find(p => p.nombre.toUpperCase() === selectedCliente.parroquia.toUpperCase());
-    if (!parroquiaObj) return [];
-    return puertosList.filter(p => p.parroquia_id === parroquiaObj.id);
+    if (!selectedCliente || !selectedCliente.nodo) return [];
+    const nodoObj = nodosList.find(p => p.nombre.toUpperCase() === selectedCliente.nodo.toUpperCase());
+    if (!nodoObj) return [];
+    return puertosList.filter(p => p.nodo_id === nodoObj.id);
   };
 
   return (
@@ -155,7 +157,7 @@ const Tecnica = () => {
                 }}
               >
                 <strong>{c.id} - {c.nombre}</strong>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{c.plan} | {c.parroquia}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{c.plan} | {c.nodo}</div>
               </div>
             ))}
           </div>
@@ -198,7 +200,7 @@ const Tecnica = () => {
               </div>
 
               <div className="input-group">
-                <label className="label">Puerto (Zona: {selectedCliente.parroquia})</label>
+                <label className="label">Puerto (Zona: {selectedCliente.nodo})</label>
                 <select className="input" name="puerto" value={formData.puerto} onChange={handlePuertoChange} required style={{ appearance: 'none' }}>
                   <option value="">Seleccione Puerto</option>
                   {getPuertosDisponibles().map(p => (
@@ -313,8 +315,36 @@ const Tecnica = () => {
               </div>
 
               <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
-                <label className="label">Ubicación GPS (Copiada del Contrato)</label>
-                <input className="input" name="ubicacion" value={formData.ubicacion} readOnly style={{ background: 'rgba(255,255,255,0.05)', color: '#fbbf24', cursor: 'not-allowed' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label className="label">Ubicación GPS (Copiada del Contrato)</label>
+                  <button 
+                    type="button" 
+                    onClick={() => setEditUbicacion(!editUbicacion)}
+                    style={{ 
+                      fontSize: '0.7rem', 
+                      padding: '2px 8px', 
+                      background: editUbicacion ? '#ef444455' : '#3b82f655', 
+                      color: editUbicacion ? '#fca5a5' : '#93c5fd',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {editUbicacion ? 'Bloquear' : 'Modificar Ubicación'}
+                  </button>
+                </div>
+                <input 
+                  className="input" 
+                  name="ubicacion" 
+                  value={formData.ubicacion} 
+                  onChange={handleChange}
+                  readOnly={!editUbicacion} 
+                  style={{ 
+                    background: !editUbicacion ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)', 
+                    color: !editUbicacion ? '#fbbf24' : 'white', 
+                    cursor: !editUbicacion ? 'not-allowed' : 'text' 
+                  }} 
+                />
               </div>
 
               <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>

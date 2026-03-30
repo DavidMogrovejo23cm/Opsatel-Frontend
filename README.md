@@ -50,7 +50,7 @@ Vista panorámica que muestra el estado actual del negocio:
 ### 📝 2. Módulo de Ventas
 Optimizado para el registro rápido de nuevos prospectos:
 *   Formularios validados para captura de datos.
-*   Gestión de ubicación geográfica por parroquias.
+*   Gestión de ubicación geográfica por nodos.
 
 ### 🔧 3. Módulo Técnico (Activaciones)
 Herramienta avanzada para el equipo de campo:

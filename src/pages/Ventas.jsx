@@ -3,17 +3,17 @@ import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Ventas = () => {
-  const [parroquiasList, setParroquiasList] = useState([]);
+  const [nodosList, setNodosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
   useEffect(() => {
     const fetchSelects = async () => {
       try {
         const [paRes, plRes] = await Promise.all([
-          configuracionService.getParroquias(),
+          configuracionService.getNodos(),
           configuracionService.getPlanes()
         ]);
-        setParroquiasList(paRes.data);
+        setNodosList(paRes.data);
         setPlanesList(plRes.data);
       } catch (error) {
         console.error("Error fetching configuraciones", error);
@@ -28,7 +28,7 @@ const Ventas = () => {
     celular: '',
     correo: '',
     direccion: '',
-    parroquia: '',
+    nodo: '',
     plan: '',
     plus: '0',
     tiempo: '12',
@@ -147,7 +147,7 @@ const Ventas = () => {
       setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', parroquia: '', plan: '', plus: '0', tiempo: '12',
+        direccion: '', nodo: '', plan: '', plus: '0', tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         fecha_firma: new Date().toISOString().split('T')[0]
       });
@@ -195,10 +195,10 @@ const Ventas = () => {
             <input className="input" name="direccion" value={formData.direccion} onChange={handleChange} required />
           </div>
           <div className="input-group">
-            <label className="label">Parroquia</label>
-            <select className="input" name="parroquia" value={formData.parroquia} onChange={handleChange} required style={{ appearance: 'none' }}>
-              <option value="">Seleccione parroquia</option>
-              {parroquiasList.map(p => (
+            <label className="label">Nodo</label>
+            <select className="input" name="nodo" value={formData.nodo} onChange={handleChange} required style={{ appearance: 'none' }}>
+              <option value="">Seleccione nodo</option>
+              {nodosList.map(p => (
                 <option key={p.id} value={p.nombre}>{p.nombre}</option>
               ))}
             </select>

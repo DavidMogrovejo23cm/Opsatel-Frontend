@@ -59,7 +59,7 @@ export const clienteService = {
   activar: (id, data) => api.patch(`/clientes/${id}/configuracion-tecnica`, data),
   updateAdmin: (id, data) => api.patch(`/clientes/${id}/administracion`, data),
   pagar: (id, data) => api.post(`/clientes/${id}/pagar`, data),
-  getNextTecnicoValues: (parroquia, puerto, mac = '', nombre = '', hasBreach = false) => api.get(`/clientes/siguiente-valor-tecnico?parroquia=${encodeURIComponent(parroquia)}&puerto=${puerto}&mac=${encodeURIComponent(mac)}&nombre=${encodeURIComponent(nombre)}&has_breach=${hasBreach}`),
+  getNextTecnicoValues: (nodo, puerto, mac = '', nombre = '', hasBreach = false) => api.get(`/clientes/siguiente-valor-tecnico?nodo=${encodeURIComponent(nodo)}&puerto=${puerto}&mac=${encodeURIComponent(mac)}&nombre=${encodeURIComponent(nombre)}&has_breach=${hasBreach}`),
   facturacionGlobal: () => api.post('/clientes/facturacion-mensual-global'),
   cierreMensualGlobal: () => api.post('/clientes/cierre-mensual-global'),
   pagoGlobalTest: () => api.post('/clientes/pago-global-test'),
@@ -71,11 +71,11 @@ export const clienteService = {
 
 
 export const configuracionService = {
-  // Parroquias
-  getParroquias: () => api.get('/configuraciones/parroquias'),
-  crearParroquia: (data) => api.post('/configuraciones/parroquias', data),
-  actualizarParroquia: (id, data) => api.patch(`/configuraciones/parroquias/${id}`, data),
-  eliminarParroquia: (id) => api.delete(`/configuraciones/parroquias/${id}`),
+  // Nodos
+  getNodos: () => api.get('/configuraciones/nodos'),
+  crearNodo: (data) => api.post('/configuraciones/nodos', data),
+  actualizarNodo: (id, data) => api.patch(`/configuraciones/nodos/${id}`, data),
+  eliminarNodo: (id) => api.delete(`/configuraciones/nodos/${id}`),
   // Planes
   getPlanes: () => api.get('/configuraciones/planes'),
   crearPlan: (data) => api.post('/configuraciones/planes', data),
@@ -87,7 +87,7 @@ export const configuracionService = {
   actualizarBanco: (id, data) => api.patch(`/configuraciones/bancos/${id}`, data),
   eliminarBanco: (id) => api.delete(`/configuraciones/bancos/${id}`),
   // Puertos
-  getPuertos: (parroquia_id) => api.get('/configuraciones/puertos' + (parroquia_id ? `?parroquia_id=${parroquia_id}` : '')),
+  getPuertos: (nodo_id) => api.get('/configuraciones/puertos' + (nodo_id ? `?nodo_id=${nodo_id}` : '')),
   crearPuerto: (data) => api.post('/configuraciones/puertos', data),
   actualizarPuerto: (id, data) => api.patch(`/configuraciones/puertos/${id}`, data),
   eliminarPuerto: (id) => api.delete(`/configuraciones/puertos/${id}`),
