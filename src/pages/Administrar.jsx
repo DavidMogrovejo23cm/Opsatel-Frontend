@@ -9,6 +9,7 @@ const Administrar = () => {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [nodosList, setNodosList] = useState([]);
+  const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
   const fetchData = async () => {
@@ -26,11 +27,13 @@ const Administrar = () => {
     fetchData();
     const fetchSelects = async () => {
       try {
-        const [paRes, plRes] = await Promise.all([
+        const [paRes, ppRes, plRes] = await Promise.all([
           configuracionService.getNodos(),
+          configuracionService.getParroquias(),
           configuracionService.getPlanes()
         ]);
         setNodosList(paRes.data);
+        setParroquiasList(ppRes.data);
         setPlanesList(plRes.data);
       } catch (error) {
         console.error("Error fetching configuraciones", error);
@@ -48,6 +51,7 @@ const Administrar = () => {
       correo: cliente.correo || '',
       direccion: cliente.direccion || '',
       nodo: cliente.nodo || '',
+      parroquia: cliente.parroquia || '',
       plan: cliente.plan || '',
       plus: cliente.plus || '0',
       estado: cliente.estado || '',
@@ -62,6 +66,11 @@ const Administrar = () => {
   };
 
   const saveEdit = async () => {
+    // Validación básica: Nombre, Cédula y Celular son requeridos
+    if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
+      return alert('Los campos Nombre, Cédula y Celular son obligatorios.');
+    }
+
     try {
       await clienteService.actualizar(editingId, editData);
       setEditingId(null);
@@ -152,7 +161,8 @@ const Administrar = () => {
                 <th style={cellStyle}>Celular</th>
                 <th style={cellStyle}>Correo</th>
                 <th style={cellStyle}>Dirección</th>
-                <th style={cellStyle}>Nodo</th>
+                 <th style={cellStyle}>Nodo</th>
+                <th style={cellStyle}>Parroquia</th>
                 <th style={cellStyle}>Plan</th>
                 <th style={cellStyle}>Plus</th>
                 <th style={cellStyle}>Estado</th>
@@ -177,6 +187,14 @@ const Administrar = () => {
                         <select style={inputStyle} value={editData.nodo} onChange={(e) => handleEditChange('nodo', e.target.value)}>
                           <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
                           {nodosList.map(p => (
+                            <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={cellStyle}>
+                        <select style={inputStyle} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
+                          <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
+                          {parroquiasList.map(p => (
                             <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
                           ))}
                         </select>
@@ -215,7 +233,8 @@ const Administrar = () => {
                       <td style={cellStyle}>{c.celular}</td>
                       <td style={{...cellStyle, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{c.correo || '-'}</td>
                       <td style={{...cellStyle, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{c.direccion || '-'}</td>
-                      <td style={cellStyle}>{c.nodo || '-'}</td>
+                       <td style={cellStyle}>{c.nodo || '-'}</td>
+                      <td style={cellStyle}>{c.parroquia || '-'}</td>
                       <td style={cellStyle}>{c.plan}</td>
                       <td style={cellStyle}>{c.plus || '0'}</td>
                       <td style={cellStyle}>

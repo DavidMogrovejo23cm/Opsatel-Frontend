@@ -99,6 +99,11 @@ export const configuracionService = {
   // Finanzas Base
   getFinanzasBase: () => api.get('/configuraciones/finanzas-base'),
   actualizarFinanzasBase: (data) => api.put('/configuraciones/finanzas-base', data),
+  // Parroquias
+  getParroquias: () => api.get('/configuraciones/parroquias'),
+  crearParroquia: (data) => api.post('/configuraciones/parroquias', data),
+  actualizarParroquia: (id, data) => api.patch(`/configuraciones/parroquias/${id}`, data),
+  eliminarParroquia: (id) => api.delete(`/configuraciones/parroquias/${id}`),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

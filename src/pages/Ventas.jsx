@@ -4,16 +4,19 @@ import { motion } from 'framer-motion';
 
 const Ventas = () => {
   const [nodosList, setNodosList] = useState([]);
+  const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
   useEffect(() => {
     const fetchSelects = async () => {
       try {
-        const [paRes, plRes] = await Promise.all([
+        const [paRes, ppRes, plRes] = await Promise.all([
           configuracionService.getNodos(),
+          configuracionService.getParroquias(),
           configuracionService.getPlanes()
         ]);
         setNodosList(paRes.data);
+        setParroquiasList(ppRes.data);
         setPlanesList(plRes.data);
       } catch (error) {
         console.error("Error fetching configuraciones", error);
@@ -29,6 +32,7 @@ const Ventas = () => {
     correo: '',
     direccion: '',
     nodo: '',
+    parroquia: '',
     plan: '',
     plus: '0',
     tiempo: '12',
@@ -147,7 +151,7 @@ const Ventas = () => {
       setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', nodo: '', plan: '', plus: '0', tiempo: '12',
+        direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         fecha_firma: new Date().toISOString().split('T')[0]
       });
@@ -199,6 +203,15 @@ const Ventas = () => {
             <select className="input" name="nodo" value={formData.nodo} onChange={handleChange} required style={{ appearance: 'none' }}>
               <option value="">Seleccione nodo</option>
               {nodosList.map(p => (
+                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="input-group">
+            <label className="label">Parroquia / Locación</label>
+            <select className="input" name="parroquia" value={formData.parroquia} onChange={handleChange} required style={{ appearance: 'none' }}>
+              <option value="">Seleccione parroquia</option>
+              {parroquiasList.map(p => (
                 <option key={p.id} value={p.nombre}>{p.nombre}</option>
               ))}
             </select>

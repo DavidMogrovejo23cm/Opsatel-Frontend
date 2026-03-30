@@ -10,6 +10,7 @@ const Configuraciones = () => {
     const [planes, setPlanes] = useState([]);
     const [bancos, setBancos] = useState([]);
     const [puertos, setPuertos] = useState([]);
+    const [parroquias, setParroquias] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
     const [finanzasBase, setFinanzasBase] = useState({ caja_chica: '0.00', pichincha: '0.00', jep: '0.00' });
 
@@ -25,6 +26,8 @@ const Configuraciones = () => {
     const [isEditingPlan, setIsEditingPlan] = useState(null);
     const [isEditingBanco, setIsEditingBanco] = useState(null);
     const [isEditingPuerto, setIsEditingPuerto] = useState(null);
+    const [newParroquia, setNewParroquia] = useState({ nombre: '' });
+    const [isEditingParroquia, setIsEditingParroquia] = useState(null);
 
     const fetchData = async () => {
         const user = configuracionService.getCurrentUser();
@@ -32,11 +35,12 @@ const Configuraciones = () => {
 
         try {
             // Reemplazo Promise.all por peticiones con manejo de error individual para que no se rompa todo si falla una (ej: 401/403 de usuarios)
-            const [paRes, plRes, baRes, puRes, finRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, ppRes, finRes] = await Promise.all([
                 configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
                 configuracionService.getPuertos().catch(e => ({ data: [] })),
+                configuracionService.getParroquias().catch(e => ({ data: [] })),
                 configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } }))
             ]);
             
@@ -44,6 +48,7 @@ const Configuraciones = () => {
             setPlanes(plRes.data);
             setBancos(baRes.data);
             setPuertos(puRes.data);
+            setParroquias(ppRes.data);
             
             if (finRes.data) {
                 setFinanzasBase({
@@ -76,6 +81,7 @@ const Configuraciones = () => {
     const handleCreate = async (type) => {
         try {
             if (type === 'Nodos') {
+                if (!newNodo.nombre?.trim() || !newNodo.base_ip?.trim()) return alert('Todos los campos son obligatorios');
                 if (isEditingNodo) {
                     await configuracionService.actualizarNodo(isEditingNodo, newNodo);
                     alert('Nodo actualizado');
@@ -85,7 +91,7 @@ const Configuraciones = () => {
                 }
                 setNewNodo({ nombre: '', base_ip: '' });
                 setIsEditingNodo(null);
-            } else if (type === 'Planes') {
+                if (!newPlan.nombre?.trim() || !newPlan.megas || !newPlan.precio) return alert('Todos los campos son obligatorios');
                 const planData = { 
                     nombre: newPlan.nombre, 
                     megas: parseInt(newPlan.megas) || 0,
@@ -101,6 +107,7 @@ const Configuraciones = () => {
                 setNewPlan({ nombre: '', megas: '', precio: '' });
                 setIsEditingPlan(null);
             } else if (type === 'Bancos') {
+                if (!newBanco.nombre?.trim()) return alert('El nombre es obligatorio');
                 if (isEditingBanco) {
                     await configuracionService.actualizarBanco(isEditingBanco, newBanco);
                     alert('Banco actualizado');
@@ -150,6 +157,17 @@ const Configuraciones = () => {
                 };
                 await configuracionService.actualizarFinanzasBase(fData);
                 alert('Finanzas base actualizadas correctamente');
+            } else if (type === 'Parroquias') {
+                if (!newParroquia.nombre?.trim()) return alert('El nombre es obligatorio');
+                if (isEditingParroquia) {
+                    await configuracionService.actualizarParroquia(isEditingParroquia, newParroquia);
+                    alert('Parroquia actualizada');
+                } else {
+                    await configuracionService.crearParroquia(newParroquia);
+                    alert('Parroquia creada');
+                }
+                setNewParroquia({ nombre: '' });
+                setIsEditingParroquia(null);
             }
             fetchData();
         } catch (error) {
@@ -165,6 +183,7 @@ const Configuraciones = () => {
             if (type === 'Bancos') await configuracionService.eliminarBanco(id);
             if (type === 'Puertos') await configuracionService.eliminarPuerto(id);
             if (type === 'Usuarios') await configuracionService.eliminarUsuario(id);
+            if (type === 'Parroquias') await configuracionService.eliminarParroquia(id);
             fetchData();
         } catch (error) {
             alert('Error al eliminar');
@@ -202,14 +221,24 @@ const Configuraciones = () => {
         setActiveTab('Puertos');
     };
 
-    const tabs = ['Nodos', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
+    const handleEditParroquia = (parr) => {
+        setIsEditingParroquia(parr.id);
+        setNewParroquia({ nombre: parr.nombre });
+        setActiveTab('Parroquias');
+    };
+
+    const tabs = ['Nodos', 'Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
 
     const renderTable = (data, columns, type) => (
         <div style={{ marginTop: '20px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
-                        {columns.map(col => <th key={col} style={{ padding: '12px' }}>{col}</th>)}
+                        {columns.map(col => (
+                            <th key={col} style={{ padding: '12px' }}>
+                                {col === 'nodo_id' ? 'Nodo / Zona' : col.toUpperCase()}
+                            </th>
+                        ))}
                         <th style={{ padding: '12px' }}>Acciones</th>
                     </tr>
                 </thead>
@@ -218,7 +247,9 @@ const Configuraciones = () => {
                         <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             {columns.map(col => (
                                 <td key={col} style={{ padding: '12px' }}>
-                                    {col === 'nodo_id' ? nodos.find(p => p.id === row[col])?.nombre : row[col]}
+                                    {col === 'nodo_id' 
+                                        ? (nodos.find(p => p.id === row[col])?.nombre || <span style={{ color: '#ef4444' }}>⚠️ SIN ASIGNAR</span>) 
+                                        : row[col]}
                                 </td>
                             ))}
                             <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
@@ -227,6 +258,9 @@ const Configuraciones = () => {
                                 )}
                                 {type === 'Nodos' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditNodo(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
+                                )}
+                                {type === 'Parroquias' && (
+                                    <button className="btn btn-secondary" onClick={() => handleEditParroquia(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                 )}
                                 {type === 'Planes' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditPlan(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
@@ -285,6 +319,23 @@ const Configuraciones = () => {
                             )}
                         </div>
                         {renderTable(nodos, ['id', 'nombre', 'base_ip'], 'Nodos')}
+                    </div>
+                )}
+
+                {activeTab === 'Parroquias' && (
+                    <div>
+                        <h3>Añadir Parroquia</h3>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Nombre de la Parroquia</label>
+                                <input className="input" style={{ margin: 0 }} value={newParroquia.nombre} onChange={e => setNewParroquia({ nombre: e.target.value.toUpperCase() })} placeholder="Ej. BAÑOS" />
+                            </div>
+                            <button className="btn btn-primary" onClick={() => handleCreate('Parroquias')}>{isEditingParroquia ? 'Actualizar' : 'Guardar'}</button>
+                            {isEditingParroquia && (
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingParroquia(null); setNewParroquia({ nombre: '' }); }}>Cancelar</button>
+                            )}
+                        </div>
+                        {renderTable(parroquias, ['id', 'nombre'], 'Parroquias')}
                     </div>
                 )}
 
