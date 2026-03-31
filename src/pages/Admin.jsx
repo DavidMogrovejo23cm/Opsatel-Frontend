@@ -131,10 +131,17 @@ const Admin = () => {
         comentarios: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
       });
 
+      // Guardar observaciones si fueron modificadas
+      if (pagoData.observaciones_edit !== undefined) {
+        await clienteService.updateAdmin(selectedCliente.id, {
+          observaciones: pagoData.observaciones_edit
+        });
+      }
+
       setShowPagoModal(false);
       fetchData();
     } catch (error) {
-      alert("Error al registrar pago");
+      alert("Error al registrar pago: " + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -370,29 +377,55 @@ const Admin = () => {
                 padding: '24px',
                 borderRadius: '24px',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.4)'
+                boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
                 <span style={{ fontSize: '1.5rem' }}>📝</span>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Observaciones Técnicas</h3>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Observaciones</h3>
               </div>
-              <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }} className="custom-scrollbar">
-                {(selectedCliente?.observaciones || 'Sin observaciones registradas.')
-                  .split('/')
-                  .map((parrafo, idx) => (
-                    <p key={idx} style={{ 
-                      fontSize: '0.85rem', 
-                      color: 'var(--text-muted)', 
-                      lineHeight: '1.5',
-                      marginBottom: '12px',
-                      paddingLeft: '12px',
-                      borderLeft: '2px solid rgba(96, 165, 250, 0.2)'
-                    }}>
-                      {parrafo.trim()}
-                    </p>
-                  ))}
-              </div>
+              <textarea
+                value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
+                onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
+                placeholder="Escriba observaciones del cliente..."
+                style={{
+                  flex: 1,
+                  minHeight: '200px',
+                  width: '100%',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(96, 165, 250, 0.2)',
+                  borderRadius: '12px',
+                  color: 'var(--text-muted)',
+                  padding: '12px',
+                  fontSize: '0.85rem',
+                  lineHeight: '1.6',
+                  resize: 'vertical',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+              />
+              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
+                Use "/" para separar párrafos en la Vista General.
+              </p>
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
+                onClick={async () => {
+                  try {
+                    await clienteService.updateAdmin(selectedCliente.id, {
+                      observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
+                    });
+                    alert('Observaciones guardadas correctamente.');
+                    fetchData();
+                  } catch (err) {
+                    alert('Error al guardar observaciones.');
+                  }
+                }}
+              >
+                💾 Guardar Observaciones
+              </button>
             </motion.div>
 
             {/* Modal de Pago Principal */}
