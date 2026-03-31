@@ -53,6 +53,16 @@ const Admin = () => {
     fetchData();
   }, []);
 
+  // Bloquea el scroll del cuerpo cuando el modal está abierto
+  useEffect(() => {
+    if (showPagoModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showPagoModal]);
+
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
@@ -340,200 +350,247 @@ const Admin = () => {
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           zIndex: 9999, overflowY: 'auto', padding: '40px 20px'
         }}>
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="glass"
-            style={{ width: '50%', minWidth: '420px', maxWidth: '850px', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', position: 'relative', margin: 'auto' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0 }}>Registrar Pago</h2>
-              <button onClick={() => setShowPagoModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
-            </div>
+          <div style={{
+            display: 'flex',
+            flexDirection: window.innerWidth <= 1100 ? 'column' : 'row',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            gap: '20px',
+            maxWidth: '1600px',
+            width: '95%',
+            margin: 'auto'
+          }}>
+            {/* Panel de Observaciones Lateral */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              className="glass"
+              style={{
+                width: window.innerWidth <= 1100 ? '100%' : '300px',
+                padding: '24px',
+                borderRadius: '24px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.4)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
+                <span style={{ fontSize: '1.5rem' }}>📝</span>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Observaciones Técnicas</h3>
+              </div>
+              <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }} className="custom-scrollbar">
+                {(selectedCliente?.observaciones || 'Sin observaciones registradas.')
+                  .split('/')
+                  .map((parrafo, idx) => (
+                    <p key={idx} style={{ 
+                      fontSize: '0.85rem', 
+                      color: 'var(--text-muted)', 
+                      lineHeight: '1.5',
+                      marginBottom: '12px',
+                      paddingLeft: '12px',
+                      borderLeft: '2px solid rgba(96, 165, 250, 0.2)'
+                    }}>
+                      {parrafo.trim()}
+                    </p>
+                  ))}
+              </div>
+            </motion.div>
 
-            <div style={{ padding: '4px 16px 16px 16px', marginTop: '-12px' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Cliente: </span>
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>{selectedCliente?.nombre}</span>
-            </div>
-
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--glass-border)' }}>
-              {parseFloat(selectedCliente.saldo || 0) > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
-                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                    ${parseFloat(selectedCliente.saldo).toFixed(2)}
-                  </span>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
-                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                  ${(parseFloat(pagoData.internet_payment || 0)).toFixed(2)}
-                </span>
+            {/* Modal de Pago Principal */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="glass"
+              style={{ width: window.innerWidth <= 1100 ? '100%' : '900px', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', position: 'relative' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0 }}>Registrar Pago</h2>
+                <button onClick={() => setShowPagoModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
               </div>
 
-              {selectedCliente?.instalation_date &&
-                selectedCliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7)) && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '4px' }}>
-                    <span style={{ color: '#818cf8' }}>Monto Primer Mes:</span>
-                    <span style={{ color: '#818cf8', fontWeight: 'bold' }}>
-                      ${(parseFloat(selectedCliente.total_pago || 0) - parseFloat(selectedCliente.plus || 0)).toFixed(2)}
+              <div style={{ padding: '4px 16px 16px 16px', marginTop: '-12px' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Cliente: </span>
+                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>{selectedCliente?.nombre}</span>
+              </div>
+
+              <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--glass-border)' }}>
+                {parseFloat(selectedCliente.saldo || 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
+                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                      ${parseFloat(selectedCliente.saldo).toFixed(2)}
                     </span>
                   </div>
                 )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
-                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                  ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Monto Adicional:</span>
-                <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-                  ${(parseFloat(pagoData.adicional || 0)).toFixed(2)}
-                </span>
-              </div>
-
-              <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
-                  <span>Pendiente Principal (Internet/TV):</span>
-                  <span style={{ color: parseFloat(selectedCliente.total_pago) > 0 ? '#f87171' : '#4ade80' }}>
-                    ${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
+                  <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                    ${(parseFloat(pagoData.internet_payment || 0)).toFixed(2)}
                   </span>
                 </div>
-              </div>
-            </div>
 
-            <div style={{
-              marginTop: '-10px',
-              marginBottom: '20px',
-              padding: '16px',
-              background: 'rgba(99, 102, 241, 0.1)',
-              borderRadius: '16px',
-              border: '1px dashed rgba(99, 102, 241, 0.3)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '1.1rem' }}>🧮</span> Calculadora de Vuelto
-                </span>
-                {efectivoRecibido && (
-                  <button
-                    onClick={() => setEfectivoRecibido('')}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div>
-                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={efectivoRecibido}
-                    onChange={(e) => setEfectivoRecibido(e.target.value)}
-                    placeholder="0.00"
-                    style={{ marginBottom: 0, fontSize: '1rem', height: '42px' }}
-                  />
+                {selectedCliente?.instalation_date &&
+                  selectedCliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7)) && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '4px' }}>
+                      <span style={{ color: '#818cf8' }}>Monto Primer Mes:</span>
+                      <span style={{ color: '#818cf8', fontWeight: 'bold' }}>
+                        ${(parseFloat(selectedCliente.total_pago || 0) - parseFloat(selectedCliente.plus || 0)).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
+                  <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                    ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
+                  </span>
                 </div>
-                <div>
-                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vuelto a entregar</label>
-                  <div style={{
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0 12px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    borderRadius: '8px',
-                    fontSize: '1.2rem',
-                    fontWeight: 'bold',
-                    color: (parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))) >= 0 ? '#4ade80' : '#f87171',
-                    border: '1px solid rgba(255,255,255,0.05)'
-                  }}>
-                    <span>$</span>
-                    <span>{(parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))).toFixed(2)}</span>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto Adicional:</span>
+                  <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                    ${(parseFloat(pagoData.adicional || 0)).toFixed(2)}
+                  </span>
+                </div>
+
+                <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
+                    <span>Pendiente Principal (Internet/TV):</span>
+                    <span style={{ color: parseFloat(selectedCliente.total_pago) > 0 ? '#f87171' : '#4ade80' }}>
+                      ${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', overflowY: 'auto', maxHeight: '400px', paddingRight: '10px', margin: '0 -8px' }} className="custom-scrollbar">
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
-                <input className="input" value={pagoData.internet_payment} onChange={(e) => {
-                  const val = e.target.value;
-                  const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0)).toFixed(2);
-                  setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
-                }} autoFocus />
+              <div style={{
+                marginTop: '-10px',
+                marginBottom: '20px',
+                padding: '16px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                borderRadius: '16px',
+                border: '1px dashed rgba(99, 102, 241, 0.3)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>🧮</span> Calculadora de Vuelto
+                  </span>
+                  {efectivoRecibido && (
+                    <button
+                      onClick={() => setEfectivoRecibido('')}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={efectivoRecibido}
+                      onChange={(e) => setEfectivoRecibido(e.target.value)}
+                      placeholder="0.00"
+                      style={{ marginBottom: 0, fontSize: '1rem', height: '42px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vuelto a entregar</label>
+                    <div style={{
+                      height: '42px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0 12px',
+                      background: 'rgba(15, 23, 42, 0.5)',
+                      borderRadius: '8px',
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      color: (parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))) >= 0 ? '#4ade80' : '#f87171',
+                      border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                      <span>$</span>
+                      <span>{(parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Adicional ($)</label>
-                <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => setPagoData({ ...pagoData, adicional: e.target.value })} />
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
-                <input className="input" value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>App</label>
-                <input className="input" value={pagoData.app} onChange={(e) => setPagoData({ ...pagoData, app: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Cod</label>
-                <input className="input" value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Facturas</label>
-                <input className="input" value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Fecha Pago</label>
-                <input type="date" className="input" value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Plus ($)</label>
-                <input type="number" step="0.01" className="input" value={pagoData.plus} onChange={(e) => {
-                   const val = e.target.value;
-                   const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0)).toFixed(2);
-                   setPagoData({ ...pagoData, plus: val, monto: newTotal });
-                }} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Bank Plus</label>
-                <select className="input" value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })} style={{ background: '#1e1b4b' }}>
-                  <option value="" style={{ background: '#1e1b4b' }}>Ninguno</option>
-                  {bancosList.map(b => (
-                    <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>Monto total ($)</label>
-                <input type="number" step="0.01" className="input" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} style={{ borderColor: 'var(--primary)' }} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Método</label>
-                <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
-                  {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
-                  {bancosList.map(b => (
-                    <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '12px 24px' }}>
-                De acuerdo
-              </button>
-            </div>
-          </motion.div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', paddingRight: '10px', margin: '0 -8px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
+                  <input className="input" value={pagoData.internet_payment} onChange={(e) => {
+                    const val = e.target.value;
+                    const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
+                  }} autoFocus />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Adicional ($)</label>
+                  <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => setPagoData({ ...pagoData, adicional: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
+                  <input className="input" value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>App</label>
+                  <input className="input" value={pagoData.app} onChange={(e) => setPagoData({ ...pagoData, app: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Cod</label>
+                  <input className="input" value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Facturas</label>
+                  <input className="input" value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Fecha Pago</label>
+                  <input type="date" className="input" value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Plus ($)</label>
+                  <input type="number" step="0.01" className="input" value={pagoData.plus} onChange={(e) => {
+                    const val = e.target.value;
+                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, plus: val, monto: newTotal });
+                  }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Bank Plus</label>
+                  <select className="input" value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })} style={{ background: '#1e1b4b' }}>
+                    <option value="" style={{ background: '#1e1b4b' }}>Ninguno</option>
+                    {bancosList.map(b => (
+                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>Monto total ($)</label>
+                  <input type="number" step="0.01" className="input" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} style={{ borderColor: 'var(--primary)' }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Método</label>
+                  <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
+                    {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
+                    {bancosList.map(b => (
+                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '12px 24px' }}>
+                  De acuerdo
+                </button>
+              </div>
+            </motion.div>
+          </div>
         </div>,
         document.body
       )}
