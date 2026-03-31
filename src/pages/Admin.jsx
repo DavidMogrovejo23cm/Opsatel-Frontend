@@ -60,7 +60,12 @@ const Admin = () => {
     const montoInicial = montoTotalPendiente > 0 ? montoTotalPendiente.toFixed(2) : '0.00';
 
     const planInfo = planesList.find(p => p.nombre.toLowerCase() === (cliente.plan || '').toLowerCase());
-    const precioPlan = planInfo ? parseFloat(planInfo.precio).toFixed(2) : '20.00';
+    let precioPlan = planInfo ? parseFloat(planInfo.precio).toFixed(2) : '20.00';
+
+    // Si es tercera edad y tiene precio especial, usamos ese para el desglose
+    if (cliente.tercera_edad && cliente.precio_plan_especial) {
+      precioPlan = parseFloat(cliente.precio_plan_especial).toFixed(2);
+    }
 
     setPagoData({
       monto: montoInicial,
@@ -356,9 +361,22 @@ const Admin = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
                 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                  ${(parseFloat(planesList.find(p => p.nombre.toLowerCase() === (selectedCliente.plan || '').toLowerCase())?.precio || 0)).toFixed(2)}
+                  ${(selectedCliente.tercera_edad && selectedCliente.precio_plan_especial
+                    ? parseFloat(selectedCliente.precio_plan_especial)
+                    : (parseFloat(planesList.find(p => p.nombre.toLowerCase() === (selectedCliente.plan || '').toLowerCase())?.precio || 0))
+                  ).toFixed(2)}
                 </span>
               </div>
+
+              {selectedCliente?.instalation_date &&
+                selectedCliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7)) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '4px' }}>
+                    <span style={{ color: '#818cf8' }}>Monto Primer Mes:</span>
+                    <span style={{ color: '#818cf8', fontWeight: 'bold' }}>
+                      ${(parseFloat(selectedCliente.total_pago || 0) - parseFloat(selectedCliente.plus || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
@@ -384,20 +402,20 @@ const Admin = () => {
               </div>
             </div>
 
-            <div style={{ 
-              marginTop: '-10px', 
+            <div style={{
+              marginTop: '-10px',
               marginBottom: '20px',
-              padding: '16px', 
-              background: 'rgba(99, 102, 241, 0.1)', 
-              borderRadius: '16px', 
-              border: '1px dashed rgba(99, 102, 241, 0.3)' 
+              padding: '16px',
+              background: 'rgba(99, 102, 241, 0.1)',
+              borderRadius: '16px',
+              border: '1px dashed rgba(99, 102, 241, 0.3)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '1.1rem' }}>🧮</span> Calculadora de Vuelto
                 </span>
                 {efectivoRecibido && (
-                  <button 
+                  <button
                     onClick={() => setEfectivoRecibido('')}
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
                   >
@@ -408,10 +426,10 @@ const Admin = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
-                  <input 
-                    type="number" 
-                    className="input" 
-                    value={efectivoRecibido} 
+                  <input
+                    type="number"
+                    className="input"
+                    value={efectivoRecibido}
                     onChange={(e) => setEfectivoRecibido(e.target.value)}
                     placeholder="0.00"
                     style={{ marginBottom: 0, fontSize: '1rem', height: '42px' }}
@@ -419,13 +437,13 @@ const Admin = () => {
                 </div>
                 <div>
                   <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vuelto a entregar</label>
-                  <div style={{ 
-                    height: '42px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <div style={{
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0 12px', 
-                    background: 'rgba(15, 23, 42, 0.5)', 
+                    padding: '0 12px',
+                    background: 'rgba(15, 23, 42, 0.5)',
                     borderRadius: '8px',
                     fontSize: '1.2rem',
                     fontWeight: 'bold',
