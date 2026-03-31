@@ -38,6 +38,8 @@ const Ventas = () => {
     tiempo: '12',
     cedula_tipo: '',
     ubicacion: '',
+    tercera_edad: false,
+    precio_plan_especial: 0,
     fecha_firma: new Date().toISOString().split('T')[0]
   });
 
@@ -81,7 +83,16 @@ const Ventas = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    if (name === 'tercera_edad') {
+      setFormData({ 
+        ...formData, 
+        tercera_edad: checked,
+        plan: checked ? 'TERCERA EDAD' : '' // Reset plan if unchecked, or set to placeholder if checked
+      });
+    } else {
+      setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+    }
   };
 
   const convertToDMS = (decimal, type) => {
@@ -153,6 +164,8 @@ const Ventas = () => {
         nombre: '', cedula: '', celular: '', correo: '',
         direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', tiempo: '12',
         cedula_tipo: '', ubicacion: '',
+        tercera_edad: false,
+        precio_plan_especial: 0,
         fecha_firma: new Date().toISOString().split('T')[0]
       });
       setFileFrontal(null);
@@ -216,15 +229,22 @@ const Ventas = () => {
               ))}
             </select>
           </div>
-          <div className="input-group">
-            <label className="label">Plan Contratado</label>
-            <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
-              <option value="">Seleccione plan</option>
-              {planesList.map(p => (
-                <option key={p.id} value={p.nombre}>{p.nombre} - ${p.precio}</option>
-              ))}
-            </select>
-          </div>
+          {!formData.tercera_edad ? (
+            <div className="input-group">
+              <label className="label">Plan Contratado</label>
+              <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
+                <option value="">Seleccione plan</option>
+                {planesList.map(p => (
+                  <option key={p.id} value={p.nombre}>{p.nombre} - ${p.precio}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="input-group">
+              <label className="label">Plan Contratado</label>
+              <input className="input" name="plan" value="TERCERA EDAD" readOnly style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }} />
+            </div>
+          )}
           <div className="input-group">
             <label className="label">Tiempo de Contrato (Meses)</label>
             <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
@@ -233,6 +253,34 @@ const Ventas = () => {
             <label className="label">IP TV (Monto Mensual)</label>
             <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} required />
           </div>
+          <div className="input-group" style={{ display: 'flex', alignItems: 'center' }}>
+            <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+              <input 
+                type="checkbox" 
+                name="tercera_edad" 
+                checked={formData.tercera_edad} 
+                onChange={handleChange}
+                style={{ width: '18px', height: '18px' }}
+              />
+              Tercera Edad (Plan Especial)
+            </label>
+          </div>
+          {formData.tercera_edad && (
+            <div className="input-group">
+              <label className="label">Valor Plan Especial ($)</label>
+              <input 
+                className="input" 
+                type="number" 
+                step="0.01" 
+                name="precio_plan_especial" 
+                value={formData.precio_plan_especial} 
+                onChange={handleChange} 
+                required 
+                placeholder="Precio mensual"
+                style={{ border: '1px solid #f59e0b' }}
+              />
+            </div>
+          )}
           <div className="input-group">
             <label className="label">Tipo de Cédula (Cedula_Tipo)</label>
             <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>

@@ -56,7 +56,9 @@ const Administrar = () => {
       plus: cliente.plus || '0',
       estado: cliente.estado || '',
       arrienda: cliente.arrienda || '',
-      cuenta: cliente.cuenta || ''
+      cuenta: cliente.cuenta || '',
+      tercera_edad: cliente.tercera_edad || false,
+      precio_plan_especial: cliente.precio_plan_especial || 0
     });
   };
 
@@ -81,7 +83,15 @@ const Administrar = () => {
   };
 
   const handleEditChange = (field, value) => {
-    setEditData(prev => ({ ...prev, [field]: value }));
+    if (field === 'tercera_edad') {
+      setEditData(prev => ({ 
+        ...prev, 
+        tercera_edad: value,
+        plan: value ? 'TERCERA EDAD' : ''
+      }));
+    } else {
+      setEditData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleEstadoChange = async (clienteId, nuevoEstado) => {
@@ -168,6 +178,8 @@ const Administrar = () => {
                 <th style={cellStyle}>Estado</th>
                 <th style={cellStyle}>Arrienda</th>
                 <th style={cellStyle}>Cuenta</th>
+                <th style={cellStyle}>3ra Edad</th>
+                <th style={cellStyle}>P. Especial</th>
                 <th style={cellStyle}>Acciones</th>
               </tr>
             </thead>
@@ -200,12 +212,16 @@ const Administrar = () => {
                         </select>
                       </td>
                       <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.plan} onChange={(e) => handleEditChange('plan', e.target.value)}>
-                          <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
-                          {planesList.map(p => (
-                            <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
-                          ))}
-                        </select>
+                        {!editData.tercera_edad ? (
+                          <select style={inputStyle} value={editData.plan} onChange={(e) => handleEditChange('plan', e.target.value)}>
+                            <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
+                            {planesList.map(p => (
+                              <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>TERCERA EDAD</span>
+                        )}
                       </td>
                       <td style={cellStyle}><input style={{...inputStyle, width: '60px'}} type="number" step="0.01" value={editData.plus} onChange={(e) => handleEditChange('plus', e.target.value)} /></td>
                       <td style={cellStyle}>
@@ -219,6 +235,23 @@ const Administrar = () => {
                       </td>
                       <td style={cellStyle}><input style={{...inputStyle, width: '70px'}} value={editData.arrienda} onChange={(e) => handleEditChange('arrienda', e.target.value)} /></td>
                       <td style={cellStyle}><input style={{...inputStyle, width: '80px'}} value={editData.cuenta} onChange={(e) => handleEditChange('cuenta', e.target.value)} /></td>
+                      <td style={cellStyle}>
+                        <input 
+                          type="checkbox" 
+                          checked={editData.tercera_edad} 
+                          onChange={(e) => handleEditChange('tercera_edad', e.target.checked)} 
+                        />
+                      </td>
+                      <td style={cellStyle}>
+                        <input 
+                          style={{...inputStyle, width: '60px'}} 
+                          type="number" 
+                          step="0.01" 
+                          value={editData.precio_plan_especial} 
+                          onChange={(e) => handleEditChange('precio_plan_especial', e.target.value)} 
+                          disabled={!editData.tercera_edad}
+                        />
+                      </td>
                       <td style={cellStyle}>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={saveEdit}>✓</button>
@@ -248,6 +281,8 @@ const Administrar = () => {
                       </td>
                       <td style={cellStyle}>{c.arrienda || '-'}</td>
                       <td style={cellStyle}>{c.cuenta || '-'}</td>
+                      <td style={cellStyle}>{c.tercera_edad ? 'SÍ' : 'NO'}</td>
+                      <td style={cellStyle}>{c.tercera_edad ? `$${c.precio_plan_especial}` : '-'}</td>
                       <td style={cellStyle}>
                         <button
                           className="btn btn-secondary"
