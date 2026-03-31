@@ -270,10 +270,16 @@ const General = () => {
                               )
                             ) : col === 'internet_payment' ? (
                               (() => {
-                                const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                let precio = 0;
+                                if (c.tercera_edad && c.precio_plan_especial) {
+                                  precio = c.precio_plan_especial;
+                                } else {
+                                  const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                  if (plan) precio = plan.precio;
+                                }
                                 return (
                                   <span style={{ color: 'var(--text-muted)' }}>
-                                    {plan ? `$${parseFloat(plan.precio).toFixed(2)}` : '-'}
+                                    {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
                                   </span>
                                 );
                               })()
@@ -286,13 +292,22 @@ const General = () => {
                               </span>
                             ) : col === 'plan' ? (
                               (() => {
-                                const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                let precio = 0;
+                                let isSpecial = false;
+                                if (c.tercera_edad && c.precio_plan_especial) {
+                                  precio = c.precio_plan_especial;
+                                  isSpecial = true;
+                                } else {
+                                  const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
+                                  if (plan) precio = plan.precio;
+                                }
                                 return (
                                   <span style={{ 
-                                    color: plan ? '#fbbf24' : 'var(--text-muted)',
-                                    fontWeight: plan ? '600' : 'normal'
+                                    color: precio > 0 ? (isSpecial ? '#f59e0b' : '#fbbf24') : 'var(--text-muted)',
+                                    fontWeight: precio > 0 ? '600' : 'normal'
                                   }}>
-                                    {plan ? `$${parseFloat(plan.precio).toFixed(2)}` : '-'}
+                                    {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
+                                    {isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>}
                                   </span>
                                 );
                               })()
