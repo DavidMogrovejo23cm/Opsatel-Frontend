@@ -145,6 +145,25 @@ const Ventas = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validación manual de campos select obligatorios
+    if (!formData.cedula_tipo) {
+      setMessage({ type: 'error', text: 'Seleccione el tipo de cédula.' });
+      return;
+    }
+    if (!formData.parroquia) {
+      setMessage({ type: 'error', text: 'Seleccione la parroquia.' });
+      return;
+    }
+    if (!formData.nodo) {
+      setMessage({ type: 'error', text: 'Seleccione el nodo.' });
+      return;
+    }
+    if (!formData.plan) {
+      setMessage({ type: 'error', text: 'Seleccione el plan contratado.' });
+      return;
+    }
+    
     setLoading(true);
     setMessage(null);
     try {

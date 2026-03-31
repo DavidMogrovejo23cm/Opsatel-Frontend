@@ -91,6 +91,7 @@ const Configuraciones = () => {
                 }
                 setNewNodo({ nombre: '', base_ip: '' });
                 setIsEditingNodo(null);
+            } else if (type === 'Planes') {
                 if (!newPlan.nombre?.trim() || !newPlan.megas || !newPlan.precio) return alert('Todos los campos son obligatorios');
                 const planData = { 
                     nombre: newPlan.nombre, 

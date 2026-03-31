@@ -78,7 +78,7 @@ const Administrar = () => {
       setEditingId(null);
       fetchData();
     } catch (error) {
-      alert('Error al guardar cambios');
+      alert('Error al guardar: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -229,7 +229,6 @@ const Administrar = () => {
                           <option value="Pendiente" style={{ background: '#1e1b4b' }}>Pendiente</option>
                           <option value="En Activación" style={{ background: '#1e1b4b' }}>En Activación</option>
                           <option value="Activo" style={{ background: '#1e1b4b' }}>Activo</option>
-                          <option value="ACTIVO" style={{ background: '#1e1b4b' }}>ACTIVO</option>
                           <option value="Inactivo" style={{ background: '#1e1b4b' }}>Inactivo</option>
                         </select>
                       </td>

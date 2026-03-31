@@ -36,8 +36,10 @@ const General = () => {
   }, []);
 
   const handleStartEdit = (id, col, value) => {
-    // Reglas maestras de bloqueo: No permite editar ID ni activar clientes pendientes desde aquí.
-    if (col === 'id') return;
+    // Reglas maestras de bloqueo: No permite editar campos que el sistema genera automáticamente.
+    const lockedCols = ['id', 'id_port', 'service_port', 'ip', 'mac'];
+    if (lockedCols.includes(col)) return;
+
     if (col === 'estado' && value?.toLowerCase() === 'pendiente') return;
 
     setEditingCell({ id, col });
@@ -108,7 +110,7 @@ const General = () => {
   const allColumns = [
     "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
     "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
-    "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave",
+    "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
     "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "saldo", "total_pago", "comentarios", "total"
   ];

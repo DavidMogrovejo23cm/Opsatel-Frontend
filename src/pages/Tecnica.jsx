@@ -111,6 +111,22 @@ const Tecnica = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validación manual de campos obligatorios
+    const requiredKeys = [
+      'mac', 'puerto', 'ont', 'servicio', 'id_port', 'service_port', 'ip', 
+      'dispositivo', 'potencia', 'nap', 'tecnico', 'activador', 'red', 'clave',
+      'ubicacion'
+    ];
+    if (hasBreach) requiredKeys.push('breach');
+
+    const hayCamposVacios = requiredKeys.some(key => !formData[key]?.toString().trim());
+
+    if (hayCamposVacios) {
+      alert('¡Error! Todos los campos técnicos del formulario deben estar llenos para completar la activación.');
+      return;
+    }
+
     try {
       await clienteService.activar(selectedCliente.id, formData);
       alert('Configuración exitosa. Cliente activado.');
@@ -207,6 +223,11 @@ const Tecnica = () => {
                     <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
                   ))}
                 </select>
+                {getPuertosDisponibles().length === 0 && (
+                  <span style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
+                    ⚠️ Este nodo no tiene puertos. Vaya a Configuraciones → Puertos para añadir uno.
+                  </span>
+                )}
               </div>
 
               <div className="input-group">
@@ -240,18 +261,36 @@ const Tecnica = () => {
               )}
 
               <div className="input-group">
-                <label className="label">ID Port</label>
-                <input className="input" name="id_port" value={formData.id_port} onChange={handleChange} required />
+                <label className="label">ID Port (Sistema)</label>
+                <input 
+                  className="input" 
+                  name="id_port" 
+                  value={formData.id_port} 
+                  readOnly 
+                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                />
               </div>
 
               <div className="input-group">
-                <label className="label">Service Port</label>
-                <input className="input" name="service_port" value={formData.service_port} onChange={handleChange} required />
+                <label className="label">Service Port (Sistema)</label>
+                <input 
+                  className="input" 
+                  name="service_port" 
+                  value={formData.service_port} 
+                  readOnly 
+                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                />
               </div>
 
               <div className="input-group">
-                <label className="label">IP</label>
-                <input className="input" name="ip" value={formData.ip} onChange={handleChange} required />
+                <label className="label">IP (Sistema)</label>
+                <input 
+                  className="input" 
+                  name="ip" 
+                  value={formData.ip} 
+                  readOnly 
+                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                />
               </div>
 
               <div className="input-group">
