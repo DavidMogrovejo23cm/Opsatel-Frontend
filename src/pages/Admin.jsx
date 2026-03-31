@@ -67,6 +67,14 @@ const Admin = () => {
       precioPlan = parseFloat(cliente.precio_plan_especial).toFixed(2);
     }
 
+    // Si es el primer mes (prorrateo), el valor base a pagar es el proporcional
+    const isFirstMonth = cliente?.instalation_date && 
+      cliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7));
+    
+    if (isFirstMonth) {
+      precioPlan = montoInicial;
+    }
+
     setPagoData({
       monto: montoInicial,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
@@ -361,10 +369,7 @@ const Admin = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
                 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                  ${(selectedCliente.tercera_edad && selectedCliente.precio_plan_especial
-                    ? parseFloat(selectedCliente.precio_plan_especial)
-                    : (parseFloat(planesList.find(p => p.nombre.toLowerCase() === (selectedCliente.plan || '').toLowerCase())?.precio || 0))
-                  ).toFixed(2)}
+                  ${(parseFloat(pagoData.internet_payment || 0)).toFixed(2)}
                 </span>
               </div>
 
@@ -381,7 +386,7 @@ const Admin = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
                 <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                  ${(parseFloat(selectedCliente.plus || 0)).toFixed(2)}
+                  ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
                 </span>
               </div>
 
@@ -457,43 +462,46 @@ const Admin = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', overflowY: 'auto', maxHeight: '400px', paddingRight: '8px', margin: '0 -8px' }} className="custom-scrollbar">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', overflowY: 'auto', maxHeight: '400px', paddingRight: '10px', margin: '0 -8px' }} className="custom-scrollbar">
               <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Monto total ($)</label>
-                <input type="number" step="0.01" className="input" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} autoFocus />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Método</label>
-                <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
-                  {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
-                  {bancosList.map(b => (
-                    <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
-                  ))}
-                </select>
+                <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
+                <input className="input" value={pagoData.internet_payment} onChange={(e) => {
+                  const val = e.target.value;
+                  const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0)).toFixed(2);
+                  setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
+                }} autoFocus />
               </div>
               <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Adicional ($)</label>
                 <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => setPagoData({ ...pagoData, adicional: e.target.value })} />
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
+                <input className="input" value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
               </div>
               <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>App</label>
                 <input className="input" value={pagoData.app} onChange={(e) => setPagoData({ ...pagoData, app: e.target.value })} />
               </div>
               <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Facturas</label>
-                <input className="input" value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
-                <input className="input" value={pagoData.internet_payment} onChange={(e) => setPagoData({ ...pagoData, internet_payment: e.target.value })} />
-              </div>
-              <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Cod</label>
                 <input className="input" value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
               </div>
               <div className="form-group">
+                <label style={{ fontSize: '0.75rem' }}>Facturas</label>
+                <input className="input" value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+              </div>
+              <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Fecha Pago</label>
                 <input type="date" className="input" value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label style={{ fontSize: '0.75rem' }}>Plus ($)</label>
+                <input type="number" step="0.01" className="input" value={pagoData.plus} onChange={(e) => {
+                   const val = e.target.value;
+                   const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0)).toFixed(2);
+                   setPagoData({ ...pagoData, plus: val, monto: newTotal });
+                }} />
               </div>
               <div className="form-group">
                 <label style={{ fontSize: '0.75rem' }}>Bank Plus</label>
@@ -504,9 +512,18 @@ const Admin = () => {
                   ))}
                 </select>
               </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
-                <input className="input" value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
+              <div className="form-group">
+                <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>Monto total ($)</label>
+                <input type="number" step="0.01" className="input" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} style={{ borderColor: 'var(--primary)' }} />
+              </div>
+              <div className="form-group">
+                <label style={{ fontSize: '0.75rem' }}>Método</label>
+                <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
+                  {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
+                  {bancosList.map(b => (
+                    <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
