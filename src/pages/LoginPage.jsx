@@ -32,81 +32,212 @@ const LoginPage = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'radial-gradient(circle at top right, #1e1b4b, #0f172a, #020617)',
+      background: '#020617',
       overflow: 'hidden',
-      position: 'relative'
     }}>
-      {/* Decorative blobs */}
-      <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '400px', height: '400px', background: 'rgba(99, 102, 241, 0.15)', borderRadius: '50%', filter: 'blur(80px)' }} />
-      <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '350px', height: '350px', background: 'rgba(244, 63, 94, 0.1)', borderRadius: '50%', filter: 'blur(80px)' }} />
-
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card glass"
-        style={{ width: '100%', maxWidth: '400px', padding: '40px', textAlign: 'center' }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{
+          width: '100%',
+          maxWidth: '850px',
+          height: '550px',
+          display: 'flex',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          borderRadius: '30px',
+          overflow: 'hidden',
+          background: 'var(--bg-gradient)'
+        }}
       >
-        <div style={{ marginBottom: '32px' }}>
-          <img 
-            src="/LOGO%20OPSATEL.png" 
-            alt="OPSATEL Logo" 
-            style={{ width: '120px', height: 'auto', marginBottom: '16px' }}
-          />
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-1px' }}>OPSATEL</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Ingresa a tu cuenta de gestión</p>
+        {/* Left Side: Gradient and Shapes */}
+        <div style={{
+          flex: '1.2',
+          background: 'linear-gradient(225deg, #1e1b4b 0%, #0f172a 100%)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '40px',
+          overflow: 'hidden',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          {/* Decorative diagonal shapes */}
+          <div style={{
+            position: 'absolute',
+            top: '-50px',
+            left: '-50px',
+            width: '200px',
+            height: '150%',
+            background: 'rgba(255, 255, 255, 0.05)',
+            transform: 'rotate(15deg)',
+            zIndex: 1
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '120px',
+            width: '100px',
+            height: '100%',
+            background: 'rgba(255, 255, 255, 0.03)',
+            transform: 'rotate(15deg)',
+            zIndex: 1
+          }} />
+
+          <div style={{ zIndex: 2, position: 'relative' }}>
+            <div style={{
+              background: 'var(--primary)',
+              padding: '12px 30px',
+              borderRadius: '50px 0 0 50px',
+              display: 'inline-block',
+              marginLeft: 'auto',
+              position: 'absolute',
+              right: '-40px',
+              top: '-20px',
+              color: 'white',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+            }}>
+              LOGIN
+            </div>
+          </div>
+
+          <div style={{ zIndex: 2, color: 'white', marginTop: 'auto' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: '1.2' }}>Bienvenido a<br />OPSATEL</h2>
+            <p style={{ marginTop: '20px', opacity: 0.6, maxWidth: '280px' }}>
+              Sistema de gestión personalizado para servicios de ISP y telecomunicaciones.
+            </p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="input-group" style={{ textAlign: 'left' }}>
-            <label className="label">Usuario</label>
-            <input
-              className="input"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              placeholder="admin / secretario / tecnico"
-            />
-          </div>
-          <div className="input-group" style={{ textAlign: 'left', marginTop: '16px' }}>
-            <label className="label">Contraseña</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
+        {/* Right Side: Form */}
+        <div style={{
+          flex: '1.8',
+          padding: '60px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          background: 'rgba(15, 23, 42, 0.3)',
+          backdropFilter: 'blur(20px)'
+        }}>
+          <div style={{ marginBottom: '40px', textAlign: 'center' }}>
             <div style={{
-              marginTop: '16px',
-              color: '#f87171',
-              fontSize: '0.85rem',
-              background: 'rgba(239, 68, 68, 0.1)',
-              padding: '8px',
-              borderRadius: '8px',
-              border: '1px solid rgba(239, 68, 68, 0.3)'
+              width: '110px',
+              height: '110px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              margin: '0 auto 20px',
+              border: '2px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 12px 24px rgba(0,0,0,0.4)',
+              background: 'rgba(255, 255, 255, 0.05)'
             }}>
-              {error}
+              <img
+                src="/image%20copy.png"
+                alt="OPSATEL Logo"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  transform: 'scale(1.0)',
+                  objectPosition: 'center'
+                }}
+              />
             </div>
-          )}
+            <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: 'white', margin: 0, letterSpacing: '2px' }}>OPSATEL</h1>
+          </div>
 
-          <button
-            className="btn btn-primary"
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '32px', height: '48px', fontSize: '1rem' }}
-          >
-            {loading ? 'Validando...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '350px' }}>
+            <div style={{ marginBottom: '25px', position: 'relative' }}>
+              <div style={{ position: 'absolute', left: '0', bottom: '12px', color: 'var(--primary)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </div>
+              <input
+                className="input"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                placeholder="Usuario"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0',
+                  padding: '12px 12px 12px 35px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
 
-        <p style={{ marginTop: '32px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          © 2026 OPSATEL SERVICIO PERSONALIZADO
-        </p>
+            <div style={{ marginBottom: '25px', position: 'relative' }}>
+              <div style={{ position: 'absolute', left: '0', bottom: '12px', color: 'var(--primary)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </div>
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Contraseña"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0',
+                  padding: '12px 12px 12px 35px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {error && (
+              <div style={{
+                color: '#f87171',
+                fontSize: '0.85rem',
+                marginBottom: '20px',
+                textAlign: 'center',
+                background: 'rgba(239, 68, 68, 0.1)',
+                padding: '8px',
+                borderRadius: '8px'
+              }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
+              <button
+                className="btn"
+                type="submit"
+                disabled={loading}
+                style={{
+                  padding: '12px 60px',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  background: 'linear-gradient(45deg, var(--primary), var(--accent))',
+                  color: 'white',
+                  boxShadow: '0 10px 20px rgba(99, 102, 241, 0.4)',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {loading ? 'Cargando...' : 'ENTRAR'}
+              </button>
+            </div>
+          </form>
+
+          <div style={{ marginTop: 'auto', color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.75rem' }}>
+            © 2026 OPSATEL SERVICIO PERSONALIZADO
+          </div>
+        </div>
       </motion.div>
     </div>
   );

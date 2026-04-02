@@ -6,7 +6,7 @@ import axios from 'axios';
 // Aquí es donde React se comunica con FastAPI. 
 // Axios actúa como el puente que envía y trae datos hacia la Base de Datos.
 // Si el backend se mueve a un servidor real, debes cambiar esto por la IP pública o dominio.
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

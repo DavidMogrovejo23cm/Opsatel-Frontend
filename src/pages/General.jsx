@@ -139,7 +139,14 @@ const General = () => {
             <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
               <tr>
                 {allColumns.map(col => (
-                  <th key={col} style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textTransform: 'uppercase', whiteSpace: 'nowrap', textAlign: 'left' }}>
+                  <th key={col} style={{ 
+                    padding: '12px', 
+                    borderBottom: '1px solid var(--glass-border)', 
+                    borderRight: '1px solid var(--glass-border)',
+                    textTransform: 'uppercase', 
+                    whiteSpace: 'nowrap', 
+                    textAlign: 'left' 
+                  }}>
                     {col === 'saldo' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col.replace('_', ' ')}
                   </th>
                 ))}
@@ -165,7 +172,9 @@ const General = () => {
                           whiteSpace: 'nowrap',
                           minWidth: '100px',
                           background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          cursor: col === 'id' ? 'default' : 'pointer'
+                          cursor: col === 'id' ? 'default' : 'pointer',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
                         }}
                       >
                         {isEditing ? (

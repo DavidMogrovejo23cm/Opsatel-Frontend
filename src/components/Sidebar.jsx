@@ -55,11 +55,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img
-              src="/LOGO%20OPSATEL.png"
-              alt="Logo"
-              style={{ width: '40px', height: '40px', objectFit: 'contain' }}
-            />
+            <div style={{ width: '45px', height: '45px', borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <img
+                    src="/image%20copy.png"
+                    alt="Logo"
+                    style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover', 
+                        transform: 'scale(1.0)',
+                        objectPosition: 'center' 
+                    }}
+                />
+            </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
               OPSATEL
             </h2>

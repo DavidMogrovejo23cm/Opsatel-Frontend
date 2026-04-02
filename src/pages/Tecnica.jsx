@@ -218,10 +218,10 @@ const Tecnica = () => {
                 style={{
                   padding: '12px', cursor: 'pointer', borderRadius: '12px',
                   border: selectedCliente?.id === c.id ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
-                  background: selectedCliente?.id === c.id ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.03)'
+                  background: selectedCliente?.id === c.id ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255, 255, 255, 0.03)'
                 }}
               >
-                <strong>{c.id} - {c.nombre}</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{c.id} - {c.nombre}</strong>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{c.plan} | {c.nodo}</div>
               </div>
             ))}
@@ -266,10 +266,10 @@ const Tecnica = () => {
 
               <div className="input-group">
                 <label className="label">Puerto (Zona: {selectedCliente.nodo})</label>
-                <select className="input" name="puerto" value={formData.puerto} onChange={handlePuertoChange} required style={{ appearance: 'none' }}>
+                <select className="input" name="puerto" value={formData.puerto} onChange={handlePuertoChange} required style={{ appearance: 'none', background: 'rgba(255, 255, 255, 0.03)', color: 'var(--text-main)' }}>
                   <option value="">Seleccione Puerto</option>
                   {getPuertosDisponibles().map(p => (
-                    <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
+                    <option key={p.id} value={p.nombre}>{p.nombre}</option>
                   ))}
                 </select>
                 {getPuertosDisponibles().length === 0 && (
@@ -285,10 +285,10 @@ const Tecnica = () => {
                   className="input"
                   value={hasBreach ? 'SI' : 'NO'}
                   onChange={handleBreachChange}
-                  style={{ appearance: 'none' }}
+                  style={{ appearance: 'none', background: 'rgba(255, 255, 255, 0.03)', color: 'var(--text-main)' }}
                 >
-                  <option value="NO" style={{ background: '#1e1b4b' }}>NO</option>
-                  <option value="SI" style={{ background: '#1e1b4b' }}>SÍ</option>
+                  <option value="NO">NO</option>
+                  <option value="SI">SÍ</option>
                 </select>
               </div>
 
@@ -316,7 +316,7 @@ const Tecnica = () => {
                   name="id_port" 
                   value={formData.id_port} 
                   readOnly 
-                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
                 />
               </div>
 
@@ -327,7 +327,7 @@ const Tecnica = () => {
                   name="service_port" 
                   value={formData.service_port} 
                   readOnly 
-                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
                 />
               </div>
 
@@ -338,7 +338,7 @@ const Tecnica = () => {
                   name="ip" 
                   value={formData.ip} 
                   readOnly 
-                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'not-allowed' }} 
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
                 />
               </div>
 
@@ -428,9 +428,10 @@ const Tecnica = () => {
                   onChange={handleChange}
                   readOnly={!editUbicacion} 
                   style={{ 
-                    background: !editUbicacion ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)', 
-                    color: !editUbicacion ? '#fbbf24' : 'white', 
-                    cursor: !editUbicacion ? 'not-allowed' : 'text' 
+                    background: !editUbicacion ? '#f1f5f9' : '#ffffff', 
+                    color: !editUbicacion ? '#d97706' : 'var(--text-main)', 
+                    cursor: !editUbicacion ? 'not-allowed' : 'text',
+                    border: '1px solid #e2e8f0'
                   }} 
                 />
               </div>
