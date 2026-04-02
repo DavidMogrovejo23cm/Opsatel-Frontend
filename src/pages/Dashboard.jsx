@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, extrasService } from '../services/api';
 import { motion } from 'framer-motion';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, LabelList } from 'recharts';
@@ -34,17 +34,51 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [clientesRes, pagosRes, financeRes] = await Promise.all([
+        const [clientesRes, pagosRes, financeRes, extrasRes] = await Promise.all([
           clienteService.listar(),
           clienteService.listarPagos(),
-          clienteService.getDashboardStats()
+          clienteService.getDashboardStats(),
+          extrasService.listar()
         ]);
 
         const clientes = clientesRes.data;
         const pagos = pagosRes.data;
         const finance = financeRes.data;
+        const extras = extrasRes.data || [];
 
-        setFinanceStats(finance);
+        // Calcular stats de EXTRAS
+        const statsExtras = {
+            Efectivo: 0,
+            Pichincha: 0,
+            JEP: 0,
+            total_clientes: extras.length,
+            activos: extras.filter(x => x.activo === 'SI').length
+        };
+
+        const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        extras.forEach(e => {
+            months.forEach(m => {
+                const pago = parseFloat(e[`${m}_pago`] || 0);
+                const banco = (e[`${m}_banco`] || '').toUpperCase();
+                if (pago > 0) {
+                    if (banco.includes('PICHINCHA')) statsExtras.Pichincha += pago;
+                    else if (banco.includes('JEP')) statsExtras.JEP += pago;
+                    else statsExtras.Efectivo += pago;
+                }
+            });
+        });
+
+        // UNIR a finanzas globales
+        const globalFinances = { ...finance.finanzas_globales };
+        globalFinances["Caja Chica"] = (globalFinances["Caja Chica"] || 0) + statsExtras.Efectivo;
+        globalFinances["Pichincha"] = (globalFinances["Pichincha"] || 0) + statsExtras.Pichincha;
+        globalFinances["JEP"] = (globalFinances["JEP"] || 0) + statsExtras.JEP;
+
+        setFinanceStats({
+            ...finance,
+            extras: statsExtras,
+            finanzas_globales: globalFinances
+        });
 
 
         // Distribución para PieChart
@@ -59,6 +93,7 @@ const Dashboard = () => {
           { name: 'Activos', value: activosCount, color: '#10b981' },
           { name: 'Inactivos', value: inactivosCount, color: '#94a3b8' },
           { name: 'Por Activar', value: porActivarCount, color: '#f59e0b' },
+          { name: 'Extras', value: statsExtras.total_clientes, color: '#8b5cf6' }
         ]);
 
         // Recaudación mensual para AreaChart
@@ -95,13 +130,13 @@ const Dashboard = () => {
           activos: activosCount,
           inactivos: inactivosCount,
           porActivar: porActivarCount,
+          extras: statsExtras.total_clientes,
           saldoPendiente: clientes.reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0),
           recaudacionMes: totalThisMonth,
           tendencia
         });
 
         setAllClientes(clientes);
-
         setRecentPagos(pagos.slice(0, 5));
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -177,6 +212,24 @@ const Dashboard = () => {
         { name: 'Pichincha', value: financeStats.plus.Pichincha, color: '#fbbf24' }
       ])
     },
+    {
+      title: 'Servicios Extras',
+      value: `$${((financeStats.extras?.Efectivo || 0) + (financeStats.extras?.Pichincha || 0) + (financeStats.extras?.JEP || 0)).toFixed(2)}`,
+      icon: '🌍',
+      color: '#8b5cf6',
+      clickable: true,
+      onClick: () => handleShowFinance('Desglose Extras', [
+        { name: 'Efectivo', value: financeStats.extras?.Efectivo || 0, color: '#10b981' },
+        { name: 'Pichincha', value: financeStats.extras?.Pichincha || 0, color: '#fbbf24' },
+        { name: 'JEP', value: financeStats.extras?.JEP || 0, color: '#6366f1' }
+      ])
+    },
+    {
+        title: 'Clientes Extras',
+        value: stats.extras || 0,
+        icon: '👨‍👩‍👧‍👦',
+        color: '#a855f7'
+    }
   ];
 
   const [showFinanceModal, setShowFinanceModal] = useState(false);
@@ -320,6 +373,43 @@ const Dashboard = () => {
                     [
                       { name: 'Efectivo', color: '#10b981' },
                       { name: 'Pichincha', color: '#fbbf24' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))
+                   }
+                  <LabelList dataKey="value" position="top" fill="#e2e8f0" formatter={(value) => "$" + value.toFixed(2)} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="glass-card glass" style={{ padding: '24px' }}>
+          <h3 style={{ marginBottom: '24px' }}>🌍 Recaudación Extras</h3>
+          <div style={{ width: '100%', height: '240px' }}>
+            <ResponsiveContainer>
+              <BarChart
+                data={[
+                  { name: 'Efectivo', value: financeStats.extras?.Efectivo || 0 },
+                  { name: 'Pichincha', value: financeStats.extras?.Pichincha || 0 },
+                  { name: 'JEP', value: financeStats.extras?.JEP || 0 }
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={(value) => "$" + value} />
+                <ReTooltip 
+                  contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                  itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value) => ["$" + value.toFixed(2), 'Total']}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                  {
+                    [
+                      { name: 'Efectivo', color: '#10b981' },
+                      { name: 'Pichincha', color: '#fbbf24' },
+                      { name: 'JEP', color: '#6366f1' }
                     ].map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))

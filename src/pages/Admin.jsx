@@ -571,71 +571,86 @@ const Admin = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', paddingRight: '10px', margin: '0 -8px' }}>
+                {/* 1. INTERNET PAY (AZUL) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
-                  <input className="input" value={pagoData.internet_payment} onChange={(e) => {
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Internet Pay.</label>
+                  <input className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.internet_payment} onChange={(e) => {
                     const val = e.target.value;
                     const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
                     setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
                   }} autoFocus />
                 </div>
+
+                {/* 2. ADICIONAL (AZUL) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Adicional ($)</label>
-                  <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => {
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Adicional ($)</label>
+                  <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
                     const val = e.target.value;
                     const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
                     setPagoData({ ...pagoData, adicional: val, monto: newTotal });
                   }} />
                 </div>
+
+                {/* 3. COMENTARIOS (MORADO) */}
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
-                  <input className="input" value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Comentarios</label>
+                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
                 </div>
+
+                {/* 4. MÉTODO (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>App</label>
-                  <input className="input" value={pagoData.app} onChange={(e) => setPagoData({ ...pagoData, app: e.target.value })} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Método</label>
+                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
+                    {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
+                    {bancosList.map(b => (
+                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* 5. PLUS (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Cod</label>
-                  <input className="input" value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Facturas</label>
-                  <input className="input" value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Fecha Pago</label>
-                  <input type="date" className="input" value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Plus ($)</label>
-                  <input type="number" step="0.01" className="input" value={pagoData.plus} onChange={(e) => {
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Plus ($)</label>
+                  <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
                     const val = e.target.value;
                     const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
                     setPagoData({ ...pagoData, plus: val, monto: newTotal });
                   }} />
                 </div>
+
+                {/* 6. BANK PLUS (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Bank Plus</label>
-                  <select className="input" value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })} style={{ background: '#1e1b4b' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Bank Plus</label>
+                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
                     <option value="" style={{ background: '#1e1b4b' }}>Ninguno</option>
                     {bancosList.map(b => (
                       <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
                     ))}
                   </select>
                 </div>
+
+                {/* 7. COD (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>Monto total ($)</label>
-                  <input type="number" step="0.01" className="input" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} style={{ borderColor: 'var(--primary)' }} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod</label>
+                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
                 </div>
+
+                {/* 8. FACTURA (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem' }}>Método</label>
-                  <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
-                    {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
-                    {bancosList.map(b => (
-                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
-                    ))}
-                  </select>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
+                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+                </div>
+
+                {/* 9. FECHA PAGO (MORADO) */}
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
+                  <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
+                </div>
+
+                {/* 10. MONTO TOTAL (AZUL) */}
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>Monto total ($)</label>
+                  <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
                 </div>
               </div>
 

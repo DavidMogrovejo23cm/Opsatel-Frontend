@@ -47,20 +47,11 @@ const LoginPage = () => {
         style={{ width: '100%', maxWidth: '400px', padding: '40px', textAlign: 'center' }}
       >
         <div style={{ marginBottom: '32px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            background: 'var(--primary)',
-            borderRadius: '16px',
-            margin: '0 auto 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem',
-            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)'
-          }}>
-            📡
-          </div>
+          <img 
+            src="/LOGO%20OPSATEL.png" 
+            alt="OPSATEL Logo" 
+            style={{ width: '120px', height: 'auto', marginBottom: '16px' }}
+          />
           <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-1px' }}>OPSATEL</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Ingresa a tu cuenta de gestión</p>
         </div>

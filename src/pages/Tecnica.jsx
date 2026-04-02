@@ -105,8 +105,45 @@ const Tecnica = () => {
     }
   };
 
+  const convertToDMS = (lat, lng) => {
+    const toDMS = (val, isLat) => {
+        const absVal = Math.abs(val);
+        const degrees = Math.floor(absVal);
+        const minutesDecimal = (absVal - degrees) * 60;
+        const minutes = Math.floor(minutesDecimal);
+        const seconds = ((minutesDecimal - minutes) * 60).toFixed(2);
+        
+        let direction = "";
+        if (isLat) {
+            direction = val < 0 ? "S" : "N";
+        } else {
+            direction = val < 0 ? "O" : "E"; // O de Oeste
+        }
+        
+        return `${degrees}°${minutes}'${seconds}''${direction}`;
+    };
+
+    return `${toDMS(lat, true)} ${toDMS(lng, false)}`;
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === 'ubicacion' && value.includes(',')) {
+        const parts = value.split(',').map(p => p.trim());
+        if (parts.length === 2) {
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const dms = convertToDMS(lat, lng);
+                setFormData({ ...formData, [name]: dms });
+                return;
+            }
+        }
+    }
+    
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -128,13 +165,24 @@ const Tecnica = () => {
     }
 
     try {
+      console.log("Activando cliente con ID:", selectedCliente.id);
+      console.log("Datos enviados (formData):", formData);
       await clienteService.activar(selectedCliente.id, formData);
       alert('Configuración exitosa. Cliente activado.');
       setSelectedCliente(null);
       fetchData();
     } catch (error) {
-      const detail = error.response?.data?.detail || 'Error en la activación';
-      alert(detail);
+      console.error("Error completo de activación:", error.response?.data);
+      let detail = error.response?.data?.detail;
+      
+      if (Array.isArray(detail)) {
+        // Errores de validación Pydantic (422)
+        const msg = detail.map(err => `${err.loc[err.loc.length-1]}: ${err.msg}`).join('\n');
+        alert(`Error de validación:\n${msg}`);
+      } else {
+        // Errores controlados por el backend (400, 404, etc)
+        alert(detail || 'Error en la activación. Verifique los datos duplicados (MAC, IP, etc).');
+      }
     }
   };
 

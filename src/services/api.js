@@ -69,6 +69,15 @@ export const clienteService = {
   getDashboardStats: () => api.get('/clientes/dashboard-stats'),
 };
 
+export const extrasService = {
+  listar: () => api.get('/extras/'),
+  crear: (data) => api.post('/extras/', data),
+  actualizar: (id, data) => api.patch(`/extras/${id}`, data),
+  eliminar: (id) => api.delete(`/extras/${id}`),
+  pagar: (id, data) => api.post(`/extras/${id}/pagar`, data),
+  listarPagos: () => api.get('/extras/pagos/historial'),
+};
+
 
 export const configuracionService = {
   // Nodos

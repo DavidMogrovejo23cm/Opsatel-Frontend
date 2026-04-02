@@ -21,10 +21,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'secretario'] },
     { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador', 'secretario'] },
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
+
   ];
 
   // Filtrar items según el rol del usuario
-  const filteredItems = menuItems.filter(item => 
+  const filteredItems = menuItems.filter(item =>
     !item.roles || (user && item.roles.includes(user.rol))
   );
 
@@ -39,31 +40,39 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     padding: '24px',
     zIndex: 100,
     transition: 'transform 0.3s ease',
+    background: 'rgba(2, 6, 23, 0.8)', // Darker background to match the dashboard
+    backdropFilter: 'blur(30px)',
+    borderRight: '1px solid rgba(255, 255, 255, 0.05)',
   };
 
   return (
     <>
-      <div className={`sidebar glass ${isOpen ? 'show-mobile' : ''}`} style={{
+      <div className={`sidebar ${isOpen ? 'show-mobile' : ''}`} style={{
         ...sidebarStyle,
         width: '260px',
         transform: (window.innerWidth <= 1024 && !isOpen) ? 'translateX(-100%)' : 'translateX(0)',
         display: (window.innerWidth <= 1024 && !isOpen) ? 'none' : 'flex'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div className="logo">
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img
+              src="/LOGO%20OPSATEL.png"
+              alt="Logo"
+              style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+            />
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
               OPSATEL
             </h2>
           </div>
           {window.innerWidth <= 1024 && (
-             <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+            <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
           )}
         </div>
 
-        <div style={{ 
-          background: 'rgba(255,255,255,0.05)', 
-          padding: '12px', 
-          borderRadius: '12px', 
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          padding: '12px',
+          borderRadius: '12px',
           marginBottom: '24px',
           border: '1px solid var(--glass-border)'
         }}>
@@ -73,35 +82,40 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {filteredItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => { if (window.innerWidth <= 1024) setIsOpen(false); }}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                marginBottom: '8px',
-                transition: 'all 0.3s ease',
-                background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
-                color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
-              })}
-            >
-              <span>{item.icon}</span>
-              <span style={{ fontWeight: 500 }}>{item.label}</span>
-            </NavLink>
-          ))}
+          {filteredItems.map((item) => {
+            if (item.type === 'divider') {
+              return <div key={item.path} style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '16px 0' }} />;
+            }
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => { if (window.innerWidth <= 1024) setIsOpen(false); }}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  marginBottom: '8px',
+                  transition: 'all 0.3s ease',
+                  background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
+                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
+                })}
+              >
+                <span>{item.icon}</span>
+                <span style={{ fontWeight: 500 }}>{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
-        <button 
+        <button
           onClick={handleLogout}
-          style={{ 
-            marginTop: 'auto', 
-            background: 'rgba(239, 68, 68, 0.1)', 
+          style={{
+            marginTop: 'auto',
+            background: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
             color: '#f87171',
             padding: '12px',
@@ -116,7 +130,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           🚪 Cerrar Sesión
         </button>
       </div>
-      
+
       <style>{`
         @media (max-width: 1024px) {
           .sidebar {

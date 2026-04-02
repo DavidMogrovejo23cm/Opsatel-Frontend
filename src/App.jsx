@@ -12,6 +12,8 @@ import Admin from './pages/Admin';
 import Administrar from './pages/Administrar';
 import Reportes from './pages/Reportes';
 import Configuraciones from './pages/Configuraciones';
+import ExtrasGeneral from './pages/ExtrasGeneral';
+import ExtraPagos from './pages/ExtraPagos';
 
 function App() {
   return (
@@ -65,6 +67,17 @@ function App() {
             <Route path="config" element={
               <ProtectedRoute roles={['administrador']}>
                 <Configuraciones />
+              </ProtectedRoute>
+            } />
+
+            <Route path="extras-general" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <ExtrasGeneral />
+              </ProtectedRoute>
+            } />
+            <Route path="extras-pagos" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <ExtraPagos />
               </ProtectedRoute>
             } />
           </Route>
