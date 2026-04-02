@@ -66,8 +66,8 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    const montoTotalPendiente = parseFloat(cliente.total_pago || 0);
-    const montoInicial = montoTotalPendiente > 0 ? montoTotalPendiente.toFixed(2) : '0.00';
+    const montoTotalPendiente = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0));
+    const montoInicial = montoTotalPendiente.toFixed(2);
 
     const planInfo = planesList.find(p => p.nombre.toLowerCase() === (cliente.plan || '').toLowerCase());
     let precioPlan = planInfo ? parseFloat(planInfo.precio).toFixed(2) : '20.00';
@@ -105,7 +105,7 @@ const Admin = () => {
 
   const handleRegistrarPago = async () => {
     if (!pagoData.monto || isNaN(pagoData.monto)) return alert("Ingrese un monto válido");
-    if (parseFloat(pagoData.monto) < 0) return alert("El monto del pago no puede ser negativo");
+
 
     // Helper para marcar campos vacíos como "NONE"
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
@@ -488,9 +488,9 @@ const Admin = () => {
 
                 <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
-                    <span>Pendiente Principal (Internet/TV):</span>
-                    <span style={{ color: parseFloat(selectedCliente.total_pago) > 0 ? '#f87171' : '#4ade80' }}>
-                      ${parseFloat(selectedCliente.total_pago || 0).toFixed(2)}
+                    <span>Total Pendiente (Consolidado):</span>
+                    <span style={{ color: (parseFloat(selectedCliente.saldo || 0) + parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)) > 0 ? '#f87171' : '#4ade80' }}>
+                      ${(parseFloat(selectedCliente.saldo || 0) + parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -541,11 +541,11 @@ const Admin = () => {
                       borderRadius: '8px',
                       fontSize: '1.2rem',
                       fontWeight: 'bold',
-                      color: (parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))) >= 0 ? '#4ade80' : '#f87171',
+                      color: (parseFloat(efectivoRecibido || 0) - (parseFloat(pagoData.monto) || 0)) >= 0 ? '#4ade80' : '#f87171',
                       border: '1px solid rgba(255,255,255,0.05)'
                     }}>
                       <span>$</span>
-                      <span>{(parseFloat(efectivoRecibido || 0) - ((parseFloat(pagoData.monto) || 0) + (parseFloat(pagoData.adicional) || 0))).toFixed(2)}</span>
+                      <span>{(parseFloat(efectivoRecibido || 0) - (parseFloat(pagoData.monto) || 0)).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -556,13 +556,17 @@ const Admin = () => {
                   <label style={{ fontSize: '0.75rem' }}>Internet Pay.</label>
                   <input className="input" value={pagoData.internet_payment} onChange={(e) => {
                     const val = e.target.value;
-                    const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0)).toFixed(2);
+                    const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
                     setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
                   }} autoFocus />
                 </div>
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem' }}>Adicional ($)</label>
-                  <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => setPagoData({ ...pagoData, adicional: e.target.value })} />
+                  <input type="number" step="0.01" className="input" value={pagoData.adicional} onChange={(e) => {
+                    const val = e.target.value;
+                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, adicional: val, monto: newTotal });
+                  }} />
                 </div>
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontSize: '0.75rem' }}>Comentarios</label>
@@ -588,7 +592,7 @@ const Admin = () => {
                   <label style={{ fontSize: '0.75rem' }}>Plus ($)</label>
                   <input type="number" step="0.01" className="input" value={pagoData.plus} onChange={(e) => {
                     const val = e.target.value;
-                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0)).toFixed(2);
+                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0) + parseFloat(selectedCliente?.saldo || 0)).toFixed(2);
                     setPagoData({ ...pagoData, plus: val, monto: newTotal });
                   }} />
                 </div>
