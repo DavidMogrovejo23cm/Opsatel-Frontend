@@ -145,6 +145,25 @@ const Admin = () => {
     }
   };
 
+  const handleGuardarCambios = async () => {
+    try {
+      await clienteService.updateAdmin(selectedCliente.id, {
+        plus: pagoData.plus,
+        adicional: pagoData.adicional,
+        comentarios: pagoData.comentarios,
+        app: pagoData.app,
+        cod: pagoData.cod,
+        facturas: pagoData.facturas,
+        internet_payment: pagoData.internet_payment
+      });
+      alert("Valores guardados correctamente");
+      fetchData();
+      setShowPagoModal(false);
+    } catch (error) {
+      alert("Error al guardar valores: " + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const handlePlanChange = async (clienteId, nuevoPlan) => {
     try {
       await clienteService.updateAdmin(clienteId, { plan: nuevoPlan });
@@ -620,8 +639,11 @@ const Admin = () => {
                 </div>
               </div>
 
-              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
+                <button className="btn btn-secondary" onClick={handleGuardarCambios} style={{ backgroundColor: '#4b5563', color: 'white' }}>
+                  💾 Guardar Valores
+                </button>
                 <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '12px 24px' }}>
                   De acuerdo
                 </button>
