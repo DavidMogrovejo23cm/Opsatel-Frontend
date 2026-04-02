@@ -51,7 +51,8 @@ const Tecnica = () => {
         puerto,
         mac || '',
         selectedCliente.nombre || '',
-        breach
+        breach,
+        selectedCliente.id || ''
       );
       const d = res.data;
       setFormData(prev => ({
