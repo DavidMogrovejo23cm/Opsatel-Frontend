@@ -8,9 +8,12 @@ const ExtrasGeneral = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const [showModal, setShowModal] = useState(false);
+    const [showPagoModal, setShowPagoModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState(null);
     const [activeTab, setActiveTab] = useState('general'); // 'general' o 'pagos'
+    const [selectedForPago, setSelectedForPago] = useState(null);
+    const [pagoData, setPagoData] = useState({ monto: 0, mes: 'ENERO', metodo: 'EFECTIVO', factura: '', referencia: '' });
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -150,6 +153,35 @@ const ExtrasGeneral = () => {
         e.cod?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleOpenPago = (extra) => {
+        const currentMonthIdx = new Date().getMonth();
+        setSelectedForPago(extra);
+        setPagoData({
+            monto: extra.valor || 0,
+            mes: months[currentMonthIdx].toUpperCase(),
+            metodo: 'EFECTIVO',
+            factura: '',
+            referencia: ''
+        });
+        setShowPagoModal(true);
+    };
+
+    const handleConfirmPago = async () => {
+        try {
+            await extrasService.pagar(selectedForPago.id, {
+                monto: parseFloat(pagoData.monto),
+                metodo_pago: pagoData.metodo,
+                mes_correspondiente: pagoData.mes,
+                referencia: pagoData.referencia || `Pago EXTRA - ${pagoData.mes}`,
+                factura: pagoData.factura
+            });
+            setShowPagoModal(false);
+            fetchData();
+        } catch (err) {
+            alert("Error al registrar pago: " + (err.response?.data?.detail || "Error desconocido"));
+        }
+    };
+
     const filteredMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
     return (
@@ -232,6 +264,9 @@ const ExtrasGeneral = () => {
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                             <button onClick={() => handleEdit(e)} title="Editar todos los datos (incluyendo meses)" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                            </button>
+                                            <button onClick={() => handleOpenPago(e)} title="Registrar Pago" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a4.5 4.5 0 1 0 0 9h5a4.5 4.5 0 1 1 0 9H6"></path></svg>
                                             </button>
                                             <button onClick={() => handleDelete(e.id)} title="Eliminar" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -372,7 +407,21 @@ const ExtrasGeneral = () => {
                                                     </div>
                                                     <div>
                                                         <label className="label">Monto Pago ($)</label>
-                                                        <input className="input" type="number" step="0.01" value={formData[`${l}_pago`]} onChange={e => setFormData({...formData, [`${l}_pago`]: e.target.value})} />
+                                                        <input 
+                                                            className="input" 
+                                                            type="number" 
+                                                            step="0.01" 
+                                                            value={formData[`${l}_pago`]} 
+                                                            onChange={e => {
+                                                                const val = parseFloat(e.target.value) || 0;
+                                                                const base = parseFloat(formData.valor) || 0;
+                                                                setFormData({
+                                                                    ...formData, 
+                                                                    [`${l}_pago`]: e.target.value,
+                                                                    [`${l}_saldo`]: Math.max(0, base - val).toFixed(2)
+                                                                });
+                                                            }} 
+                                                        />
                                                     </div>
                                                     <div>
                                                         <label className="label">Banco/Método</label>
@@ -384,7 +433,19 @@ const ExtrasGeneral = () => {
                                                     </div>
                                                     <div>
                                                         <label className="label">Saldo Restante ($)</label>
-                                                        <input className="input" type="number" step="0.01" value={formData[`${l}_saldo`]} onChange={e => setFormData({...formData, [`${l}_saldo`]: e.target.value})} />
+                                                        <input 
+                                                            className="input" 
+                                                            type="number" 
+                                                            step="0.01" 
+                                                            value={formData[`${l}_saldo`]} 
+                                                            onChange={e => {
+                                                                const sVal = parseFloat(e.target.value) || 0;
+                                                                const base = parseFloat(formData.valor) || 0;
+                                                                // Si el usuario edita el saldo directamente, opcionalmente ajustamos el pago?
+                                                                // Por ahora dejamos que el saldo sea libre pero sugerimos que editen el pago.
+                                                                setFormData({...formData, [`${l}_saldo`]: e.target.value});
+                                                            }} 
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -400,6 +461,46 @@ const ExtrasGeneral = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL PAGO RÁPIDO */}
+            {showPagoModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(2, 6, 23, 0.95)', zIndex: 10000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div className="glass" style={{ width: '450px', padding: '32px', borderRadius: '24px' }}>
+                        <h2 style={{ marginBottom: '8px' }}>Registrar Pago</h2>
+                        <p style={{ color: '#94a3b8', marginBottom: '24px', fontSize: '0.9rem' }}>Pagar servicio de <b>{selectedForPago?.nombre_cliente}</b></p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div className="form-group">
+                                <label className="label">Mes de inicio</label>
+                                <select className="input" value={pagoData.mes} onChange={e => setPagoData({...pagoData, mes: e.target.value})} style={{ background: '#1e293b' }}>
+                                    {months.map(m => <option key={m} value={m.toUpperCase()}>{m.toUpperCase()}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="label">Monto a pagar ($)</label>
+                                <input className="input" type="number" step="0.01" value={pagoData.monto} onChange={e => setPagoData({...pagoData, monto: e.target.value})} />
+                            </div>
+                            <div className="form-group">
+                                <label className="label">Baco / Método</label>
+                                <input className="input" value={pagoData.metodo} onChange={e => setPagoData({...pagoData, metodo: e.target.value})} />
+                            </div>
+                            <div className="form-group">
+                                <label className="label">Factura #</label>
+                                <input className="input" value={pagoData.factura} onChange={e => setPagoData({...pagoData, factura: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '32px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setShowPagoModal(false)} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', borderRadius: '10px', cursor: 'pointer' }}>Cerrar</button>
+                            <button onClick={handleConfirmPago} style={{ padding: '10px 30px', background: '#10b981', border: 'none', color: 'white', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer' }}>Confirmar Pago</button>
+                        </div>
                     </div>
                 </div>
             )}

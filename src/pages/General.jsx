@@ -251,7 +251,7 @@ const General = () => {
                           }}>
                             {col === 'total' ? (
                               (() => {
-                                const totalCobrado = parseFloat(c.pago_mensual || 0) + parseFloat(c.plus_pagado || 0) + parseFloat(c.adicional_pagado || 0);
+                                const totalCobrado = parseFloat(c.pago_mensual || 0);
                                 return (
                                   <span style={{
                                     color: totalCobrado > 0 ? '#4ade80' : 'var(--text-muted)',
@@ -262,11 +262,14 @@ const General = () => {
                                 );
                               })()
                             ) : col === 'saldo' ? (
-                              parseFloat(c.pago_mensual || 0) <= 0 ? (
-                                <span style={{ color: '#f87171' }}>Pendiente</span>
-                              ) : (
-                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.pago_mensual).toFixed(2)})</span>
-                              )
+                              (() => {
+                                const internetPagado = parseFloat(c.pago_mensual || 0) - parseFloat(c.plus_pagado || 0) - parseFloat(c.adicional_pagado || 0);
+                                return internetPagado <= 0 ? (
+                                  <span style={{ color: '#f87171' }}>Pendiente</span>
+                                ) : (
+                                  <span style={{ color: '#4ade80' }}>Pagado (${internetPagado.toFixed(2)})</span>
+                                );
+                              })()
                             ) : col === 'plus' ? (
                               parseFloat(c.plus_pagado || 0) > 0 ? (
                                 <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.plus_pagado).toFixed(2)})</span>
