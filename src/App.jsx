@@ -14,6 +14,8 @@ import Reportes from './pages/Reportes';
 import Configuraciones from './pages/Configuraciones';
 import ExtrasGeneral from './pages/ExtrasGeneral';
 import ExtraPagos from './pages/ExtraPagos';
+import HojaRuta from './pages/HojaRuta';
+
 
 function App() {
   return (
@@ -78,6 +80,12 @@ function App() {
             <Route path="extras-pagos" element={
               <ProtectedRoute roles={['administrador', 'secretario']}>
                 <ExtraPagos />
+              </ProtectedRoute>
+            } />
+
+            <Route path="hoja-ruta" element={
+              <ProtectedRoute roles={['administrador', 'tecnico']}>
+                <HojaRuta />
               </ProtectedRoute>
             } />
           </Route>

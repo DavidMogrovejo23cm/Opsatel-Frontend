@@ -119,4 +119,11 @@ export const configuracionService = {
   }
 };
 
+export const hojaRutaService = {
+  listar: () => api.get('/hoja-ruta/'),
+  crear: (data) => api.post('/hoja-ruta/', data),
+  actualizar: (id, data) => api.patch(`/hoja-ruta/${id}`, data),
+  eliminar: (id) => api.delete(`/hoja-ruta/${id}`),
+};
+
 export default api;

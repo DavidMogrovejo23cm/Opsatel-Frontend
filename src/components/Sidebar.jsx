@@ -12,10 +12,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   };
 
   const menuItems = [
-    { path: '/', label: 'Overview', icon: '📊', roles: ['administrador', 'secretario', 'tecnico'] },
+    { path: '/', label: 'Overview', icon: '📊', roles: ['administrador', 'secretario'] },
     { path: '/general', label: 'General', icon: '📋', roles: ['administrador', 'secretario', 'tecnico'] },
     { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador', 'secretario', 'tecnico'] },
     { path: '/tecnica', label: 'Tecnico', icon: '🔧', roles: ['administrador', 'tecnico', 'instalador'] },
+    { path: '/hoja-ruta', label: 'Hoja de Ruta', icon: '🗓️', roles: ['administrador', 'tecnico'] },
 
     { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador', 'secretario'] },
     { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'secretario'] },
@@ -23,10 +24,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
 
     // Extras
-    { path: '----', type: 'divider', roles: ['administrador', 'secretario'] },
+    { path: 'divider-1', type: 'divider', roles: ['administrador', 'secretario'] },
     { path: '/extras-general', label: 'Extras Gral', icon: '🌍', roles: ['administrador', 'secretario'] },
     { path: '/extras-pagos', label: 'Extra Pagos', icon: '💸', roles: ['administrador', 'secretario'] },
-    { path: '----', type: 'divider', roles: ['administrador', 'tecnico'] },
+    { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
   ];
 
   // Filtrar items según el rol del usuario
@@ -95,13 +96,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {filteredItems.map((item) => {
+          {filteredItems.map((item, index) => {
             if (item.type === 'divider') {
-              return <div key={item.path} style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '16px 0' }} />;
+              return <div key={`divider-${index}`} style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '16px 0' }} />;
             }
             return (
               <NavLink
-                key={item.path}
+                key={item.path || `item-${index}`}
                 to={item.path}
                 onClick={() => { if (window.innerWidth <= 1024) setIsOpen(false); }}
                 style={({ isActive }) => ({

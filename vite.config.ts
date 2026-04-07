@@ -14,10 +14,11 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://127.0.0.1:8000',
       '/clientes': 'http://127.0.0.1:8000',
-      '/extras': 'http://127.0.0.1:8000',
+      '/extras/': 'http://127.0.0.1:8000',
       '/configuraciones': 'http://127.0.0.1:8000',
       '/rutas_reportes': 'http://127.0.0.1:8000',
-      '/uploads': 'http://127.0.0.1:8000'
+      '/uploads': 'http://127.0.0.1:8000',
+      '/hoja-ruta': 'http://127.0.0.1:8000'
     }
   }
 })
