@@ -68,7 +68,7 @@ const Admin = () => {
 
     // El internet sugerido es el total_pago del backend (saldo + plan + plus) menos el plus
     const internetSugerido = (parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)).toFixed(2);
-    
+
     // El monto total consolidado para el campo "Monto" (lo que se va a pagar hoy)
     // Incluye el adicional que el backend mantiene separado del total_pago
     const montoTotalConsolidado = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0)).toFixed(2);
@@ -248,7 +248,6 @@ const Admin = () => {
             <>
 
               <button className="btn btn-secondary" style={{ width: window.innerWidth <= 480 ? '100%' : 'auto' }} onClick={ejecutarFacturacion}>⚙️ Facturación Mensual</button>
-              <button className="btn btn-primary" style={{ backgroundColor: '#f59e0b', width: window.innerWidth <= 480 ? '100%' : 'auto' }} onClick={liquidarTest}>💰 Liquidar Test</button>
             </>
           )}
         </div>
