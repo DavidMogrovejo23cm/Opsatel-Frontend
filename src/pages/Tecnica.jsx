@@ -704,3 +704,4 @@ const Tecnica = () => {
 };
 
 export default Tecnica;
+//este es un texto de prueba para validar commit sin erro del frontend
