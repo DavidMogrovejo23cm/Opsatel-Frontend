@@ -15,6 +15,7 @@ import Configuraciones from './pages/Configuraciones';
 import ExtrasGeneral from './pages/ExtrasGeneral';
 import ExtraPagos from './pages/ExtraPagos';
 import HojaRuta from './pages/HojaRuta';
+import Tickets from './pages/Tickets';
 
 
 function App() {
@@ -86,6 +87,11 @@ function App() {
             <Route path="hoja-ruta" element={
               <ProtectedRoute roles={['administrador', 'tecnico']}>
                 <HojaRuta />
+              </ProtectedRoute>
+            } />
+            <Route path="tickets" element={
+              <ProtectedRoute roles={['administrador']}>
+                <Tickets />
               </ProtectedRoute>
             } />
           </Route>

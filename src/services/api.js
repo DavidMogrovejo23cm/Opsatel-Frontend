@@ -127,4 +127,11 @@ export const hojaRutaService = {
   eliminar: (id) => api.delete(`/hoja-ruta/${id}`),
 };
 
+export const ticketsService = {
+  listar: () => api.get('/tickets/'),
+  crear: (data) => api.post('/tickets/', data),
+  actualizar: (id, data) => api.patch(`/tickets/${id}`, data),
+  eliminar: (id) => api.delete(`/tickets/${id}`),
+};
+
 export default api;

@@ -37,6 +37,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'secretario'] },
     { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador', 'secretario'] },
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
+    { path: '/tickets', label: 'Tickets Dev', icon: '🎫', roles: ['administrador'] },
 
     // Extras
     { path: 'divider-1', type: 'divider', roles: ['administrador', 'secretario'] },
