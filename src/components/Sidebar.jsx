@@ -4,7 +4,22 @@ import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { user, logout } = useAuth();
+  const [pendientesCount, setPendientesCount] = React.useState(0);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await clienteService.getPendientesCount();
+        setPendientesCount(res.data.count);
+      } catch (e) {
+        console.error("Error fetching pendientes count:", e);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000); // Actualiza cada 30 segundos
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -119,7 +134,22 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
                 })}
               >
-                <span>{item.icon}</span>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span>{item.icon}</span>
+                  {item.path === '/tecnica' && pendientesCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      left: '12px',
+                      width: '10px',
+                      height: '10px',
+                      background: '#ef4444',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(2, 6, 23, 1)',
+                      boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+                    }} />
+                  )}
+                </div>
                 <span style={{ fontWeight: 500 }}>{item.label}</span>
               </NavLink>
             );

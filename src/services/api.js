@@ -67,6 +67,7 @@ export const clienteService = {
   getHistorialReportes: () => api.get('/clientes/reportes/historial'),
   generarReporte: () => api.post('/clientes/reportes/generar'),
   getDashboardStats: () => api.get('/clientes/dashboard-stats'),
+  getPendientesCount: () => api.get('/clientes/pendientes-count'),
 };
 
 export const extrasService = {
