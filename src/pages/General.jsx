@@ -22,6 +22,9 @@ const General = () => {
     try {
       const response = await clienteService.listar();
       setClientes(response.data);
+      if (response.data.length > 0) {
+        console.log("DEBUG PRIMER CLIENTE:", response.data[0]);
+      }
       const planesResp = await configuracionService.getPlanes();
       setPlanesList(planesResp.data);
     } catch (error) {

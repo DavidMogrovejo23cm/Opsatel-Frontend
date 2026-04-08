@@ -58,7 +58,7 @@ const HojaRuta = () => {
             return clientes
                 .filter(c => c.estado?.toUpperCase() === 'PENDIENTE')
                 .sort((a, b) => a.id - b.id)
-                .slice(0, 10);
+                .slice(0, 30);
         }
         return clientes
             .filter(c => 
@@ -272,8 +272,8 @@ const HojaRuta = () => {
                                     />
                                     {filteredClients.length > 0 && (
                                         <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '5px', border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
-                                            <div style={{ padding: '8px 15px', background: 'rgba(255,255,255,0.05)', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
-                                                {clientSearch ? 'RESULTADOS DE BÚSQUEDA' : 'CLIENTES PENDIENTES DE ACTIVACIÓN'}
+                                            <div style={{ padding: '8px 15px', background: '#1e293b', fontSize: '0.7rem', color: '#818cf8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                {clientSearch ? '🔍 RESULTADOS DE BÚSQUEDA' : '🚩 CLIENTES PENDIENTES DE ACTIVACIÓN'}
                                             </div>
                                             {filteredClients.map(c => (
                                                 <div 
