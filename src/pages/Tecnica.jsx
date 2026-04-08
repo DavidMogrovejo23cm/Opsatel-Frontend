@@ -181,7 +181,8 @@ const Tecnica = () => {
       iptv_bouquets: checked ? '[1,2,5]' : '[]',
       iptv_outputs: checked ? '[1,2]' : '[]',
       // Prefer calculation from plus if it exists, otherwise use stored value
-      iptv_max_conn: checked ? ((parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2) : (selectedCliente.iptv_max_conn || 0)) : 0,
+      // La primera es gratis (+1), las extras se calculan del valor 'plus'
+      iptv_max_conn: checked ? ((parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2 + 1) : 1) : 0,
       plus: checked ? (selectedCliente.plus || '0') : '0'
     }));
   };

@@ -134,23 +134,26 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
                 })}
               >
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                   <span>{item.icon}</span>
+                  <span style={{ fontWeight: 500 }}>{item.label}</span>
+                  
                   {item.path === '/tecnica' && pendientesCount > 0 && (
-                    <span style={{
-                      position: 'absolute',
-                      top: '-4px',
-                      left: '12px',
-                      width: '10px',
-                      height: '10px',
-                      background: '#ef4444',
-                      borderRadius: '50%',
-                      border: '2px solid rgba(2, 6, 23, 1)',
-                      boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
-                    }} />
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        background: '#f87171',
+                        borderRadius: '50%',
+                        marginLeft: 'auto',
+                        boxShadow: '0 0 8px rgba(248, 113, 113, 0.8)'
+                      }}
+                    />
                   )}
                 </div>
-                <span style={{ fontWeight: 500 }}>{item.label}</span>
               </NavLink>
             );
           })}
