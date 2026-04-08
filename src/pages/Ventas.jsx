@@ -213,7 +213,7 @@ const Ventas = () => {
           gap: '20px'
         }}>
           <div className="input-group">
-            <label className="label">Nombre Completo</label>
+            <label className="label">Nombre Completo (Apellidos y Nombres)</label>
             <input className="input" name="nombre" value={formData.nombre} onChange={handleChange} required />
           </div>
           <div className="input-group">
@@ -271,7 +271,7 @@ const Ventas = () => {
             <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
           </div>
           <div className="input-group">
-            <label className="label">Pantallas IPTV ($2 c/u)</label>
+            <label className="label">Pantallas IPTV (Pantallas adicionales)</label>
             <input
               className="input"
               type="number"
@@ -326,60 +326,7 @@ const Ventas = () => {
               <option value="Pasaporte">Pasaporte</option>
             </select>
           </div>
-          <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
-            <label className="label">Ubicación</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                className="input"
-                name="ubicacion"
-                value={formData.ubicacion}
-                onChange={handleChange}
-                onPaste={(e) => {
-                  const pastedData = e.clipboardData.getData('text').trim();
 
-                  // 1. Detectar coordenadas decimales: -2.930955, -79.045381
-                  const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
-                  // 2. Extraer de URL de Google Maps: .../@-2.930955,-79.045381,15z
-                  const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-                  // 3. Detectar DMS estándar (Google Maps): 2°55'51.4"S 79°02'43.4"W
-                  const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
-
-                  let latDecimal, lngDecimal;
-
-                  const matchDD = pastedData.match(regexDD);
-                  const matchURL = pastedData.match(regexURL);
-                  const matchDMS = pastedData.match(regexDMS);
-
-                  if (matchDD) {
-                    latDecimal = parseFloat(matchDD[1]);
-                    lngDecimal = parseFloat(matchDD[2]);
-                  } else if (matchURL) {
-                    latDecimal = parseFloat(matchURL[1]);
-                    lngDecimal = parseFloat(matchURL[2]);
-                  } else if (matchDMS) {
-                    e.preventDefault();
-                    // Si ya es DMS, solo ajustamos el formato (coma y espacio)
-                    const latPart = matchDMS[1];
-                    const lngPart = matchDMS[2].replace('°', '° ');
-                    setFormData({ ...formData, ubicacion: `${latPart}, ${lngPart}` });
-                    return;
-                  }
-
-                  if (latDecimal !== undefined && lngDecimal !== undefined) {
-                    e.preventDefault();
-                    const latDMS = convertToDMS(latDecimal, "lat");
-                    const lngDMS = convertToDMS(lngDecimal, "lng");
-                    // Ajustar el formato: 2°55'51.44"S, 79° 2'43.37"W
-                    setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
-                  }
-                }}
-                placeholder="Lat, Long (Manual o GPS)"
-                style={{ flex: 1 }}
-              />
-              <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
-              <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
-            </div>
-          </div>
           <div className="input-group">
             <label className="label">Foto Cédula Frontal</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -463,6 +410,60 @@ const Ventas = () => {
           </div>
         </div>
 
+        <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+          <label className="label">Ubicación</label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              className="input"
+              name="ubicacion"
+              value={formData.ubicacion}
+              onChange={handleChange}
+              onPaste={(e) => {
+                const pastedData = e.clipboardData.getData('text').trim();
+
+                // 1. Detectar coordenadas decimales: -2.930955, -79.045381
+                const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
+                // 2. Extraer de URL de Google Maps: .../@-2.930955,-79.045381,15z
+                const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+                // 3. Detectar DMS estándar (Google Maps): 2°55'51.4"S 79°02'43.4"W
+                const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
+
+                let latDecimal, lngDecimal;
+
+                const matchDD = pastedData.match(regexDD);
+                const matchURL = pastedData.match(regexURL);
+                const matchDMS = pastedData.match(regexDMS);
+
+                if (matchDD) {
+                  latDecimal = parseFloat(matchDD[1]);
+                  lngDecimal = parseFloat(matchDD[2]);
+                } else if (matchURL) {
+                  latDecimal = parseFloat(matchURL[1]);
+                  lngDecimal = parseFloat(matchURL[2]);
+                } else if (matchDMS) {
+                  e.preventDefault();
+                  // Si ya es DMS, solo ajustamos el formato (coma y espacio)
+                  const latPart = matchDMS[1];
+                  const lngPart = matchDMS[2].replace('°', '° ');
+                  setFormData({ ...formData, ubicacion: `${latPart}, ${lngPart}` });
+                  return;
+                }
+
+                if (latDecimal !== undefined && lngDecimal !== undefined) {
+                  e.preventDefault();
+                  const latDMS = convertToDMS(latDecimal, "lat");
+                  const lngDMS = convertToDMS(lngDecimal, "lng");
+                  // Ajustar el formato: 2°55'51.44"S, 79° 2'43.37"W
+                  setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
+                }
+              }}
+              placeholder="Lat, Long (Manual o GPS)"
+              style={{ flex: 1 }}
+            />
+            <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
+            <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
+          </div>
+        </div>
         {message && (
           <div style={{
             padding: '16px',
