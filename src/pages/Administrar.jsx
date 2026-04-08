@@ -58,7 +58,8 @@ const Administrar = () => {
       arrienda: cliente.arrienda || '',
       cuenta: cliente.cuenta || '',
       tercera_edad: cliente.tercera_edad || false,
-      precio_plan_especial: cliente.precio_plan_especial || 0
+      precio_plan_especial: cliente.precio_plan_especial || 0,
+      iptv_max_conn: cliente.iptv_max_conn || 0
     });
   };
 
@@ -174,7 +175,7 @@ const Administrar = () => {
                  <th style={cellStyle}>Nodo</th>
                 <th style={cellStyle}>Parroquia</th>
                 <th style={cellStyle}>Plan</th>
-                <th style={cellStyle}>Plus</th>
+                <th style={cellStyle}>IPTV (Pantallas)</th>
                 <th style={cellStyle}>Estado</th>
                 <th style={cellStyle}>Arrienda</th>
                 <th style={cellStyle}>Cuenta</th>
@@ -223,7 +224,21 @@ const Administrar = () => {
                           <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>TERCERA EDAD</span>
                         )}
                       </td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '60px'}} type="number" step="0.01" value={editData.plus} onChange={(e) => handleEditChange('plus', e.target.value)} /></td>
+                      <td style={cellStyle}>
+                        <input 
+                          style={{...inputStyle, width: '60px'}} 
+                          type="number" 
+                          value={editData.iptv_max_conn} 
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setEditData(prev => ({ 
+                              ...prev, 
+                              iptv_max_conn: val,
+                              plus: (val * 2).toString()
+                            }));
+                          }} 
+                        />
+                      </td>
                       <td style={cellStyle}>
                         <select style={inputStyle} value={editData.estado} onChange={(e) => handleEditChange('estado', e.target.value)}>
                           <option value="Pendiente" style={{ background: '#1e1b4b' }}>Pendiente</option>
@@ -268,7 +283,7 @@ const Administrar = () => {
                        <td style={cellStyle}>{c.nodo || '-'}</td>
                       <td style={cellStyle}>{c.parroquia || '-'}</td>
                       <td style={cellStyle}>{c.plan}</td>
-                      <td style={cellStyle}>{c.plus || '0'}</td>
+                      <td style={cellStyle}>{c.iptv_max_conn || '0'}</td>
                       <td style={cellStyle}>
                         <span style={{
                           padding: '3px 8px', borderRadius: '6px', fontSize: '0.7rem',

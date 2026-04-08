@@ -77,7 +77,7 @@ const ExtraPagos = () => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1>Extra Pagos (Cobranza)</h1>
+        <h1>Extra Pagos </h1>
         <input
           className="input"
           placeholder="Buscar por COD o Nombre..."
@@ -111,7 +111,7 @@ const ExtraPagos = () => {
                   <td style={{ fontSize: '0.85rem', color: '#4ade80' }}>${parseFloat(e.total_pagado || 0).toFixed(2)}</td>
                   <td style={{ fontSize: '0.8rem' }}>{e.activo}</td>
                   <td>
-                    <button 
+                    <button
                       onClick={() => openPagoModal(e)}
                       style={{
                         padding: '8px 16px',
@@ -146,51 +146,51 @@ const ExtraPagos = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 9999
         }}>
-            <div className="glass" style={{ width: '450px', padding: '32px' }}>
-                <h2 style={{ marginBottom: '8px' }}>Registrar Pago Extra</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
-                    Cliente: <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedExtra?.nombre_cliente}</span>
-                </p>
+          <div className="glass" style={{ width: '450px', padding: '32px' }}>
+            <h2 style={{ marginBottom: '8px' }}>Registrar Pago Extra</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
+              Cliente: <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedExtra?.nombre_cliente}</span>
+            </p>
 
-                <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label className="label">Mes de Pago</label>
-                    <select className="input" value={pagoData.mes} onChange={(e) => setPagoData({...pagoData, mes: e.target.value})} style={{ background: '#1e1b4b' }}>
-                        {months.map(m => (
-                            <option key={m} value={m} style={{ background: '#1e1b4b' }}>{m}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label className="label">Monto a Cobrar ($)</label>
-                    <input className="input" type="number" step="0.01" value={pagoData.monto} onChange={(e) => setPagoData({...pagoData, monto: e.target.value})} />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label className="label">Método de Pago</label>
-                    <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({...pagoData, metodo: e.target.value})} style={{ background: '#1e1b4b' }}>
-                        <option value="EFECTIVO" style={{ background: '#1e1b4b' }}>EFECTIVO</option>
-                        {bancosList.map(b => (
-                            <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label className="label">Número de Factura</label>
-                    <input className="input" placeholder="Ej: 001-001-0001" value={pagoData.factura} onChange={(e) => setPagoData({...pagoData, factura: e.target.value})} />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '24px' }}>
-                    <label className="label">Referencia (Opcional)</label>
-                    <input className="input" value={pagoData.referencia} onChange={(e) => setPagoData({...pagoData, referencia: e.target.value})} />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
-                    <button className="btn btn-primary" onClick={handlePagar}>Registrar Pago</button>
-                </div>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Mes de Pago</label>
+              <select className="input" value={pagoData.mes} onChange={(e) => setPagoData({ ...pagoData, mes: e.target.value })} style={{ background: '#1e1b4b' }}>
+                {months.map(m => (
+                  <option key={m} value={m} style={{ background: '#1e1b4b' }}>{m}</option>
+                ))}
+              </select>
             </div>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Monto a Cobrar ($)</label>
+              <input className="input" type="number" step="0.01" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Método de Pago</label>
+              <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
+                <option value="EFECTIVO" style={{ background: '#1e1b4b' }}>EFECTIVO</option>
+                {bancosList.map(b => (
+                  <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Número de Factura</label>
+              <input className="input" placeholder="Ej: 001-001-0001" value={pagoData.factura} onChange={(e) => setPagoData({ ...pagoData, factura: e.target.value })} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="label">Referencia (Opcional)</label>
+              <input className="input" value={pagoData.referencia} onChange={(e) => setPagoData({ ...pagoData, referencia: e.target.value })} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handlePagar}>Registrar Pago</button>
+            </div>
+          </div>
         </div>,
         document.body
       )}

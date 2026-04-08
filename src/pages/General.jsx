@@ -101,11 +101,14 @@ const General = () => {
     }
   };
 
-  const filteredClientes = clientes.filter(c =>
-    c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.cedula?.includes(searchTerm) ||
-    c.id.toString().includes(searchTerm)
-  );
+  const filteredClientes = clientes
+    .filter(c =>
+      c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.cedula?.includes(searchTerm) ||
+      c.id.toString().includes(searchTerm) ||
+      c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.id - b.id);
 
   const allColumns = [
     "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
@@ -121,7 +124,7 @@ const General = () => {
         <div>
           <h1>Vista General de Clientes</h1>
           <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginTop: '4px' }}>
-            💡 Haz doble clic en cualquier celda (o un clic en Estado) para editar el valor.
+            💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
         <input
@@ -139,15 +142,15 @@ const General = () => {
             <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
               <tr>
                 {allColumns.map(col => (
-                  <th key={col} style={{ 
-                    padding: '12px', 
-                    borderBottom: '1px solid var(--glass-border)', 
+                  <th key={col} style={{
+                    padding: '12px',
+                    borderBottom: '1px solid var(--glass-border)',
                     borderRight: '1px solid var(--glass-border)',
-                    textTransform: 'uppercase', 
-                    whiteSpace: 'nowrap', 
-                    textAlign: 'left' 
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'left'
                   }}>
-                    {col === 'saldo' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col.replace('_', ' ')}
+                    {col === 'saldo' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col.replace('_', ' ')}
                   </th>
                 ))}
               </tr>
@@ -316,7 +319,7 @@ const General = () => {
                                   if (plan) precio = plan.precio;
                                 }
                                 return (
-                                  <span style={{ 
+                                  <span style={{
                                     color: precio > 0 ? (isSpecial ? '#f59e0b' : '#fbbf24') : 'var(--text-muted)',
                                     fontWeight: precio > 0 ? '600' : 'normal'
                                   }}>
@@ -332,7 +335,7 @@ const General = () => {
                                 {!c.cedula_frontal && !c.cedula_posterior && '-'}
                               </div>
                             ) : (
-                              c[col] || '-'
+                              c[col] || c[col?.toUpperCase()] || '-'
                             )}
                           </span>
                         )}

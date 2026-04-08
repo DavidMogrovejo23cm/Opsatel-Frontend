@@ -61,7 +61,7 @@ const Reportes = () => {
         <div>
           <h1>Reportes y Cierre de Mes</h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Aquí puedes generar el reporte de Excel, vaciando los campos de recibo de pago para el nuevo mes (las deudas/excedentes se mantienen).
+            Aquí puedes generar el reporte en Excel
           </p>
         </div>
 

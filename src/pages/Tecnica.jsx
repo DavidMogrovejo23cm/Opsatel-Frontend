@@ -12,6 +12,7 @@ const Tecnica = () => {
     dispositivo: '', potencia: '', nap: '',
     ubicacion: '', tecnico: '', activador: '',
     red: '', clave: '',
+    plus: '0',
     iptv_activar: false,
     iptv_user: '', iptv_pass: '', iptv_bouquets: '[]',
     iptv_exp_date: '', iptv_max_conn: 1, iptv_outputs: '[]',
@@ -29,7 +30,7 @@ const Tecnica = () => {
       setClientes(response.data.filter(c =>
         c.estado?.toUpperCase() === 'EN ACTIVACIÓN' ||
         c.estado?.toUpperCase() === 'PENDIENTE'
-      ));
+      ).sort((a, b) => a.id - b.id));
 
       const [paRes, puRes] = await Promise.all([
         configuracionService.getNodos(),
@@ -77,6 +78,18 @@ const Tecnica = () => {
     setSelectedCliente(cliente);
     setHasBreach(false);
     setEditUbicacion(false);
+
+    const hasIptv = (cliente.iptv_max_conn || 0) > 0 || (parseFloat(cliente.plus || 0) > 0);
+
+    // Generar username: ID + Primer Apellido + Primera Letra Nombre
+    const nameParts = (cliente.nombre || '').trim().split(' ').filter(p => p.length > 0);
+    let generatedUser = cliente.id.toString();
+    if (nameParts.length >= 2) {
+      generatedUser += nameParts[0].toLowerCase() + nameParts[1][0].toLowerCase();
+    } else if (nameParts.length === 1) {
+      generatedUser += nameParts[0].toLowerCase();
+    }
+
     setFormData({
       mac: '',
       puerto: '', ont: '', servicio: '', breach: '',
@@ -85,9 +98,15 @@ const Tecnica = () => {
       ubicacion: cliente.ubicacion || '',
       tecnico: '', activador: '',
       red: '', clave: '',
-      iptv_activar: false,
-      iptv_user: '', iptv_pass: '', iptv_bouquets: '[]',
-      iptv_exp_date: '', iptv_max_conn: 1, iptv_outputs: '[]',
+      plus: cliente.plus || '0',
+      iptv_activar: hasIptv,
+      iptv_user: hasIptv ? generatedUser : '',
+      iptv_pass: hasIptv ? 'TV' + new Date().getFullYear() + '.@' : '',
+      iptv_bouquets: hasIptv ? '[1,2,5]' : '[]',
+      iptv_exp_date: hasIptv ? 'Nunca' : '',
+      // Prioritize the calculated screen count if plus is set, otherwise use stored iptv_max_conn
+      iptv_max_conn: (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2) : (cliente.iptv_max_conn || 0),
+      iptv_outputs: hasIptv ? '[1,2]' : '[]',
       iptv_notes: '', iptv_member_id: 1
     });
   };
@@ -116,20 +135,20 @@ const Tecnica = () => {
 
   const convertToDMS = (lat, lng) => {
     const toDMS = (val, isLat) => {
-        const absVal = Math.abs(val);
-        const degrees = Math.floor(absVal);
-        const minutesDecimal = (absVal - degrees) * 60;
-        const minutes = Math.floor(minutesDecimal);
-        const seconds = ((minutesDecimal - minutes) * 60).toFixed(2);
-        
-        let direction = "";
-        if (isLat) {
-            direction = val < 0 ? "S" : "N";
-        } else {
-            direction = val < 0 ? "O" : "E"; // O de Oeste
-        }
-        
-        return `${degrees}°${minutes}'${seconds}''${direction}`;
+      const absVal = Math.abs(val);
+      const degrees = Math.floor(absVal);
+      const minutesDecimal = (absVal - degrees) * 60;
+      const minutes = Math.floor(minutesDecimal);
+      const seconds = ((minutesDecimal - minutes) * 60).toFixed(2);
+
+      let direction = "";
+      if (isLat) {
+        direction = val < 0 ? "S" : "N";
+      } else {
+        direction = val < 0 ? "O" : "E"; // O de Oeste
+      }
+
+      return `${degrees}°${minutes}'${seconds}''${direction}`;
     };
 
     return `${toDMS(lat, true)} ${toDMS(lng, false)}`;
@@ -137,7 +156,12 @@ const Tecnica = () => {
 
   const handleIptvToggle = (e) => {
     const checked = e.target.checked;
-    
+
+    // Si se deselecciona, quitamos el costo y las pantallas del cliente (requerimiento user)
+    if (!checked) {
+      setSelectedCliente(prev => ({ ...prev, plus: "0", iptv_max_conn: 0 }));
+    }
+
     // Generar username: ID + Primer Apellido + Primera Letra Nombre
     const nameParts = (selectedCliente.nombre || '').trim().split(' ').filter(p => p.length > 0);
     let generatedUser = selectedCliente.id.toString();
@@ -155,7 +179,10 @@ const Tecnica = () => {
       iptv_pass: checked ? 'TV' + new Date().getFullYear() + '.@' : '',
       iptv_member_id: 1,
       iptv_bouquets: checked ? '[1,2,5]' : '[]',
-      iptv_outputs: checked ? '[1,2]' : '[]'
+      iptv_outputs: checked ? '[1,2]' : '[]',
+      // Prefer calculation from plus if it exists, otherwise use stored value
+      iptv_max_conn: checked ? ((parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2) : (selectedCliente.iptv_max_conn || 0)) : 0,
+      plus: checked ? (selectedCliente.plus || '0') : '0'
     }));
   };
 
@@ -189,39 +216,39 @@ const Tecnica = () => {
     let current = [];
     try { current = JSON.parse(formData.iptv_outputs || '[]'); } catch (e) { current = []; }
     if (current.includes(id)) {
-        current = current.filter(o => o !== id);
+      current = current.filter(o => o !== id);
     } else {
-        current.push(id);
+      current.push(id);
     }
     setFormData(prev => ({ ...prev, iptv_outputs: JSON.stringify(current) }));
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === 'ubicacion' && value.includes(',')) {
-        const parts = value.split(',').map(p => p.trim());
-        if (parts.length === 2) {
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const dms = convertToDMS(lat, lng);
-                setFormData({ ...formData, [name]: dms });
-                return;
-            }
+      const parts = value.split(',').map(p => p.trim());
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const dms = convertToDMS(lat, lng);
+          setFormData({ ...formData, [name]: dms });
+          return;
         }
+      }
     }
-    
+
     setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validación manual de campos obligatorios
     const requiredKeys = [
-      'mac', 'puerto', 'ont', 'servicio', 'id_port', 'service_port', 'ip', 
+      'mac', 'puerto', 'ont', 'servicio', 'id_port', 'service_port', 'ip',
       'dispositivo', 'potencia', 'nap', 'tecnico', 'activador', 'red', 'clave',
       'ubicacion'
     ];
@@ -229,7 +256,7 @@ const Tecnica = () => {
 
     // IPTV Validations
     if (formData.iptv_activar) {
-        requiredKeys.push('iptv_user', 'iptv_pass', 'iptv_bouquets', 'iptv_exp_date', 'iptv_member_id', 'iptv_max_conn', 'iptv_outputs');
+      requiredKeys.push('iptv_user', 'iptv_pass', 'iptv_bouquets', 'iptv_exp_date', 'iptv_member_id', 'iptv_max_conn', 'iptv_outputs');
     }
 
     const hayCamposVacios = requiredKeys.some(key => !formData[key]?.toString().trim());
@@ -249,10 +276,10 @@ const Tecnica = () => {
     } catch (error) {
       console.error("Error completo de activación:", error.response?.data);
       let detail = error.response?.data?.detail;
-      
+
       if (Array.isArray(detail)) {
         // Errores de validación Pydantic (422)
-        const msg = detail.map(err => `${err.loc[err.loc.length-1]}: ${err.msg}`).join('\n');
+        const msg = detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join('\n');
         alert(`Error de validación:\n${msg}`);
       } else {
         // Errores controlados por el backend (400, 404, etc)
@@ -384,35 +411,35 @@ const Tecnica = () => {
               )}
 
               <div className="input-group">
-                <label className="label">ID Port (Sistema)</label>
-                <input 
-                  className="input" 
-                  name="id_port" 
-                  value={formData.id_port} 
-                  readOnly 
-                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
+                <label className="label">ID Port</label>
+                <input
+                  className="input"
+                  name="id_port"
+                  value={formData.id_port}
+                  readOnly
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }}
                 />
               </div>
 
               <div className="input-group">
                 <label className="label">Service Port (Sistema)</label>
-                <input 
-                  className="input" 
-                  name="service_port" 
-                  value={formData.service_port} 
-                  readOnly 
-                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
+                <input
+                  className="input"
+                  name="service_port"
+                  value={formData.service_port}
+                  readOnly
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }}
                 />
               </div>
 
               <div className="input-group">
                 <label className="label">IP (Sistema)</label>
-                <input 
-                  className="input" 
-                  name="ip" 
-                  value={formData.ip} 
-                  readOnly 
-                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }} 
+                <input
+                  className="input"
+                  name="ip"
+                  value={formData.ip}
+                  readOnly
+                  style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', border: '1px solid #e2e8f0' }}
                 />
               </div>
 
@@ -423,13 +450,13 @@ const Tecnica = () => {
 
               <div className="input-group">
                 <label className="label">Potencia (Rango: -6 a -27)</label>
-                <input 
-                  className="input" 
-                  name="potencia" 
-                  value={formData.potencia} 
-                  onChange={handleChange} 
-                  required 
-                  placeholder="-21.5" 
+                <input
+                  className="input"
+                  name="potencia"
+                  value={formData.potencia}
+                  onChange={handleChange}
+                  required
+                  placeholder="-21.5"
                   style={{
                     borderColor: (() => {
                       const val = parseFloat(formData.potencia?.replace(',', '.'));
@@ -479,10 +506,10 @@ const Tecnica = () => {
               {/* IPTV ACTIVATION SECTION */}
               <div className="input-group" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: formData.iptv_activar ? '16px' : '0' }}>
-                  <input 
-                    type="checkbox" 
-                    id="activar_iptv" 
-                    checked={formData.iptv_activar} 
+                  <input
+                    type="checkbox"
+                    id="activar_iptv"
+                    checked={formData.iptv_activar}
                     onChange={handleIptvToggle}
                     style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#var(--primary)' }}
                   />
@@ -502,7 +529,7 @@ const Tecnica = () => {
                       <input className="input" name="iptv_pass" value={formData.iptv_pass} onChange={handleChange} placeholder="Password" />
                     </div>
                     <div className="input-group">
-                      <label className="label">Expiración (30 días por defecto)</label>
+                      <label className="label">Expiración </label>
                       <input className="input" name="iptv_exp_date" value={formData.iptv_exp_date} onChange={handleChange} placeholder="YYYY-MM-DD HH:mm" />
                     </div>
                     <div className="input-group">
@@ -515,78 +542,78 @@ const Tecnica = () => {
                     </div>
 
                     <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                        <label className="label">Bouquets (Plan de Canales)</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                           {[
-                             {id: 1, label: 'TV EN VIVO'},
-                             {id: 2, label: 'PELÍCULAS'},
-                             {id: 5, label: 'SERIES'},
-                             {id: 10, label: 'TV ADULTOS (+14)'}
-                           ].map(b => (
-                             <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                               <input 
-                                 type="checkbox" 
-                                 checked={JSON.parse(formData.iptv_bouquets || '[]').includes(b.id)}
-                                 onChange={() => handleBouquetChange(b.id)}
-                               />
-                               {b.label}
-                             </label>
-                           ))}
-                        </div>
+                      <label className="label">Bouquets (Plan de Canales)</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
+                        {[
+                          { id: 1, label: 'TV EN VIVO' },
+                          { id: 2, label: 'PELÍCULAS' },
+                          { id: 5, label: 'SERIES' },
+                          { id: 10, label: 'TV ADULTOS (+14)' }
+                        ].map(b => (
+                          <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={JSON.parse(formData.iptv_bouquets || '[]').includes(b.id)}
+                              onChange={() => handleBouquetChange(b.id)}
+                            />
+                            {b.label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                        <label className="label">Access Outputs</label>
-                        <div style={{ display: 'flex', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                           {[
-                             {id: 1, label: 'HLS'},
-                             {id: 2, label: 'MPEGTS'},
-                             {id: 3, label: 'RTMP'}
-                           ].map(o => (
-                             <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                               <input 
-                                 type="checkbox" 
-                                 checked={JSON.parse(formData.iptv_outputs || '[]').includes(o.id)}
-                                 onChange={() => handleOutputChange(o.id)}
-                               />
-                               {o.label}
-                             </label>
-                           ))}
-                        </div>
+                      <label className="label">Access Outputs</label>
+                      <div style={{ display: 'flex', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
+                        {[
+                          { id: 1, label: 'HLS' },
+                          { id: 2, label: 'MPEGTS' },
+                          { id: 3, label: 'RTMP' }
+                        ].map(o => (
+                          <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={JSON.parse(formData.iptv_outputs || '[]').includes(o.id)}
+                              onChange={() => handleOutputChange(o.id)}
+                            />
+                            {o.label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                        <label className="label">Admin Notes</label>
-                        <textarea className="input" name="iptv_notes" value={formData.iptv_notes} onChange={handleChange} style={{ height: '60px' }} />
+                      <label className="label">Admin Notes</label>
+                      <textarea className="input" name="iptv_notes" value={formData.iptv_notes} onChange={handleChange} style={{ height: '60px' }} />
                     </div>
 
                     <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
-                        <label className="label" style={{ color: '#818cf8', display: 'flex', justifyContent: 'space-between' }}>
-                          Script de Activación (SQL)
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              navigator.clipboard.writeText(getIptvScript(formData));
-                              alert('Script copiado al portapapeles');
-                            }}
-                            style={{ background: 'rgba(129, 140, 248, 0.2)', border: '1px solid #818cf8', color: '#818cf8', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                          >
-                            Copiar Script
-                          </button>
-                        </label>
-                        <pre style={{ 
-                          background: 'rgba(0,0,0,0.3)', 
-                          padding: '12px', 
-                          borderRadius: '8px', 
-                          fontSize: '0.75rem', 
-                          color: '#c7d2fe', 
-                          overflowX: 'auto',
-                          border: '1px solid rgba(129, 140, 248, 0.3)',
-                          fontFamily: 'monospace',
-                          whiteSpace: 'pre-wrap'
-                        }}>
-                          {getIptvScript(formData)}
-                        </pre>
+                      <label className="label" style={{ color: '#818cf8', display: 'flex', justifyContent: 'space-between' }}>
+                        Script de Activación (SQL)
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(getIptvScript(formData));
+                            alert('Script copiado al portapapeles');
+                          }}
+                          style={{ background: 'rgba(129, 140, 248, 0.2)', border: '1px solid #818cf8', color: '#818cf8', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Copiar Script
+                        </button>
+                      </label>
+                      <pre style={{
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        color: '#c7d2fe',
+                        overflowX: 'auto',
+                        border: '1px solid rgba(129, 140, 248, 0.3)',
+                        fontFamily: 'monospace',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {getIptvScript(formData)}
+                      </pre>
                     </div>
                   </motion.div>
                 )}
@@ -595,13 +622,13 @@ const Tecnica = () => {
               <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="label">Ubicación GPS (Copiada del Contrato)</label>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setEditUbicacion(!editUbicacion)}
-                    style={{ 
-                      fontSize: '0.7rem', 
-                      padding: '2px 8px', 
-                      background: editUbicacion ? '#ef444455' : '#3b82f655', 
+                    style={{
+                      fontSize: '0.7rem',
+                      padding: '2px 8px',
+                      background: editUbicacion ? '#ef444455' : '#3b82f655',
                       color: editUbicacion ? '#fca5a5' : '#93c5fd',
                       border: 'none',
                       borderRadius: '4px',
@@ -611,26 +638,26 @@ const Tecnica = () => {
                     {editUbicacion ? 'Bloquear' : 'Modificar Ubicación'}
                   </button>
                 </div>
-                <input 
-                  className="input" 
-                  name="ubicacion" 
-                  value={formData.ubicacion} 
+                <input
+                  className="input"
+                  name="ubicacion"
+                  value={formData.ubicacion}
                   onChange={handleChange}
-                  readOnly={!editUbicacion} 
-                  style={{ 
-                    background: !editUbicacion ? '#f1f5f9' : '#ffffff', 
-                    color: !editUbicacion ? '#d97706' : 'var(--text-main)', 
+                  readOnly={!editUbicacion}
+                  style={{
+                    background: !editUbicacion ? '#f1f5f9' : '#ffffff',
+                    color: !editUbicacion ? '#d97706' : 'var(--text-main)',
                     cursor: !editUbicacion ? 'not-allowed' : 'text',
                     border: '1px solid #e2e8f0'
-                  }} 
+                  }}
                 />
               </div>
 
               <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setSelectedCliente(null)}>Cancelar</button>
-                <button 
-                  type="button" 
-                  className="btn" 
+                <button
+                  type="button"
+                  className="btn"
                   style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#f87171' }}
                   onClick={async () => {
                     if (window.confirm(`¿Está seguro de eliminar a ${selectedCliente.nombre}? Esta acción liberará su ID.`)) {
@@ -647,8 +674,8 @@ const Tecnica = () => {
                 >
                   Eliminar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn btn-primary"
                   disabled={(() => {
                     const val = parseFloat(formData.potencia?.replace(',', '.'));

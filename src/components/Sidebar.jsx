@@ -49,6 +49,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     background: 'rgba(2, 6, 23, 0.8)', // Darker background to match the dashboard
     backdropFilter: 'blur(30px)',
     borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+    overflowY: 'auto',
   };
 
   return (

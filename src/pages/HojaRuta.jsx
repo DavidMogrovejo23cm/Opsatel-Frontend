@@ -52,12 +52,22 @@ const HojaRuta = () => {
     }, []);
 
     const filteredClients = useMemo(() => {
-        if (!clientSearch || !Array.isArray(clientes)) return [];
-        return clientes.filter(c => 
-            (c.nombre?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-            c.id?.toString().includes(clientSearch)) &&
-            c.estado !== 'Activo'
-        ).slice(0, 5);
+        if (!clientSearch && !Array.isArray(clientes)) return [];
+        // Si no hay búsqueda, mostramos un listado de los que están en 'Pendiente'
+        if (!clientSearch) {
+            return clientes
+                .filter(c => c.estado?.toUpperCase() === 'PENDIENTE')
+                .sort((a, b) => a.id - b.id)
+                .slice(0, 10);
+        }
+        return clientes
+            .filter(c => 
+                (c.nombre?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                c.id?.toString().includes(clientSearch)) &&
+                c.estado?.toUpperCase() !== 'ACTIVO'
+            )
+            .sort((a, b) => a.id - b.id)
+            .slice(0, 5);
     }, [clientSearch, clientes]);
 
     const handleSelectClient = (client) => {
@@ -258,9 +268,13 @@ const HojaRuta = () => {
                                         placeholder="Escribe nombre o ID del cliente..." 
                                         value={clientSearch}
                                         onChange={e => setClientSearch(e.target.value)}
+                                        onFocus={() => { if(!clientSearch) setClientSearch(''); }}
                                     />
                                     {filteredClients.length > 0 && (
                                         <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '5px', border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
+                                            <div style={{ padding: '8px 15px', background: 'rgba(255,255,255,0.05)', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                                                {clientSearch ? 'RESULTADOS DE BÚSQUEDA' : 'CLIENTES PENDIENTES DE ACTIVACIÓN'}
+                                            </div>
                                             {filteredClients.map(c => (
                                                 <div 
                                                     key={c.id} 
@@ -268,12 +282,27 @@ const HojaRuta = () => {
                                                     style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                                                     className="client-search-item"
                                                 >
-                                                    <div style={{ fontWeight: 'bold' }}>{c.nombre}</div>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>ID: {c.id} | {c.parroquia}</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ fontWeight: 'bold', color: '#fff' }}>{c.nombre}</div>
+                                                        <span style={{ 
+                                                            fontSize: '0.6rem', 
+                                                            padding: '2px 6px', 
+                                                            borderRadius: '4px', 
+                                                            background: 'rgba(245, 158, 11, 0.1)', 
+                                                            color: '#f59e0b',
+                                                            border: '1px solid rgba(245, 158, 11, 0.2)'
+                                                        }}>
+                                                            {c.estado}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>ID: {c.id} | {c.parroquia} | {c.celular}</div>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                                        * Se muestran clientes en estado 'Pendiente' o 'En Activación' por defecto.
+                                    </p>
                                     {selectedClient && (
                                         <div style={{ marginTop: '10px', background: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '0.85rem' }}>
                                             ✅ Cliente seleccionado: <b>{selectedClient.nombre}</b>

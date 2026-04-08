@@ -35,7 +35,8 @@ const Ventas = () => {
     parroquia: '',
     plan: '',
     plus: '0',
-    tiempo: '12',
+    iptv_max_conn: 0,
+    tiempo: '24',
     cedula_tipo: '',
     ubicacion: '',
     tercera_edad: false,
@@ -85,8 +86,8 @@ const Ventas = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (name === 'tercera_edad') {
-      setFormData({ 
-        ...formData, 
+      setFormData({
+        ...formData,
         tercera_edad: checked,
         plan: checked ? 'TERCERA EDAD' : '' // Reset plan if unchecked, or set to placeholder if checked
       });
@@ -145,7 +146,7 @@ const Ventas = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validación manual de campos select obligatorios
     if (!formData.cedula_tipo) {
       setMessage({ type: 'error', text: 'Seleccione el tipo de cédula.' });
@@ -163,9 +164,10 @@ const Ventas = () => {
       setMessage({ type: 'error', text: 'Seleccione el plan contratado.' });
       return;
     }
-    
+
     setLoading(true);
     setMessage(null);
+    console.log("Enviando contrato con parroquia:", formData.parroquia);
     try {
       const response = await clienteService.crear(formData);
       const clienteId = response.data.id;
@@ -181,7 +183,7 @@ const Ventas = () => {
       setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', tiempo: '12',
+        direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', iptv_max_conn: 0, tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         tercera_edad: false,
         precio_plan_especial: 0,
@@ -265,43 +267,58 @@ const Ventas = () => {
             </div>
           )}
           <div className="input-group">
-            <label className="label">Tiempo de Contrato (Meses)</label>
+            <label className="label">Tiempo de Contrato </label>
             <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
           </div>
           <div className="input-group">
-            <label className="label">IP TV (Monto Mensual)</label>
-            <input className="input" type="number" step="0.01" name="plus" value={formData.plus} onChange={handleChange} required />
+            <label className="label">Pantallas IPTV ($2 c/u)</label>
+            <input
+              className="input"
+              type="number"
+              name="iptv_max_conn"
+              value={formData.iptv_max_conn}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                setFormData({
+                  ...formData,
+                  iptv_max_conn: val,
+                  plus: (val * 2).toString()
+                });
+              }}
+              min="0"
+              required
+            />
           </div>
           <div className="input-group" style={{ display: 'flex', alignItems: 'center' }}>
             <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
-              <input 
-                type="checkbox" 
-                name="tercera_edad" 
-                checked={formData.tercera_edad} 
+              <input
+                type="checkbox"
+                name="tercera_edad"
+                checked={formData.tercera_edad}
                 onChange={handleChange}
                 style={{ width: '18px', height: '18px' }}
               />
-              Tercera Edad (Plan Especial)
+              Tercera Edad
             </label>
           </div>
           {formData.tercera_edad && (
             <div className="input-group">
               <label className="label">Valor Plan Especial ($)</label>
-              <input 
-                className="input" 
-                type="number" 
-                step="0.01" 
-                name="precio_plan_especial" 
-                value={formData.precio_plan_especial} 
-                onChange={handleChange} 
-                required 
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                name="precio_plan_especial"
+                value={formData.precio_plan_especial}
+                onChange={handleChange}
+                required
                 placeholder="Precio mensual"
                 style={{ border: '1px solid #f59e0b' }}
               />
             </div>
           )}
           <div className="input-group">
-            <label className="label">Tipo de Cédula (Cedula_Tipo)</label>
+            <label className="label">Tipo de Cédula</label>
             <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>
               <option value="">Seleccione tipo</option>
               <option value="Física">Física</option>
@@ -310,25 +327,25 @@ const Ventas = () => {
             </select>
           </div>
           <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
-            <label className="label">Coordenadas (Ubicación)</label>
+            <label className="label">Ubicación</label>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <input 
-                className="input" 
-                name="ubicacion" 
-                value={formData.ubicacion} 
-                onChange={handleChange} 
+              <input
+                className="input"
+                name="ubicacion"
+                value={formData.ubicacion}
+                onChange={handleChange}
                 onPaste={(e) => {
                   const pastedData = e.clipboardData.getData('text').trim();
-                  
+
                   // 1. Detectar coordenadas decimales: -2.930955, -79.045381
                   const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
                   // 2. Extraer de URL de Google Maps: .../@-2.930955,-79.045381,15z
                   const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
                   // 3. Detectar DMS estándar (Google Maps): 2°55'51.4"S 79°02'43.4"W
                   const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
-                  
+
                   let latDecimal, lngDecimal;
-                  
+
                   const matchDD = pastedData.match(regexDD);
                   const matchURL = pastedData.match(regexURL);
                   const matchDMS = pastedData.match(regexDMS);
@@ -356,8 +373,8 @@ const Ventas = () => {
                     setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
                   }
                 }}
-                placeholder="Lat, Long (Manual o GPS)" 
-                style={{ flex: 1 }} 
+                placeholder="Lat, Long (Manual o GPS)"
+                style={{ flex: 1 }}
               />
               <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
               <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
@@ -366,34 +383,34 @@ const Ventas = () => {
           <div className="input-group">
             <label className="label">Foto Cédula Frontal</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              <input 
-                className="input" 
-                placeholder="Pegar imagen (Ctrl+V)" 
+              <input
+                className="input"
+                placeholder="Pegar imagen (Ctrl+V)"
                 style={{ flex: 1, marginBottom: 0 }}
                 onPaste={(e) => handlePaste(e, setFileFrontal)}
                 readOnly
               />
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
+              <button
+                type="button"
+                className="btn btn-secondary"
                 style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
                 onClick={() => document.getElementById('file-frontal').click()}
               >
                 📁 Subir
               </button>
             </div>
-            <input 
+            <input
               id="file-frontal"
-              type="file" 
-              style={{ display: 'none' }} 
-              onChange={(e) => setFileFrontal(e.target.files[0])} 
-              accept="image/*" 
+              type="file"
+              style={{ display: 'none' }}
+              onChange={(e) => setFileFrontal(e.target.files[0])}
+              accept="image/*"
             />
             {fileFrontal && previewFrontal && (
               <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
                 <img src={previewFrontal} alt="Vista previa frontal" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setFileFrontal(null)}
                   style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                 >✕</button>
@@ -407,34 +424,34 @@ const Ventas = () => {
           <div className="input-group">
             <label className="label">Foto Cédula Posterior</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              <input 
-                className="input" 
-                placeholder="Pegar imagen (Ctrl+V)" 
+              <input
+                className="input"
+                placeholder="Pegar imagen (Ctrl+V)"
                 style={{ flex: 1, marginBottom: 0 }}
                 onPaste={(e) => handlePaste(e, setFilePosterior)}
                 readOnly
               />
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
+              <button
+                type="button"
+                className="btn btn-secondary"
                 style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
                 onClick={() => document.getElementById('file-posterior').click()}
               >
                 📁 Subir
               </button>
             </div>
-            <input 
+            <input
               id="file-posterior"
-              type="file" 
-              style={{ display: 'none' }} 
-              onChange={(e) => setFilePosterior(e.target.files[0])} 
-              accept="image/*" 
+              type="file"
+              style={{ display: 'none' }}
+              onChange={(e) => setFilePosterior(e.target.files[0])}
+              accept="image/*"
             />
             {filePosterior && previewPosterior && (
               <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
                 <img src={previewPosterior} alt="Vista previa posterior" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setFilePosterior(null)}
                   style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                 >✕</button>

@@ -207,10 +207,12 @@ const Admin = () => {
 
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
-  const filteredClientes = safeClientes.filter(c =>
-    c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.id?.toString().includes(searchTerm)
-  );
+  const filteredClientes = safeClientes
+    .filter(c =>
+      c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.id?.toString().includes(searchTerm)
+    )
+    .sort((a, b) => a.id - b.id);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
@@ -262,7 +264,7 @@ const Admin = () => {
                 <th>Nombre</th>
                 <th>Estado</th>
                 <th>Plan Base</th>
-                <th>IP TV</th>
+                <th>Pantallas IPTV</th>
                 <th>Comentarios</th>
                 <th>Pendiente</th>
                 <th>Acciones</th>
@@ -270,7 +272,10 @@ const Admin = () => {
             </thead>
             <tbody>
               {filteredClientes.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <tr key={c.id} style={{ 
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
+                }}>
                   <td style={{ padding: '12px' }}>{c.id}</td>
                   <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</td>
                   <td>
@@ -311,9 +316,19 @@ const Admin = () => {
                   <td>
                     <input
                       type="number"
-                      step="0.01"
-                      value={c.plus || 0}
-                      onChange={(e) => handlePlusChange(c.id, e.target.value)}
+                      value={(parseFloat(c.plus || 0) / 2) || 0}
+                      onChange={async (e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        try {
+                          await clienteService.updateAdmin(c.id, { 
+                            iptv_max_conn: val,
+                            plus: (val * 2).toString() 
+                          });
+                          fetchData();
+                        } catch (error) {
+                          console.error(error);
+                        }
+                      }}
                       style={{
                         width: '70px',
                         background: 'rgba(255,255,255,0.05)',
@@ -341,7 +356,20 @@ const Admin = () => {
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openPagoModal(c)}>
+                    <button 
+                      className="btn btn-primary" 
+                      style={{ 
+                        padding: '6px 12px', 
+                        fontSize: '0.8rem',
+                        opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.5 : 1,
+                        cursor: c.estado?.toUpperCase() === 'PENDIENTE' ? 'not-allowed' : 'pointer',
+                        filter: c.estado?.toUpperCase() === 'PENDIENTE' ? 'grayscale(1)' : 'none'
+                      }} 
+                      onClick={() => {
+                        if (c.estado?.toUpperCase() !== 'PENDIENTE') openPagoModal(c);
+                      }}
+                      disabled={c.estado?.toUpperCase() === 'PENDIENTE'}
+                    >
                       Pagar
                     </button>
                   </td>
@@ -479,7 +507,7 @@ const Admin = () => {
                   )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto Plus (IPTV):</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2) || 0} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                     ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
                   </span>
