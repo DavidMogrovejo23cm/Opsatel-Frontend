@@ -12,6 +12,9 @@ const HojaRuta = () => {
     const [selectedClient, setSelectedClient] = useState(null);
     const [showClientList, setShowClientList] = useState(false);
     const [activeTab, setActiveTab] = useState('clientes'); // 'clientes' o 'general'
+    const [clientSearchTerm, setClientSearchTerm] = useState('');
+    const [showTecnicoSuggestions, setShowTecnicoSuggestions] = useState(false);
+    const [tecnicoSearch, setTecnicoSearch] = useState('');
 
     const initialForm = {
         fecha: new Date().toISOString().split('T')[0],
@@ -53,12 +56,27 @@ const HojaRuta = () => {
     }, []);
 
 
-    const pendingClients = useMemo(() => {
+    const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
+        const term = clientSearchTerm.toLowerCase();
         return clientes
-            .filter(c => c.estado?.toUpperCase() === 'PENDIENTE' || c.estado?.toUpperCase() === 'EN ACTIVACIÓN')
+            .filter(c => c.estado?.toUpperCase() === 'ACTIVO')
+            .filter(c =>
+                !term ||
+                c.nombre?.toLowerCase().includes(term) ||
+                String(c.id).includes(term) ||
+                c.parroquia?.toLowerCase().includes(term)
+            )
             .sort((a, b) => a.id - b.id);
-    }, [clientes]);
+    }, [clientes, clientSearchTerm]);
+
+    const tecnicoSuggestions = useMemo(() => {
+        if (!Array.isArray(registros)) return [];
+        const all = registros.map(r => r.tecnico).filter(Boolean);
+        const unique = [...new Set(all)].sort();
+        if (!tecnicoSearch.trim()) return unique;
+        return unique.filter(t => t.toLowerCase().includes(tecnicoSearch.toLowerCase()));
+    }, [registros, tecnicoSearch]);
 
     const handleSelectClient = (client) => {
         setSelectedClient(client);
@@ -71,6 +89,7 @@ const HojaRuta = () => {
             parroquia: client.parroquia || ''
         });
         setShowClientList(false);
+        setClientSearchTerm('');
     };
 
     const handleEdit = (r) => {
@@ -326,34 +345,49 @@ const HojaRuta = () => {
                                 <div>
                                     {!editingId && (
                                         <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">Seleccionar Cliente</label>
+                                            <label className="label">Seleccionar Cliente Activo</label>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowClientList(!showClientList)}
                                                 className="btn btn-secondary"
                                                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}
                                             >
-                                                <span>{selectedClient ? selectedClient.nombre : '🔍 Buscar Cliente...'}</span>
+                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente Activo...'}</span>
                                                 <span>{showClientList ? '▲' : '▼'}</span>
                                             </button>
 
                                             {showClientList && (
-                                                <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '10px', border: '1px solid var(--glass-border)', overflowY: 'auto', maxHeight: '300px' }}>
-                                                    <div style={{ padding: '8px 15px', background: '#1e293b', fontSize: '0.7rem', color: '#818cf8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        🚩 PENDIENTES DE ACTIVACIÓN
+                                                <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '6px', border: '1px solid var(--glass-border)' }}>
+                                                    {/* Buscador interno */}
+                                                    <div style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                                        <input
+                                                            autoFocus
+                                                            className="input"
+                                                            placeholder="Filtrar por nombre, ID o parroquia..."
+                                                            value={clientSearchTerm}
+                                                            onChange={e => setClientSearchTerm(e.target.value)}
+                                                            style={{ padding: '8px 12px', fontSize: '0.8rem' }}
+                                                        />
                                                     </div>
-                                                    {pendingClients.map(c => (
-                                                        <div
-                                                            key={c.id}
-                                                            onClick={() => handleSelectClient(c)}
-                                                            style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                                                            className="client-search-item"
-                                                        >
-                                                            <div style={{ fontWeight: 'bold', color: '#fff' }}>{c.nombre}</div>
-                                                            <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>ID: {c.id} | {c.parroquia}</div>
+                                                    <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
+                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#4ade80', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                                                            ✅ CLIENTES ACTIVOS
                                                         </div>
-                                                    ))}
-                                                    {pendingClients.length === 0 && <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>No hay pendientes</div>}
+                                                        {activatedClients.map(c => (
+                                                            <div
+                                                                key={c.id}
+                                                                onClick={() => handleSelectClient(c)}
+                                                                style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                                                                className="client-search-item"
+                                                            >
+                                                                <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.82rem' }}>{c.nombre}</div>
+                                                                <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: '2px' }}>ID: {c.id} | {c.parroquia} | {c.plan}</div>
+                                                            </div>
+                                                        ))}
+                                                        {activatedClients.length === 0 && (
+                                                            <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>Sin resultados</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -438,9 +472,43 @@ const HojaRuta = () => {
                                             <input className="input" type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
                                         </div>
                                     </div>
-                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <div className="form-group" style={{ gridColumn: 'span 2', position: 'relative' }}>
                                         <label className="label">Técnico Responsable</label>
-                                        <input className="input" placeholder="Nombre del técnico" value={formData.tecnico} onChange={e => setFormData({ ...formData, tecnico: e.target.value })} required />
+                                        <input
+                                            className="input"
+                                            placeholder="Buscar o escribir técnico..."
+                                            value={formData.tecnico}
+                                            onChange={e => {
+                                                setFormData({ ...formData, tecnico: e.target.value });
+                                                setTecnicoSearch(e.target.value);
+                                                setShowTecnicoSuggestions(true);
+                                            }}
+                                            onFocus={() => { setTecnicoSearch(formData.tecnico); setShowTecnicoSuggestions(true); }}
+                                            onBlur={() => setTimeout(() => setShowTecnicoSuggestions(false), 150)}
+                                            required
+                                            autoComplete="off"
+                                        />
+                                        {showTecnicoSuggestions && tecnicoSuggestions.length > 0 && (
+                                            <div style={{
+                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+                                                background: 'rgba(15, 23, 42, 0.98)', border: '1px solid var(--glass-border)',
+                                                borderRadius: '10px', marginTop: '4px', overflowY: 'auto', maxHeight: '180px'
+                                            }}>
+                                                {tecnicoSuggestions.map(t => (
+                                                    <div
+                                                        key={t}
+                                                        onMouseDown={() => {
+                                                            setFormData({ ...formData, tecnico: t });
+                                                            setShowTecnicoSuggestions(false);
+                                                        }}
+                                                        className="client-search-item"
+                                                        style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '0.85rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                                                    >
+                                                        👷 {t}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Actividad Celular de Contacto</label>
