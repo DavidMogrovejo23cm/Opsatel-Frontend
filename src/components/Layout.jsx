@@ -7,9 +7,7 @@ const Layout = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <button className="hamburger-btn" onClick={() => setIsSidebarOpen(true)}>
-        ☰
-      </button>
+      <button className="hamburger-btn" onClick={() => setIsSidebarOpen(true)}>☰</button>
 
       <div 
         className={`blur-overlay ${isSidebarOpen ? 'active' : ''}`} 
@@ -38,6 +36,12 @@ const Layout = () => {
             width: 100% !important;
             padding: 20px !important;
             padding-top: 70px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          main {
+            padding: 12px !important;
+            padding-top: 60px !important;
           }
         }
       `}</style>

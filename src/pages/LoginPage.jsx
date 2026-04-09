@@ -27,40 +27,14 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#020617',
-      overflow: 'hidden',
-    }}>
+    <div className="login-wrapper">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        style={{
-          width: '100%',
-          maxWidth: '850px',
-          height: '550px',
-          display: 'flex',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          borderRadius: '30px',
-          overflow: 'hidden',
-          background: 'var(--bg-gradient)'
-        }}
+        className="login-card"
       >
         {/* Left Side: Gradient and Shapes */}
-        <div style={{
-          flex: '1.2',
-          background: 'linear-gradient(225deg, #1e1b4b 0%, #0f172a 100%)',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '40px',
-          overflow: 'hidden',
-          borderRight: '1px solid rgba(255, 255, 255, 0.1)'
-        }}>
+        <div className="login-left">
           {/* Decorative diagonal shapes */}
           <div style={{
             position: 'absolute',
@@ -110,17 +84,7 @@ const LoginPage = () => {
         </div>
 
         {/* Right Side: Form */}
-        <div style={{
-          flex: '1.8',
-          padding: '60px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          background: 'rgba(15, 23, 42, 0.3)',
-          backdropFilter: 'blur(20px)'
-        }}>
+        <div className="login-right">
           <div style={{ marginBottom: '40px', textAlign: 'center' }}>
             <div style={{
               width: '110px',

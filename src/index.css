@@ -139,13 +139,9 @@ select.input option {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Responsive Settings */
-@media (max-width: 1024px) {
-  :root {
-    --sidebar-width: 0px;
-  }
-}
-
+/* ─────────────────────────────────────────────
+   OVERLAY & HAMBURGER
+───────────────────────────────────────────── */
 .blur-overlay {
   position: fixed;
   top: 0;
@@ -166,50 +162,26 @@ select.input option {
   pointer-events: auto;
 }
 
-/* Base Responsive styles */
-@media (max-width: 768px) {
-  .glass-card {
-    padding: 16px;
-  }
-  
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.25rem; }
-
-  /* Responsive Tables */
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  /* Grid Layouts */
-  .grid-2, .grid-3, .grid-4 {
-    grid-template-columns: 1fr !important;
-  }
-}
-
 .hamburger-btn {
   display: none;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: white;
-  padding: 8px;
+  padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
   z-index: 110;
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   font-size: 1.25rem;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-@media (max-width: 1024px) {
-  .hamburger-btn {
-    display: flex;
-  }
-}
-
+/* ─────────────────────────────────────────────
+   CUSTOM SCROLLBAR
+───────────────────────────────────────────── */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

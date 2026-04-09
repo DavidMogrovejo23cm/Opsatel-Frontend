@@ -165,7 +165,7 @@ const HojaRuta = () => {
     return (
         <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <div className="page-top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
                         <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#a78bfa' : '#c084fc' }}>
                             {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
@@ -340,7 +340,7 @@ const HojaRuta = () => {
                                 <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
+                            <div className="hr-modal-grid" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
                                 {/* PANEL IZQUIERDO: SELECCIÓN E INFO */}
                                 <div>
                                     {!editingId && (
@@ -488,27 +488,7 @@ const HojaRuta = () => {
                                             required
                                             autoComplete="off"
                                         />
-                                        {showTecnicoSuggestions && tecnicoSuggestions.length > 0 && (
-                                            <div style={{
-                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-                                                background: 'rgba(15, 23, 42, 0.98)', border: '1px solid var(--glass-border)',
-                                                borderRadius: '10px', marginTop: '4px', overflowY: 'auto', maxHeight: '180px'
-                                            }}>
-                                                {tecnicoSuggestions.map(t => (
-                                                    <div
-                                                        key={t}
-                                                        onMouseDown={() => {
-                                                            setFormData({ ...formData, tecnico: t });
-                                                            setShowTecnicoSuggestions(false);
-                                                        }}
-                                                        className="client-search-item"
-                                                        style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '0.85rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                                                    >
-                                                        👷 {t}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+
                                     </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Actividad Celular de Contacto</label>
@@ -556,7 +536,7 @@ const HojaRuta = () => {
                                         <input className="input" value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
                                     </div>
                                     <div style={{ gridColumn: 'span 2' }}>
-                                        <label className="label">Observaciones de la Visita</label>
+                                        <label className="label">Razones de la Visita</label>
                                         <textarea className="input" rows="4" value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} placeholder="Detalle lo encontrado o lo que se requiere hacer..."></textarea>
                                     </div>
 
