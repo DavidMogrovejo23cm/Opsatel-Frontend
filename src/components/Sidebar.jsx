@@ -30,10 +30,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const menuItems = [
     { path: '/', label: 'Overview', icon: '📊', roles: ['administrador', 'secretario'] },
-    { path: '/general', label: 'General', icon: '📋', roles: ['administrador', 'secretario', 'tecnico'] },
-    { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador', 'secretario', 'tecnico'] },
-    { path: '/tecnica', label: 'Tecnico', icon: '🔧', roles: ['administrador', 'tecnico', 'instalador'] },
+    { path: '/general', label: 'General', icon: '📋', roles: ['administrador', 'secretario'] },
+    { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador', 'secretario'] },
     { path: '/hoja-ruta', label: 'Hoja de Ruta', icon: '🗓️', roles: ['administrador', 'tecnico'] },
+    { path: '/tecnica', label: 'Tecnico', icon: '🔧', roles: ['administrador', 'tecnico', 'instalador'] },
     { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador', 'secretario'] },
     { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'secretario'] },
     { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador', 'secretario'] },

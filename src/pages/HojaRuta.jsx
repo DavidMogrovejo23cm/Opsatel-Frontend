@@ -165,7 +165,7 @@ const HojaRuta = () => {
     return (
         <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
-                <div className="page-top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
                         <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#a78bfa' : '#c084fc' }}>
                             {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
@@ -340,7 +340,7 @@ const HojaRuta = () => {
                                 <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
                             </div>
 
-                            <div className="hr-modal-grid" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
                                 {/* PANEL IZQUIERDO: SELECCIÓN E INFO */}
                                 <div>
                                     {!editingId && (
@@ -488,7 +488,6 @@ const HojaRuta = () => {
                                             required
                                             autoComplete="off"
                                         />
-
                                     </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Actividad Celular de Contacto</label>
