@@ -361,7 +361,7 @@ const Configuraciones = () => {
                                 <button className="btn btn-secondary" onClick={() => { setIsEditingPlan(null); setNewPlan({ nombre: '', megas: '', precio: '' }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable(planes, ['id', 'nombre', 'megas', 'precio'], 'Planes')}
+                        {renderTable([...planes].sort((a, b) => parseFloat(a.precio) - parseFloat(b.precio)), ['id', 'nombre', 'megas', 'precio'], 'Planes')}
                     </div>
                 )}
 

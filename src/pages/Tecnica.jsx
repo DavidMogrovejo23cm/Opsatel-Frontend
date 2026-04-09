@@ -20,6 +20,7 @@ const Tecnica = () => {
   });
   const [hasBreach, setHasBreach] = useState(false);
   const [editUbicacion, setEditUbicacion] = useState(false);
+  const [searchPendientes, setSearchPendientes] = useState('');
 
   const [nodosList, setNodosList] = useState([]);
   const [puertosList, setPuertosList] = useState([]);
@@ -145,7 +146,7 @@ const Tecnica = () => {
       if (isLat) {
         direction = val < 0 ? "S" : "N";
       } else {
-        direction = val < 0 ? "O" : "E"; // O de Oeste
+        direction = val < 0 ? "W" : "E";
       }
 
       return `${degrees}°${minutes}'${seconds}''${direction}`;
@@ -308,11 +309,26 @@ const Tecnica = () => {
         display: (selectedCliente && window.innerWidth <= 1024) ? 'none' : 'block'
       }}>
         <h2 style={{ marginBottom: '16px' }}>Pendientes de Activación</h2>
-        {clientes.length === 0 ? (
+        <div style={{ marginBottom: '16px' }}>
+          <input
+            className="input"
+            placeholder="🔍 Buscar pendiente..."
+            value={searchPendientes}
+            onChange={(e) => setSearchPendientes(e.target.value)}
+            style={{ width: '100%', fontSize: '0.9rem' }}
+          />
+        </div>
+        {clientes.filter(c => 
+          c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) || 
+          c.id.toString().includes(searchSearchPendientes || '')
+        ).length === 0 ? (
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No hay pendientes de activación.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {clientes.map(c => (
+            {clientes.filter(c => 
+              c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) || 
+              c.id.toString().includes(searchPendientes)
+            ).map(c => (
               <div
                 key={c.id}
                 onClick={() => handleSelect(c)}
@@ -646,10 +662,10 @@ const Tecnica = () => {
                   onChange={handleChange}
                   readOnly={!editUbicacion}
                   style={{
-                    background: !editUbicacion ? '#f1f5f9' : '#ffffff',
-                    color: !editUbicacion ? '#d97706' : 'var(--text-main)',
+                    background: !editUbicacion ? '#f1f5f9' : 'rgba(255,255,255,0.05)',
+                    color: !editUbicacion ? '#d97706' : '#ffffff',
                     cursor: !editUbicacion ? 'not-allowed' : 'text',
-                    border: '1px solid #e2e8f0'
+                    border: editUbicacion ? '1px solid var(--primary)' : '1px solid #e2e8f0'
                   }}
                 />
               </div>

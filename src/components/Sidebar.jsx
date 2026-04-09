@@ -64,10 +64,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           flexDirection: 'column',
           padding: '24px',
           zIndex: 150,
-          background: 'rgba(99, 102, 241, 0.92)',
+          background: 'linear-gradient(180deg, #1a1040 0%, #1e1550 60%, #151035 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.08),'
+          borderRight: '1px solid rgba(255, 255, 255, 0.07)',
           overflowY: 'auto',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
