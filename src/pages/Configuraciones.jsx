@@ -18,7 +18,7 @@ const Configuraciones = () => {
     const [newNodo, setNewNodo] = useState({ nombre: '', base_ip: '' });
     const [newPlan, setNewPlan] = useState({ nombre: '', megas: '', precio: '' });
     const [newBanco, setNewBanco] = useState({ nombre: '' });
-    const [newPuerto, setNewPuerto] = useState({ numero: '', nodo_id: '' });
+    const [newPuerto, setNewPuerto] = useState({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
     const [searchPuerto, setSearchPuerto] = useState('');
     const [newUsuario, setNewUsuario] = useState({ username: '', password: '', rol: 'tecnico' });
     const [isEditingUser, setIsEditingUser] = useState(null);
@@ -125,7 +125,7 @@ const Configuraciones = () => {
                 const nodoId = parseInt(newPuerto.nodo_id);
 
                 if (isEditingPuerto) {
-                    await configuracionService.actualizarPuerto(isEditingPuerto, { nombre: nombreEsperado, nodo_id: nodoId });
+                    await configuracionService.actualizarPuerto(isEditingPuerto, { nombre: nombreEsperado, nodo_id: nodoId, limite_ip: newPuerto.limite_ip, limite_device: newPuerto.limite_device, limite_service_port: newPuerto.limite_service_port });
                     alert('Puerto actualizado');
                 } else {
                     // Verificar si ya existe un puerto con ese número en esa zona
@@ -133,10 +133,10 @@ const Configuraciones = () => {
                     if (existePuerto) {
                         return alert(`¡Error! El ${nombreEsperado} ya se encuentra registrado en esa zona.`);
                     }
-                    await configuracionService.crearPuerto({ nombre: nombreEsperado, nodo_id: nodoId });
+                    await configuracionService.crearPuerto({ nombre: nombreEsperado, nodo_id: nodoId, limite_ip: newPuerto.limite_ip, limite_device: newPuerto.limite_device, limite_service_port: newPuerto.limite_service_port });
                     alert('Puerto creado');
                 }
-                setNewPuerto({ numero: '', nodo_id: '' });
+                setNewPuerto({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
                 setIsEditingPuerto(null);
             } else if (type === 'Usuarios') {
                 if (!newUsuario.username || (!isEditingUser && !newUsuario.password)) return alert('Llene todos los campos');
@@ -218,7 +218,13 @@ const Configuraciones = () => {
     const handleEditPuerto = (puerto) => {
         setIsEditingPuerto(puerto.id);
         const numeroMatch = puerto.nombre.match(/\d+/);
-        setNewPuerto({ numero: numeroMatch ? numeroMatch[0] : '', nodo_id: puerto.nodo_id });
+        setNewPuerto({ 
+            numero: numeroMatch ? numeroMatch[0] : '', 
+            nodo_id: puerto.nodo_id,
+            limite_ip: puerto.limite_ip || '',
+            limite_device: puerto.limite_device || '',
+            limite_service_port: puerto.limite_service_port || ''
+        });
         setActiveTab('Puertos');
     };
 
@@ -397,12 +403,22 @@ const Configuraciones = () => {
                                 <label className="label">Número</label>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <span style={{ marginRight: '8px', color: 'var(--text-muted)' }}>Puerto</span>
-                                    <input type="number" min="1" className="input" style={{ margin: 0, width: '100px' }} value={newPuerto.numero} onChange={e => setNewPuerto({ ...newPuerto, numero: e.target.value })} placeholder="Ej. 1" />
+                                    <input type="number" min="0" className="input" style={{ margin: 0, width: '100px' }} value={newPuerto.numero} onChange={e => {
+                                        const val = e.target.value;
+                                        const num = parseInt(val);
+                                        let lim = '';
+                                        if (!isNaN(num)) {
+                                            const start = num * 128;
+                                            const end = start + 127;
+                                            lim = `${start} al ${end}`;
+                                        }
+                                        setNewPuerto({ ...newPuerto, numero: val, limite_ip: lim, limite_device: lim, limite_service_port: lim });
+                                    }} placeholder="Ej. 1" />
                                 </div>
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Puertos')}>{isEditingPuerto ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingPuerto && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingPuerto(null); setNewPuerto({ numero: '', nodo_id: '' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingPuerto(null); setNewPuerto({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' }); }}>Cancelar</button>
                             )}
                         </div>
                         <div style={{ marginTop: '20px' }}>
@@ -424,7 +440,7 @@ const Configuraciones = () => {
                                     nodoName.toLowerCase().includes(search)
                                 );
                             }),
-                            ['id', 'nombre', 'nodo_id'], 'Puertos'
+                            ['id', 'nombre', 'nodo_id', 'limite_ip', 'limite_device', 'limite_service_port'], 'Puertos'
                         )}
                     </div>
                 )}
