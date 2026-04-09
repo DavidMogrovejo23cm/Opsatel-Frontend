@@ -321,6 +321,12 @@ select.input option {
     padding: 40px 28px;
     flex: 1;
   }
+  .login-icon {
+    display: none !important;
+  }
+  .login-input {
+    padding-left: 12px !important;
+  }
 }
 
 /* ─────────────────────────────────────────────
