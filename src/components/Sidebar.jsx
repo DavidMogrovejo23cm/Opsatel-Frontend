@@ -64,10 +64,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           flexDirection: 'column',
           padding: '24px',
           zIndex: 150,
-          background: 'linear-gradient(170deg, #1e0b45 0%, #2d1065 50%, #1a0b3e 100%)',
-          backdropFilter: 'blur(30px)',
-          WebkitBackdropFilter: 'blur(30px)',
-          borderRight: '1px solid rgba(139,92,246,0.2)',
+          background: 'rgba(99, 102, 241, 0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08),'
           overflowY: 'auto',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
@@ -132,9 +132,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   borderRadius: '12px',
                   marginBottom: '4px',
                   transition: 'all 0.25s ease',
-                  background: isActive ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
-                  border: isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent',
-                  color: isActive ? '#e0d7ff' : 'rgba(196,181,253,0.7)',
+                  background: isActive ? 'rgba(255,255,255,0.18)' : 'transparent',
+                  border: isActive ? '1px solid rgba(255,255,255,0.25)' : 'none',
+                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.75)',
                   fontWeight: isActive ? '700' : '400',
                   textDecoration: 'none',
                 })}
