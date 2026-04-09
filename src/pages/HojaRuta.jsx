@@ -52,6 +52,24 @@ const HojaRuta = () => {
         fetchData();
     }, []);
 
+    const filteredRegistros = useMemo(() => {
+        if (!Array.isArray(registros)) return [];
+        
+        const search = searchTerm.toLowerCase();
+        let filtered = registros.filter(r => 
+            (r.nombre_cliente?.toLowerCase().includes(search) ||
+            r.tecnico?.toLowerCase().includes(search))
+        );
+
+        if (activeTab === 'clientes') {
+            // Un registro es de 'cliente' si tiene un ID válido mayor a 0
+            return filtered.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
+        } else {
+            // Un registro es 'general' si no tiene cliente_id, o es 0/null/vacío
+            return filtered.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
+        }
+    }, [registros, searchTerm, activeTab]);
+
     const pendingClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
         return clientes
@@ -140,7 +158,7 @@ const HojaRuta = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
-                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#818cf8' : '#fbbf24' }}>
+                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#a78bfa' : '#c084fc' }}>
                             {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
@@ -149,46 +167,46 @@ const HojaRuta = () => {
                                 : 'Actividades técnicas generales y soporte para terceros o registros externos.'}
                         </p>
                         
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '20px', background: 'rgba(255,255,255,0.03)', padding: '5px', borderRadius: '12px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', gap: '5px', marginTop: '20px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '15px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <button 
                                 onClick={() => setActiveTab('clientes')}
                                 style={{ 
-                                    padding: '8px 20px', 
-                                    borderRadius: '8px', 
+                                    padding: '10px 24px', 
+                                    borderRadius: '12px', 
                                     border: 'none', 
                                     cursor: 'pointer',
-                                    fontWeight: 'bold',
+                                    fontWeight: '900',
                                     fontSize: '0.75rem',
-                                    background: activeTab === 'clientes' ? 'var(--primary)' : 'transparent',
-                                    color: activeTab === 'clientes' ? 'white' : 'var(--text-muted)',
-                                    transition: '0.3s'
+                                    background: activeTab === 'clientes' ? '#7e22ce' : 'transparent',
+                                    color: activeTab === 'clientes' ? 'white' : '#94a3b8',
+                                    transition: '0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                             >
-                                👥 Clientes del Sistema
+                                SECCIÓN CLIENTES
                             </button>
                             <button 
                                 onClick={() => setActiveTab('general')}
                                 style={{ 
-                                    padding: '8px 20px', 
-                                    borderRadius: '8px', 
+                                    padding: '10px 24px', 
+                                    borderRadius: '12px', 
                                     border: 'none', 
                                     cursor: 'pointer',
-                                    fontWeight: 'bold',
+                                    fontWeight: '900',
                                     fontSize: '0.75rem',
-                                    background: activeTab === 'general' ? 'var(--primary)' : 'transparent',
-                                    color: activeTab === 'general' ? 'white' : 'var(--text-muted)',
-                                    transition: '0.3s'
+                                    background: activeTab === 'general' ? '#7e22ce' : 'transparent',
+                                    color: activeTab === 'general' ? 'white' : '#94a3b8',
+                                    transition: '0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                             >
-                                🏢 Hoja de Ruta General
+                                SECCIÓN GENERAL
                             </button>
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '16px' }}>
                         <input
                             className="input"
-                            placeholder="Buscar por cliente o técnico..."
-                            style={{ width: '300px', marginBottom: 0 }}
+                            placeholder="Buscar en esta sección..."
+                            style={{ width: '300px', marginBottom: 0, borderRadius: '15px', background: 'rgba(255,255,255,0.02)' }}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -203,13 +221,13 @@ const HojaRuta = () => {
                             style={{ 
                                 padding: '12px 28px', 
                                 borderRadius: '15px', 
-                                background: activeTab === 'clientes' ? 'var(--primary)' : '#fbbf24', 
-                                color: activeTab === 'clientes' ? 'white' : '#000', 
+                                background: '#7e22ce', 
+                                color: 'white', 
                                 border: 'none', 
                                 fontWeight: '900', 
                                 cursor: 'pointer', 
-                                boxShadow: activeTab === 'clientes' ? '0 10px 20px rgba(99, 102, 241, 0.4)' : '0 10px 20px rgba(251, 191, 36, 0.3)',
-                                transition: '0.3s'
+                                boxShadow: '0 8px 30px rgba(126, 34, 206, 0.25)',
+                                transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                         >
                             {activeTab === 'clientes' ? '+ Programar Instalación' : '+ Nueva Actividad General'}
@@ -239,7 +257,7 @@ const HojaRuta = () => {
                                 {filteredRegistros.map(r => (
                                     <tr key={r.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', transition: 'transform 0.2s' }}>
                                         <td style={{ padding: '12px 15px', borderRadius: '12px 0 0 12px' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#818cf8', fontSize: '0.8rem' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
                                                 {r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}
                                             </div>
                                         </td>
@@ -256,9 +274,9 @@ const HojaRuta = () => {
                                                     cursor: 'default',
                                                     display: 'inline-block',
                                                     whiteSpace: 'nowrap',
-                                                    background: r.estado === 'Realizado' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                                    color: r.estado === 'Realizado' ? '#10b981' : '#f59e0b',
-                                                    border: `1px solid ${r.estado === 'Realizado' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`
+                                                    background: r.estado === 'Realizado' ? 'rgba(167, 139, 250, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                                                    color: r.estado === 'Realizado' ? '#c084fc' : '#94a3b8',
+                                                    border: `1px solid ${r.estado === 'Realizado' ? 'rgba(167, 139, 250, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`
                                                 }}
                                             >
                                                 {r.estado}
