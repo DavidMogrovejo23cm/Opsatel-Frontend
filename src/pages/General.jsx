@@ -118,7 +118,7 @@ const General = () => {
     "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
-    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "saldo", "total_pago", "comentarios", "total"
+    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "saldo", "total_pago", "total"
   ];
 
   return (
