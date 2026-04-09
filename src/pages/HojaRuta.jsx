@@ -140,8 +140,14 @@ const HojaRuta = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: '900', margin: 0 }}>Hoja de Ruta</h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Programación de instalaciones y soporte técnico.</p>
+                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#818cf8' : '#fbbf24' }}>
+                            {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
+                        </h1>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
+                            {activeTab === 'clientes' 
+                                ? 'Gestión y programación de instalaciones para clientes registrados en el sistema.' 
+                                : 'Actividades técnicas generales y soporte para terceros o registros externos.'}
+                        </p>
                         
                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px', background: 'rgba(255,255,255,0.03)', padding: '5px', borderRadius: '12px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <button 
@@ -190,14 +196,23 @@ const HojaRuta = () => {
                             onClick={() => {
                                 setFormData({
                                     ...initialForm,
-                                    // Si estamos en tab general, por defecto no tiene cliente_id
                                     cliente_id: activeTab === 'clientes' ? '' : null
                                 });
                                 setShowModal(true);
                             }}
-                            style={{ padding: '12px 24px', borderRadius: '12px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+                            style={{ 
+                                padding: '12px 28px', 
+                                borderRadius: '15px', 
+                                background: activeTab === 'clientes' ? 'var(--primary)' : '#fbbf24', 
+                                color: activeTab === 'clientes' ? 'white' : '#000', 
+                                border: 'none', 
+                                fontWeight: '900', 
+                                cursor: 'pointer', 
+                                boxShadow: activeTab === 'clientes' ? '0 10px 20px rgba(99, 102, 241, 0.4)' : '0 10px 20px rgba(251, 191, 36, 0.3)',
+                                transition: '0.3s'
+                            }}
                         >
-                            + Nueva Ruta
+                            {activeTab === 'clientes' ? '+ Programar Instalación' : '+ Nueva Actividad General'}
                         </button>
                     </div>
                 </div>
@@ -206,17 +221,17 @@ const HojaRuta = () => {
                     <div style={{ overflowX: 'auto', borderRadius: '15px' }}>
                         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                             <thead>
-                                <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', letterSpacing: '0.08em' }}>
-                                    <th style={{ padding: '12px 15px', width: '110px' }}>Fecha Pedido</th>
-                                    <th style={{ width: '60px' }}>ID Ref</th>
-                                    <th style={{ width: '90px' }}>Estado</th>
-                                    <th style={{ width: '130px' }}>Programado</th>
-                                    <th style={{ width: '120px' }}>Técnico</th>
-                                    <th style={{ width: '220px' }}>Cliente</th>
-                                    <th style={{ width: '180px' }}>Ubicación</th>
-                                    <th style={{ width: '100px' }}>Caja NAP</th>
-                                    <th style={{ width: '130px' }}>Actividad</th>
-                                    <th style={{ minWidth: '200px' }}>Observación</th>
+                                <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', letterSpacing: '0.1em', opacity: 0.8 }}>
+                                    <th style={{ padding: '15px', width: '110px' }}>Fecha Pedido</th>
+                                    <th style={{ width: '80px' }}>{activeTab === 'clientes' ? 'ID Cliente' : 'Ref #'}</th>
+                                    <th style={{ width: '100px' }}>Estado</th>
+                                    <th style={{ width: '140px' }}>Programación</th>
+                                    <th style={{ width: '130px' }}>Técnico</th>
+                                    <th style={{ width: '240px' }}>{activeTab === 'clientes' ? 'Cliente' : 'Personal / Externo'}</th>
+                                    <th style={{ width: '180px' }}>Ubicación / Zona</th>
+                                    <th style={{ width: '110px' }}>Caja / Nap</th>
+                                    <th style={{ width: '140px' }}>Tipo Actividad</th>
+                                    <th style={{ minWidth: '220px' }}>Detalle / Observación</th>
                                     <th style={{ textAlign: 'right', paddingRight: '20px', width: '80px' }}>Acciones</th>
                                 </tr>
                             </thead>
