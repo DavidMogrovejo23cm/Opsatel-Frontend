@@ -52,23 +52,6 @@ const HojaRuta = () => {
         fetchData();
     }, []);
 
-    const filteredRegistros = useMemo(() => {
-        if (!Array.isArray(registros)) return [];
-        
-        const search = searchTerm.toLowerCase();
-        let filtered = registros.filter(r => 
-            (r.nombre_cliente?.toLowerCase().includes(search) ||
-            r.tecnico?.toLowerCase().includes(search))
-        );
-
-        if (activeTab === 'clientes') {
-            // Un registro es de 'cliente' si tiene un ID válido mayor a 0
-            return filtered.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
-        } else {
-            // Un registro es 'general' si no tiene cliente_id, o es 0/null/vacío
-            return filtered.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
-        }
-    }, [registros, searchTerm, activeTab]);
 
     const pendingClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
@@ -146,12 +129,19 @@ const HojaRuta = () => {
         }
     };
 
-    const filteredRegistros = Array.isArray(registros) 
-        ? registros.filter(r => 
-            r.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.tecnico?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        : [];
+    const filteredRegistros = useMemo(() => {
+        if (!Array.isArray(registros)) return [];
+        const search = searchTerm.toLowerCase();
+        const base = registros.filter(r =>
+            r.nombre_cliente?.toLowerCase().includes(search) ||
+            r.tecnico?.toLowerCase().includes(search)
+        );
+        if (activeTab === 'clientes') {
+            return base.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
+        } else {
+            return base.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
+        }
+    }, [registros, searchTerm, activeTab]);
 
     return (
         <>
@@ -162,18 +152,18 @@ const HojaRuta = () => {
                             {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
-                            {activeTab === 'clientes' 
-                                ? 'Gestión y programación de instalaciones para clientes registrados en el sistema.' 
+                            {activeTab === 'clientes'
+                                ? 'Gestión y programación de instalaciones para clientes registrados en el sistema.'
                                 : 'Actividades técnicas generales y soporte para terceros o registros externos.'}
                         </p>
-                        
+
                         <div style={{ display: 'flex', gap: '5px', marginTop: '20px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '15px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('clientes')}
-                                style={{ 
-                                    padding: '10px 24px', 
-                                    borderRadius: '12px', 
-                                    border: 'none', 
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '12px',
+                                    border: 'none',
                                     cursor: 'pointer',
                                     fontWeight: '900',
                                     fontSize: '0.75rem',
@@ -184,12 +174,12 @@ const HojaRuta = () => {
                             >
                                 SECCIÓN CLIENTES
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('general')}
-                                style={{ 
-                                    padding: '10px 24px', 
-                                    borderRadius: '12px', 
-                                    border: 'none', 
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '12px',
+                                    border: 'none',
                                     cursor: 'pointer',
                                     fontWeight: '900',
                                     fontSize: '0.75rem',
@@ -210,7 +200,7 @@ const HojaRuta = () => {
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
-                        <button 
+                        <button
                             onClick={() => {
                                 setFormData({
                                     ...initialForm,
@@ -218,14 +208,14 @@ const HojaRuta = () => {
                                 });
                                 setShowModal(true);
                             }}
-                            style={{ 
-                                padding: '12px 28px', 
-                                borderRadius: '15px', 
-                                background: '#7e22ce', 
-                                color: 'white', 
-                                border: 'none', 
-                                fontWeight: '900', 
-                                cursor: 'pointer', 
+                            style={{
+                                padding: '12px 28px',
+                                borderRadius: '15px',
+                                background: '#7e22ce',
+                                color: 'white',
+                                border: 'none',
+                                fontWeight: '900',
+                                cursor: 'pointer',
                                 boxShadow: '0 8px 30px rgba(126, 34, 206, 0.25)',
                                 transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
@@ -254,7 +244,22 @@ const HojaRuta = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredRegistros.map(r => (
+                                {(useMemo(() => {
+                                    if (!Array.isArray(registros)) return [];
+
+                                    const search = searchTerm.toLowerCase();
+                                    let filtered = registros.filter(r => (r.nombre_cliente?.toLowerCase().includes(search) ||
+                                        r.tecnico?.toLowerCase().includes(search))
+                                    );
+
+                                    if (activeTab === 'clientes') {
+                                        // Un registro es de 'cliente' si tiene un ID válido mayor a 0
+                                        return filtered.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
+                                    } else {
+                                        // Un registro es 'general' si no tiene cliente_id, o es 0/null/vacío
+                                        return filtered.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
+                                    }
+                                }, [registros, searchTerm, activeTab])).map(r => (
                                     <tr key={r.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', transition: 'transform 0.2s' }}>
                                         <td style={{ padding: '12px 15px', borderRadius: '12px 0 0 12px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
@@ -265,12 +270,12 @@ const HojaRuta = () => {
                                             {r.cliente_id}
                                         </td>
                                         <td style={{ padding: '12px 5px' }}>
-                                            <div 
-                                                style={{ 
-                                                    padding: '3px 10px', 
-                                                    borderRadius: '20px', 
-                                                    fontSize: '0.6rem', 
-                                                    fontWeight: 'bold', 
+                                            <div
+                                                style={{
+                                                    padding: '3px 10px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.6rem',
+                                                    fontWeight: 'bold',
                                                     cursor: 'default',
                                                     display: 'inline-block',
                                                     whiteSpace: 'nowrap',
@@ -337,7 +342,7 @@ const HojaRuta = () => {
                                     {!editingId && (
                                         <div style={{ marginBottom: '20px' }}>
                                             <label className="label">Seleccionar Cliente</label>
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => setShowClientList(!showClientList)}
                                                 className="btn btn-secondary"
@@ -349,12 +354,12 @@ const HojaRuta = () => {
 
                                             {showClientList && (
                                                 <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '10px', border: '1px solid var(--glass-border)', overflowY: 'auto', maxHeight: '300px' }}>
-                                                     <div style={{ padding: '8px 15px', background: '#1e293b', fontSize: '0.7rem', color: '#818cf8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                    <div style={{ padding: '8px 15px', background: '#1e293b', fontSize: '0.7rem', color: '#818cf8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                                         🚩 PENDIENTES DE ACTIVACIÓN
                                                     </div>
                                                     {pendingClients.map(c => (
-                                                        <div 
-                                                            key={c.id} 
+                                                        <div
+                                                            key={c.id}
                                                             onClick={() => handleSelectClient(c)}
                                                             style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                                                             className="client-search-item"
@@ -430,38 +435,38 @@ const HojaRuta = () => {
                                 <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <div style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Nombre de la Persona / Cliente</label>
-                                        <input 
-                                            className="input" 
-                                            placeholder="Ingrese nombre completo..." 
-                                            value={formData.nombre_cliente} 
-                                            onChange={e => setFormData({...formData, nombre_cliente: e.target.value})} 
-                                            required 
+                                        <input
+                                            className="input"
+                                            placeholder="Ingrese nombre completo..."
+                                            value={formData.nombre_cliente}
+                                            onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })}
+                                            required
                                         />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">Fecha Programación</label>
-                                        <input className="input" type="date" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
+                                        <input className="input" type="date" value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">Hora Programación</label>
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <input className="input" type="time" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
+                                            <input className="input" type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
                                         </div>
                                     </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Técnico Responsable</label>
-                                        <input className="input" placeholder="Nombre del técnico" value={formData.tecnico} onChange={e => setFormData({...formData, tecnico: e.target.value})} required />
+                                        <input className="input" placeholder="Nombre del técnico" value={formData.tecnico} onChange={e => setFormData({ ...formData, tecnico: e.target.value })} required />
                                     </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Actividad Celular de Contacto</label>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                            <select 
-                                                className="input" 
-                                                value={['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) ? formData.actividad : 'OTRO'} 
+                                            <select
+                                                className="input"
+                                                value={['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) ? formData.actividad : 'OTRO'}
                                                 onChange={e => {
                                                     const val = e.target.value;
-                                                    setFormData({...formData, actividad: val === 'OTRO' ? '' : val});
-                                                }} 
+                                                    setFormData({ ...formData, actividad: val === 'OTRO' ? '' : val });
+                                                }}
                                                 style={{ background: '#1e293b' }}
                                             >
                                                 <option value="INSTALACION">INSTALACION</option>
@@ -470,36 +475,36 @@ const HojaRuta = () => {
                                                 <option value="CAMBIO EQUIPO">CAMBIO EQUIPO</option>
                                                 <option value="OTRO">OTRO (Manual)</option>
                                             </select>
-                                            <input className="input" placeholder="Celular" value={formData.celular_cliente} onChange={e => setFormData({...formData, celular_cliente: e.target.value})} />
+                                            <input className="input" placeholder="Celular" value={formData.celular_cliente} onChange={e => setFormData({ ...formData, celular_cliente: e.target.value })} />
                                         </div>
                                     </div>
                                     {!['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) && (
                                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                             <label className="label">Especificar Actividad</label>
-                                            <input 
-                                                className="input" 
-                                                placeholder="Describa la actividad..." 
-                                                value={formData.actividad} 
-                                                onChange={e => setFormData({...formData, actividad: e.target.value.toUpperCase()})} 
-                                                required 
+                                            <input
+                                                className="input"
+                                                placeholder="Describa la actividad..."
+                                                value={formData.actividad}
+                                                onChange={e => setFormData({ ...formData, actividad: e.target.value.toUpperCase() })}
+                                                required
                                             />
                                         </div>
                                     )}
                                     <div className="form-group">
                                         <label className="label">Parroquia / Zona</label>
-                                        <input className="input" value={formData.parroquia} onChange={e => setFormData({...formData, parroquia: e.target.value})} />
+                                        <input className="input" value={formData.parroquia} onChange={e => setFormData({ ...formData, parroquia: e.target.value })} />
                                     </div>
                                     <div className="form-group">
                                         <label className="label">Ubicación de Caja (NAP / Referencia)</label>
-                                        <input className="input" placeholder="Ej: CAJA 1804-A" value={formData.ubicacion_caja} onChange={e => setFormData({...formData, ubicacion_caja: e.target.value})} />
+                                        <input className="input" placeholder="Ej: CAJA 1804-A" value={formData.ubicacion_caja} onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })} />
                                     </div>
                                     <div style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Dirección / Referencia de Ubicación</label>
-                                        <input className="input" value={formData.ubicacion_cliente} onChange={e => setFormData({...formData, ubicacion_cliente: e.target.value})} />
+                                        <input className="input" value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
                                     </div>
                                     <div style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Observaciones de la Visita</label>
-                                        <textarea className="input" rows="4" value={formData.observacion} onChange={e => setFormData({...formData, observacion: e.target.value})} placeholder="Detalle lo encontrado o lo que se requiere hacer..."></textarea>
+                                        <textarea className="input" rows="4" value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} placeholder="Detalle lo encontrado o lo que se requiere hacer..."></textarea>
                                     </div>
 
                                     <div style={{ gridColumn: 'span 2', display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '20px' }}>
