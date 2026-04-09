@@ -462,6 +462,8 @@ const Ventas = () => {
               placeholder="Lat, Long (Manual o GPS)"
               style={{ flex: 1 }}
             />
+            <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
+            <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
           </div>
         </div>
 
