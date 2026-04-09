@@ -132,14 +132,14 @@ const HojaRuta = () => {
     const filteredRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
         const search = searchTerm.toLowerCase();
-        const base = registros.filter(r =>
+        const bySearch = registros.filter(r =>
             r.nombre_cliente?.toLowerCase().includes(search) ||
             r.tecnico?.toLowerCase().includes(search)
         );
         if (activeTab === 'clientes') {
-            return base.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
+            return bySearch.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
         } else {
-            return base.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
+            return bySearch.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
         }
     }, [registros, searchTerm, activeTab]);
 
@@ -244,22 +244,7 @@ const HojaRuta = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(useMemo(() => {
-                                    if (!Array.isArray(registros)) return [];
-
-                                    const search = searchTerm.toLowerCase();
-                                    let filtered = registros.filter(r => (r.nombre_cliente?.toLowerCase().includes(search) ||
-                                        r.tecnico?.toLowerCase().includes(search))
-                                    );
-
-                                    if (activeTab === 'clientes') {
-                                        // Un registro es de 'cliente' si tiene un ID válido mayor a 0
-                                        return filtered.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
-                                    } else {
-                                        // Un registro es 'general' si no tiene cliente_id, o es 0/null/vacío
-                                        return filtered.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
-                                    }
-                                }, [registros, searchTerm, activeTab])).map(r => (
+                                {filteredRegistros.map(r => (
                                     <tr key={r.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', transition: 'transform 0.2s' }}>
                                         <td style={{ padding: '12px 15px', borderRadius: '12px 0 0 12px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
