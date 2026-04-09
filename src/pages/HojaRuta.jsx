@@ -60,7 +60,7 @@ const HojaRuta = () => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
         return clientes
-            .filter(c => c.estado?.toUpperCase() === 'ACTIVO')
+            .filter(c => c.estado?.toUpperCase() === 'PENDIENTE' || c.estado?.toUpperCase() === 'EN ACTIVACIÓN')
             .filter(c =>
                 !term ||
                 c.nombre?.toLowerCase().includes(term) ||
@@ -345,14 +345,14 @@ const HojaRuta = () => {
                                 <div>
                                     {!editingId && (
                                         <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">Seleccionar Cliente Activo</label>
+                                            <label className="label">Seleccionar Cliente Pendiente</label>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowClientList(!showClientList)}
                                                 className="btn btn-secondary"
                                                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}
                                             >
-                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente Activo...'}</span>
+                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente Pendiente...'}</span>
                                                 <span>{showClientList ? '▲' : '▼'}</span>
                                             </button>
 
@@ -370,8 +370,8 @@ const HojaRuta = () => {
                                                         />
                                                     </div>
                                                     <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
-                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#4ade80', fontWeight: 'bold', letterSpacing: '0.08em' }}>
-                                                            ✅ CLIENTES ACTIVOS
+                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#facc15', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                                                            ⏳ CLIENTES PENDIENTES DE ACTIVACIÓN
                                                         </div>
                                                         {activatedClients.map(c => (
                                                             <div
