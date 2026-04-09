@@ -64,10 +64,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           flexDirection: 'column',
           padding: '24px',
           zIndex: 150,
-          background: 'rgba(2, 6, 23, 0.9)',
+          background: 'linear-gradient(170deg, #1e0b45 0%, #2d1065 50%, #1a0b3e 100%)',
           backdropFilter: 'blur(30px)',
           WebkitBackdropFilter: 'blur(30px)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRight: '1px solid rgba(139,92,246,0.2)',
           overflowY: 'auto',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
@@ -102,11 +102,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
         {/* User info */}
         <div style={{
-          background: 'rgba(255,255,255,0.04)',
+          background: 'rgba(139,92,246,0.12)',
           padding: '12px',
           borderRadius: '12px',
           marginBottom: '24px',
-          border: '1px solid var(--glass-border)'
+          border: '1px solid rgba(139,92,246,0.2)'
         }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sesión como:</div>
           <div style={{ fontWeight: 'bold', textTransform: 'capitalize', marginTop: '2px' }}>{user?.username}</div>
@@ -132,10 +132,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   borderRadius: '12px',
                   marginBottom: '4px',
                   transition: 'all 0.25s ease',
-                  background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                  border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
-                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontWeight: isActive ? '600' : '400',
+                  background: isActive ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
+                  border: isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent',
+                  color: isActive ? '#e0d7ff' : 'rgba(196,181,253,0.7)',
+                  fontWeight: isActive ? '700' : '400',
                   textDecoration: 'none',
                 })}
               >
