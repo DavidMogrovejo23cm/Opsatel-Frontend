@@ -394,6 +394,7 @@ const HojaRuta = () => {
                                 </div>
 
                                 {/* FORMULARIO DE PROGRAMACIÓN */}
+                                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <div style={{ gridColumn: 'span 2' }}>
                                         <label className="label">Nombre de la Persona / Cliente</label>
                                         <input 
