@@ -41,6 +41,7 @@ const Ventas = () => {
     ubicacion: '',
     tercera_edad: false,
     precio_plan_especial: 0,
+    comentarios: '',
     fecha_firma: new Date().toISOString().split('T')[0]
   });
 
@@ -187,6 +188,7 @@ const Ventas = () => {
         cedula_tipo: '', ubicacion: '',
         tercera_edad: false,
         precio_plan_especial: 0,
+        comentarios: '',
         fecha_firma: new Date().toISOString().split('T')[0]
       });
       setFileFrontal(null);
@@ -460,9 +462,20 @@ const Ventas = () => {
               placeholder="Lat, Long (Manual o GPS)"
               style={{ flex: 1 }}
             />
-            <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
-            <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
           </div>
+        </div>
+
+        <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', marginTop: '10px' }}>
+          <label className="label">Comentarios del Contrato</label>
+          <textarea
+            className="input"
+            name="comentarios"
+            value={formData.comentarios}
+            onChange={handleChange}
+            placeholder="Ingrese cualquier observación o comentario relevante para el contrato..."
+            rows="3"
+            style={{ resize: 'vertical' }}
+          ></textarea>
         </div>
         {message && (
           <div style={{
