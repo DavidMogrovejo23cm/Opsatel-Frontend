@@ -1,5 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
 
+/* ─────────────────────────────────────────────
+   VARIABLES
+───────────────────────────────────────────── */
 :root {
   --primary: #6366f1;
   --secondary: #ec4899;
@@ -14,6 +17,9 @@
   --sidebar-width: 260px;
 }
 
+/* ─────────────────────────────────────────────
+   RESET
+───────────────────────────────────────────── */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -33,7 +39,9 @@ a {
   color: inherit;
 }
 
-
+/* ─────────────────────────────────────────────
+   GLASS
+───────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -54,7 +62,9 @@ a {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
 .btn {
   padding: 12px 24px;
   border-radius: 12px;
@@ -62,7 +72,7 @@ a {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -88,7 +98,9 @@ a {
   background: rgba(255, 255, 255, 0.1);
 }
 
-
+/* ─────────────────────────────────────────────
+   INPUTS
+───────────────────────────────────────────── */
 .input-group {
   margin-bottom: 20px;
 }
@@ -109,6 +121,7 @@ a {
   color: var(--text-main);
   outline: none;
   transition: border-color 0.3s ease;
+  font-family: 'Outfit', sans-serif;
 }
 
 select.input option {
@@ -121,34 +134,26 @@ select.input option {
   background: rgba(255, 255, 255, 0.07);
 }
 
+/* ─────────────────────────────────────────────
+   SCROLLBARS
+───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
 /* ─────────────────────────────────────────────
-   OVERLAY & HAMBURGER
+   SIDEBAR OVERLAY + HAMBURGER
 ───────────────────────────────────────────── */
 .blur-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 90;
@@ -164,35 +169,188 @@ select.input option {
 
 .hamburger-btn {
   display: none;
-  background: var(--glass-bg);
+  background: rgba(15, 23, 42, 0.9);
   border: 1px solid var(--glass-border);
   color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  z-index: 110;
+  z-index: 200;
   position: fixed;
-  top: 16px;
-  left: 16px;
-  font-size: 1.25rem;
+  top: 14px;
+  left: 14px;
+  font-size: 1.2rem;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  line-height: 1;
 }
 
 /* ─────────────────────────────────────────────
-   CUSTOM SCROLLBAR
+   LOGIN — desktop (usa clases en el JSX)
 ───────────────────────────────────────────── */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #020617;
+  padding: 20px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 10px;
+
+.login-card {
+  width: 100%;
+  max-width: 850px;
+  min-height: 550px;
+  display: flex;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  border-radius: 28px;
+  overflow: hidden;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+
+.login-left {
+  flex: 1.2;
+  background: linear-gradient(225deg, #1e1b4b 0%, #0f172a 100%);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+
+.login-right {
+  flex: 1.8;
+  padding: 56px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ─────────────────────────────────────────────
+   TABLET ≤ 1024px
+───────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  :root { --sidebar-width: 0px; }
+
+  .hamburger-btn { display: flex; }
+
+  /* Sidebar becomes a drawer */
+  .sidebar {
+    position: fixed !important;
+    transform: translateX(-100%) !important;
+    display: flex !important;
+    width: 270px !important;
+    z-index: 150 !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .sidebar.show-mobile {
+    transform: translateX(0) !important;
+  }
+
+  /* Main content full width */
+  main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 24px 20px !important;
+    padding-top: 68px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   MOBILE ≤ 768px
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  main {
+    padding: 16px !important;
+    padding-top: 64px !important;
+  }
+
+  .glass-card { padding: 16px !important; }
+
+  /* Tables scroll horizontally */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Grid auto-collapse */
+  [style*="gridTemplateColumns"],
+  [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page header stacks */
+  .page-top-bar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+  .page-top-bar > div:last-child {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .page-top-bar input,
+  .page-top-bar button {
+    width: 100% !important;
+  }
+
+  /* HojaRuta modal grid: 2col → 1col */
+  .hr-modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* LOGIN: hide left panel, form full width */
+  .login-card {
+    flex-direction: column;
+    min-height: unset;
+    border-radius: 20px;
+    max-height: 98vh;
+    overflow-y: auto;
+  }
+  .login-left { display: none; }
+  .login-right {
+    padding: 40px 28px;
+    flex: 1;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   SMALL MOBILE ≤ 480px
+───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  main {
+    padding: 10px !important;
+    padding-top: 58px !important;
+  }
+
+  .glass-card {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  h1 { font-size: 1.25rem !important; }
+  h2 { font-size: 1.05rem !important; }
+
+  .btn {
+    padding: 10px 16px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .input {
+    padding: 10px 12px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .login-wrapper { padding: 8px; }
+  .login-right { padding: 28px 16px; }
+  .login-card { border-radius: 16px; }
 }
