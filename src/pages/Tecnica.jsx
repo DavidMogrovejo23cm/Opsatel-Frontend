@@ -320,7 +320,7 @@ const Tecnica = () => {
         </div>
         {clientes.filter(c => 
           c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) || 
-          c.id.toString().includes(searchSearchPendientes || '')
+          c.id.toString().includes(searchPendientes)
         ).length === 0 ? (
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No hay pendientes de activación.</p>
         ) : (
