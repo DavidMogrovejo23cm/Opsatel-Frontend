@@ -60,7 +60,12 @@ const HojaRuta = () => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
         return clientes
-            .filter(c => c.estado?.toUpperCase() === 'PENDIENTE' || c.estado?.toUpperCase() === 'EN ACTIVACIÓN')
+            .filter(c => {
+                if (activeTab === 'clientes') {
+                    return c.estado?.toUpperCase() === 'PENDIENTE' || c.estado?.toUpperCase() === 'EN ACTIVACIÓN';
+                }
+                return c.estado?.toUpperCase() === 'ACTIVO';
+            })
             .filter(c =>
                 !term ||
                 c.nombre?.toLowerCase().includes(term) ||
@@ -68,7 +73,7 @@ const HojaRuta = () => {
                 c.parroquia?.toLowerCase().includes(term)
             )
             .sort((a, b) => a.id - b.id);
-    }, [clientes, clientSearchTerm]);
+    }, [clientes, clientSearchTerm, activeTab]);
 
     const tecnicoSuggestions = useMemo(() => {
         if (!Array.isArray(registros)) return [];
@@ -345,14 +350,14 @@ const HojaRuta = () => {
                                 <div>
                                     {!editingId && (
                                         <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">Seleccionar Cliente Pendiente</label>
+                                            <label className="label">{activeTab === 'clientes' ? 'Seleccionar Cliente Pendiente' : 'Seleccionar Cliente Activo'}</label>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowClientList(!showClientList)}
                                                 className="btn btn-secondary"
                                                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}
                                             >
-                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente Pendiente...'}</span>
+                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : (activeTab === 'clientes' ? '🔍 Buscar Cliente Pendiente...' : '🔍 Buscar Cliente Activo...')}</span>
                                                 <span>{showClientList ? '▲' : '▼'}</span>
                                             </button>
 
@@ -370,8 +375,8 @@ const HojaRuta = () => {
                                                         />
                                                     </div>
                                                     <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
-                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#facc15', fontWeight: 'bold', letterSpacing: '0.08em' }}>
-                                                            ⏳ CLIENTES PENDIENTES DE ACTIVACIÓN
+                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: activeTab === 'clientes' ? '#facc15' : '#4ade80', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                                                            {activeTab === 'clientes' ? '⏳ CLIENTES PENDIENTES DE ACTIVACIÓN' : '✅ CLIENTES ACTIVOS'}
                                                         </div>
                                                         {activatedClients.map(c => (
                                                             <div
