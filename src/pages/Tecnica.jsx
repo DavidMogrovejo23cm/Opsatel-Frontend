@@ -106,7 +106,7 @@ const Tecnica = () => {
       iptv_bouquets: hasIptv ? '[1,2,5]' : '[]',
       iptv_exp_date: hasIptv ? 'Nunca' : '',
       // Prioritize the calculated screen count if plus is set, otherwise use stored iptv_max_conn
-      iptv_max_conn: (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2) : (cliente.iptv_max_conn || 0),
+      iptv_max_conn: (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2 + 1) : (cliente.iptv_max_conn || 1),
       iptv_outputs: hasIptv ? '[1,2]' : '[]',
       iptv_notes: '', iptv_member_id: 1
     });

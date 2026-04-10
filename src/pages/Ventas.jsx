@@ -35,7 +35,7 @@ const Ventas = () => {
     parroquia: '',
     plan: '',
     plus: '0',
-    iptv_max_conn: 0,
+    iptv_max_conn: 1,
     tiempo: '24',
     cedula_tipo: '',
     ubicacion: '',
@@ -278,12 +278,12 @@ const Ventas = () => {
               className="input"
               type="number"
               name="iptv_max_conn"
-              value={formData.iptv_max_conn}
+              value={formData.iptv_max_conn - 1}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
                 setFormData({
                   ...formData,
-                  iptv_max_conn: val,
+                  iptv_max_conn: val + 1,
                   plus: (val * 2).toString()
                 });
               }}
