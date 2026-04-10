@@ -15,195 +15,90 @@ const Tickets = () => {
             setLoading(true);
             const res = await ticketsService.listar();
             setTickets(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { console.error(err); } finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        fetchTickets();
-    }, []);
+    useEffect(() => { fetchTickets(); }, []);
 
     const handleSave = async () => {
-        if (!titulo || !contentRef.current.innerHTML) {
-            alert("Por favor ingrese título y contenido");
-            return;
-        }
+        if (!titulo || !contentRef.current.innerHTML) { alert("Complete todos los campos"); return; }
         setSubmitting(true);
         try {
-            await ticketsService.crear({
-                titulo,
-                contenido: contentRef.current.innerHTML
-            });
-            setShowModal(false);
-            setTitulo('');
-            if (contentRef.current) contentRef.current.innerHTML = '';
-            fetchTickets();
-        } catch (err) {
-            alert("Error al guardar ticket");
-        } finally {
-            setSubmitting(false);
-        }
+            await ticketsService.crear({ titulo, contenido: contentRef.current.innerHTML });
+            setShowModal(false); setTitulo(''); fetchTickets();
+        } catch (err) { alert("Error"); } finally { setSubmitting(false); }
     };
 
     const toggleEstado = async (id, currentEstado) => {
-        const nextEstado = currentEstado === 'Pendiente' ? 'Finalizado' : 'Pendiente';
         try {
-            await ticketsService.actualizar(id, { estado: nextEstado });
+            await ticketsService.actualizar(id, { estado: currentEstado === 'Pendiente' ? 'Finalizado' : 'Pendiente' });
             fetchTickets();
-        } catch (err) {
-            alert("Error al actualizar estado");
-        }
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm("¿Eliminar este ticket permanentemente?")) return;
-        try {
-            await ticketsService.eliminar(id);
-            fetchTickets();
-        } catch (err) {
-            alert("Error al eliminar ticket");
-        }
+        } catch (err) { alert("Error"); }
     };
 
     return (
-        <div className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
+            <div className="flex-between" style={{ marginBottom: '32px' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: '900', margin: 0 }}>Tickets de Desarrollo</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Reportes de errores y sugerencias para el equipo de desarrollo.</p>
+                    <h1>Tickets Dev</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Reportes de errores y sugerencias.</p>
                 </div>
-                <button 
-                    onClick={() => setShowModal(true)}
-                    className="btn btn-primary"
-                    style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 'bold' }}
-                >
-                    + Nuevo Ticket
-                </button>
+                <button onClick={() => setShowModal(true)} className="btn btn-primary">+ Nuevo Ticket</button>
             </div>
 
-            {loading ? <p>Cargando tickets...</p> : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+            {loading ? <p>Cargando...</p> : (
+                <div className="responsive-grid grid-2" style={{ gap: '20px' }}>
                     {tickets.map(t => (
-                        <motion.div 
-                            key={t.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="glass"
-                            style={{ 
-                                padding: '20px', 
-                                borderRadius: '20px', 
-                                border: '1px solid var(--glass-border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '15px',
-                                position: 'relative'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div 
-                                    style={{ 
-                                        padding: '4px 10px', 
-                                        borderRadius: '20px', 
-                                        fontSize: '0.7rem', 
-                                        fontWeight: 'bold',
-                                        background: t.estado === 'Finalizado' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                        color: t.estado === 'Finalizado' ? '#10b981' : '#f59e0b',
-                                        border: `1px solid ${t.estado === 'Finalizado' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
-                                        cursor: 'pointer'
-                                    }}
+                        <div key={t.id} className="glass" style={{ padding: '20px', borderRadius: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div className="flex-between">
+                                <span 
                                     onClick={() => toggleEstado(t.id, t.estado)}
+                                    style={{ 
+                                        padding: '4px 10px', borderRadius: '15px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer',
+                                        background: t.estado === 'Finalizado' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                        color: t.estado === 'Finalizado' ? '#10b981' : '#f59e0b'
+                                    }}
                                 >
                                     {t.estado}
-                                </div>
-                                <button onClick={() => handleDelete(t.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem', opacity: 0.6 }}>&times;</button>
+                                </span>
+                                <small style={{ color: 'var(--text-muted)' }}>{new Date(t.fecha_creacion).toLocaleDateString()}</small>
                             </div>
-
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>{t.titulo}</h3>
-                            
+                            <h3 style={{ margin: 0 }}>{t.titulo}</h3>
                             <div 
-                                style={{ 
-                                    fontSize: '0.9rem', 
-                                    color: 'rgba(255,255,255,0.8)', 
-                                    maxHeight: '200px', 
-                                    overflowY: 'auto',
-                                    padding: '10px',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '10px'
-                                }}
-                                className="ticket-content-preview"
-                                dangerouslySetInnerHTML={{ __html: t.contenido }}
+                                style={{ maxHeight: '150px', overflowY: 'auto', fontSize: '0.85rem', opacity: 0.8, padding: '10px', background: 'rgba(0,0,0,0.1)', borderRadius: '10px' }} 
+                                dangerouslySetInnerHTML={{ __html: t.contenido }} 
                             />
-
-                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>✍️ {t.autor}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(t.fecha_creacion).toLocaleDateString()}</span>
-                            </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             )}
 
             <AnimatePresence>
                 {showModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(2, 6, 23, 0.95)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass" style={{ width: '100%', maxWidth: '800px', padding: '40px', borderRadius: '30px' }}>
-                            <h2 style={{ marginBottom: '24px' }}>📝 Nuevo Ticket de Desarrollo</h2>
-                            
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label className="label">Título del Ticket</label>
-                                <input 
-                                    className="input" 
-                                    placeholder="Ej: Error en el cálculo de IPTV..." 
-                                    value={titulo}
-                                    onChange={e => setTitulo(e.target.value)}
-                                />
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass" style={{ width: '100%', maxWidth: '600px', padding: '30px', borderRadius: '24px' }}>
+                            <h2 style={{ marginBottom: '20px' }}>Nuevo Ticket</h2>
+                            <div className="input-group">
+                                <label className="label">Título</label>
+                                <input className="input" value={titulo} onChange={e => setTitulo(e.target.value)} />
                             </div>
-
-                            <div className="form-group">
-                                <label className="label">Descripción Detallada (Permite Pegar Fotos Ctrl+V)</label>
+                            <div className="input-group" style={{ marginTop: '15px' }}>
+                                <label className="label">Descripción</label>
                                 <div 
-                                    ref={contentRef}
-                                    contentEditable
-                                    style={{ 
-                                        width: '100%', 
-                                        minHeight: '300px', 
-                                        maxHeight: '450px', 
-                                        overflowY: 'auto',
-                                        background: 'rgba(255,255,255,0.04)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '15px',
-                                        padding: '15px',
-                                        outline: 'none',
-                                        color: 'white',
-                                        textAlign: 'left'
-                                    }}
-                                    className="rich-editor"
-                                    onPaste={(e) => {
-                                        // Filtro opcional para asegurar que solo pegue texto e imágenes
-                                    }}
+                                    ref={contentRef} 
+                                    contentEditable 
+                                    style={{ minHeight: '200px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '15px', outline: 'none' }} 
                                 />
                             </div>
-
-                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
-                                <button onClick={() => setShowModal(false)} className="btn btn-secondary">Cancelar</button>
-                                <button onClick={handleSave} disabled={submitting} className="btn btn-primary">
-                                    {submitting ? 'Guardando...' : 'Publicar Ticket'}
-                                </button>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                                <button className="btn btn-primary" onClick={handleSave} disabled={submitting}>Publicar</button>
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-
-            <style>{`
-                .rich-editor img { max-width: 100%; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1); }
-                .ticket-content-preview img { max-width: 100%; height: auto; border-radius: 8px; }
-                .ticket-content-preview { scrollbar-width: thin; }
-            `}</style>
-        </div>
+        </motion.div>
     );
 };
 

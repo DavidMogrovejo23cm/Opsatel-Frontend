@@ -50,18 +50,11 @@ const Reportes = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: window.innerWidth <= 768 ? 'stretch' : 'flex-start',
-        gap: '20px',
-        marginBottom: '24px'
-      }}>
+      <div className="flex-between" style={{ marginBottom: '24px' }}>
         <div>
           <h1>Reportes y Cierre de Mes</h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Aquí puedes generar el reporte en Excel
+            Generación de respaldos y cierre de ciclo financiero.
           </p>
         </div>
 
@@ -90,7 +83,7 @@ const Reportes = () => {
         ) : reportes.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>Aún no hay reportes generados.</p>
         ) : (
-          <div style={{ overflowX: 'auto', border: '1px solid var(--glass-border)', borderRadius: '12px' }}>
+          <div className="table-container">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <thead style={{ background: 'rgba(15, 23, 42, 0.95)' }}>
                 <tr>
