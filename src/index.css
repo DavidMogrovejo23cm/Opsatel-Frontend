@@ -135,40 +135,6 @@ select.input option {
 }
 
 /* ─────────────────────────────────────────────
-   LAYOUT UTILITIES
-───────────────────────────────────────────── */
-.responsive-grid {
-  display: grid !important;
-  gap: 20px;
-}
-
-.grid-4 { grid-template-columns: repeat(4, 1fr); }
-.grid-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-2 { grid-template-columns: repeat(2, 1fr); }
-
-.flex-between {
-  display: flex !important;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.modal-content-wrapper {
-  max-width: 900px;
-  width: 95%;
-  margin: auto;
-  display: flex;
-  gap: 20px;
-}
-
-/* ─────────────────────────────────────────────
    SCROLLBARS
 ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; }
@@ -315,21 +281,12 @@ select.input option {
   }
 
   /* Grid auto-collapse */
-  .grid-4, .grid-3, .grid-2, .responsive-grid {
+  [style*="gridTemplateColumns"],
+  [style*="grid-template-columns"] {
     grid-template-columns: 1fr !important;
   }
 
   /* Page header stacks */
-  .flex-between {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
-
-  .modal-content-wrapper {
-    flex-direction: column !important;
-  }
-
-  /* Specific page adjustements */
   .page-top-bar {
     flex-direction: column !important;
     align-items: flex-start !important;

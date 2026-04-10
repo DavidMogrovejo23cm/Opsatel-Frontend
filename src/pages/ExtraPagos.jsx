@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { extrasService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
@@ -10,9 +11,18 @@ const ExtraPagos = () => {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedExtra, setSelectedExtra] = useState(null);
 
-  const [pagoData, setPagoData] = useState({ monto: 0, metodo: 'EFECTIVO', mes: 'ENERO', referencia: '', factura: '' });
+  const [pagoData, setPagoData] = useState({
+    monto: 0,
+    metodo: 'EFECTIVO',
+    mes: 'ENERO',
+    referencia: '',
+    factura: ''
+  });
 
-  const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+  const months = [
+    "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+    "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+  ];
 
   const fetchData = async () => {
     try {
@@ -20,10 +30,28 @@ const ExtraPagos = () => {
       const banksResp = await configuracionService.getBancos();
       setExtras(resp.data);
       setBancosList(banksResp.data);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const openPagoModal = (extra) => {
+    setSelectedExtra(extra);
+    setPagoData({
+      monto: extra.valor || 0,
+      metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
+      mes: months[new Date().getMonth()],
+      referencia: '',
+      factura: ''
+    });
+    setShowPagoModal(true);
+  };
 
   const handlePagar = async () => {
     try {
@@ -34,78 +62,137 @@ const ExtraPagos = () => {
         referencia: pagoData.referencia || `Pago EXTRA - ${pagoData.mes}`,
         factura: pagoData.factura
       });
-      setShowPagoModal(false); fetchData();
-    } catch (err) { alert("Error"); }
+      setShowPagoModal(false);
+      fetchData();
+    } catch (err) {
+      alert("Error al registrar pago extra");
+    }
   };
 
-  const filteredExtras = extras.filter(e => e.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) || e.cod?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredExtras = extras.filter(e =>
+    e.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    e.cod?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div className="flex-between" style={{ marginBottom: '24px' }}>
-        <h1>Extra Pagos</h1>
-        <input className="input" placeholder="Buscar..." style={{ maxWidth: '250px', marginBottom: 0 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1>Extra Pagos </h1>
+        <input
+          className="input"
+          placeholder="Buscar por COD o Nombre..."
+          style={{ maxWidth: '300px', marginBottom: 0 }}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {loading ? <p>Cargando...</p> : (
-        <div className="table-container">
+      {loading ? <p>Cargando clientes extras...</p> : (
+        <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+              <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '12px' }}>COD</th>
-                <th>CLIENTE</th>
+                <th>NOMBRE CLIENTE</th>
+                <th>USUARIO</th>
                 <th>VALOR BASE</th>
-                <th>PAGADO</th>
+                <th>TOTAL PAGADO</th>
+                <th>ACTIVO</th>
                 <th>ACCIONES</th>
               </tr>
             </thead>
             <tbody>
               {filteredExtras.map(e => (
                 <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: '12px' }}>{e.cod}</td>
-                  <td>{e.nombre_cliente}</td>
-                  <td style={{ color: '#fbbf24', fontWeight: 'bold' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
-                  <td style={{ color: '#4ade80' }}>${parseFloat(e.total_pagado || 0).toFixed(2)}</td>
+                  <td style={{ padding: '12px', fontSize: '0.8rem' }}>{e.cod}</td>
+                  <td style={{ fontSize: '0.85rem' }}>{e.nombre_cliente}</td>
+                  <td style={{ fontSize: '0.8rem' }}>{e.usuario}</td>
+                  <td style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fbbf24' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
+                  <td style={{ fontSize: '0.85rem', color: '#4ade80' }}>${parseFloat(e.total_pagado || 0).toFixed(2)}</td>
+                  <td style={{ fontSize: '0.8rem' }}>{e.activo}</td>
                   <td>
-                    <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.7rem' }} onClick={() => { setSelectedExtra(e); setShowPagoModal(true); setPagoData({...pagoData, monto: e.valor}); }}>💰 Cobrar</button>
+                    <button
+                      onClick={() => openPagoModal(e)}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                      }}
+                    >
+                      💰 Cobrar
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {filteredExtras.length === 0 && <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>Sin resultados.</p>}
         </div>
       )}
 
-      {showPagoModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '15px' }}>
-          <div className="glass" style={{ width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '20px' }}>
-            <h2>Registrar Pago Extra</h2>
-            <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: '10px 0 20px' }}>{selectedExtra?.nombre_cliente}</p>
-            <div className="responsive-grid grid-2">
-                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                    <label className="label">Mes</label>
-                    <select className="input" value={pagoData.mes} onChange={e => setPagoData({...pagoData, mes: e.target.value})}>
-                        {months.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                </div>
-                <div className="input-group">
-                    <label className="label">Monto</label>
-                    <input className="input" type="number" value={pagoData.monto} onChange={e => setPagoData({...pagoData, monto: e.target.value})} />
-                </div>
-                <div className="input-group">
-                    <label className="label">Método</label>
-                    <select className="input" value={pagoData.metodo} onChange={e => setPagoData({...pagoData, metodo: e.target.value})}>
-                        <option value="EFECTIVO">EFECTIVO</option>
-                        {bancosList.map(b => <option key={b.id} value={b.nombre}>{b.nombre}</option>)}
-                    </select>
-                </div>
+      {showPagoModal && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass" style={{ width: '450px', padding: '32px' }}>
+            <h2 style={{ marginBottom: '8px' }}>Registrar Pago Extra</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
+              Cliente: <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedExtra?.nombre_cliente}</span>
+            </p>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Mes de Pago</label>
+              <select className="input" value={pagoData.mes} onChange={(e) => setPagoData({ ...pagoData, mes: e.target.value })} style={{ background: '#1e1b4b' }}>
+                {months.map(m => (
+                  <option key={m} value={m} style={{ background: '#1e1b4b' }}>{m}</option>
+                ))}
+              </select>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '20px', justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={handlePagar}>Pagar</button>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Monto a Cobrar ($)</label>
+              <input className="input" type="number" step="0.01" value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Método de Pago</label>
+              <select className="input" value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })} style={{ background: '#1e1b4b' }}>
+                <option value="EFECTIVO" style={{ background: '#1e1b4b' }}>EFECTIVO</option>
+                {bancosList.map(b => (
+                  <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="label">Número de Factura</label>
+              <input className="input" placeholder="Ej: 001-001-0001" value={pagoData.factura} onChange={(e) => setPagoData({ ...pagoData, factura: e.target.value })} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="label">Referencia (Opcional)</label>
+              <input className="input" value={pagoData.referencia} onChange={(e) => setPagoData({ ...pagoData, referencia: e.target.value })} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handlePagar}>Registrar Pago</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

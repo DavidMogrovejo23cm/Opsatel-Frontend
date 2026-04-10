@@ -282,7 +282,7 @@ const Dashboard = () => {
     <div>
       <h1 style={{ marginBottom: '32px' }}>Panel de Control</h1>
 
-      <div className="responsive-grid grid-4" style={{ marginBottom: '40px' }}>
+      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
         {cards.map((card, i) => (
           <motion.div
             key={card.title}
@@ -311,7 +311,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="responsive-grid grid-2" style={{ marginBottom: '40px' }}>
+      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
         <div className="glass-card glass" style={{ padding: '24px' }}>
           <h3 style={{ marginBottom: '24px' }}>🌐 Recaudación Internet</h3>
           <div style={{ width: '100%', height: '240px' }}>
@@ -468,7 +468,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="responsive-grid grid-2" style={{ marginBottom: '40px' }}>
+      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
         <div className="glass-card glass" style={{ padding: '24px', minHeight: '350px' }}>
           <h3 style={{ marginBottom: '24px' }}>📈 Estado de Servicios</h3>
           <div style={{ width: '100%', height: '280px' }}>
@@ -515,7 +515,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="responsive-grid grid-2">
+      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         <div className="glass-card glass" style={{ padding: '24px' }}>
           <h3 style={{ marginBottom: '16px' }}>📝 Últimos Pagos Registrados</h3>
           {loading ? <p>Cargando reportes...</p> : (
