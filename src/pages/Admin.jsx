@@ -216,23 +216,14 @@ const Admin = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: window.innerWidth <= 768 ? 'stretch' : 'flex-start',
-        gap: '20px',
-        marginBottom: '24px'
-      }}>
+      <div className="flex-between" style={{ marginBottom: '24px' }}>
         <div>
           <h1>Pagos y Cobros</h1>
         </div>
         <div style={{
           display: 'flex',
-          flexDirection: window.innerWidth <= 480 ? 'column' : 'row',
           gap: '12px',
-          alignItems: 'center',
-          width: window.innerWidth <= 768 ? '100%' : 'auto'
+          alignItems: 'center'
         }}>
           <input
             className="input"
@@ -256,7 +247,7 @@ const Admin = () => {
       </div>
 
       {loading ? <p>Cargando clientes...</p> : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
@@ -392,23 +383,15 @@ const Admin = () => {
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           zIndex: 9999, overflowY: 'auto', padding: '40px 20px'
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: window.innerWidth <= 1100 ? 'column' : 'row',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            gap: '20px',
-            maxWidth: '1600px',
-            width: '95%',
-            margin: 'auto'
-          }}>
+          <div className="modal-content-wrapper">
             {/* Panel de Observaciones Lateral */}
             <motion.div
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               className="glass"
               style={{
-                width: window.innerWidth <= 1100 ? '100%' : '300px',
+                width: '100%',
+                maxWidth: '300px',
                 padding: '24px',
                 borderRadius: '24px',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -468,7 +451,7 @@ const Admin = () => {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               className="glass"
-              style={{ width: window.innerWidth <= 1100 ? '100%' : '900px', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', position: 'relative' }}
+              style={{ width: '100%', maxWidth: '900px', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', position: 'relative' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h2 style={{ margin: 0 }}>Registrar Pago</h2>
