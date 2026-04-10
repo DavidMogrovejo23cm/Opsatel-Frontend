@@ -175,6 +175,14 @@ const Configuraciones = () => {
                     </div>
                 )}
 
+                {activeTab === 'Bancos' && (
+                    <div className="responsive-grid grid-2">
+                        <div className="input-group" style={{gridColumn: 'span 2'}}><label className="label">Nombre del Banco</label><input className="input" value={newBanco.nombre} onChange={e => setNewBanco({nombre: e.target.value.toUpperCase()})} /></div>
+                        <button className="btn btn-primary" onClick={() => handleCreate('Bancos')}>{isEditingBanco ? 'Actualizar' : 'Guardar'}</button>
+                        <div style={{gridColumn: 'span 2'}}>{renderTable(bancos, ['id', 'nombre'], 'Bancos')}</div>
+                    </div>
+                )}
+
                 {activeTab === 'Puertos' && (
                     <div className="responsive-grid grid-2">
                         <div className="input-group">
