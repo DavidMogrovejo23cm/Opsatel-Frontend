@@ -96,7 +96,8 @@ const Configuraciones = () => {
                 const planData = { 
                     nombre: newPlan.nombre, 
                     megas: parseInt(newPlan.megas) || 0,
-                    precio: parseFloat(newPlan.precio) 
+                    precio: parseFloat(newPlan.precio),
+                    pantallas: parseInt(newPlan.pantallas) || 1
                 };
                 if (isEditingPlan) {
                     await configuracionService.actualizarPlan(isEditingPlan, planData);
@@ -105,7 +106,7 @@ const Configuraciones = () => {
                     await configuracionService.crearPlan(planData);
                     alert('Plan creado');
                 }
-                setNewPlan({ nombre: '', megas: '', precio: '' });
+                setNewPlan({ nombre: '', megas: '', precio: '', pantallas: 1 });
                 setIsEditingPlan(null);
             } else if (type === 'Bancos') {
                 if (!newBanco.nombre?.trim()) return alert('El nombre es obligatorio');
@@ -205,7 +206,7 @@ const Configuraciones = () => {
 
     const handleEditPlan = (plan) => {
         setIsEditingPlan(plan.id);
-        setNewPlan({ nombre: plan.nombre, megas: plan.megas || '', precio: plan.precio });
+        setNewPlan({ nombre: plan.nombre, megas: plan.megas || '', precio: plan.precio, pantallas: plan.pantallas ?? 1 });
         setActiveTab('Planes');
     };
 
