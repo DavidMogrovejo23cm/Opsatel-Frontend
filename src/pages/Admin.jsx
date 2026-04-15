@@ -419,48 +419,75 @@ const Admin = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
                 <span style={{ fontSize: '1.5rem' }}>📝</span>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Observaciones</h3>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Notas del Cliente</h3>
               </div>
-              <textarea
-                value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
-                onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
-                placeholder="Escriba observaciones del cliente..."
-                style={{
-                  flex: 1,
-                  minHeight: '200px',
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(96, 165, 250, 0.2)',
+
+              {/* Comentarios de Contrato */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                  Comentario de Contrato
+                </label>
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '12px',
-                  color: 'var(--text-muted)',
                   padding: '12px',
                   fontSize: '0.85rem',
                   lineHeight: '1.6',
-                  resize: 'vertical',
-                  outline: 'none',
-                  fontFamily: 'inherit'
-                }}
-              />
-              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
-                Use "/" para separar párrafos en la Vista General.
-              </p>
-              <button
-                className="btn btn-secondary"
-                style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
-                onClick={async () => {
-                  try {
-                    await clienteService.updateAdmin(selectedCliente.id, {
-                      observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
-                    });
-                    alert('Observaciones guardadas correctamente.');
-                    fetchData();
-                  } catch (err) {
-                    alert('Error al guardar observaciones.');
-                  }
-                }}
-              >
-                💾 Guardar Observaciones
-              </button>
+                  color: 'rgba(255,255,255,0.7)',
+                  minHeight: '80px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {selectedCliente?.comentarios || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Sin comentarios...</span>}
+                </div>
+              </div>
+
+              {/* Observaciones Generales/Técnicas */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                  Observaciones Técnicas
+                </label>
+                <textarea
+                  value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
+                  onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
+                  placeholder="Escriba observaciones del cliente..."
+                  style={{
+                    flex: 1,
+                    minHeight: '120px',
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(96, 165, 250, 0.2)',
+                    borderRadius: '12px',
+                    color: 'var(--text-muted)',
+                    padding: '12px',
+                    fontSize: '0.85rem',
+                    lineHeight: '1.6',
+                    resize: 'vertical',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
+                  Use "/" para separar párrafos en la Vista General.
+                </p>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
+                  onClick={async () => {
+                    try {
+                      await clienteService.updateAdmin(selectedCliente.id, {
+                        observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
+                      });
+                      alert('Observaciones guardadas correctamente.');
+                      fetchData();
+                    } catch (err) {
+                      alert('Error al guardar observaciones.');
+                    }
+                  }}
+                >
+                  💾 Guardar Observaciones
+                </button>
+              </div>
             </motion.div>
 
             {/* Modal de Pago Principal */}

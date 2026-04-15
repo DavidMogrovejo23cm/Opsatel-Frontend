@@ -286,9 +286,21 @@ const HojaRuta = () => {
                                             </button>
                                         </td>
                                         <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px' }}>
-                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                                <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1.1rem' }} title="Editar">✏️</button>
-                                                <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' }} title="Eliminar">&times;</button>
+                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                {user.rol?.toLowerCase() === 'administrador' ? (
+                                                    <>
+                                                        <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1.1rem' }} title="Editar">✏️</button>
+                                                        <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' }} title="Eliminar">&times;</button>
+                                                    </>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleOpenObs(r)}
+                                                        className="btn btn-secondary"
+                                                        style={{ fontSize: '0.7rem', padding: '5px 10px' }}
+                                                    >
+                                                        📝 Observación
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -299,82 +311,181 @@ const HojaRuta = () => {
                 )}
             </motion.div>
 
-            {/* MODAL PRINCIPAL */}
+            {/* MODAL PRINCIPAL RESTAURADO COMO ESTABA ANTES */}
             <AnimatePresence>
                 {showModal && (
                     <div className="modal-overlay">
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass">
-                            <div className="modal-header">
-                                <h2>{editingId ? '✏️ Editar Registro' : (modalSource === 'CLIENTE' ? '🚀 Programar Instalación' : '⚙️ Nueva Actividad')}</h2>
-                                <button onClick={() => setShowModal(false)} className="close-btn">&times;</button>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '1000px' }}>
+                            <div className="modal-header" style={{ marginBottom: '20px' }}>
+                                <h2 style={{ margin: 0 }}>{editingId ? '✏️ Editar Registro' : (modalSource === 'CLIENTE' ? '🚀 Programar Instalación' : '⚙️ Nueva Actividad')}</h2>
+                                <button onClick={() => setShowModal(false)} className="close-btn" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="modal-grid">
-                                <div className="modal-side">
+                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 900 ? 'minmax(350px, 1fr) 2fr' : '1fr', gap: '30px' }}>
+                                {/* COLUMNA IZQUIERDA: BÚSQUEDA Y DATOS DEL CLIENTE */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {!editingId && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">Seleccionar Cliente ({modalSource})</label>
-                                            <button type="button" onClick={() => setShowClientList(!showClientList)} className="input" style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
-                                                {selectedClient ? selectedClient.nombre : '🔍 Buscar...'}
-                                                <span>{showClientList ? '▲' : '▼'}</span>
-                                            </button>
-                                            {showClientList && (
-                                                <div className="client-picker glass">
-                                                    <input className="input" placeholder="Nombre o ID..." value={clientSearchTerm} onChange={e => setClientSearchTerm(e.target.value)} />
-                                                    <div className="client-list">
+                                        <div>
+                                            <label className="label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar y Seleccionar Cliente ({modalSource})</label>
+                                            <div className="client-picker" style={{ position: 'relative' }}>
+                                                <input 
+                                                    className="input" 
+                                                    placeholder="Escriba nombre o ID..." 
+                                                    value={clientSearchTerm} 
+                                                    onChange={e => {
+                                                        setClientSearchTerm(e.target.value);
+                                                        setShowClientList(true);
+                                                    }} 
+                                                    onFocus={() => setShowClientList(true)}
+                                                    style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}
+                                                />
+                                                {showClientList && clientSearchTerm && (
+                                                    <div className="client-list glass" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, maxHeight: '250px', overflowY: 'auto' }}>
                                                         {activatedClients.map(c => (
-                                                            <div key={c.id} className="client-item" onClick={() => handleSelectClient(c)}>
-                                                                #{c.id} - {c.nombre}
+                                                            <div key={c.id} className="client-item" onClick={() => handleSelectClient(c)} style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                <div style={{ fontWeight: 'bold' }}>#{c.id} - {c.nombre}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{c.parroquia} | {c.celular}</div>
                                                             </div>
                                                         ))}
+                                                        {activatedClients.length === 0 && (
+                                                            <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>Sin resultados</div>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="client-info glass">
-                                        <h4>Datos seleccionados</h4>
-                                        <p><strong>Nombre:</strong> {formData.nombre_cliente || '-'}</p>
-                                        <p><strong>Parroquia:</strong> {formData.parroquia || '-'}</p>
-                                        <p><strong>Ubicación:</strong> {formData.ubicacion_cliente || '-'}</p>
-                                        <p><strong>Celular:</strong> {formData.celular_cliente || '-'}</p>
+
+                                    {/* CUADRO DE INFORMACIÓN DEL CLIENTE (CONTRACT DATA) */}
+                                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '20px', flex: 1 }}>
+                                        <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Datos Seleccionados</h3>
+                                        {selectedClient || editingId ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div>
+                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Nombre</label>
+                                                    <div style={{ fontSize: '0.85rem' }}>{formData.nombre_cliente || selectedClient?.nombre || '-'}</div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Celular</label>
+                                                        <div style={{ fontSize: '0.85rem' }}>{formData.celular_cliente || selectedClient?.celular || '-'}</div>
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Parroquia</label>
+                                                        <div style={{ fontSize: '0.85rem' }}>{formData.parroquia || selectedClient?.parroquia || '-'}</div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Ubicación Física</label>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{formData.ubicacion_cliente || selectedClient?.ubicacion || selectedClient?.direccion || '-'}</div>
+                                                </div>
+                                                {(selectedClient?.comentarios) && (
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
+                                                        <div style={{ fontSize: '0.75rem', color: '#fcd34d', fontStyle: 'italic' }}>{selectedClient.comentarios}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '40px 0', textAlign: 'center', opacity: 0.3 }}>
+                                                <div style={{ fontSize: '2rem' }}>👤</div>
+                                                <p style={{ fontSize: '0.7rem' }}>Seleccione un cliente para ver sus detalles</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="modal-form-fields">
+
+                                {/* COLUMNA DERECHA: FORMULARIO */}
+                                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div className="input-group">
-                                            <label className="label">Fecha</label>
-                                            <input type="date" className="input" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programación</label>
+                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
                                         </div>
                                         <div className="input-group">
-                                            <label className="label">Hora</label>
-                                            <input type="time" className="input" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora Programación</label>
+                                            <input type="time" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
                                         </div>
                                     </div>
-                                    <div className="input-group">
-                                        <label className="label">Técnico Responsable</label>
-                                        <input className="input" value={formData.tecnico} onChange={e => setFormData({...formData, tecnico: e.target.value})} placeholder="Nombre del técnico" required />
+                                    
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nombre Cliente Físico (Opcional si usó buscador)</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.nombre_cliente} onChange={e => setFormData({...formData, nombre_cliente: e.target.value})} placeholder="Nombre completo" required />
+                                        </div>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Técnico Responsable</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.tecnico} onChange={e => setFormData({...formData, tecnico: e.target.value})} placeholder="Nombre del técnico" required />
+                                        </div>
                                     </div>
-                                    <div className="input-group">
-                                        <label className="label">Actividad</label>
-                                        <input className="input" value={formData.actividad} onChange={e => setFormData({...formData, actividad: e.target.value.toUpperCase()})} required />
+
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Actividad a Realizar</label>
+                                            <select 
+                                                className="input" 
+                                                style={{ width: '100%', padding: '12px', boxSizing: 'border-box', background: '#1e293b' }}
+                                                value={['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) ? formData.actividad : 'OTRO'}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setFormData({ ...formData, actividad: val === 'OTRO' ? '' : val });
+                                                }}
+                                            >
+                                                <option value="INSTALACION">INSTALACION</option>
+                                                <option value="VISITA TECNICA">VISITA TECNICA</option>
+                                                <option value="FOCO ROJO">FOCO ROJO</option>
+                                                <option value="CAMBIO EQUIPO">CAMBIO EQUIPO</option>
+                                                <option value="OTRO">OTRO (Manual)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Celular Contacto</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.celular_cliente} onChange={e => setFormData({ ...formData, celular_cliente: e.target.value })} placeholder="Celular" />
+                                        </div>
                                     </div>
-                                    <div className="input-group">
-                                        <label className="label">Observaciones Generales</label>
-                                        <textarea className="input" rows="4" value={formData.observacion} onChange={e => setFormData({...formData, observacion: e.target.value})} placeholder="Detalles del pedido..."></textarea>
+
+                                    {!['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) && (
+                                        <div className="input-group">
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Especificar Actividad (Otro)</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.actividad} onChange={e => setFormData({ ...formData, actividad: e.target.value.toUpperCase() })} placeholder="Describa actividad..." required />
+                                        </div>
+                                    )}
+
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Parroquia / Sector</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.parroquia} onChange={e => setFormData({ ...formData, parroquia: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Caja NAP / Referencia Lógica</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_caja} onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })} placeholder="Ej: CAJA 1804" />
+                                        </div>
                                     </div>
-                                    <div className="modal-actions">
-                                        <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cancelar</button>
-                                        <button type="submit" className="btn btn-primary" disabled={submitting}>
-                                            {submitting ? 'Guardando...' : 'Confirmar'}
+
+                                    <div className="input-group">
+                                        <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dirección Física Exacta</label>
+                                        <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Problema Reportado / Razones Visita</label>
+                                        <textarea className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box', fontFamily: 'inherit' }} rows="3" value={formData.observacion} onChange={e => setFormData({...formData, observacion: e.target.value})} placeholder="Detalle el requerimiento..."></textarea>
+                                    </div>
+
+                                    <div className="modal-actions" style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                                        <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ padding: '10px 20px' }}>Cancelar</button>
+                                        <button type="submit" className="btn btn-primary" disabled={submitting} style={{ padding: '10px 20px' }}>
+                                            {submitting ? 'Guardando...' : (editingId ? 'Actualizar Registro' : 'Crear Registro')}
                                         </button>
                                     </div>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
+
 
             {/* MODAL OBSERVACIÓN TÉCNICA */}
             <AnimatePresence>
