@@ -525,8 +525,8 @@ const HojaRuta = () => {
                 .status-chip { border: 1px solid; padding: 4px 12px; borderRadius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
                 .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
-                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justifyContent: center; padding: 20px; }
-                .modal-content { width: 100%; maxWidth: 900px; padding: 40px; border-radius: 20px; maxHeight: 90vh; overflowY: auto; }
+                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+                .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
                 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
                 .modal-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
                 .client-info { padding: 20px; font-size: 0.8rem; }
