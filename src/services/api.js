@@ -6,7 +6,7 @@ import axios from 'axios';
 // Aquí es donde React se comunica con FastAPI. 
 // Axios actúa como el puente que envía y trae datos hacia la Base de Datos.
 // Si el backend se mueve a un servidor real, debes cambiar esto por la IP pública o dominio.
-const API_BASE_URL = 'https://opsatel-backend-production.up.railway.app';
+const API_BASE_URL = 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -47,7 +47,7 @@ export const authService = {
 };
 
 export const clienteService = {
-  listar: () => api.get('/clientes/'), 
+  listar: () => api.get('/clientes/'),
   crear: (data) => api.post('/clientes/', data),
   actualizar: (id, data) => api.patch(`/clientes/${id}`, data),
   getById: (id) => api.get(`/clientes/${id}`),

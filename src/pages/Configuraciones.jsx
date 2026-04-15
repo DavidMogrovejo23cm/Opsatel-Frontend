@@ -349,7 +349,7 @@ const Configuraciones = () => {
                 {activeTab === 'Planes' && (
                     <div>
                         <h3>Añadir Plan</h3>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre del Plan</label>
                                 <input className="input" style={{ margin: 0 }} value={newPlan.nombre} onChange={e => setNewPlan({ ...newPlan, nombre: e.target.value })} placeholder="Ej. 1GB" />
@@ -362,12 +362,16 @@ const Configuraciones = () => {
                                 <label className="label">Precio ($)</label>
                                 <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={newPlan.precio} onChange={e => setNewPlan({ ...newPlan, precio: e.target.value })} placeholder="0.00" />
                             </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Pantallas IPTV</label>
+                                <input type="number" className="input" style={{ margin: 0 }} value={newPlan.pantallas} onChange={e => setNewPlan({ ...newPlan, pantallas: e.target.value })} min="0" />
+                            </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Planes')}>{isEditingPlan ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingPlan && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingPlan(null); setNewPlan({ nombre: '', megas: '', precio: '' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingPlan(null); setNewPlan({ nombre: '', megas: '', precio: '', pantallas: 1 }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable([...planes].sort((a, b) => parseFloat(a.precio) - parseFloat(b.precio)), ['id', 'nombre', 'megas', 'precio'], 'Planes')}
+                        {renderTable([...planes].sort((a, b) => parseFloat(a.precio) - parseFloat(b.precio)), ['id', 'nombre', 'megas', 'precio', 'pantallas'], 'Planes')}
                     </div>
                 )}
 
