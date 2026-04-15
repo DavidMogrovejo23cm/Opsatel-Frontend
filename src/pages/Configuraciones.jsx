@@ -16,7 +16,7 @@ const Configuraciones = () => {
 
     // Form states
     const [newNodo, setNewNodo] = useState({ nombre: '', base_ip: '' });
-    const [newPlan, setNewPlan] = useState({ nombre: '', megas: '', precio: '' });
+    const [newPlan, setNewPlan] = useState({ nombre: '', megas: '', precio: '', pantallas: 1 });
     const [newBanco, setNewBanco] = useState({ nombre: '' });
     const [newPuerto, setNewPuerto] = useState({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
     const [searchPuerto, setSearchPuerto] = useState('');
@@ -76,6 +76,8 @@ const Configuraciones = () => {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(fetchData, 30000); // Auto-refresh cada 30 segundos
+        return () => clearInterval(interval);
     }, []);
 
     const handleCreate = async (type) => {
@@ -91,12 +93,14 @@ const Configuraciones = () => {
                 }
                 setNewNodo({ nombre: '', base_ip: '' });
                 setIsEditingNodo(null);
+                fetchData();
             } else if (type === 'Planes') {
                 if (!newPlan.nombre?.trim() || !newPlan.megas || !newPlan.precio) return alert('Todos los campos son obligatorios');
                 const planData = { 
                     nombre: newPlan.nombre, 
                     megas: parseInt(newPlan.megas) || 0,
-                    precio: parseFloat(newPlan.precio) 
+                    precio: parseFloat(newPlan.precio),
+                    pantallas: parseInt(newPlan.pantallas) || 1
                 };
                 if (isEditingPlan) {
                     await configuracionService.actualizarPlan(isEditingPlan, planData);
@@ -105,8 +109,9 @@ const Configuraciones = () => {
                     await configuracionService.crearPlan(planData);
                     alert('Plan creado');
                 }
-                setNewPlan({ nombre: '', megas: '', precio: '' });
+                setNewPlan({ nombre: '', megas: '', precio: '', pantallas: 1 });
                 setIsEditingPlan(null);
+                fetchData();
             } else if (type === 'Bancos') {
                 if (!newBanco.nombre?.trim()) return alert('El nombre es obligatorio');
                 if (isEditingBanco) {
@@ -118,6 +123,7 @@ const Configuraciones = () => {
                 }
                 setNewBanco({ nombre: '' });
                 setIsEditingBanco(null);
+                fetchData();
             } else if (type === 'Puertos') {
                 if (!newPuerto.numero || !newPuerto.nodo_id) return alert('Llene todos los campos');
 
@@ -138,6 +144,7 @@ const Configuraciones = () => {
                 }
                 setNewPuerto({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
                 setIsEditingPuerto(null);
+                fetchData();
             } else if (type === 'Usuarios') {
                 if (!newUsuario.username || (!isEditingUser && !newUsuario.password)) return alert('Llene todos los campos');
                 
@@ -150,6 +157,7 @@ const Configuraciones = () => {
                 }
                 setNewUsuario({ username: '', password: '', rol: 'tecnico' });
                 setIsEditingUser(null);
+                fetchData();
             } else if (type === 'Finanzas Base') {
                 const fData = {
                     caja_chica: parseFloat(finanzasBase.caja_chica) || 0,
@@ -205,7 +213,12 @@ const Configuraciones = () => {
 
     const handleEditPlan = (plan) => {
         setIsEditingPlan(plan.id);
-        setNewPlan({ nombre: plan.nombre, megas: plan.megas || '', precio: plan.precio });
+        setNewPlan({ 
+            nombre: plan.nombre, 
+            megas: plan.megas || '', 
+            precio: plan.precio,
+            pantallas: plan.pantallas || 1
+        });
         setActiveTab('Planes');
     };
 
@@ -362,12 +375,16 @@ const Configuraciones = () => {
                                 <label className="label">Precio ($)</label>
                                 <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={newPlan.precio} onChange={e => setNewPlan({ ...newPlan, precio: e.target.value })} placeholder="0.00" />
                             </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Pantallas</label>
+                                <input type="number" className="input" style={{ margin: 0 }} value={newPlan.pantallas} onChange={e => setNewPlan({ ...newPlan, pantallas: e.target.value })} placeholder="1" />
+                            </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Planes')}>{isEditingPlan ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingPlan && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingPlan(null); setNewPlan({ nombre: '', megas: '', precio: '' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingPlan(null); setNewPlan({ nombre: '', megas: '', precio: '', pantallas: 1 }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable([...planes].sort((a, b) => parseFloat(a.precio) - parseFloat(b.precio)), ['id', 'nombre', 'megas', 'precio'], 'Planes')}
+                        {renderTable([...planes].sort((a, b) => parseFloat(a.precio) - parseFloat(b.precio)), ['id', 'nombre', 'megas', 'precio', 'pantallas'], 'Planes')}
                     </div>
                 )}
 

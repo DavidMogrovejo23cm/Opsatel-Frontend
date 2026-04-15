@@ -68,6 +68,9 @@ export const clienteService = {
   generarReporte: () => api.post('/clientes/reportes/generar'),
   getDashboardStats: () => api.get('/clientes/dashboard-stats'),
   getPendientesCount: () => api.get('/clientes/pendientes-count'),
+  actualizarConFotos: (id, formData) => api.patch(`/clientes/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 export const extrasService = {
@@ -125,6 +128,10 @@ export const hojaRutaService = {
   crear: (data) => api.post('/hoja-ruta/', data),
   actualizar: (id, data) => api.patch(`/hoja-ruta/${id}`, data),
   eliminar: (id) => api.delete(`/hoja-ruta/${id}`),
+  getCurrentUser: () => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
 };
 
 export const ticketsService = {

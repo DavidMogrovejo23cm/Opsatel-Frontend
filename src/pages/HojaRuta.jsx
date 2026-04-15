@@ -11,7 +11,13 @@ const HojaRuta = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
     const [showClientList, setShowClientList] = useState(false);
-    const [activeTab, setActiveTab] = useState('clientes'); // 'clientes' o 'general'
+    const [activeTab, setActiveTab] = useState('todo'); // 'todo'
+    const [showTechModal, setShowTechModal] = useState(false);
+    const [techId, setTechId] = useState(null);
+    const [techObs, setTechObs] = useState('');
+    const user = hojaRutaService.getCurrentUser();
+    const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
+    const isTecnico = user && user.rol === 'tecnico';
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [showTecnicoSuggestions, setShowTecnicoSuggestions] = useState(false);
     const [tecnicoSearch, setTecnicoSearch] = useState('');
@@ -53,6 +59,8 @@ const HojaRuta = () => {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
 
@@ -60,12 +68,7 @@ const HojaRuta = () => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
         return clientes
-            .filter(c => {
-                if (activeTab === 'clientes') {
-                    return c.estado?.toUpperCase() === 'PENDIENTE' || c.estado?.toUpperCase() === 'EN ACTIVACIÓN';
-                }
-                return c.estado?.toUpperCase() === 'ACTIVO';
-            })
+            .filter(c => c.estado?.toUpperCase() !== 'INACTIVO')
             .filter(c =>
                 !term ||
                 c.nombre?.toLowerCase().includes(term) ||
@@ -134,12 +137,23 @@ const HojaRuta = () => {
     };
 
     const toggleEstado = async (id, currentEstado) => {
+        if (!isAdmin) return alert("Solo el administrador puede cambiar el estado");
         const nextEstado = currentEstado === 'Pendiente' ? 'Realizado' : 'Pendiente';
         try {
             await hojaRutaService.actualizar(id, { estado: nextEstado });
             fetchData();
         } catch (err) {
             alert("Error al actualizar estado");
+        }
+    };
+
+    const handleSaveTechObs = async () => {
+        try {
+            await hojaRutaService.actualizar(techId, { observacion_tecnico: techObs });
+            setShowTechModal(false);
+            fetchData();
+        } catch (err) {
+            alert("Error al guardar observación");
         }
     };
 
@@ -156,65 +170,24 @@ const HojaRuta = () => {
     const filteredRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
         const search = searchTerm.toLowerCase();
-        const bySearch = registros.filter(r =>
+        return registros.filter(r =>
             r.nombre_cliente?.toLowerCase().includes(search) ||
-            r.tecnico?.toLowerCase().includes(search)
+            r.tecnico?.toLowerCase().includes(search) ||
+            r.actividad?.toLowerCase().includes(search)
         );
-        if (activeTab === 'clientes') {
-            return bySearch.filter(r => r.cliente_id && Number(r.cliente_id) > 0);
-        } else {
-            return bySearch.filter(r => !r.cliente_id || Number(r.cliente_id) <= 0);
-        }
-    }, [registros, searchTerm, activeTab]);
+    }, [registros, searchTerm]);
 
     return (
         <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
-                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: activeTab === 'clientes' ? '#a78bfa' : '#c084fc' }}>
-                            {activeTab === 'clientes' ? '👥 Hoja de Ruta: Clientes' : '🏢 Hoja de Ruta: General'}
+                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: '#c084fc' }}>
+                            📋 Hoja de Ruta
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
-                            {activeTab === 'clientes'
-                                ? 'Gestión y programación de instalaciones para clientes registrados en el sistema.'
-                                : 'Actividades técnicas generales y soporte para terceros o registros externos.'}
+                            Gestión de instalaciones y actividades técnicas generales del sistema.
                         </p>
-
-                        <div style={{ display: 'flex', gap: '5px', marginTop: '20px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '15px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <button
-                                onClick={() => setActiveTab('clientes')}
-                                style={{
-                                    padding: '10px 24px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: '900',
-                                    fontSize: '0.75rem',
-                                    background: activeTab === 'clientes' ? '#7e22ce' : 'transparent',
-                                    color: activeTab === 'clientes' ? 'white' : '#94a3b8',
-                                    transition: '0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-                                }}
-                            >
-                                SECCIÓN CLIENTES
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('general')}
-                                style={{
-                                    padding: '10px 24px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: '900',
-                                    fontSize: '0.75rem',
-                                    background: activeTab === 'general' ? '#7e22ce' : 'transparent',
-                                    color: activeTab === 'general' ? 'white' : '#94a3b8',
-                                    transition: '0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-                                }}
-                            >
-                                SECCIÓN GENERAL
-                            </button>
-                        </div>
                     </div>
                     <div style={{ display: 'flex', gap: '16px' }}>
                         <input
@@ -228,7 +201,7 @@ const HojaRuta = () => {
                             onClick={() => {
                                 setFormData({
                                     ...initialForm,
-                                    cliente_id: activeTab === 'clientes' ? '' : null
+                                    actividad: 'INSTALACION'
                                 });
                                 setShowModal(true);
                             }}
@@ -244,7 +217,29 @@ const HojaRuta = () => {
                                 transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                         >
-                            {activeTab === 'clientes' ? '+ Programar Instalación' : '+ Nueva Actividad General'}
+                            + Programar Instalación
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFormData({
+                                    ...initialForm,
+                                    actividad: 'ACTIVIDAD',
+                                    cliente_id: null
+                                });
+                                setShowModal(true);
+                            }}
+                            style={{
+                                padding: '12px 28px',
+                                borderRadius: '15px',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                        >
+                            + Nueva Actividad
                         </button>
                     </div>
                 </div>
@@ -255,11 +250,11 @@ const HojaRuta = () => {
                             <thead>
                                 <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', letterSpacing: '0.1em', opacity: 0.8 }}>
                                     <th style={{ padding: '15px', width: '110px' }}>Fecha Pedido</th>
-                                    <th style={{ width: '80px' }}>{activeTab === 'clientes' ? 'ID Cliente' : 'Ref #'}</th>
+                                    <th style={{ width: '80px' }}>Ref #</th>
                                     <th style={{ width: '100px' }}>Estado</th>
                                     <th style={{ width: '140px' }}>Programación</th>
                                     <th style={{ width: '130px' }}>Técnico</th>
-                                    <th style={{ width: '240px' }}>{activeTab === 'clientes' ? 'Cliente' : 'Personal / Externo'}</th>
+                                    <th style={{ width: '240px' }}>Cliente / Referencia</th>
                                     <th style={{ width: '180px' }}>Ubicación / Zona</th>
                                     <th style={{ width: '110px' }}>Caja / Nap</th>
                                     <th style={{ width: '140px' }}>Tipo Actividad</th>
@@ -280,12 +275,13 @@ const HojaRuta = () => {
                                         </td>
                                         <td style={{ padding: '12px 5px' }}>
                                             <div
+                                                onClick={() => toggleEstado(r.id, r.estado)}
                                                 style={{
                                                     padding: '3px 10px',
                                                     borderRadius: '20px',
                                                     fontSize: '0.6rem',
                                                     fontWeight: 'bold',
-                                                    cursor: 'default',
+                                                    cursor: isAdmin ? 'pointer' : 'default',
                                                     display: 'inline-block',
                                                     whiteSpace: 'nowrap',
                                                     background: r.estado === 'Realizado' ? 'rgba(167, 139, 250, 0.08)' : 'rgba(255, 255, 255, 0.03)',
@@ -318,10 +314,30 @@ const HojaRuta = () => {
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px 5px', fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: '200px', whiteSpace: 'pre-wrap' }}>
-                                            {r.observacion || '-'}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div>{r.observacion || '-'}</div>
+                                                {r.observacion_tecnico && (
+                                                    <div style={{ color: '#10b981', borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '4px' }}>
+                                                        <strong>Técnico:</strong> {r.observacion_tecnico}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px' }}>
                                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                                {(isAdmin || isTecnico) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setTechId(r.id);
+                                                            setTechObs(r.observacion_tecnico || '');
+                                                            setShowTechModal(true);
+                                                        }}
+                                                        style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }}
+                                                        title="Observación Técnica"
+                                                    >
+                                                        🛠️
+                                                    </button>
+                                                )}
                                                 <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }} title="Editar">✏️</button>
                                                 <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }} title="Eliminar">&times;</button>
                                             </div>
@@ -350,14 +366,14 @@ const HojaRuta = () => {
                                 <div>
                                     {!editingId && (
                                         <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">{activeTab === 'clientes' ? 'Seleccionar Cliente Pendiente' : 'Seleccionar Cliente Activo'}</label>
+                                            <label className="label">Seleccionar Cliente (Búsqueda General)</label>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowClientList(!showClientList)}
                                                 className="btn btn-secondary"
                                                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}
                                             >
-                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : (activeTab === 'clientes' ? '🔍 Buscar Cliente Pendiente...' : '🔍 Buscar Cliente Activo...')}</span>
+                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente...'}</span>
                                                 <span>{showClientList ? '▲' : '▼'}</span>
                                             </button>
 
@@ -375,8 +391,8 @@ const HojaRuta = () => {
                                                         />
                                                     </div>
                                                     <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
-                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: activeTab === 'clientes' ? '#facc15' : '#4ade80', fontWeight: 'bold', letterSpacing: '0.08em' }}>
-                                                            {activeTab === 'clientes' ? '⏳ CLIENTES PENDIENTES DE ACTIVACIÓN' : '✅ CLIENTES ACTIVOS'}
+                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#818cf8', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                                                            👥 LISTADO DE CLIENTES
                                                         </div>
                                                         {activatedClients.map(c => (
                                                             <div
@@ -551,6 +567,28 @@ const HojaRuta = () => {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showTechModal && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(2, 6, 23, 0.9)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass" style={{ width: '100%', maxWidth: '500px', padding: '30px', borderRadius: '20px' }}>
+                            <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>🛠️ Observación del Técnico</h2>
+                            <textarea
+                                className="input"
+                                rows="6"
+                                value={techObs}
+                                onChange={e => setTechObs(e.target.value)}
+                                placeholder="Escriba aquí los detalles técnicos o trabajos realizados..."
+                                style={{ background: 'rgba(255,255,255,0.05)', marginBottom: '20px' }}
+                            ></textarea>
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setShowTechModal(false)} className="btn btn-secondary">Cancelar</button>
+                                <button onClick={handleSaveTechObs} className="btn btn-primary">Guardar Observación</button>
                             </div>
                         </motion.div>
                     </div>

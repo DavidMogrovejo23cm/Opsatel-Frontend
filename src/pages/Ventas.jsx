@@ -150,7 +150,11 @@ const Ventas = () => {
 
     // Validación manual de campos select obligatorios
     if (!formData.cedula_tipo) {
-      setMessage({ type: 'error', text: 'Seleccione el tipo de cédula.' });
+      setMessage({ type: 'error', text: 'Seleccione si posee Cédula/Identificación.' });
+      return;
+    }
+    if (formData.cedula_tipo === 'SÍ' && (!fileFrontal || !filePosterior)) {
+      setMessage({ type: 'error', text: 'Las fotos de la cédula son obligatorias si seleccionó SÍ.' });
       return;
     }
     if (!formData.parroquia) {
@@ -320,12 +324,11 @@ const Ventas = () => {
             </div>
           )}
           <div className="input-group">
-            <label className="label">Tipo de Cédula</label>
+            <label className="label">¿Posee Cédula / Identificación?</label>
             <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>
-              <option value="">Seleccione tipo</option>
-              <option value="Física">Física</option>
-              <option value="Digital">Digital</option>
-              <option value="Pasaporte">Pasaporte</option>
+              <option value="">Seleccione...</option>
+              <option value="SÍ">SÍ</option>
+              <option value="NO">NO</option>
             </select>
           </div>
 

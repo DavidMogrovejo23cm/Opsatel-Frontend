@@ -8,6 +8,9 @@ const Administrar = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [fileFrontal, setFileFrontal] = useState(null);
+  const [filePosterior, setFilePosterior] = useState(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [nodosList, setNodosList] = useState([]);
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
@@ -25,6 +28,7 @@ const Administrar = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 30000);
     const fetchSelects = async () => {
       try {
         const [paRes, ppRes, plRes] = await Promise.all([
@@ -59,13 +63,16 @@ const Administrar = () => {
       cuenta: cliente.cuenta || '',
       tercera_edad: cliente.tercera_edad || false,
       precio_plan_especial: cliente.precio_plan_especial || 0,
-      iptv_max_conn: cliente.iptv_max_conn || 0
+       iptv_max_conn: cliente.iptv_max_conn || 0,
+       cedula_tipo: cliente.cedula_tipo || ''
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditData({});
+    setFileFrontal(null);
+    setFilePosterior(null);
   };
 
   const saveEdit = async () => {
@@ -75,8 +82,22 @@ const Administrar = () => {
     }
 
     try {
-      await clienteService.actualizar(editingId, editData);
+      // Si hay archivos, usamos FormData
+      if (fileFrontal || filePosterior) {
+        const formData = new FormData();
+        Object.keys(editData).forEach(key => {
+          formData.append(key, editData[key]);
+        });
+        if (fileFrontal) formData.append('foto_frontal', fileFrontal);
+        if (filePosterior) formData.append('foto_posterior', filePosterior);
+        
+        await clienteService.actualizarConFotos(editingId, formData);
+      } else {
+        await clienteService.actualizar(editingId, editData);
+      }
       setEditingId(null);
+      setFileFrontal(null);
+      setFilePosterior(null);
       fetchData();
     } catch (error) {
       alert('Error al guardar: ' + (error.response?.data?.detail || error.message));
@@ -181,6 +202,7 @@ const Administrar = () => {
                 <th style={cellStyle}>Cuenta</th>
                 <th style={cellStyle}>3ra Edad</th>
                 <th style={cellStyle}>P. Especial</th>
+                <th style={cellStyle}>Cédula Si/No</th>
                 <th style={cellStyle}>Acciones</th>
               </tr>
             </thead>
@@ -267,7 +289,24 @@ const Administrar = () => {
                         />
                       </td>
                       <td style={cellStyle}>
+                        <select style={{...inputStyle, width: '70px'}} value={editData.cedula_tipo} onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}>
+                          <option value="">...</option>
+                          <option value="SÍ">SÍ</option>
+                          <option value="NO">NO</option>
+                        </select>
+                      </td>
+                      <td style={cellStyle}>
                         <div style={{ display: 'flex', gap: '6px' }}>
+                          {editData.cedula_tipo === 'SÍ' && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '4px 8px', fontSize: '0.7rem', background: (fileFrontal && filePosterior) ? '#10b981' : 'rgba(255,255,255,0.1)' }}
+                              onClick={() => setShowPhotoModal(true)}
+                              title="Subir Fotos de Cédula"
+                            >
+                              📷
+                            </button>
+                          )}
                           <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={saveEdit}>✓</button>
                           <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={cancelEdit}>✗</button>
                         </div>
@@ -297,6 +336,7 @@ const Administrar = () => {
                       <td style={cellStyle}>{c.cuenta || '-'}</td>
                       <td style={cellStyle}>{c.tercera_edad ? 'SÍ' : 'NO'}</td>
                       <td style={cellStyle}>{c.tercera_edad ? `$${c.precio_plan_especial}` : '-'}</td>
+                      <td style={cellStyle}>{c.cedula_tipo || 'NO'}</td>
                       <td style={cellStyle}>
                         <button
                           className="btn btn-secondary"
@@ -315,6 +355,31 @@ const Administrar = () => {
           {filteredClientes.length === 0 && !loading && (
             <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No se encontraron clientes.</p>
           )}
+        </div>
+      )}
+      {showPhotoModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(2, 6, 23, 0.9)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass" style={{ width: '400px', padding: '30px', borderRadius: '20px' }}>
+            <h3 style={{ marginBottom: '20px' }}>📸 Subir Fotos de Cédula</h3>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>FRONTAL</label>
+              <input type="file" className="input" onChange={e => setFileFrontal(e.target.files[0])} />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>POSTERIOR</label>
+              <input type="file" className="input" onChange={e => setFilePosterior(e.target.files[0])} />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowPhotoModal(false)}
+                disabled={!fileFrontal || !filePosterior}
+              >
+                Cargar Archivos
+              </button>
+              <button className="btn btn-secondary" onClick={() => { setFileFrontal(null); setFilePosterior(null); setShowPhotoModal(false); }}>Cancelar</button>
+            </div>
+          </div>
         </div>
       )}
     </motion.div>
