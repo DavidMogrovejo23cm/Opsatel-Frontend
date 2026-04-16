@@ -7,20 +7,14 @@ const HojaRuta = () => {
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [showObsModal, setShowObsModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
     const [showClientList, setShowClientList] = useState(false);
-    const [activeTab, setActiveTab] = useState('todo'); // 'todo'
-    const [showTechModal, setShowTechModal] = useState(false);
-    const [techId, setTechId] = useState(null);
-    const [techObs, setTechObs] = useState('');
-    const user = hojaRutaService.getCurrentUser();
-    const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
-    const isTecnico = user && user.rol === 'tecnico';
     const [clientSearchTerm, setClientSearchTerm] = useState('');
-    const [showTecnicoSuggestions, setShowTecnicoSuggestions] = useState(false);
-    const [tecnicoSearch, setTecnicoSearch] = useState('');
+    const [modalSource, setModalSource] = useState('CLIENTE'); // 'CLIENTE' o 'GENERAL'
+    const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
 
     const initialForm = {
         fecha: new Date().toISOString().split('T')[0],
@@ -33,17 +27,17 @@ const HojaRuta = () => {
         ubicacion_caja: '',
         actividad: 'INSTALACION',
         observacion: '',
+        observacion_tecnico: '',
         parroquia: '',
         estado: 'Pendiente'
     };
 
     const [formData, setFormData] = useState(initialForm);
-
     const [editingId, setEditingId] = useState(null);
 
-    const fetchData = async () => {
+    const fetchData = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const [hrRes, clRes] = await Promise.all([
                 hojaRutaService.listar(),
                 clienteService.listar()
@@ -53,22 +47,25 @@ const HojaRuta = () => {
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
+    // Auto-refresh cada 30 segundos
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(() => fetchData(true), 30000);
         return () => clearInterval(interval);
     }, []);
-
 
     const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
         return clientes
-            .filter(c => c.estado?.toUpperCase() !== 'INACTIVO')
+            .filter(c => {
+                if (modalSource === 'CLIENTE') return c.estado?.toUpperCase() !== 'ACTIVO';
+                return c.estado?.toUpperCase() === 'ACTIVO';
+            })
             .filter(c =>
                 !term ||
                 c.nombre?.toLowerCase().includes(term) ||
@@ -76,15 +73,40 @@ const HojaRuta = () => {
                 c.parroquia?.toLowerCase().includes(term)
             )
             .sort((a, b) => a.id - b.id);
-    }, [clientes, clientSearchTerm, activeTab]);
+    }, [clientes, clientSearchTerm, modalSource]);
 
-    const tecnicoSuggestions = useMemo(() => {
+    const [dateFilter, setDateFilter] = useState('');
+
+    const sortedRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
-        const all = registros.map(r => r.tecnico).filter(Boolean);
-        const unique = [...new Set(all)].sort();
-        if (!tecnicoSearch.trim()) return unique;
-        return unique.filter(t => t.toLowerCase().includes(tecnicoSearch.toLowerCase()));
-    }, [registros, tecnicoSearch]);
+        const search = searchTerm.toLowerCase();
+
+        let filtered = registros.filter(r => {
+            const matchSearch = r.nombre_cliente?.toLowerCase().includes(search) ||
+                r.tecnico?.toLowerCase().includes(search) ||
+                r.parroquia?.toLowerCase().includes(search);
+
+            if (!matchSearch) return false;
+
+            if (dateFilter && r.fecha !== dateFilter) return false;
+
+            return true;
+        });
+
+        // Ordenamiento: 1. Fecha Pedido (created_at desc), 2. Fecha Programacion (fecha), 3. Hora (hora)
+        return filtered.sort((a, b) => {
+            // Primero por fecha de creación (pedido)
+            const dateA = new Date(a.created_at || 0).getTime();
+            const dateB = new Date(b.created_at || 0).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+
+            // Luego por fecha programada
+            if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+
+            // Luego por hora
+            return a.hora.localeCompare(b.hora);
+        });
+    }, [registros, searchTerm, dateFilter]);
 
     const handleSelectClient = (client) => {
         setSelectedClient(client);
@@ -92,12 +114,24 @@ const HojaRuta = () => {
             ...formData,
             cliente_id: client.id,
             nombre_cliente: client.nombre,
-            ubicacion_cliente: client.ubicacion || '',
+            ubicacion_cliente: client.ubicacion || client.direccion || '',
             celular_cliente: client.celular || '',
-            parroquia: client.parroquia || ''
+            parroquia: client.parroquia || '',
+            actividad: modalSource === 'CLIENTE' ? 'INSTALACION' : 'ACTIVIDAD'
         });
         setShowClientList(false);
         setClientSearchTerm('');
+    };
+
+    const handleOpenModal = (source) => {
+        setModalSource(source);
+        setFormData({
+            ...initialForm,
+            actividad: source === 'CLIENTE' ? 'INSTALACION' : 'ACTIVIDAD'
+        });
+        setEditingId(null);
+        setSelectedClient(null);
+        setShowModal(true);
     };
 
     const handleEdit = (r) => {
@@ -105,7 +139,14 @@ const HojaRuta = () => {
         setFormData({ ...r });
         const fullClient = clientes.find(c => c.id === r.cliente_id);
         setSelectedClient(fullClient || { nombre: r.nombre_cliente, id: r.cliente_id });
+        setModalSource(r.cliente_id ? 'CLIENTE' : 'GENERAL');
         setShowModal(true);
+    };
+
+    const handleOpenObs = (r) => {
+        setEditingId(r.id);
+        setFormData({ ...r });
+        setShowObsModal(true);
     };
 
     const handleSubmit = async (e) => {
@@ -118,30 +159,24 @@ const HojaRuta = () => {
                 await hojaRutaService.crear(formData);
             }
             setShowModal(false);
-            setFormData(initialForm);
-            setEditingId(null);
-            setSelectedClient(null);
+            setShowObsModal(false);
             fetchData();
         } catch (err) {
-            alert("Error al guardar: " + (err.response?.data?.detail || "Error desconocido"));
+            alert(err.response?.data?.detail || "Error al procesar");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const closeModal = () => {
-        setShowModal(false);
-        setFormData(initialForm);
-        setEditingId(null);
-        setSelectedClient(null);
-    };
-
     const toggleEstado = async (id, currentEstado) => {
-        if (!isAdmin) return alert("Solo el administrador puede cambiar el estado");
+        if (user.rol?.toLowerCase() !== 'administrador') {
+            alert("Solo el administrador puede cambiar el estado de la hoja de ruta");
+            return;
+        }
         const nextEstado = currentEstado === 'Pendiente' ? 'Realizado' : 'Pendiente';
         try {
             await hojaRutaService.actualizar(id, { estado: nextEstado });
-            fetchData();
+            fetchData(true);
         } catch (err) {
             alert("Error al actualizar estado");
         }
@@ -158,6 +193,10 @@ const HojaRuta = () => {
     };
 
     const handleDelete = async (id) => {
+        if (user.rol?.toLowerCase() !== 'administrador') {
+            alert("Solo el administrador puede eliminar registros");
+            return;
+        }
         if (!confirm("¿Eliminar este registro?")) return;
         try {
             await hojaRutaService.eliminar(id);
@@ -167,179 +206,132 @@ const HojaRuta = () => {
         }
     };
 
-    const filteredRegistros = useMemo(() => {
-        if (!Array.isArray(registros)) return [];
-        const search = searchTerm.toLowerCase();
-        return registros.filter(r =>
-            r.nombre_cliente?.toLowerCase().includes(search) ||
-            r.tecnico?.toLowerCase().includes(search) ||
-            r.actividad?.toLowerCase().includes(search)
-        );
-    }, [registros, searchTerm]);
-
     return (
         <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
-                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: '#c084fc' }}>
-                            📋 Hoja de Ruta
+                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: '#a78bfa' }}>
+                            📋 Hoja de Ruta Unificada
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
-                            Gestión de instalaciones y actividades técnicas generales del sistema.
+                            Gestión centralizada de instalaciones y actividades técnicas.
                         </p>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}> Fecha:</span>
+                            <input
+                                type="date"
+                                className="input"
+                                style={{ width: '150px', marginBottom: 0, padding: '5px', background: 'transparent', border: 'none', color: 'white' }}
+                                value={dateFilter}
+                                onChange={e => setDateFilter(e.target.value)}
+                            />
+                            {dateFilter && (
+                                <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>&times;</button>
+                            )}
+                        </div>
                         <input
                             className="input"
-                            placeholder="Buscar en esta sección..."
-                            style={{ width: '300px', marginBottom: 0, borderRadius: '15px', background: 'rgba(255,255,255,0.02)' }}
+                            placeholder="Buscar técnico, cliente o zona..."
+                            style={{ width: '250px', marginBottom: 0, borderRadius: '15px' }}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
-                        <button
-                            onClick={() => {
-                                setFormData({
-                                    ...initialForm,
-                                    actividad: 'INSTALACION'
-                                });
-                                setShowModal(true);
-                            }}
-                            style={{
-                                padding: '12px 28px',
-                                borderRadius: '15px',
-                                background: '#7e22ce',
-                                color: 'white',
-                                border: 'none',
-                                fontWeight: '900',
-                                cursor: 'pointer',
-                                boxShadow: '0 8px 30px rgba(126, 34, 206, 0.25)',
-                                transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }}
-                        >
+                        <button onClick={() => handleOpenModal('CLIENTE')} className="btn btn-primary" style={{ padding: '12px 20px' }}>
                             + Programar Instalación
                         </button>
-                        <button
-                            onClick={() => {
-                                setFormData({
-                                    ...initialForm,
-                                    actividad: 'ACTIVIDAD',
-                                    cliente_id: null
-                                });
-                                setShowModal(true);
-                            }}
-                            style={{
-                                padding: '12px 28px',
-                                borderRadius: '15px',
-                                background: 'rgba(255,255,255,0.05)',
-                                color: 'white',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                fontWeight: '900',
-                                cursor: 'pointer',
-                                transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }}
-                        >
+                        <button onClick={() => handleOpenModal('GENERAL')} className="btn btn-secondary" style={{ padding: '12px 20px', border: '1px solid #7e22ce', color: '#a78bfa' }}>
                             + Nueva Actividad
                         </button>
                     </div>
                 </div>
 
-                {loading ? <p>Cargando hoja de ruta...</p> : (
+                {loading ? <p>Cargando datos...</p> : (
                     <div style={{ overflowX: 'auto', borderRadius: '15px' }}>
                         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                             <thead>
-                                <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', letterSpacing: '0.1em', opacity: 0.8 }}>
-                                    <th style={{ padding: '15px', width: '110px' }}>Fecha Pedido</th>
-                                    <th style={{ width: '80px' }}>Ref #</th>
-                                    <th style={{ width: '100px' }}>Estado</th>
-                                    <th style={{ width: '140px' }}>Programación</th>
-                                    <th style={{ width: '130px' }}>Técnico</th>
-                                    <th style={{ width: '240px' }}>Cliente / Referencia</th>
-                                    <th style={{ width: '180px' }}>Ubicación / Zona</th>
-                                    <th style={{ width: '110px' }}>Caja / Nap</th>
-                                    <th style={{ width: '140px' }}>Tipo Actividad</th>
-                                    <th style={{ minWidth: '220px' }}>Detalle / Observación</th>
-                                    <th style={{ textAlign: 'right', paddingRight: '20px', width: '80px' }}>Acciones</th>
+                                <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', opacity: 0.8 }}>
+                                    <th style={{ padding: '15px' }}>F. Pedido</th>
+                                    <th>Programación</th>
+                                    <th>Estado / Acciones</th>
+                                    <th>Técnico</th>
+                                    <th>Cliente / Descripción</th>
+                                    <th>Ubicación</th>
+                                    <th>Actividad</th>
+                                    <th>Observaciones</th>
+                                    <th style={{ textAlign: 'right', paddingRight: '20px' }}>Admin</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredRegistros.map(r => (
-                                    <tr key={r.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', transition: 'transform 0.2s' }}>
-                                        <td style={{ padding: '12px 15px', borderRadius: '12px 0 0 12px' }}>
+                                {sortedRegistros.map(r => (
+                                    <tr key={r.id} className="glass-row" style={{ background: 'rgba(255,255,255,0.02)', transition: '0.2s' }}>
+                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
                                                 {r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}
                                             </div>
                                         </td>
-                                        <td style={{ padding: '12px 5px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                                            {r.cliente_id}
-                                        </td>
-                                        <td style={{ padding: '12px 5px' }}>
-                                            <div
-                                                onClick={() => toggleEstado(r.id, r.estado)}
-                                                style={{
-                                                    padding: '3px 10px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '0.6rem',
-                                                    fontWeight: 'bold',
-                                                    cursor: isAdmin ? 'pointer' : 'default',
-                                                    display: 'inline-block',
-                                                    whiteSpace: 'nowrap',
-                                                    background: r.estado === 'Realizado' ? 'rgba(167, 139, 250, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                                                    color: r.estado === 'Realizado' ? '#c084fc' : '#94a3b8',
-                                                    border: `1px solid ${r.estado === 'Realizado' ? 'rgba(167, 139, 250, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`
-                                                }}
-                                            >
-                                                {r.estado}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '12px 5px' }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.fecha}</div>
+                                        <td>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{r.fecha}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.hora}</div>
                                         </td>
-                                        <td style={{ padding: '12px 5px', fontWeight: 'bold', color: '#fff', fontSize: '0.8rem' }}>
-                                            {r.tecnico || '-'}
+                                        <td>
+                                            <button
+                                                onClick={() => toggleEstado(r.id, r.estado)}
+                                                className={`status-chip ${r.estado === 'Realizado' ? 'success' : 'pending'}`}
+                                                disabled={user.rol?.toLowerCase() !== 'administrador'}
+                                                style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
+                                            >
+                                                {r.estado}
+                                            </button>
                                         </td>
-                                        <td style={{ padding: '12px 5px' }}>
-                                            <div style={{ fontWeight: '800', fontSize: '0.8rem', color: '#fff', maxWidth: '210px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre_cliente}</div>
+                                        <td style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#fff' }}>{r.tecnico}</td>
+                                        <td>
+                                            <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{r.nombre_cliente}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.celular_cliente}</div>
                                         </td>
-                                        <td style={{ padding: '12px 5px' }}>
-                                            <div style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>{r.parroquia}</div>
-                                            <div style={{ opacity: 0.6, fontSize: '0.65rem', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.ubicacion_cliente}</div>
+                                        <td>
+                                            <div style={{ fontSize: '0.75rem' }}>{r.parroquia}</div>
+                                            <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{r.ubicacion_cliente}</div>
                                         </td>
-                                        <td style={{ padding: '12px 5px', fontSize: '0.8rem', color: '#60a5fa', fontWeight: 'bold' }}>{r.ubicacion_caja || '-'}</td>
-                                        <td style={{ padding: '12px 5px' }}>
-                                            <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>
+                                        <td>
+                                            <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                                 {r.actividad}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '12px 5px', fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: '200px', whiteSpace: 'pre-wrap' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div>{r.observacion || '-'}</div>
-                                                {r.observacion_tecnico && (
-                                                    <div style={{ color: '#10b981', borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '4px' }}>
-                                                        <strong>Técnico:</strong> {r.observacion_tecnico}
-                                                    </div>
-                                                )}
+                                        <td style={{ verticalAlign: 'top', paddingTop: '10px' }}>
+                                            <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
+                                                {r.observacion || 'Sin observación'}
                                             </div>
+                                            {r.observacion_tecnico && (
+                                                <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: '4px', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                                    <strong>⚙️:</strong> {r.observacion_tecnico}
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => handleOpenObs(r)}
+                                                style={{ fontSize: '0.65rem', color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 0' }}
+                                            >
+                                                {user.rol?.toLowerCase() === 'tecnico' ? '✎ Editar Obs. Técnica' : '👁 Ver Obs. Técnica'}
+                                            </button>
                                         </td>
                                         <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px' }}>
-                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                                {(isAdmin || isTecnico) && (
+                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                {user.rol?.toLowerCase() === 'administrador' ? (
+                                                    <>
+                                                        <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1.1rem' }} title="Editar">✏️</button>
+                                                        <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' }} title="Eliminar">&times;</button>
+                                                    </>
+                                                ) : (
                                                     <button
-                                                        onClick={() => {
-                                                            setTechId(r.id);
-                                                            setTechObs(r.observacion_tecnico || '');
-                                                            setShowTechModal(true);
-                                                        }}
-                                                        style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }}
-                                                        title="Observación Técnica"
+                                                        onClick={() => handleOpenObs(r)}
+                                                        className="btn btn-secondary"
+                                                        style={{ fontSize: '0.7rem', padding: '5px 10px' }}
                                                     >
-                                                        🛠️
+                                                        📝 Observación
                                                     </button>
                                                 )}
-                                                <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }} title="Editar">✏️</button>
-                                                <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', opacity: 0.8 }} title="Eliminar">&times;</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -350,112 +342,75 @@ const HojaRuta = () => {
                 )}
             </motion.div>
 
+            {/* MODAL PRINCIPAL RESTAURADO COMO ESTABA ANTES */}
             <AnimatePresence>
                 {showModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(2, 6, 23, 0.9)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass" style={{ width: '100%', maxWidth: '1000px', padding: '40px', borderRadius: '30px', maxHeight: '95vh', overflowY: 'auto' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                    {editingId ? '✏️ Editar Ruta' : (activeTab === 'clientes' ? '📝 Nueva Ruta (Cliente)' : '🏢 Nueva Ruta General')}
-                                </h2>
-                                <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
+                    <div className="modal-overlay">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '1000px' }}>
+                            <div className="modal-header" style={{ marginBottom: '20px' }}>
+                                <h2 style={{ margin: 0 }}>{editingId ? '✏️ Editar Registro' : (modalSource === 'CLIENTE' ? '🚀 Programar Instalación' : '⚙️ Nueva Actividad')}</h2>
+                                <button onClick={() => setShowModal(false)} className="close-btn" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
-                                {/* PANEL IZQUIERDO: SELECCIÓN E INFO */}
-                                <div>
+                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 900 ? 'minmax(350px, 1fr) 2fr' : '1fr', gap: '30px' }}>
+                                {/* COLUMNA IZQUIERDA: BÚSQUEDA Y DATOS DEL CLIENTE */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {!editingId && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <label className="label">Seleccionar Cliente (Búsqueda General)</label>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowClientList(!showClientList)}
-                                                className="btn btn-secondary"
-                                                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}
-                                            >
-                                                <span>{selectedClient ? `#${selectedClient.id} — ${selectedClient.nombre}` : '🔍 Buscar Cliente...'}</span>
-                                                <span>{showClientList ? '▲' : '▼'}</span>
-                                            </button>
-
-                                            {showClientList && (
-                                                <div style={{ background: 'rgba(15, 23, 42, 0.98)', borderRadius: '10px', marginTop: '6px', border: '1px solid var(--glass-border)' }}>
-                                                    {/* Buscador interno */}
-                                                    <div style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                                                        <input
-                                                            autoFocus
-                                                            className="input"
-                                                            placeholder="Filtrar por nombre, ID o parroquia..."
-                                                            value={clientSearchTerm}
-                                                            onChange={e => setClientSearchTerm(e.target.value)}
-                                                            style={{ padding: '8px 12px', fontSize: '0.8rem' }}
-                                                        />
-                                                    </div>
-                                                    <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
-                                                        <div style={{ padding: '6px 15px', background: '#1e293b', fontSize: '0.65rem', color: '#818cf8', fontWeight: 'bold', letterSpacing: '0.08em' }}>
-                                                            👥 LISTADO DE CLIENTES
-                                                        </div>
+                                        <div>
+                                            <label className="label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar y Seleccionar Cliente ({modalSource})</label>
+                                            <div className="client-picker" style={{ position: 'relative' }}>
+                                                <input
+                                                    className="input"
+                                                    placeholder="Escriba nombre o ID..."
+                                                    value={clientSearchTerm}
+                                                    onChange={e => {
+                                                        setClientSearchTerm(e.target.value);
+                                                        setShowClientList(true);
+                                                    }}
+                                                    onFocus={() => setShowClientList(true)}
+                                                    style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}
+                                                />
+                                                {showClientList && clientSearchTerm && (
+                                                    <div className="client-list glass" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, maxHeight: '250px', overflowY: 'auto' }}>
                                                         {activatedClients.map(c => (
-                                                            <div
-                                                                key={c.id}
-                                                                onClick={() => handleSelectClient(c)}
-                                                                style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                                                                className="client-search-item"
-                                                            >
-                                                                <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.82rem' }}>{c.nombre}</div>
-                                                                <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: '2px' }}>ID: {c.id} | {c.parroquia} | {c.plan}</div>
+                                                            <div key={c.id} className="client-item" onClick={() => handleSelectClient(c)} style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                <div style={{ fontWeight: 'bold' }}>#{c.id} - {c.nombre}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{c.parroquia} | {c.celular}</div>
                                                             </div>
                                                         ))}
                                                         {activatedClients.length === 0 && (
                                                             <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>Sin resultados</div>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
                                     {/* CUADRO DE INFORMACIÓN DEL CLIENTE (CONTRACT DATA) */}
-                                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '20px' }}>
-                                        <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Datos del Contrato</h3>
-                                        {selectedClient ? (
+                                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '20px', flex: 1 }}>
+                                        <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Datos Seleccionados</h3>
+                                        {selectedClient || editingId ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div>
                                                     <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Nombre</label>
-                                                    <div style={{ fontSize: '0.85rem' }}>{selectedClient.nombre}</div>
+                                                    <div style={{ fontSize: '0.85rem' }}>{formData.nombre_cliente || selectedClient?.nombre || '-'}</div>
                                                 </div>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>ID Cliente</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{selectedClient.id}</div>
-                                                    </div>
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Celular</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{selectedClient.celular}</div>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Plan</label>
-                                                    <div style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: 'bold' }}>{selectedClient.plan}</div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Ubicación</label>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{selectedClient.ubicacion}</div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Dirección</label>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{selectedClient.direccion}</div>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Nodo</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{selectedClient.nodo}</div>
+                                                        <div style={{ fontSize: '0.85rem' }}>{formData.celular_cliente || selectedClient?.celular || '-'}</div>
                                                     </div>
                                                     <div>
-                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Contrato</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{selectedClient.tiempo} meses</div>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Parroquia</label>
+                                                        <div style={{ fontSize: '0.85rem' }}>{formData.parroquia || selectedClient?.parroquia || '-'}</div>
                                                     </div>
                                                 </div>
-                                                {selectedClient.comentarios && (
+                                                <div>
+                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Ubicación Física</label>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{formData.ubicacion_cliente || selectedClient?.ubicacion || selectedClient?.direccion || '-'}</div>
+                                                </div>
+                                                {(selectedClient?.comentarios) && (
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
                                                         <div style={{ fontSize: '0.75rem', color: '#fcd34d', fontStyle: 'italic' }}>{selectedClient.comentarios}</div>
@@ -471,56 +426,42 @@ const HojaRuta = () => {
                                     </div>
                                 </div>
 
-                                {/* FORMULARIO DE PROGRAMACIÓN */}
-                                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                    <div style={{ gridColumn: 'span 2' }}>
-                                        <label className="label">Nombre de la Persona / Cliente</label>
-                                        <input
-                                            className="input"
-                                            placeholder="Ingrese nombre completo..."
-                                            value={formData.nombre_cliente}
-                                            onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="label">Fecha Programación</label>
-                                        <input className="input" type="date" value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="label">Hora Programación</label>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <input className="input" type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
+                                {/* COLUMNA DERECHA: FORMULARIO */}
+                                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div className="input-group">
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programación</label>
+                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
+                                        </div>
+                                        <div className="input-group">
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora Programación</label>
+                                            <input type="time" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
                                         </div>
                                     </div>
-                                    <div className="form-group" style={{ gridColumn: 'span 2', position: 'relative' }}>
-                                        <label className="label">Técnico Responsable</label>
-                                        <input
-                                            className="input"
-                                            placeholder="Buscar o escribir técnico..."
-                                            value={formData.tecnico}
-                                            onChange={e => {
-                                                setFormData({ ...formData, tecnico: e.target.value });
-                                                setTecnicoSearch(e.target.value);
-                                                setShowTecnicoSuggestions(true);
-                                            }}
-                                            onFocus={() => { setTecnicoSearch(formData.tecnico); setShowTecnicoSuggestions(true); }}
-                                            onBlur={() => setTimeout(() => setShowTecnicoSuggestions(false), 150)}
-                                            required
-                                            autoComplete="off"
-                                        />
+
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nombre Cliente</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.nombre_cliente} onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })} placeholder="Nombre completo" required />
+                                        </div>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Técnico Responsable</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.tecnico} onChange={e => setFormData({ ...formData, tecnico: e.target.value })} placeholder="Nombre del técnico" required />
+                                        </div>
                                     </div>
-                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                        <label className="label">Actividad Celular de Contacto</label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Actividad a Realizar</label>
                                             <select
                                                 className="input"
+                                                style={{ width: '100%', padding: '12px', boxSizing: 'border-box', background: '#1e293b' }}
                                                 value={['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) ? formData.actividad : 'OTRO'}
                                                 onChange={e => {
                                                     const val = e.target.value;
                                                     setFormData({ ...formData, actividad: val === 'OTRO' ? '' : val });
                                                 }}
-                                                style={{ background: '#1e293b' }}
                                             >
                                                 <option value="INSTALACION">INSTALACION</option>
                                                 <option value="VISITA TECNICA">VISITA TECNICA</option>
@@ -528,41 +469,44 @@ const HojaRuta = () => {
                                                 <option value="CAMBIO EQUIPO">CAMBIO EQUIPO</option>
                                                 <option value="OTRO">OTRO (Manual)</option>
                                             </select>
-                                            <input className="input" placeholder="Celular" value={formData.celular_cliente} onChange={e => setFormData({ ...formData, celular_cliente: e.target.value })} />
                                         </div>
-                                    </div>
-                                    {!['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) && (
-                                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                            <label className="label">Especificar Actividad</label>
-                                            <input
-                                                className="input"
-                                                placeholder="Describa la actividad..."
-                                                value={formData.actividad}
-                                                onChange={e => setFormData({ ...formData, actividad: e.target.value.toUpperCase() })}
-                                                required
-                                            />
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Celular Contacto</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.celular_cliente} onChange={e => setFormData({ ...formData, celular_cliente: e.target.value })} placeholder="Celular" />
                                         </div>
-                                    )}
-                                    <div className="form-group">
-                                        <label className="label">Parroquia / Zona</label>
-                                        <input className="input" value={formData.parroquia} onChange={e => setFormData({ ...formData, parroquia: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="label">Ubicación de Caja (NAP / Referencia)</label>
-                                        <input className="input" placeholder="Ej: CAJA 1804-A" value={formData.ubicacion_caja} onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })} />
-                                    </div>
-                                    <div style={{ gridColumn: 'span 2' }}>
-                                        <label className="label">Dirección / Referencia de Ubicación</label>
-                                        <input className="input" value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
-                                    </div>
-                                    <div style={{ gridColumn: 'span 2' }}>
-                                        <label className="label">Razones de la Visita</label>
-                                        <textarea className="input" rows="4" value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} placeholder="Detalle lo encontrado o lo que se requiere hacer..."></textarea>
                                     </div>
 
-                                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                                        <button type="button" onClick={closeModal} className="btn btn-secondary">Cancelar</button>
-                                        <button type="submit" disabled={submitting || (!formData.cliente_id && !formData.nombre_cliente)} className="btn btn-primary">
+                                    {!['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) && (
+                                        <div className="input-group">
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Especificar Actividad (Otro)</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.actividad} onChange={e => setFormData({ ...formData, actividad: e.target.value.toUpperCase() })} placeholder="Describa actividad..." required />
+                                        </div>
+                                    )}
+
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Parroquia / Sector</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.parroquia} onChange={e => setFormData({ ...formData, parroquia: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Caja NAP / Referencia Lógica</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_caja} onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })} placeholder="Ej: CAJA 1804" />
+                                        </div>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dirección Física Exacta</label>
+                                        <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Problema Reportado / Razones Visita</label>
+                                        <textarea className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box', fontFamily: 'inherit' }} rows="3" value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} placeholder="Detalle el requerimiento..."></textarea>
+                                    </div>
+
+                                    <div className="modal-actions" style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                                        <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ padding: '10px 20px' }}>Cancelar</button>
+                                        <button type="submit" className="btn btn-primary" disabled={submitting} style={{ padding: '10px 20px' }}>
                                             {submitting ? 'Guardando...' : (editingId ? 'Actualizar Registro' : 'Crear Registro')}
                                         </button>
                                     </div>
@@ -573,34 +517,57 @@ const HojaRuta = () => {
                 )}
             </AnimatePresence>
 
+
+            {/* MODAL OBSERVACIÓN TÉCNICA */}
             <AnimatePresence>
-                {showTechModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(2, 6, 23, 0.9)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass" style={{ width: '100%', maxWidth: '500px', padding: '30px', borderRadius: '20px' }}>
-                            <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>🛠️ Observación del Técnico</h2>
-                            <textarea
-                                className="input"
-                                rows="6"
-                                value={techObs}
-                                onChange={e => setTechObs(e.target.value)}
-                                placeholder="Escriba aquí los detalles técnicos o trabajos realizados..."
-                                style={{ background: 'rgba(255,255,255,0.05)', marginBottom: '20px' }}
-                            ></textarea>
-                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setShowTechModal(false)} className="btn btn-secondary">Cancelar</button>
-                                <button onClick={handleSaveTechObs} className="btn btn-primary">Guardar Observación</button>
+                {showObsModal && (
+                    <div className="modal-overlay">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '500px' }}>
+                            <div className="modal-header">
+                                <h2>⚙️ Observación Técnica</h2>
+                                <button onClick={() => setShowObsModal(false)} className="close-btn">&times;</button>
                             </div>
+                            <form onSubmit={handleSubmit}>
+                                <div className="input-group">
+                                    <label className="label">Actividades Realizadas por el Técnico</label>
+                                    <textarea
+                                        className="input"
+                                        rows="10"
+                                        value={formData.observacion_tecnico}
+                                        onChange={e => setFormData({ ...formData, observacion_tecnico: e.target.value })}
+                                        disabled={user.rol?.toLowerCase() !== 'tecnico' && user.rol?.toLowerCase() !== 'administrador'}
+                                        placeholder="El técnico debe escribir aquí lo realizado..."
+                                        style={{ height: '200px' }}
+                                    ></textarea>
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" onClick={() => setShowObsModal(false)} className="btn btn-secondary">Cerrar</button>
+                                    {(user.rol?.toLowerCase() === 'tecnico' || user.rol?.toLowerCase() === 'administrador') && (
+                                        <button type="submit" className="btn btn-primary" disabled={submitting}>Guardar</button>
+                                    )}
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
 
             <style>{`
-                .client-search-item:hover { background: rgba(99, 102, 241, 0.1); }
-                .label { display: block; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em; }
-                .input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 12px; outline: none; transition: border 0.3s; font-size: 0.85rem; }
-                .input:focus { border-color: var(--primary); }
-                th { border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
+                .status-chip { border: 1px solid; padding: 4px 12px; borderRadius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
+                .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
+                .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+                .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
+                .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+                .modal-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
+                .client-info { padding: 20px; font-size: 0.8rem; }
+                .client-info h4 { margin-top: 0; margin-bottom: 15px; color: #a78bfa; }
+                .client-info p { margin: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
+                .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+                .client-picker { position: relative; }
+                .client-list { position: absolute; top: 100%; left: 0; right: 0; background: #1e1b4b; border-radius: 10px; z-index: 100; max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
+                .client-item { padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
+                .client-item:hover { background: rgba(255,255,255,0.1); }
             `}</style>
         </>
     );

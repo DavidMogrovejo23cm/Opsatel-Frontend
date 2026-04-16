@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ const Admin = () => {
   const [bancosList, setBancosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hojaRutaList, setHojaRutaList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -32,25 +33,30 @@ const Admin = () => {
     comentarios: ''
   });
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      const [clientesRes, bancosRes, planesRes] = await Promise.all([
+      if (!silent) setLoading(true);
+      const [clientesRes, bancosRes, planesRes, hrRes] = await Promise.all([
         clienteService.listar(),
         configuracionService.getBancos(),
-        configuracionService.getPlanes()
+        configuracionService.getPlanes(),
+        hojaRutaService.listar()
       ]);
       setClientes(clientesRes.data);
       setBancosList(bancosRes.data);
       setPlanesList(planesRes.data);
+      setHojaRutaList(hrRes.data || []);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => fetchData(true), 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Bloquea el scroll del cuerpo cuando el modal está abierto
@@ -85,7 +91,8 @@ const Admin = () => {
       plus: cliente.plus || '',
       bank_plus: cliente.bank_plus || '',
       adicional: cliente.adicional || '',
-      comentarios: cliente.comentarios || ''
+      comentarios: cliente.observaciones || '', // Usamos observaciones para las notas de pago acumuladas
+      observaciones_edit: cliente.observaciones || ''
     });
     setEfectivoRecibido('');
     setShowPagoModal(true);
@@ -101,6 +108,10 @@ const Admin = () => {
     try {
       // Según v1.2, pagoData.monto es el efectivo total recibido. 
       // El backend desglosará el adicional independientemente.
+      if (parseFloat(pagoData.plus || 0) > 0 && !pagoData.bank_plus) {
+        return alert('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
+      }
+
       await clienteService.pagar(selectedCliente.id, {
         monto: parseFloat(pagoData.monto),
         metodo_pago: pagoData.metodo,
@@ -116,7 +127,7 @@ const Admin = () => {
         plus: noneIfEmpty(pagoData.plus),
         bank_plus: noneIfEmpty(pagoData.bank_plus),
         adicional: noneIfEmpty(pagoData.adicional),
-        comentarios: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
+        observaciones: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
       });
 
       // Guardar observaciones si fueron modificadas
@@ -138,7 +149,7 @@ const Admin = () => {
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.plus,
         adicional: pagoData.adicional,
-        comentarios: pagoData.comentarios,
+        observaciones: pagoData.comentarios, // Guardar nota de reparación en observaciones
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
@@ -161,24 +172,6 @@ const Admin = () => {
     }
   };
 
-  const handlePlusChange = async (clienteId, nuevoPlus) => {
-    try {
-      await clienteService.updateAdmin(clienteId, { plus: nuevoPlus });
-      fetchData();
-    } catch (error) {
-      alert("Error al actualizar plus");
-    }
-  };
-
-  const handleAdicionalChange = async (clienteId, nuevoAdicional) => {
-    try {
-      await clienteService.updateAdmin(clienteId, { adicional: nuevoAdicional });
-      fetchData();
-    } catch (error) {
-      alert("Error al actualizar adicional");
-    }
-  };
-
   const ejecutarFacturacion = async () => {
     if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?\n(Asegúrese de haber generado el Reporte Mensual primero desde la sección de Reportes)")) return;
     try {
@@ -190,28 +183,20 @@ const Admin = () => {
     }
   };
 
-
-
-  const liquidarTest = async () => {
-    if (!confirm("¿Deseas liquidar TODAS las deudas de todos los clientes (Solo para PRUEBAS)?")) return;
-    try {
-      const resp = await clienteService.pagoGlobalTest();
-      alert(resp.data.message);
-      fetchData();
-    } catch (err) {
-      alert("Error al ejecutar liquidación test");
-    }
-  };
-
-
-
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
+  const [statusFilter, setStatusFilter] = useState('ACTIVO');
+
   const filteredClientes = safeClientes
-    .filter(c =>
-      c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.id?.toString().includes(searchTerm)
-    )
+    .filter(c => {
+      // Filtro de estado para cobros: Solo Activos por defecto, o según búsqueda
+      if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
+      if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
+      if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
+
+      return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.id?.toString().includes(searchTerm)
+    })
     .sort((a, b) => a.id - b.id);
 
   return (
@@ -234,6 +219,18 @@ const Admin = () => {
           alignItems: 'center',
           width: window.innerWidth <= 768 ? '100%' : 'auto'
         }}>
+          <select
+            className="input"
+            style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Solo Activos</option>
+            <option value="INACTIVO">Solo Inactivos</option>
+            <option value="PENDIENTE">Solo Pendientes</option>
+          </select>
+
           <input
             className="input"
             placeholder="Buscar por ID o Nombre..."
@@ -248,7 +245,6 @@ const Admin = () => {
 
           {isAdmin && (
             <>
-
               <button className="btn btn-secondary" style={{ width: window.innerWidth <= 480 ? '100%' : 'auto' }} onClick={ejecutarFacturacion}>⚙️ Facturación Mensual</button>
             </>
           )}
@@ -267,12 +263,13 @@ const Admin = () => {
                 <th>Pantallas IPTV</th>
                 <th>Comentarios</th>
                 <th>Pendiente</th>
+                <th>COMENTARIO PAGO</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredClientes.map(c => (
-                <tr key={c.id} style={{ 
+                <tr key={c.id} style={{
                   borderBottom: '1px solid rgba(255,255,255,0.05)',
                   opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
                 }}>
@@ -316,13 +313,14 @@ const Admin = () => {
                   <td>
                     <input
                       type="number"
-                      value={(parseFloat(c.plus || 0) / 2 + 1)}
+                      value={(parseFloat(c.plus || 0) / 2 + (planesList.find(p => p.nombre === c.plan)?.pantallas || 1))}
                       onChange={async (e) => {
                         const val = parseInt(e.target.value) || 1;
+                        const baseScreens = planesList.find(p => p.nombre === c.plan)?.pantallas || 1;
                         try {
-                          await clienteService.updateAdmin(c.id, { 
+                          await clienteService.updateAdmin(c.id, {
                             iptv_max_conn: val,
-                            plus: (Math.max(0, (val - 1) * 2)).toString() 
+                            plus: (Math.max(0, (val - baseScreens) * 2)).toString()
                           });
                           fetchData();
                         } catch (error) {
@@ -343,7 +341,7 @@ const Admin = () => {
                     />
                   </td>
                   <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {c.comentarios || '-'}
+                    {c.observaciones || '-'}
                   </td>
                   <td style={{ fontWeight: 'bold' }}>
                     {parseFloat(c.total_pago) < 0 ? (
@@ -356,16 +354,19 @@ const Admin = () => {
                       </span>
                     )}
                   </td>
+                  <td style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap' }}>
+                    {c.observaciones || '-'}
+                  </td>
                   <td>
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ 
-                        padding: '6px 12px', 
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        padding: '6px 12px',
                         fontSize: '0.8rem',
                         opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.5 : 1,
                         cursor: c.estado?.toUpperCase() === 'PENDIENTE' ? 'not-allowed' : 'pointer',
                         filter: c.estado?.toUpperCase() === 'PENDIENTE' ? 'grayscale(1)' : 'none'
-                      }} 
+                      }}
                       onClick={() => {
                         if (c.estado?.toUpperCase() !== 'PENDIENTE') openPagoModal(c);
                       }}
@@ -419,48 +420,114 @@ const Admin = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
                 <span style={{ fontSize: '1.5rem' }}>📝</span>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Observaciones</h3>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Notas del Cliente</h3>
               </div>
-              <textarea
-                value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
-                onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
-                placeholder="Escriba observaciones del cliente..."
-                style={{
-                  flex: 1,
-                  minHeight: '200px',
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(96, 165, 250, 0.2)',
+
+              {/* Comentarios de Contrato */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                  Comentario de Contrato
+                </label>
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '12px',
-                  color: 'var(--text-muted)',
                   padding: '12px',
                   fontSize: '0.85rem',
                   lineHeight: '1.6',
-                  resize: 'vertical',
-                  outline: 'none',
-                  fontFamily: 'inherit'
-                }}
-              />
-              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
-                Use "/" para separar párrafos en la Vista General.
-              </p>
-              <button
-                className="btn btn-secondary"
-                style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
-                onClick={async () => {
-                  try {
-                    await clienteService.updateAdmin(selectedCliente.id, {
-                      observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
-                    });
-                    alert('Observaciones guardadas correctamente.');
-                    fetchData();
-                  } catch (err) {
-                    alert('Error al guardar observaciones.');
+                  color: 'rgba(255,255,255,0.7)',
+                  minHeight: '80px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {selectedCliente?.comentarios ? (
+                    selectedCliente.comentarios.split('/').map((line, idx) => (
+                      <React.Fragment key={idx}>{line}<br/></React.Fragment>
+                    ))
+                  ) : (
+                    <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Sin comentarios...</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Observaciones Generales/Técnicas */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                  Observaciones
+                </label>
+                <textarea
+                  value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
+                  onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
+                  placeholder="Escriba observaciones del cliente..."
+                  style={{
+                    flex: 1,
+                    minHeight: '120px',
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(96, 165, 250, 0.2)',
+                    borderRadius: '12px',
+                    color: 'var(--text-muted)',
+                    padding: '12px',
+                    fontSize: '0.85rem',
+                    lineHeight: '1.6',
+                    resize: 'vertical',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
+                  Use "/" para separar párrafos en la Vista General.
+                </p>
+
+                {/* Problema Reportado & Observación Técnica (de Hoja de Ruta) */}
+                {(() => {
+                  const hrItem = hojaRutaList.find(h => h.cliente_id === selectedCliente?.id && (h.observacion || h.observacion_tecnico));
+                  if (hrItem) {
+                    return (
+                      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {hrItem.observacion && (
+                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.05)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#fbbf24', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                              ⚠️ Problema Reportado
+                            </label>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                              {hrItem.observacion}
+                            </div>
+                          </div>
+                        )}
+                        {hrItem.observacion_tecnico && (
+                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#10b981', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                              ⚡ Solución Técnica
+                            </label>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                              {hrItem.observacion_tecnico}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
                   }
-                }}
-              >
-                💾 Guardar Observaciones
-              </button>
+                  return null;
+                })()}
+
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
+                  onClick={async () => {
+                    try {
+                      await clienteService.updateAdmin(selectedCliente.id, {
+                        observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
+                      });
+                      alert('Observaciones guardadas correctamente.');
+                      fetchData();
+                    } catch (err) {
+                      alert('Error al guardar observaciones.');
+                    }
+                  }}
+                >
+                  💾 Guardar Observaciones
+                </button>
+              </div>
             </motion.div>
 
             {/* Modal de Pago Principal */}
@@ -497,18 +564,8 @@ const Admin = () => {
                   </span>
                 </div>
 
-                {selectedCliente?.instalation_date &&
-                  selectedCliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7)) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '4px' }}>
-                      <span style={{ color: '#818cf8' }}>Monto Primer Mes:</span>
-                      <span style={{ color: '#818cf8', fontWeight: 'bold' }}>
-                        ${(parseFloat(selectedCliente.total_pago || 0) - parseFloat(selectedCliente.plus || 0)).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + 1) || 1} Pantallas):</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + (planesList.find(p => p.nombre === selectedCliente?.plan)?.pantallas || 1))} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                     ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
                   </span>
@@ -607,10 +664,16 @@ const Admin = () => {
                   }} />
                 </div>
 
-                {/* 3. COMENTARIOS (MORADO) */}
+                {/* 3. COMENTARIOS DE PAGO / REPARACIÓN (MORADO) - Se guarda en 'observaciones' */}
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Comentarios</label>
-                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
+                  <textarea 
+                    className="input" 
+                    style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }} 
+                    value={pagoData.comentarios} 
+                    onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })}
+                    placeholder="Escriba aquí si hay reparaciones..."
+                  />
                 </div>
 
                 {/* 4. MÉTODO (MORADO) */}

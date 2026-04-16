@@ -90,7 +90,16 @@ const Ventas = () => {
       setFormData({
         ...formData,
         tercera_edad: checked,
-        plan: checked ? 'TERCERA EDAD' : '' // Reset plan if unchecked, or set to placeholder if checked
+        plan: checked ? 'TERCERA EDAD' : '' 
+      });
+    } else if (name === 'plan') {
+      const selectedPlan = planesList.find(p => p.nombre === value);
+      const baseScreens = selectedPlan?.pantallas || 1;
+      setFormData({ 
+        ...formData, 
+        plan: value,
+        iptv_max_conn: baseScreens,
+        plus: '0'
       });
     } else {
       setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
@@ -149,12 +158,12 @@ const Ventas = () => {
     e.preventDefault();
 
     // Validación manual de campos select obligatorios
-    if (!formData.cedula_tipo) {
-      setMessage({ type: 'error', text: 'Seleccione si posee Cédula/Identificación.' });
+    if (formData.cedula_tipo === 'Si' && (!fileFrontal || !filePosterior)) {
+      setMessage({ type: 'error', text: 'Las fotos de la cédula son obligatorias si seleccionó "Si".' });
       return;
     }
-    if (formData.cedula_tipo === 'SÍ' && (!fileFrontal || !filePosterior)) {
-      setMessage({ type: 'error', text: 'Las fotos de la cédula son obligatorias si seleccionó SÍ.' });
+    if (!formData.cedula_tipo) {
+      setMessage({ type: 'error', text: 'Seleccione si se requiere digitalización de cédula.' });
       return;
     }
     if (!formData.parroquia) {
@@ -282,13 +291,17 @@ const Ventas = () => {
               className="input"
               type="number"
               name="iptv_max_conn"
-              value={formData.iptv_max_conn - 1}
+              value={(() => {
+                const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                return Math.max(0, formData.iptv_max_conn - baseScreens);
+              })()}
               onChange={(e) => {
-                const val = parseInt(e.target.value) || 0;
+                const additional = parseInt(e.target.value) || 0;
+                const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
                 setFormData({
                   ...formData,
-                  iptv_max_conn: val + 1,
-                  plus: (val * 2).toString()
+                  iptv_max_conn: baseScreens + additional,
+                  plus: (additional * 2).toString()
                 });
               }}
               min="0"
@@ -324,11 +337,11 @@ const Ventas = () => {
             </div>
           )}
           <div className="input-group">
-            <label className="label">¿Posee Cédula / Identificación?</label>
+            <label className="label">¿Digitalizar Cédula?</label>
             <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>
-              <option value="">Seleccione...</option>
-              <option value="SÍ">SÍ</option>
-              <option value="NO">NO</option>
+              <option value="">Seleccione opción</option>
+              <option value="Si">Si (Mandatorio imagenes)</option>
+              <option value="No">No</option>
             </select>
           </div>
 

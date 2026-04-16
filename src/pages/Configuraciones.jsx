@@ -213,12 +213,7 @@ const Configuraciones = () => {
 
     const handleEditPlan = (plan) => {
         setIsEditingPlan(plan.id);
-        setNewPlan({ 
-            nombre: plan.nombre, 
-            megas: plan.megas || '', 
-            precio: plan.precio,
-            pantallas: plan.pantallas || 1
-        });
+        setNewPlan({ nombre: plan.nombre, megas: plan.megas || '', precio: plan.precio, pantallas: plan.pantallas ?? 1 });
         setActiveTab('Planes');
     };
 
@@ -362,7 +357,7 @@ const Configuraciones = () => {
                 {activeTab === 'Planes' && (
                     <div>
                         <h3>Añadir Plan</h3>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre del Plan</label>
                                 <input className="input" style={{ margin: 0 }} value={newPlan.nombre} onChange={e => setNewPlan({ ...newPlan, nombre: e.target.value })} placeholder="Ej. 1GB" />
@@ -376,8 +371,8 @@ const Configuraciones = () => {
                                 <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={newPlan.precio} onChange={e => setNewPlan({ ...newPlan, precio: e.target.value })} placeholder="0.00" />
                             </div>
                             <div className="input-group" style={{ margin: 0 }}>
-                                <label className="label">Pantallas</label>
-                                <input type="number" className="input" style={{ margin: 0 }} value={newPlan.pantallas} onChange={e => setNewPlan({ ...newPlan, pantallas: e.target.value })} placeholder="1" />
+                                <label className="label">Pantallas IPTV</label>
+                                <input type="number" className="input" style={{ margin: 0 }} value={newPlan.pantallas} onChange={e => setNewPlan({ ...newPlan, pantallas: e.target.value })} min="0" />
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Planes')}>{isEditingPlan ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingPlan && (

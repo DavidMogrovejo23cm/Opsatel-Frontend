@@ -15,20 +15,27 @@ const Administrar = () => {
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
-  const fetchData = async () => {
+  // Estados para fotos en edición
+  const [fileFrontal, setFileFrontal] = useState(null);
+  const [filePosterior, setFilePosterior] = useState(null);
+
+  const fetchData = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const response = await clienteService.listar();
-      setClientes(response.data);
+      const sorted = (response.data || []).sort((a, b) => a.id - b.id);
+      setClientes(sorted);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(() => fetchData(true), 30000);
+    
     const fetchSelects = async () => {
       try {
         const [paRes, ppRes, plRes] = await Promise.all([
@@ -48,24 +55,9 @@ const Administrar = () => {
 
   const startEdit = (cliente) => {
     setEditingId(cliente.id);
-    setEditData({
-      nombre: cliente.nombre || '',
-      cedula: cliente.cedula || '',
-      celular: cliente.celular || '',
-      correo: cliente.correo || '',
-      direccion: cliente.direccion || '',
-      nodo: cliente.nodo || '',
-      parroquia: cliente.parroquia || '',
-      plan: cliente.plan || '',
-      plus: cliente.plus || '0',
-      estado: cliente.estado || '',
-      arrienda: cliente.arrienda || '',
-      cuenta: cliente.cuenta || '',
-      tercera_edad: cliente.tercera_edad || false,
-      precio_plan_especial: cliente.precio_plan_especial || 0,
-       iptv_max_conn: cliente.iptv_max_conn || 0,
-       cedula_tipo: cliente.cedula_tipo || ''
-    });
+    setEditData({ ...cliente });
+    setFileFrontal(null);
+    setFilePosterior(null);
   };
 
   const cancelEdit = () => {
@@ -76,25 +68,21 @@ const Administrar = () => {
   };
 
   const saveEdit = async () => {
-    // Validación básica: Nombre, Cédula y Celular son requeridos
     if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
       return alert('Los campos Nombre, Cédula y Celular son obligatorios.');
     }
 
     try {
-      // Si hay archivos, usamos FormData
+      await clienteService.actualizar(editingId, editData);
+      
+      // Subir fotos si se seleccionaron
       if (fileFrontal || filePosterior) {
-        const formData = new FormData();
-        Object.keys(editData).forEach(key => {
-          formData.append(key, editData[key]);
-        });
-        if (fileFrontal) formData.append('foto_frontal', fileFrontal);
-        if (filePosterior) formData.append('foto_posterior', filePosterior);
-        
-        await clienteService.actualizarConFotos(editingId, formData);
-      } else {
-        await clienteService.actualizar(editingId, editData);
+        const uploadData = new FormData();
+        if (fileFrontal) uploadData.append('frontal', fileFrontal);
+        if (filePosterior) uploadData.append('posterior', filePosterior);
+        await clienteService.uploadCedula(editingId, uploadData);
       }
+
       setEditingId(null);
       setFileFrontal(null);
       setFilePosterior(null);
@@ -109,77 +97,45 @@ const Administrar = () => {
       setEditData(prev => ({ 
         ...prev, 
         tercera_edad: value,
-        plan: value ? 'TERCERA EDAD' : ''
+        plan: value ? 'TERCERA EDAD' : prev.plan
       }));
     } else {
       setEditData(prev => ({ ...prev, [field]: value }));
     }
   };
 
-  const handleEstadoChange = async (clienteId, nuevoEstado) => {
-    try {
-      await clienteService.actualizar(clienteId, { estado: nuevoEstado });
-      fetchData();
-    } catch (error) {
-      alert('Error al cambiar estado');
-    }
-  };
-
   const filteredClientes = clientes.filter(c => {
-    // Algoritmo de caducidad: Solo muestra clientes ingresados en los últimos 7 días.
+    // Filtro: Solo Activos (según solicitud del usuario)
+    if (c.estado?.toUpperCase() !== 'ACTIVO') return false;
+
     if (!c.fecha_firma) return false;
-    
     const fechaFirma = new Date(c.fecha_firma);
     const hace7Dias = new Date();
     hace7Dias.setDate(hace7Dias.getDate() - 7);
-    
-    if (fechaFirma < hace7Dias) {
-      return false; // Forzamos ocultamiento si pasó más de una semana.
-    }
+    if (fechaFirma < hace7Dias) return false;
 
     return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            c.id?.toString().includes(searchTerm) ||
            c.cedula?.includes(searchTerm);
   });
 
-  const cellStyle = {
-    padding: '10px 8px',
-    fontSize: '0.8rem',
-    whiteSpace: 'nowrap'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid var(--primary)',
-    borderRadius: '6px',
-    color: 'white',
-    padding: '6px 8px',
-    fontSize: '0.8rem',
-    outline: 'none'
-  };
+  const cellStyle = { padding: '12px 10px', fontSize: '0.8rem', whiteSpace: 'nowrap' };
+  const inputStyle = { width: '100%', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: 'white', padding: '8px 10px', fontSize: '0.8rem', outline: 'none' };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1>Administrar Recientes</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
-            Únicamente clientes creados en los últimos 7 días.
-          </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Clientes creados en los últimos 7 días.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <input
-            className="input"
-            placeholder="Buscar por ID, Nombre o Cédula..."
-            style={{ maxWidth: '280px', marginBottom: 0 }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem' }}>
-            {filteredClientes.length} recientes
-          </span>
-        </div>
+        <input
+          className="input"
+          placeholder="Buscar..."
+          style={{ maxWidth: '280px', marginBottom: 0 }}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       {loading ? <p>Cargando...</p> : (
@@ -188,163 +144,117 @@ const Administrar = () => {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 <th style={cellStyle}>ID</th>
-                <th style={cellStyle}>Nombre</th>
-                <th style={cellStyle}>Cédula</th>
-                <th style={cellStyle}>Celular</th>
-                <th style={cellStyle}>Correo</th>
-                <th style={cellStyle}>Dirección</th>
-                 <th style={cellStyle}>Nodo</th>
-                <th style={cellStyle}>Parroquia</th>
-                <th style={cellStyle}>Plan</th>
-                <th style={cellStyle}>IPTV (Pantallas)</th>
+                <th style={cellStyle}>Datos Cliente</th>
+                <th style={cellStyle}>Técnico / Red</th>
+                <th style={cellStyle}>Ubicación / Plan</th>
+                <th style={cellStyle}>Potencia</th>
+                <th style={cellStyle}>Documentación</th>
                 <th style={cellStyle}>Estado</th>
-                <th style={cellStyle}>Arrienda</th>
-                <th style={cellStyle}>Cuenta</th>
-                <th style={cellStyle}>3ra Edad</th>
-                <th style={cellStyle}>P. Especial</th>
-                <th style={cellStyle}>Cédula Si/No</th>
                 <th style={cellStyle}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredClientes.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
+                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={cellStyle}>{c.id}</td>
-
                   {editingId === c.id ? (
                     <>
-                      <td style={cellStyle}><input style={inputStyle} value={editData.nombre} onChange={(e) => handleEditChange('nombre', e.target.value)} /></td>
-                      <td style={cellStyle}><input style={inputStyle} value={editData.cedula} onChange={(e) => handleEditChange('cedula', e.target.value)} /></td>
-                      <td style={cellStyle}><input style={inputStyle} value={editData.celular} onChange={(e) => handleEditChange('celular', e.target.value)} /></td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '140px'}} value={editData.correo} onChange={(e) => handleEditChange('correo', e.target.value)} /></td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '140px'}} value={editData.direccion} onChange={(e) => handleEditChange('direccion', e.target.value)} /></td>
-                      <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.nodo} onChange={(e) => handleEditChange('nodo', e.target.value)}>
-                          <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
-                          {nodosList.map(p => (
-                            <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
-                          ))}
-                        </select>
+                    <td style={cellStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
+                          <input style={inputStyle} value={editData.nombre} onChange={(e) => handleEditChange('nombre', e.target.value)} placeholder="Nombre" />
+                          <input style={inputStyle} value={editData.cedula} onChange={(e) => handleEditChange('cedula', e.target.value)} placeholder="Cédula" />
+                          <input style={inputStyle} value={editData.celular} onChange={(e) => handleEditChange('celular', e.target.value)} placeholder="Celular" />
+                        </div>
                       </td>
                       <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
-                          <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
-                          {parroquiasList.map(p => (
-                            <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
-                          ))}
-                        </select>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '140px' }}>
+                          <input style={inputStyle} value={editData.tecnico} onChange={(e) => handleEditChange('tecnico', e.target.value)} placeholder="Técnico" />
+                          <input style={inputStyle} value={editData.red} onChange={(e) => handleEditChange('red', e.target.value)} placeholder="Red" />
+                        </div>
                       </td>
                       <td style={cellStyle}>
-                        {!editData.tercera_edad ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' }}>
                           <select style={inputStyle} value={editData.plan} onChange={(e) => handleEditChange('plan', e.target.value)}>
-                            <option value="" style={{ background: '#1e1b4b' }}>Seleccione</option>
-                            {planesList.map(p => (
-                              <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>
-                            ))}
+                            {planesList.map(p => <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>)}
                           </select>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>TERCERA EDAD</span>
-                        )}
+                          <select style={inputStyle} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
+                            {parroquiasList.map(p => <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>)}
+                          </select>
+                        </div>
                       </td>
                       <td style={cellStyle}>
-                        <input 
-                          style={{...inputStyle, width: '60px'}} 
-                          type="number" 
-                          value={editData.iptv_max_conn} 
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            setEditData(prev => ({ 
-                              ...prev, 
-                              iptv_max_conn: val,
-                              plus: (val * 2).toString()
-                            }));
-                          }} 
-                        />
+                        <input style={{ ...inputStyle, width: '80px' }} value={editData.potencia} onChange={(e) => handleEditChange('potencia', e.target.value)} placeholder="-22.5" />
                       </td>
                       <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.estado} onChange={(e) => handleEditChange('estado', e.target.value)}>
-                          <option value="Pendiente" style={{ background: '#1e1b4b' }}>Pendiente</option>
-                          <option value="En Activación" style={{ background: '#1e1b4b' }}>En Activación</option>
-                          <option value="Activo" style={{ background: '#1e1b4b' }}>Activo</option>
-                          <option value="Inactivo" style={{ background: '#1e1b4b' }}>Inactivo</option>
-                        </select>
-                      </td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '70px'}} value={editData.arrienda} onChange={(e) => handleEditChange('arrienda', e.target.value)} /></td>
-                      <td style={cellStyle}><input style={{...inputStyle, width: '80px'}} value={editData.cuenta} onChange={(e) => handleEditChange('cuenta', e.target.value)} /></td>
-                      <td style={cellStyle}>
-                        <input 
-                          type="checkbox" 
-                          checked={editData.tercera_edad} 
-                          onChange={(e) => handleEditChange('tercera_edad', e.target.checked)} 
-                        />
-                      </td>
-                      <td style={cellStyle}>
-                        <input 
-                          style={{...inputStyle, width: '60px'}} 
-                          type="number" 
-                          step="0.01" 
-                          value={editData.precio_plan_especial} 
-                          onChange={(e) => handleEditChange('precio_plan_especial', e.target.value)} 
-                          disabled={!editData.tercera_edad}
-                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <select style={inputStyle} value={editData.cedula_tipo} onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}>
+                            <option value="No">¿Digitalizada? No</option>
+                            <option value="Si">¿Digitalizada? Si</option>
+                          </select>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.05)' }}>
+                              {fileFrontal ? '✅ Front.' : '📸 Front.'}
+                              <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                            </label>
+                            <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.05)' }}>
+                              {filePosterior ? '✅ Post.' : '📸 Post.'}
+                              <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                            </label>
+                          </div>
+                        </div>
                       </td>
                       <td style={cellStyle}>
-                        <select style={{...inputStyle, width: '70px'}} value={editData.cedula_tipo} onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}>
-                          <option value="">...</option>
-                          <option value="SÍ">SÍ</option>
-                          <option value="NO">NO</option>
+                        <select style={{ ...inputStyle, minWidth: '120px' }} value={editData.estado} onChange={(e) => handleEditChange('estado', e.target.value)}>
+                          <option value="Pendiente">Pendiente</option>
+                          <option value="En Activación">En Activación</option>
+                          <option value="Activo">Activo</option>
+                          <option value="Suspendido">Suspendido</option>
+                          <option value="Retirado">Retirado</option>
                         </select>
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          {editData.cedula_tipo === 'SÍ' && (
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '4px 8px', fontSize: '0.7rem', background: (fileFrontal && filePosterior) ? '#10b981' : 'rgba(255,255,255,0.1)' }}
-                              onClick={() => setShowPhotoModal(true)}
-                              title="Subir Fotos de Cédula"
-                            >
-                              📷
-                            </button>
-                          )}
-                          <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={saveEdit}>✓</button>
-                          <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={cancelEdit}>✗</button>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button onClick={saveEdit} className="btn btn-primary" style={{ padding: '8px', fontSize: '1rem' }} title="Guardar">✅</button>
+                          <button onClick={cancelEdit} className="btn btn-secondary" style={{ padding: '8px', fontSize: '1rem' }} title="Cancelar">❌</button>
                         </div>
                       </td>
                     </>
                   ) : (
                     <>
-                      <td style={{...cellStyle, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{c.nombre}</td>
-                      <td style={cellStyle}>{c.cedula}</td>
-                      <td style={cellStyle}>{c.celular}</td>
-                      <td style={{...cellStyle, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{c.correo || '-'}</td>
-                      <td style={{...cellStyle, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{c.direccion || '-'}</td>
-                       <td style={cellStyle}>{c.nodo || '-'}</td>
-                      <td style={cellStyle}>{c.parroquia || '-'}</td>
-                      <td style={cellStyle}>{c.plan}</td>
-                      <td style={cellStyle}>{c.iptv_max_conn || '0'}</td>
+                      <td style={cellStyle}>
+                        <div style={{ fontWeight: 'bold' }}>{c.nombre}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.cedula} | {c.celular}</div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div>{c.tecnico}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.red}</div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div>{c.plan}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.parroquia}</div>
+                      </td>
+                      <td style={cellStyle}>
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>{c.potencia || '-'}</span>
+                      </td>
+                      <td style={cellStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontSize: '0.75rem' }}>Digitalizada: {c.cedula_tipo || 'No'}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(c.cedula_frontal || c.cedula_posterior) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
+                        </div>
+                      </td>
                       <td style={cellStyle}>
                         <span style={{
-                          padding: '3px 8px', borderRadius: '6px', fontSize: '0.7rem',
-                          background: c.estado?.toUpperCase() === 'ACTIVO' ? 'rgba(16,185,129,0.1)' : (c.estado?.toUpperCase() === 'INACTIVO' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)'),
-                          color: c.estado?.toUpperCase() === 'ACTIVO' ? '#10b981' : (c.estado?.toUpperCase() === 'INACTIVO' ? '#ef4444' : '#f59e0b')
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          background: c.estado === 'Activo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                          color: c.estado === 'Activo' ? '#10b981' : '#f59e0b'
                         }}>
                           {c.estado}
                         </span>
                       </td>
-                      <td style={cellStyle}>{c.arrienda || '-'}</td>
-                      <td style={cellStyle}>{c.cuenta || '-'}</td>
-                      <td style={cellStyle}>{c.tercera_edad ? 'SÍ' : 'NO'}</td>
-                      <td style={cellStyle}>{c.tercera_edad ? `$${c.precio_plan_especial}` : '-'}</td>
-                      <td style={cellStyle}>{c.cedula_tipo || 'NO'}</td>
                       <td style={cellStyle}>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                          onClick={() => startEdit(c)}
-                        >
-                          ✏️ Editar
-                        </button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
                       </td>
                     </>
                   )}
@@ -352,9 +262,6 @@ const Administrar = () => {
               ))}
             </tbody>
           </table>
-          {filteredClientes.length === 0 && !loading && (
-            <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No se encontraron clientes.</p>
-          )}
         </div>
       )}
       {showPhotoModal && (

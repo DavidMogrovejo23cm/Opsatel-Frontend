@@ -47,7 +47,7 @@ export const authService = {
 };
 
 export const clienteService = {
-  listar: () => api.get('/clientes/'), 
+  listar: () => api.get('/clientes/'),
   crear: (data) => api.post('/clientes/', data),
   actualizar: (id, data) => api.patch(`/clientes/${id}`, data),
   getById: (id) => api.get(`/clientes/${id}`),
