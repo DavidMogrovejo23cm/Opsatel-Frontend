@@ -489,7 +489,7 @@ const Admin = () => {
                             <label style={{ fontSize: '0.75rem', color: '#fbbf24', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                               ⚠️ Problema Reportado
                             </label>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                               {hrItem.observacion}
                             </div>
                           </div>
@@ -499,7 +499,7 @@ const Admin = () => {
                             <label style={{ fontSize: '0.75rem', color: '#10b981', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                               ⚡ Solución Técnica
                             </label>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                               {hrItem.observacion_tecnico}
                             </div>
                           </div>
