@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ const Admin = () => {
   const [bancosList, setBancosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hojaRutaList, setHojaRutaList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -32,25 +33,30 @@ const Admin = () => {
     comentarios: ''
   });
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      const [clientesRes, bancosRes, planesRes] = await Promise.all([
+      if (!silent) setLoading(true);
+      const [clientesRes, bancosRes, planesRes, hrRes] = await Promise.all([
         clienteService.listar(),
         configuracionService.getBancos(),
-        configuracionService.getPlanes()
+        configuracionService.getPlanes(),
+        hojaRutaService.listar()
       ]);
       setClientes(clientesRes.data);
       setBancosList(bancosRes.data);
       setPlanesList(planesRes.data);
+      setHojaRutaList(hrRes.data || []);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => fetchData(true), 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Bloquea el scroll del cuerpo cuando el modal está abierto
@@ -85,7 +91,8 @@ const Admin = () => {
       plus: cliente.plus || '',
       bank_plus: cliente.bank_plus || '',
       adicional: cliente.adicional || '',
-      comentarios: cliente.comentarios || ''
+      comentarios: cliente.observaciones || '', // Usamos observaciones para las notas de pago acumuladas
+      observaciones_edit: cliente.observaciones || ''
     });
     setEfectivoRecibido('');
     setShowPagoModal(true);
@@ -101,6 +108,10 @@ const Admin = () => {
     try {
       // Según v1.2, pagoData.monto es el efectivo total recibido. 
       // El backend desglosará el adicional independientemente.
+      if (parseFloat(pagoData.plus || 0) > 0 && !pagoData.bank_plus) {
+        return alert('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
+      }
+
       await clienteService.pagar(selectedCliente.id, {
         monto: parseFloat(pagoData.monto),
         metodo_pago: pagoData.metodo,
@@ -116,7 +127,7 @@ const Admin = () => {
         plus: noneIfEmpty(pagoData.plus),
         bank_plus: noneIfEmpty(pagoData.bank_plus),
         adicional: noneIfEmpty(pagoData.adicional),
-        comentarios: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
+        observaciones: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
       });
 
       // Guardar observaciones si fueron modificadas
@@ -138,7 +149,7 @@ const Admin = () => {
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.plus,
         adicional: pagoData.adicional,
-        comentarios: pagoData.comentarios,
+        observaciones: pagoData.comentarios, // Guardar nota de reparación en observaciones
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
@@ -161,24 +172,6 @@ const Admin = () => {
     }
   };
 
-  const handlePlusChange = async (clienteId, nuevoPlus) => {
-    try {
-      await clienteService.updateAdmin(clienteId, { plus: nuevoPlus });
-      fetchData();
-    } catch (error) {
-      alert("Error al actualizar plus");
-    }
-  };
-
-  const handleAdicionalChange = async (clienteId, nuevoAdicional) => {
-    try {
-      await clienteService.updateAdmin(clienteId, { adicional: nuevoAdicional });
-      fetchData();
-    } catch (error) {
-      alert("Error al actualizar adicional");
-    }
-  };
-
   const ejecutarFacturacion = async () => {
     if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?\n(Asegúrese de haber generado el Reporte Mensual primero desde la sección de Reportes)")) return;
     try {
@@ -189,21 +182,6 @@ const Admin = () => {
       alert(error.response?.data?.detail || "Error en facturación");
     }
   };
-
-
-
-  const liquidarTest = async () => {
-    if (!confirm("¿Deseas liquidar TODAS las deudas de todos los clientes (Solo para PRUEBAS)?")) return;
-    try {
-      const resp = await clienteService.pagoGlobalTest();
-      alert(resp.data.message);
-      fetchData();
-    } catch (err) {
-      alert("Error al ejecutar liquidación test");
-    }
-  };
-
-
 
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
@@ -267,7 +245,6 @@ const Admin = () => {
 
           {isAdmin && (
             <>
-
               <button className="btn btn-secondary" style={{ width: window.innerWidth <= 480 ? '100%' : 'auto' }} onClick={ejecutarFacturacion}>⚙️ Facturación Mensual</button>
             </>
           )}
@@ -286,6 +263,7 @@ const Admin = () => {
                 <th>Pantallas IPTV</th>
                 <th>Comentarios</th>
                 <th>Pendiente</th>
+                <th>COMENTARIO PAGO</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -362,7 +340,7 @@ const Admin = () => {
                     />
                   </td>
                   <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {c.comentarios || '-'}
+                    {c.observaciones || '-'}
                   </td>
                   <td style={{ fontWeight: 'bold' }}>
                     {parseFloat(c.total_pago) < 0 ? (
@@ -374,6 +352,9 @@ const Admin = () => {
                         ${parseFloat(c.total_pago).toFixed(2)}
                       </span>
                     )}
+                  </td>
+                  <td style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap' }}>
+                    {c.observaciones || '-'}
                   </td>
                   <td>
                     <button
@@ -457,7 +438,13 @@ const Admin = () => {
                   minHeight: '80px',
                   whiteSpace: 'pre-wrap'
                 }}>
-                  {selectedCliente?.comentarios || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Sin comentarios...</span>}
+                  {selectedCliente?.comentarios ? (
+                    selectedCliente.comentarios.split('/').map((line, idx) => (
+                      <React.Fragment key={idx}>{line}<br/></React.Fragment>
+                    ))
+                  ) : (
+                    <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Sin comentarios...</span>
+                  )}
                 </div>
               </div>
 
@@ -489,6 +476,39 @@ const Admin = () => {
                 <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
                   Use "/" para separar párrafos en la Vista General.
                 </p>
+
+                {/* Problema Reportado & Observación Técnica (de Hoja de Ruta) */}
+                {(() => {
+                  const hrItem = hojaRutaList.find(h => h.cliente_id === selectedCliente?.id && (h.observacion || h.observacion_tecnico));
+                  if (hrItem) {
+                    return (
+                      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {hrItem.observacion && (
+                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.05)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#fbbf24', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                              ⚠️ Problema Reportado
+                            </label>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                              {hrItem.observacion}
+                            </div>
+                          </div>
+                        )}
+                        {hrItem.observacion_tecnico && (
+                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#10b981', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                              ⚡ Solución Técnica
+                            </label>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                              {hrItem.observacion_tecnico}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 <button
                   className="btn btn-secondary"
                   style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
@@ -542,16 +562,6 @@ const Admin = () => {
                     ${(parseFloat(pagoData.internet_payment || 0)).toFixed(2)}
                   </span>
                 </div>
-
-                {selectedCliente?.instalation_date &&
-                  selectedCliente.instalation_date.startsWith(new Date().toISOString().slice(0, 7)) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '4px' }}>
-                      <span style={{ color: '#818cf8' }}>Monto Primer Mes:</span>
-                      <span style={{ color: '#818cf8', fontWeight: 'bold' }}>
-                        ${(parseFloat(selectedCliente.total_pago || 0) - parseFloat(selectedCliente.plus || 0)).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + 1) || 1} Pantallas):</span>
@@ -653,10 +663,16 @@ const Admin = () => {
                   }} />
                 </div>
 
-                {/* 3. COMENTARIOS (MORADO) */}
+                {/* 3. COMENTARIOS DE PAGO / REPARACIÓN (MORADO) - Se guarda en 'observaciones' */}
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Comentarios</label>
-                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.comentarios} onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
+                  <textarea 
+                    className="input" 
+                    style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }} 
+                    value={pagoData.comentarios} 
+                    onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })}
+                    placeholder="Escriba aquí si hay reparaciones..."
+                  />
                 </div>
 
                 {/* 4. MÉTODO (MORADO) */}

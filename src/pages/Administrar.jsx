@@ -16,19 +16,23 @@ const Administrar = () => {
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const response = await clienteService.listar();
-      setClientes(response.data);
+      const sorted = (response.data || []).sort((a, b) => a.id - b.id);
+      setClientes(sorted);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => fetchData(true), 30000);
+    
     const fetchSelects = async () => {
       try {
         const [paRes, ppRes, plRes] = await Promise.all([
@@ -94,6 +98,9 @@ const Administrar = () => {
   };
 
   const filteredClientes = clientes.filter(c => {
+    // Filtro: Solo Activos (según solicitud del usuario)
+    if (c.estado?.toUpperCase() !== 'ACTIVO') return false;
+
     if (!c.fecha_firma) return false;
     const fechaFirma = new Date(c.fecha_firma);
     const hace7Dias = new Date();
@@ -105,8 +112,8 @@ const Administrar = () => {
            c.cedula?.includes(searchTerm);
   });
 
-  const cellStyle = { padding: '10px 8px', fontSize: '0.8rem', whiteSpace: 'nowrap' };
-  const inputStyle = { width: '100%', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--primary)', borderRadius: '6px', color: 'white', padding: '6px 8px', fontSize: '0.8rem' };
+  const cellStyle = { padding: '12px 10px', fontSize: '0.8rem', whiteSpace: 'nowrap' };
+  const inputStyle = { width: '100%', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: 'white', padding: '8px 10px', fontSize: '0.8rem', outline: 'none' };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass">
@@ -130,10 +137,11 @@ const Administrar = () => {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 <th style={cellStyle}>ID</th>
-                <th style={cellStyle}>Nombre / Cédula / Celular</th>
+                <th style={cellStyle}>Datos Cliente</th>
+                <th style={cellStyle}>Técnico / Red</th>
                 <th style={cellStyle}>Ubicación / Plan</th>
-                <th style={cellStyle}>Digitalizar Cédula (SI/NO)</th>
-                <th style={cellStyle}>Fotos Cédula</th>
+                <th style={cellStyle}>Potencia</th>
+                <th style={cellStyle}>Documentación</th>
                 <th style={cellStyle}>Estado</th>
                 <th style={cellStyle}>Acciones</th>
               </tr>
@@ -144,66 +152,102 @@ const Administrar = () => {
                   <td style={cellStyle}>{c.id}</td>
                   {editingId === c.id ? (
                     <>
-                      <td style={cellStyle}>
-                        <input style={inputStyle} value={editData.nombre} onChange={(e) => handleEditChange('nombre', e.target.value)} placeholder="Nombre" />
-                        <input style={{...inputStyle, marginTop: '5px'}} value={editData.cedula} onChange={(e) => handleEditChange('cedula', e.target.value)} placeholder="Cédula" />
-                        <input style={{...inputStyle, marginTop: '5px'}} value={editData.celular} onChange={(e) => handleEditChange('celular', e.target.value)} placeholder="Celular" />
-                      </td>
-                      <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.plan} onChange={(e) => handleEditChange('plan', e.target.value)}>
-                          {planesList.map(p => <option key={p.id} value={p.nombre} style={{background: '#1e1b4b'}}>{p.nombre}</option>)}
-                        </select>
-                        <select style={{...inputStyle, marginTop: '5px'}} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
-                          {parroquiasList.map(p => <option key={p.id} value={p.nombre} style={{background: '#1e1b4b'}}>{p.nombre}</option>)}
-                        </select>
-                      </td>
-                      <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.cedula_tipo} onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}>
-                          <option value="No" style={{background: '#1e1b4b'}}>No</option>
-                          <option value="Si" style={{background: '#1e1b4b'}}>Si</option>
-                        </select>
-                      </td>
-                      <td style={cellStyle}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{fontSize: '10px'}}>{fileFrontal ? '✅ Frontal' : '📁 Frontal'}<input type="file" style={{display: 'none'}} onChange={e => setFileFrontal(e.target.files[0])}/></label>
-                          <label style={{fontSize: '10px'}}>{filePosterior ? '✅ Post.' : '📁 Post.'}<input type="file" style={{display: 'none'}} onChange={e => setFilePosterior(e.target.files[0])}/></label>
+                    <td style={cellStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' }}>
+                          <input style={inputStyle} value={editData.nombre} onChange={(e) => handleEditChange('nombre', e.target.value)} placeholder="Nombre" />
+                          <input style={inputStyle} value={editData.cedula} onChange={(e) => handleEditChange('cedula', e.target.value)} placeholder="Cédula" />
+                          <input style={inputStyle} value={editData.celular} onChange={(e) => handleEditChange('celular', e.target.value)} placeholder="Celular" />
                         </div>
                       </td>
                       <td style={cellStyle}>
-                        <select style={inputStyle} value={editData.estado} onChange={(e) => handleEditChange('estado', e.target.value)}>
-                          <option value="Pendiente" style={{background: '#1e1b4b'}}>Pendiente</option>
-                          <option value="En Activación" style={{background: '#1e1b4b'}}>En Activación</option>
-                          <option value="Activo" style={{background: '#1e1b4b'}}>Activo</option>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '140px' }}>
+                          <input style={inputStyle} value={editData.tecnico} onChange={(e) => handleEditChange('tecnico', e.target.value)} placeholder="Técnico" />
+                          <input style={inputStyle} value={editData.red} onChange={(e) => handleEditChange('red', e.target.value)} placeholder="Red" />
+                        </div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' }}>
+                          <select style={inputStyle} value={editData.plan} onChange={(e) => handleEditChange('plan', e.target.value)}>
+                            {planesList.map(p => <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>)}
+                          </select>
+                          <select style={inputStyle} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
+                            {parroquiasList.map(p => <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>)}
+                          </select>
+                        </div>
+                      </td>
+                      <td style={cellStyle}>
+                        <input style={{ ...inputStyle, width: '80px' }} value={editData.potencia} onChange={(e) => handleEditChange('potencia', e.target.value)} placeholder="-22.5" />
+                      </td>
+                      <td style={cellStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <select style={inputStyle} value={editData.cedula_tipo} onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}>
+                            <option value="No">¿Digitalizada? No</option>
+                            <option value="Si">¿Digitalizada? Si</option>
+                          </select>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.05)' }}>
+                              {fileFrontal ? '✅ Front.' : '📸 Front.'}
+                              <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                            </label>
+                            <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.05)' }}>
+                              {filePosterior ? '✅ Post.' : '📸 Post.'}
+                              <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                            </label>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={cellStyle}>
+                        <select style={{ ...inputStyle, minWidth: '120px' }} value={editData.estado} onChange={(e) => handleEditChange('estado', e.target.value)}>
+                          <option value="Pendiente">Pendiente</option>
+                          <option value="En Activación">En Activación</option>
+                          <option value="Activo">Activo</option>
+                          <option value="Suspendido">Suspendido</option>
+                          <option value="Retirado">Retirado</option>
                         </select>
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={saveEdit}>✅</button>
-                          <button onClick={cancelEdit}>❌</button>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button onClick={saveEdit} className="btn btn-primary" style={{ padding: '8px', fontSize: '1rem' }} title="Guardar">✅</button>
+                          <button onClick={cancelEdit} className="btn btn-secondary" style={{ padding: '8px', fontSize: '1rem' }} title="Cancelar">❌</button>
                         </div>
                       </td>
                     </>
                   ) : (
                     <>
                       <td style={cellStyle}>
-                        <div style={{fontWeight: 'bold'}}>{c.nombre}</div>
-                        <div style={{fontSize: '0.7rem', opacity: 0.6}}>{c.cedula} | {c.celular}</div>
+                        <div style={{ fontWeight: 'bold' }}>{c.nombre}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.cedula} | {c.celular}</div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div>{c.tecnico}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.red}</div>
                       </td>
                       <td style={cellStyle}>
                         <div>{c.plan}</div>
-                        <div style={{fontSize: '0.7rem', opacity: 0.6}}>{c.parroquia}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.parroquia}</div>
                       </td>
                       <td style={cellStyle}>
-                        <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8' }}>{c.cedula_tipo || 'No'}</span>
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>{c.potencia || '-'}</span>
                       </td>
                       <td style={cellStyle}>
-                        {c.foto_cedula_frontal || c.foto_cedula_posterior ? '✅ Digitalizada' : '❌ Sin fotos'}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontSize: '0.75rem' }}>Digitalizada: {c.cedula_tipo || 'No'}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(c.cedula_frontal || c.cedula_posterior) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
+                        </div>
                       </td>
                       <td style={cellStyle}>
-                        <span style={{ color: c.estado === 'Activo' ? '#10b981' : '#f59e0b' }}>{c.estado}</span>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          background: c.estado === 'Activo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                          color: c.estado === 'Activo' ? '#10b981' : '#f59e0b'
+                        }}>
+                          {c.estado}
+                        </span>
                       </td>
                       <td style={cellStyle}>
-                        <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => startEdit(c)}>✏️</button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
                       </td>
                     </>
                   )}

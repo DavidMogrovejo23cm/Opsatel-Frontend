@@ -210,7 +210,7 @@ const HojaRuta = () => {
                     </div>
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Fecha:</span>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}> Fecha:</span>
                             <input
                                 type="date"
                                 className="input"
@@ -295,8 +295,8 @@ const HojaRuta = () => {
                                                 {r.observacion || 'Sin observación'}
                                             </div>
                                             {r.observacion_tecnico && (
-                                                <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '5px', padding: '5px', background: 'rgba(0,0,0,0.2)', borderRadius: '5px' }}>
-                                                    <strong>⚙️ Técnico:</strong> {r.observacion_tecnico}
+                                                <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: '4px', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                                    <strong>⚙️:</strong> {r.observacion_tecnico}
                                                 </div>
                                             )}
                                             <button

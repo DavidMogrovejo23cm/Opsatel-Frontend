@@ -130,7 +130,7 @@ const General = () => {
     "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
-    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "saldo", "total_pago", "total"
+    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "observaciones"
   ];
 
   return (
@@ -178,7 +178,7 @@ const General = () => {
                     whiteSpace: 'nowrap',
                     textAlign: 'left'
                   }}>
-                    {col === 'saldo' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col.replace('_', ' ')}
+                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'COMENTARIO PAGO' : col.replace('_', ' ')}
                   </th>
                 ))}
               </tr>
@@ -280,91 +280,42 @@ const General = () => {
                             ) : 'inherit',
                             fontWeight: col === 'id' ? '600' : 'normal'
                           }}>
-                            {col === 'total' ? (
-                              (() => {
+                            {(() => {
+                              if (col === 'total') {
                                 const totalCobrado = parseFloat(c.pago_mensual || 0);
+                                return <span style={{ color: totalCobrado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalCobrado.toFixed(2)}</span>;
+                              }
+                              if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
+                                const valPagado = col === 'plus' ? c.plus_pagado : col === 'adicional' ? c.adicional_pagado : c.internet_payment;
+                                const hasValue = valPagado && parseFloat(valPagado) > 0;
+                                return <span style={{ fontWeight: '500', color: hasValue ? '#4ade80' : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
+                              }
+                              if (col === 'total_pago') {
+                                return <span style={{ color: parseFloat(c.total_pago || 0) <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${parseFloat(c.total_pago || 0).toFixed(2)}</span>;
+                              }
+                              if (col === 'plan') {
+                                let precio = 0; let isSpecial = false;
+                                if (c.tercera_edad && c.precio_plan_especial) { precio = c.precio_plan_especial; isSpecial = true; }
+                                else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
+                                return <span style={{ color: precio > 0 ? (isSpecial ? '#f59e0b' : '#fbbf24') : 'var(--text-muted)', fontWeight: '600' }}>{precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}{isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>}</span>;
+                              }
+                              if (col === 'fotos_cedula') {
+                                return <div style={{ display: 'flex', gap: '8px' }}>
+                                  {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
+                                  {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
+                                  {!c.cedula_frontal && !c.cedula_posterior && '-'}
+                                </div>;
+                              }
+                              if (col === 'observaciones') {
                                 return (
-                                  <span style={{
-                                    color: totalCobrado > 0 ? '#4ade80' : 'var(--text-muted)',
-                                    fontWeight: 'bold'
-                                  }}>
-                                    ${totalCobrado.toFixed(2)}
-                                  </span>
+                                  <div style={{ fontStyle: 'italic', opacity: 0.8, color: '#a78bfa', whiteSpace: 'pre-line' }}>
+                                    {c.observaciones ? c.observaciones.split('/').join('\n') : '-'}
+                                  </div>
                                 );
-                              })()
-                            ) : col === 'saldo' ? (
-                              (() => {
-                                const internetPagado = parseFloat(c.pago_mensual || 0) - parseFloat(c.plus_pagado || 0) - parseFloat(c.adicional_pagado || 0);
-                                return internetPagado <= 0 ? (
-                                  <span style={{ color: '#f87171' }}>Pendiente</span>
-                                ) : (
-                                  <span style={{ color: '#4ade80' }}>Pagado (${internetPagado.toFixed(2)})</span>
-                                );
-                              })()
-                            ) : col === 'plus' ? (
-                              parseFloat(c.plus_pagado || 0) > 0 ? (
-                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.plus_pagado).toFixed(2)})</span>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)' }}>{c.plus || '0'}</span>
-                              )
-                            ) : col === 'adicional' ? (
-                              parseFloat(c.adicional_pagado || 0) > 0 ? (
-                                <span style={{ color: '#4ade80' }}>Pagado (${parseFloat(c.adicional_pagado).toFixed(2)})</span>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)' }}>{c.adicional || '0'}</span>
-                              )
-                            ) : col === 'internet_payment' ? (
-                              (() => {
-                                let precio = 0;
-                                if (c.tercera_edad && c.precio_plan_especial) {
-                                  precio = c.precio_plan_especial;
-                                } else {
-                                  const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
-                                  if (plan) precio = plan.precio;
-                                }
-                                return (
-                                  <span style={{ color: 'var(--text-muted)' }}>
-                                    {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
-                                  </span>
-                                );
-                              })()
-                            ) : col === 'total_pago' ? (
-                              <span style={{
-                                color: parseFloat(c.total_pago || 0) > 0 ? '#f87171' : 'var(--text-muted)',
-                                fontWeight: 'bold'
-                              }}>
-                                ${parseFloat(c.total_pago || 0).toFixed(2)}
-                              </span>
-                            ) : col === 'plan' ? (
-                              (() => {
-                                let precio = 0;
-                                let isSpecial = false;
-                                if (c.tercera_edad && c.precio_plan_especial) {
-                                  precio = c.precio_plan_especial;
-                                  isSpecial = true;
-                                } else {
-                                  const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase());
-                                  if (plan) precio = plan.precio;
-                                }
-                                return (
-                                  <span style={{
-                                    color: precio > 0 ? (isSpecial ? '#f59e0b' : '#fbbf24') : 'var(--text-muted)',
-                                    fontWeight: precio > 0 ? '600' : 'normal'
-                                  }}>
-                                    {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
-                                    {isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>}
-                                  </span>
-                                );
-                              })()
-                            ) : col === 'fotos_cedula' ? (
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer">Frontal</a>}
-                                {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer">Posterior</a>}
-                                {!c.cedula_frontal && !c.cedula_posterior && '-'}
-                              </div>
-                            ) : (
-                              c[col] || c[col?.toUpperCase()] || '-'
-                            )}
+                              }
+                              
+                              return c[col] !== undefined ? String(c[col] || '-') : '-';
+                            })()}
                           </span>
                         )}
                       </td>
