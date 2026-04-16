@@ -90,7 +90,16 @@ const Ventas = () => {
       setFormData({
         ...formData,
         tercera_edad: checked,
-        plan: checked ? 'TERCERA EDAD' : '' // Reset plan if unchecked, or set to placeholder if checked
+        plan: checked ? 'TERCERA EDAD' : '' 
+      });
+    } else if (name === 'plan') {
+      const selectedPlan = planesList.find(p => p.nombre === value);
+      const baseScreens = selectedPlan?.pantallas || 1;
+      setFormData({ 
+        ...formData, 
+        plan: value,
+        iptv_max_conn: baseScreens,
+        plus: '0'
       });
     } else {
       setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
@@ -282,13 +291,17 @@ const Ventas = () => {
               className="input"
               type="number"
               name="iptv_max_conn"
-              value={formData.iptv_max_conn - 1}
+              value={(() => {
+                const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                return Math.max(0, formData.iptv_max_conn - baseScreens);
+              })()}
               onChange={(e) => {
-                const val = parseInt(e.target.value) || 0;
+                const additional = parseInt(e.target.value) || 0;
+                const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
                 setFormData({
                   ...formData,
-                  iptv_max_conn: val + 1,
-                  plus: (val * 2).toString()
+                  iptv_max_conn: baseScreens + additional,
+                  plus: (additional * 2).toString()
                 });
               }}
               min="0"

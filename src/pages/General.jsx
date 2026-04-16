@@ -127,7 +127,7 @@ const General = () => {
 
   const allColumns = [
     "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
-    "fecha_firma", "instalation_date", "estado", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
+    "fecha_firma", "instalation_date", "estado", "comentarios", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
     "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "observaciones"
@@ -178,7 +178,7 @@ const General = () => {
                     whiteSpace: 'nowrap',
                     textAlign: 'left'
                   }}>
-                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'COMENTARIO PAGO' : col.replace('_', ' ')}
+                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'COMENTARIO PAGO' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col.replace('_', ' ')}
                   </th>
                 ))}
               </tr>
@@ -313,7 +313,14 @@ const General = () => {
                                   </div>
                                 );
                               }
-                              
+                              if (col === 'comentarios') {
+                                return (
+                                  <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
+                                    {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
+                                  </div>
+                                );
+                              }
+
                               return c[col] !== undefined ? String(c[col] || '-') : '-';
                             })()}
                           </span>

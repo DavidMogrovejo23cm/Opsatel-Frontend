@@ -313,13 +313,14 @@ const Admin = () => {
                   <td>
                     <input
                       type="number"
-                      value={(parseFloat(c.plus || 0) / 2 + 1)}
+                      value={(parseFloat(c.plus || 0) / 2 + (planesList.find(p => p.nombre === c.plan)?.pantallas || 1))}
                       onChange={async (e) => {
                         const val = parseInt(e.target.value) || 1;
+                        const baseScreens = planesList.find(p => p.nombre === c.plan)?.pantallas || 1;
                         try {
                           await clienteService.updateAdmin(c.id, {
                             iptv_max_conn: val,
-                            plus: (Math.max(0, (val - 1) * 2)).toString()
+                            plus: (Math.max(0, (val - baseScreens) * 2)).toString()
                           });
                           fetchData();
                         } catch (error) {
@@ -564,7 +565,7 @@ const Admin = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + 1) || 1} Pantallas):</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + (planesList.find(p => p.nombre === selectedCliente?.plan)?.pantallas || 1))} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                     ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
                   </span>

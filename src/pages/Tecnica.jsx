@@ -24,6 +24,7 @@ const Tecnica = () => {
 
   const [nodosList, setNodosList] = useState([]);
   const [puertosList, setPuertosList] = useState([]);
+  const [planesList, setPlanesList] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -33,12 +34,14 @@ const Tecnica = () => {
         c.estado?.toUpperCase() === 'PENDIENTE'
       ).sort((a, b) => a.id - b.id));
 
-      const [paRes, puRes] = await Promise.all([
+      const [paRes, puRes, plRes] = await Promise.all([
         configuracionService.getNodos(),
-        configuracionService.getPuertos()
+        configuracionService.getPuertos(),
+        configuracionService.getPlanes()
       ]);
       setNodosList(paRes.data);
       setPuertosList(puRes.data);
+      setPlanesList(plRes.data);
     } catch (error) {
       console.error("Error fetching data", error);
     }
@@ -106,7 +109,10 @@ const Tecnica = () => {
       iptv_bouquets: hasIptv ? '[1,2,5]' : '[]',
       iptv_exp_date: hasIptv ? 'Nunca' : '',
       // Prioritize the calculated screen count if plus is set, otherwise use stored iptv_max_conn
-      iptv_max_conn: (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2 + 1) : (cliente.iptv_max_conn || 1),
+      iptv_max_conn: (() => {
+        const baseScreens = planesList.find(p => p.nombre === cliente.plan)?.pantallas || 1;
+        return (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2 + baseScreens) : (cliente.iptv_max_conn || baseScreens);
+      })(),
       iptv_outputs: hasIptv ? '[1,2]' : '[]',
       iptv_notes: '', iptv_member_id: 1
     });
@@ -182,8 +188,11 @@ const Tecnica = () => {
       iptv_bouquets: checked ? '[1,2,5]' : '[]',
       iptv_outputs: checked ? '[1,2]' : '[]',
       // Prefer calculation from plus if it exists, otherwise use stored value
-      // La primera es gratis (+1), las extras se calculan del valor 'plus'
-      iptv_max_conn: checked ? ((parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2 + 1) : 1) : 0,
+      // Las extras se calculan del valor 'plus' sumado a las base del plan
+      iptv_max_conn: checked ? (() => {
+        const baseScreens = planesList.find(p => p.nombre === selectedCliente.plan)?.pantallas || 1;
+        return (parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2 + baseScreens) : baseScreens;
+      })() : 0,
       plus: checked ? (selectedCliente.plus || '0') : '0'
     }));
   };
