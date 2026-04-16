@@ -15,11 +15,10 @@ const Administrar = () => {
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
-  // Estados para fotos en edición
-  const [fileFrontal, setFileFrontal] = useState(null);
-  const [filePosterior, setFilePosterior] = useState(null);
 
-  const fetchData = async (silent = false) => {
+    // Estados para fotos en edición
+  
+    const fetchData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const response = await clienteService.listar();
