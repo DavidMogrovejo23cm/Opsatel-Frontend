@@ -91,7 +91,7 @@ const Admin = () => {
       plus: cliente.plus || '',
       bank_plus: cliente.bank_plus || '',
       adicional: cliente.adicional || '',
-      comentarios: cliente.observaciones || '', // Usamos observaciones para las notas de pago acumuladas
+      notas_pago: cliente.notas_pago || '',
       observaciones_edit: cliente.observaciones || ''
     });
     setEfectivoRecibido('');
@@ -127,7 +127,7 @@ const Admin = () => {
         plus: noneIfEmpty(pagoData.plus),
         bank_plus: noneIfEmpty(pagoData.bank_plus),
         adicional: noneIfEmpty(pagoData.adicional),
-        observaciones: (pagoData.comentarios && String(pagoData.comentarios).trim()) ? String(pagoData.comentarios).trim() : null
+        notas_pago: (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : null
       });
 
       // Guardar observaciones si fueron modificadas
@@ -149,7 +149,8 @@ const Admin = () => {
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.plus,
         adicional: pagoData.adicional,
-        observaciones: pagoData.comentarios, // Guardar nota de reparación en observaciones
+        notas_pago: pagoData.notas_pago,
+        observaciones: pagoData.observaciones_edit,
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
@@ -261,9 +262,8 @@ const Admin = () => {
                 <th>Estado</th>
                 <th>Plan Base</th>
                 <th>Pantallas IPTV</th>
-                <th>Comentarios</th>
                 <th>Pendiente</th>
-                <th>COMENTARIO PAGO</th>
+                <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -304,7 +304,7 @@ const Admin = () => {
                     >
                       {!planesList.some(p => p.nombre === c.plan) && (
                         <option value={c.plan}>{c.plan}</option>
-                      )}
+                       )}
                       {planesList.map(p => (
                         <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre} (${p.precio})</option>
                       ))}
@@ -340,9 +340,6 @@ const Admin = () => {
                       }}
                     />
                   </td>
-                  <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {c.observaciones || '-'}
-                  </td>
                   <td style={{ fontWeight: 'bold' }}>
                     {parseFloat(c.total_pago) < 0 ? (
                       <span style={{ color: '#4ade80' }}>
@@ -354,9 +351,10 @@ const Admin = () => {
                       </span>
                     )}
                   </td>
-                  <td style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap' }}>
-                    {c.observaciones || '-'}
+                  <td style={{ fontSize: '0.75rem', color: '#a78bfa', whiteSpace: 'pre-wrap', maxWidth: '180px' }}>
+                    {c.notas_pago || '-'}
                   </td>
+
                   <td>
                     <button
                       className="btn btn-primary"
@@ -423,31 +421,32 @@ const Admin = () => {
                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Notas del Cliente</h3>
               </div>
 
-              {/* Comentarios de Contrato */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
-                  Comentario de Contrato
-                </label>
-                <div style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '12px',
-                  padding: '12px',
-                  fontSize: '0.85rem',
-                  lineHeight: '1.6',
-                  color: 'rgba(255,255,255,0.7)',
-                  minHeight: '80px',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {selectedCliente?.comentarios ? (
-                    selectedCliente.comentarios.split('/').map((line, idx) => (
-                      <React.Fragment key={idx}>{line}<br/></React.Fragment>
-                    ))
-                  ) : (
-                    <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Sin comentarios...</span>
-                  )}
+                {/* Comentarios de Contrato */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#60a5fa', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                    Comentarios del Contrato (Lectura)
+                  </label>
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.05)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    fontSize: '0.85rem',
+                    lineHeight: '1.6',
+                    color: 'white',
+                    minHeight: '80px',
+                    whiteSpace: 'pre-wrap',
+                    fontStyle: 'italic'
+                  }}>
+                    {selectedCliente?.comentarios ? (
+                      selectedCliente.comentarios.split('/').map((line, idx) => (
+                        <React.Fragment key={idx}>{line}<br /></React.Fragment>
+                      ))
+                    ) : (
+                      <span style={{ opacity: 0.5 }}>Sin comentarios registrados...</span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
               {/* Observaciones Generales/Técnicas */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -474,40 +473,55 @@ const Admin = () => {
                     fontFamily: 'inherit'
                   }}
                 />
-                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', marginBottom: '12px' }}>
-                  Use "/" para separar párrafos en la Vista General.
-                </p>
 
-                {/* Problema Reportado & Observación Técnica (de Hoja de Ruta) */}
+                {/* Historial Técnico (Hoja de Ruta) */}
                 {(() => {
-                  const hrItem = hojaRutaList.find(h => h.cliente_id === selectedCliente?.id && (h.observacion || h.observacion_tecnico));
-                  if (hrItem) {
+                  const hrMatches = (hojaRutaList || [])
+                    .filter(h => Number(h.cliente_id) === Number(selectedCliente?.id))
+                    .sort((a, b) => new Date(b.created_at || b.id || 0) - new Date(a.created_at || a.id || 0));
+                  
+                  const lastHR = hrMatches[0];
+
+                  if (lastHR && (lastHR.observacion || lastHR.observacion_tecnico)) {
                     return (
-                      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {hrItem.observacion && (
-                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.05)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                            <label style={{ fontSize: '0.75rem', color: '#fbbf24', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                              ⚠️ Problema Reportado
+                      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '4px' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>Última Actividad Técnica</h4>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{lastHR.fecha} - {lastHR.actividad}</span>
+                        </div>
+                        
+                        {lastHR.observacion && (
+                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.08)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#fbbf24', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+                              Problema Reportado
                             </label>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                              {hrItem.observacion}
+                            <div style={{ fontSize: '0.85rem', color: 'white', fontStyle: 'italic' }}>
+                              {lastHR.observacion}
                             </div>
                           </div>
                         )}
-                        {hrItem.observacion_tecnico && (
-                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                            <label style={{ fontSize: '0.75rem', color: '#10b981', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                              ⚡ Solución Técnica
+
+                        {lastHR.observacion_tecnico && (
+                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#10b981', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+                              observacion tecnica
                             </label>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                              {hrItem.observacion_tecnico}
+                            <div style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: '500' }}>
+                              {lastHR.observacion_tecnico}
+                            </div>
+                            <div style={{ fontSize: '0.6rem', color: 'rgba(16,185,129,0.5)', marginTop: '6px', textAlign: 'right' }}>
+                              - {lastHR.tecnico} ({lastHR.fecha})
                             </div>
                           </div>
                         )}
                       </div>
                     );
                   }
-                  return null;
+                  return (
+                    <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
+                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No hay reportes técnicos recientes</span>
+                    </div>
+                  );
                 })()}
 
                 <button
@@ -667,11 +681,11 @@ const Admin = () => {
                 {/* 3. COMENTARIOS DE PAGO / REPARACIÓN (MORADO) - Se guarda en 'observaciones' */}
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
-                  <textarea 
-                    className="input" 
-                    style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }} 
-                    value={pagoData.comentarios} 
-                    onChange={(e) => setPagoData({ ...pagoData, comentarios: e.target.value })}
+                  <textarea
+                    className="input"
+                    style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }}
+                    value={pagoData.notas_pago}
+                    onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
                     placeholder="Escriba aquí si hay reparaciones..."
                   />
                 </div>
