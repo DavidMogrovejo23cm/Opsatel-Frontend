@@ -75,15 +75,23 @@ const HojaRuta = () => {
             .sort((a, b) => a.id - b.id);
     }, [clientes, clientSearchTerm, modalSource]);
 
+    const [dateFilter, setDateFilter] = useState('');
+
     const sortedRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
         const search = searchTerm.toLowerCase();
-        
-        let filtered = registros.filter(r =>
-            r.nombre_cliente?.toLowerCase().includes(search) ||
-            r.tecnico?.toLowerCase().includes(search) ||
-            r.parroquia?.toLowerCase().includes(search)
-        );
+
+        let filtered = registros.filter(r => {
+            const matchSearch = r.nombre_cliente?.toLowerCase().includes(search) ||
+                r.tecnico?.toLowerCase().includes(search) ||
+                r.parroquia?.toLowerCase().includes(search);
+
+            if (!matchSearch) return false;
+
+            if (dateFilter && r.fecha !== dateFilter) return false;
+
+            return true;
+        });
 
         // Ordenamiento: 1. Fecha Pedido (created_at desc), 2. Fecha Programacion (fecha), 3. Hora (hora)
         return filtered.sort((a, b) => {
@@ -98,7 +106,7 @@ const HojaRuta = () => {
             // Luego por hora
             return a.hora.localeCompare(b.hora);
         });
-    }, [registros, searchTerm]);
+    }, [registros, searchTerm, dateFilter]);
 
     const handleSelectClient = (client) => {
         setSelectedClient(client);
@@ -117,9 +125,9 @@ const HojaRuta = () => {
 
     const handleOpenModal = (source) => {
         setModalSource(source);
-        setFormData({ 
-            ...initialForm, 
-            actividad: source === 'CLIENTE' ? 'INSTALACION' : 'ACTIVIDAD' 
+        setFormData({
+            ...initialForm,
+            actividad: source === 'CLIENTE' ? 'INSTALACION' : 'ACTIVIDAD'
         });
         setEditingId(null);
         setSelectedClient(null);
@@ -200,11 +208,24 @@ const HojaRuta = () => {
                             Gestión centralizada de instalaciones y actividades técnicas.
                         </p>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Fecha:</span>
+                            <input
+                                type="date"
+                                className="input"
+                                style={{ width: '150px', marginBottom: 0, padding: '5px', background: 'transparent', border: 'none', color: 'white' }}
+                                value={dateFilter}
+                                onChange={e => setDateFilter(e.target.value)}
+                            />
+                            {dateFilter && (
+                                <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>&times;</button>
+                            )}
+                        </div>
                         <input
                             className="input"
                             placeholder="Buscar técnico, cliente o zona..."
-                            style={{ width: '300px', marginBottom: 0, borderRadius: '15px' }}
+                            style={{ width: '250px', marginBottom: 0, borderRadius: '15px' }}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -246,7 +267,7 @@ const HojaRuta = () => {
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.hora}</div>
                                         </td>
                                         <td>
-                                            <button 
+                                            <button
                                                 onClick={() => toggleEstado(r.id, r.estado)}
                                                 className={`status-chip ${r.estado === 'Realizado' ? 'success' : 'pending'}`}
                                                 disabled={user.rol?.toLowerCase() !== 'administrador'}
@@ -278,7 +299,7 @@ const HojaRuta = () => {
                                                     <strong>⚙️ Técnico:</strong> {r.observacion_tecnico}
                                                 </div>
                                             )}
-                                            <button 
+                                            <button
                                                 onClick={() => handleOpenObs(r)}
                                                 style={{ fontSize: '0.65rem', color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 0' }}
                                             >
@@ -293,7 +314,7 @@ const HojaRuta = () => {
                                                         <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' }} title="Eliminar">&times;</button>
                                                     </>
                                                 ) : (
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleOpenObs(r)}
                                                         className="btn btn-secondary"
                                                         style={{ fontSize: '0.7rem', padding: '5px 10px' }}
@@ -328,14 +349,14 @@ const HojaRuta = () => {
                                         <div>
                                             <label className="label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar y Seleccionar Cliente ({modalSource})</label>
                                             <div className="client-picker" style={{ position: 'relative' }}>
-                                                <input 
-                                                    className="input" 
-                                                    placeholder="Escriba nombre o ID..." 
-                                                    value={clientSearchTerm} 
+                                                <input
+                                                    className="input"
+                                                    placeholder="Escriba nombre o ID..."
+                                                    value={clientSearchTerm}
                                                     onChange={e => {
                                                         setClientSearchTerm(e.target.value);
                                                         setShowClientList(true);
-                                                    }} 
+                                                    }}
                                                     onFocus={() => setShowClientList(true)}
                                                     style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}
                                                 />
@@ -397,34 +418,34 @@ const HojaRuta = () => {
 
                                 {/* COLUMNA DERECHA: FORMULARIO */}
                                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    
+
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div className="input-group">
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programación</label>
-                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value})} required />
+                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
                                         </div>
                                         <div className="input-group">
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora Programación</label>
-                                            <input type="time" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} required />
+                                            <input type="time" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div>
-                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nombre Cliente Físico (Opcional si usó buscador)</label>
-                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.nombre_cliente} onChange={e => setFormData({...formData, nombre_cliente: e.target.value})} placeholder="Nombre completo" required />
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nombre Cliente</label>
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.nombre_cliente} onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })} placeholder="Nombre completo" required />
                                         </div>
                                         <div>
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Técnico Responsable</label>
-                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.tecnico} onChange={e => setFormData({...formData, tecnico: e.target.value})} placeholder="Nombre del técnico" required />
+                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.tecnico} onChange={e => setFormData({ ...formData, tecnico: e.target.value })} placeholder="Nombre del técnico" required />
                                         </div>
                                     </div>
 
                                     <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div>
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Actividad a Realizar</label>
-                                            <select 
-                                                className="input" 
+                                            <select
+                                                className="input"
                                                 style={{ width: '100%', padding: '12px', boxSizing: 'border-box', background: '#1e293b' }}
                                                 value={['INSTALACION', 'VISITA TECNICA', 'FOCO ROJO', 'CAMBIO EQUIPO'].includes(formData.actividad) ? formData.actividad : 'OTRO'}
                                                 onChange={e => {
@@ -470,7 +491,7 @@ const HojaRuta = () => {
 
                                     <div className="input-group">
                                         <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Problema Reportado / Razones Visita</label>
-                                        <textarea className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box', fontFamily: 'inherit' }} rows="3" value={formData.observacion} onChange={e => setFormData({...formData, observacion: e.target.value})} placeholder="Detalle el requerimiento..."></textarea>
+                                        <textarea className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box', fontFamily: 'inherit' }} rows="3" value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} placeholder="Detalle el requerimiento..."></textarea>
                                     </div>
 
                                     <div className="modal-actions" style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '10px' }}>
@@ -499,11 +520,11 @@ const HojaRuta = () => {
                             <form onSubmit={handleSubmit}>
                                 <div className="input-group">
                                     <label className="label">Actividades Realizadas por el Técnico</label>
-                                    <textarea 
-                                        className="input" 
-                                        rows="10" 
-                                        value={formData.observacion_tecnico} 
-                                        onChange={e => setFormData({...formData, observacion_tecnico: e.target.value})}
+                                    <textarea
+                                        className="input"
+                                        rows="10"
+                                        value={formData.observacion_tecnico}
+                                        onChange={e => setFormData({ ...formData, observacion_tecnico: e.target.value })}
                                         disabled={user.rol?.toLowerCase() !== 'tecnico' && user.rol?.toLowerCase() !== 'administrador'}
                                         placeholder="El técnico debe escribir aquí lo realizado..."
                                         style={{ height: '200px' }}

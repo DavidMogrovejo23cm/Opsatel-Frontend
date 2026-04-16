@@ -207,11 +207,18 @@ const Admin = () => {
 
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
+  const [statusFilter, setStatusFilter] = useState('ACTIVO');
+
   const filteredClientes = safeClientes
-    .filter(c =>
-      c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.id?.toString().includes(searchTerm)
-    )
+    .filter(c => {
+      // Filtro de estado para cobros: Solo Activos por defecto, o según búsqueda
+      if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
+      if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
+      if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
+
+      return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.id?.toString().includes(searchTerm)
+    })
     .sort((a, b) => a.id - b.id);
 
   return (
@@ -234,6 +241,18 @@ const Admin = () => {
           alignItems: 'center',
           width: window.innerWidth <= 768 ? '100%' : 'auto'
         }}>
+          <select
+            className="input"
+            style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Solo Activos</option>
+            <option value="INACTIVO">Solo Inactivos</option>
+            <option value="PENDIENTE">Solo Pendientes</option>
+          </select>
+
           <input
             className="input"
             placeholder="Buscar por ID o Nombre..."
@@ -272,7 +291,7 @@ const Admin = () => {
             </thead>
             <tbody>
               {filteredClientes.map(c => (
-                <tr key={c.id} style={{ 
+                <tr key={c.id} style={{
                   borderBottom: '1px solid rgba(255,255,255,0.05)',
                   opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
                 }}>
@@ -320,9 +339,9 @@ const Admin = () => {
                       onChange={async (e) => {
                         const val = parseInt(e.target.value) || 1;
                         try {
-                          await clienteService.updateAdmin(c.id, { 
+                          await clienteService.updateAdmin(c.id, {
                             iptv_max_conn: val,
-                            plus: (Math.max(0, (val - 1) * 2)).toString() 
+                            plus: (Math.max(0, (val - 1) * 2)).toString()
                           });
                           fetchData();
                         } catch (error) {
@@ -357,15 +376,15 @@ const Admin = () => {
                     )}
                   </td>
                   <td>
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ 
-                        padding: '6px 12px', 
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        padding: '6px 12px',
                         fontSize: '0.8rem',
                         opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.5 : 1,
                         cursor: c.estado?.toUpperCase() === 'PENDIENTE' ? 'not-allowed' : 'pointer',
                         filter: c.estado?.toUpperCase() === 'PENDIENTE' ? 'grayscale(1)' : 'none'
-                      }} 
+                      }}
                       onClick={() => {
                         if (c.estado?.toUpperCase() !== 'PENDIENTE') openPagoModal(c);
                       }}
@@ -445,7 +464,7 @@ const Admin = () => {
               {/* Observaciones Generales/Técnicas */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
-                  Observaciones Técnicas
+                  Observaciones
                 </label>
                 <textarea
                   value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}

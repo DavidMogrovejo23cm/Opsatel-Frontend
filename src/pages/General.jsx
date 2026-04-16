@@ -104,13 +104,25 @@ const General = () => {
     }
   };
 
+  const [statusFilter, setStatusFilter] = useState('TODOS');
+
   const filteredClientes = clientes
-    .filter(c =>
-      c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.cedula?.includes(searchTerm) ||
-      c.id.toString().includes(searchTerm) ||
-      c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(c => {
+      // Filtro por término de búsqueda
+      const matchSearch = c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.cedula?.includes(searchTerm) ||
+        c.id.toString().includes(searchTerm) ||
+        c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchSearch) return false;
+
+      // Filtro por estado
+      if (statusFilter === 'ACTIVO') return c.estado?.toUpperCase() === 'ACTIVO';
+      if (statusFilter === 'INACTIVO') return c.estado?.toUpperCase() === 'INACTIVO';
+      if (statusFilter === 'PENDIENTE') return c.estado?.toUpperCase() === 'PENDIENTE';
+
+      return true;
+    })
     .sort((a, b) => a.id - b.id);
 
   const allColumns = [
@@ -130,13 +142,26 @@ const General = () => {
             💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
-        <input
-          className="input"
-          placeholder="Buscar por ID, Nombre o Cédula..."
-          style={{ maxWidth: '300px' }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <select
+            className="input"
+            style={{ maxWidth: '200px', marginBottom: 0, background: '#1e1b4b' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="TODOS">Todos los Estados</option>
+            <option value="ACTIVO">Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+            <option value="PENDIENTE">Pendientes</option>
+          </select>
+          <input
+            className="input"
+            placeholder="Buscar por ID, Nombre o Cédula..."
+            style={{ maxWidth: '300px', marginBottom: 0 }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       {loading ? <p>Cargando datos...</p> : (
