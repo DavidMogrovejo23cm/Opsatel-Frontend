@@ -24,6 +24,38 @@ const ExtraPagos = () => {
     "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
   ];
 
+  const calculateDebe = (e) => {
+    const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const currentMonthIdx = new Date().getMonth();
+    let totalDebe = 0;
+    
+    // Determinar mes de inicio basado en fecha_ingreso
+    let startMonthIdx = 0;
+    if (e.fecha_ingreso) {
+        try {
+            const mesIngreso = parseInt(e.fecha_ingreso.split('-')[1]);
+            startMonthIdx = mesIngreso - 1;
+        } catch(err) { startMonthIdx = 0; }
+    }
+
+    for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
+        const m = listMonths[i];
+        // El saldo del mes en ExtrasGeneral se calcula como (valor - pago). 
+        // Si no se ha tocado el mes (pago=0 y saldo=0), se debe el valor total del mes.
+        const saldoMes = (parseFloat(e[`${m}_pago`] || 0) === 0 && (parseFloat(e[`${m}_saldo`] || 0) === 0)) 
+            ? parseFloat(e.valor || 0) 
+            : parseFloat(e[`${m}_saldo`] || 0);
+        totalDebe += saldoMes;
+    }
+    return totalDebe;
+  };
+
+  const getPagoMesActual = (e) => {
+    const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const currentMonth = listMonths[new Date().getMonth()];
+    return parseFloat(e[`${currentMonth}_pago`] || 0);
+  };
+
   const fetchData = async () => {
     try {
       const resp = await extrasService.listar();
@@ -37,14 +69,25 @@ const ExtraPagos = () => {
     }
   };
 
+  const totals = React.useMemo(() => {
+    let globalDebe = 0;
+    let recaudadoMes = 0;
+    extras.forEach(e => {
+        globalDebe += calculateDebe(e);
+        recaudadoMes += getPagoMesActual(e);
+    });
+    return { globalDebe, recaudadoMes, totalClientes: extras.length };
+  }, [extras]);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const openPagoModal = (extra) => {
+    const debt = calculateDebe(extra);
     setSelectedExtra(extra);
     setPagoData({
-      monto: extra.valor || 0,
+      monto: debt > 0 ? debt : extra.valor || 0, // Sugerir el total de la deuda si existe
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       mes: months[new Date().getMonth()],
       referencia: '',
@@ -76,15 +119,34 @@ const ExtraPagos = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1>Extra Pagos </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div>
+           <h1 style={{ fontSize: '2rem', fontWeight: '900', margin: 0 }}>Gestión de Cobranzas <span style={{ color: '#94a3b8', fontSize: '1rem', fontWeight: '400' }}>(Extras)</span></h1>
+           <p style={{ color: '#94a3b8', margin: 0 }}>Panel profesional de control de cartera y recaudación.</p>
+        </div>
         <input
           className="input"
-          placeholder="Buscar por COD o Nombre..."
-          style={{ maxWidth: '300px', marginBottom: 0 }}
+          placeholder="🔍 Buscar por COD o Nombre..."
+          style={{ maxWidth: '300px', marginBottom: 0, borderRadius: '12px' }}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+      </div>
+
+      {/* METRICAS PROFESIONALES */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        <div className="glass" style={{ padding: '20px', borderRadius: '15px', borderLeft: '4px solid #f87171' }}>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>CARTERA PENDIENTE (TOTAL)</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#f87171' }}>${totals.globalDebe.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+        </div>
+        <div className="glass" style={{ padding: '20px', borderRadius: '15px', borderLeft: '4px solid #34d399' }}>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>RECAUDADO ESTE MES</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#34d399' }}>${totals.recaudadoMes.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+        </div>
+        <div className="glass" style={{ padding: '20px', borderRadius: '15px', borderLeft: '4px solid #6366f1' }}>
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold' }}>TOTAL SERVICIOS ADM.</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#6366f1' }}>{totals.totalClientes}</div>
+        </div>
       </div>
 
       {loading ? <p>Cargando clientes extras...</p> : (
@@ -96,7 +158,8 @@ const ExtraPagos = () => {
                 <th>NOMBRE CLIENTE</th>
                 <th>USUARIO</th>
                 <th>VALOR BASE</th>
-                <th>TOTAL PAGADO</th>
+                <th>PAGADO (MES)</th>
+                <th>DEBE (SALDO)</th>
                 <th>ACTIVO</th>
                 <th>ACCIONES</th>
               </tr>
@@ -106,10 +169,17 @@ const ExtraPagos = () => {
                 <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '12px', fontSize: '0.8rem' }}>{e.cod}</td>
                   <td style={{ fontSize: '0.85rem' }}>{e.nombre_cliente}</td>
-                  <td style={{ fontSize: '0.8rem' }}>{e.usuario}</td>
-                  <td style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fbbf24' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
-                  <td style={{ fontSize: '0.85rem', color: '#4ade80' }}>${parseFloat(e.total_pagado || 0).toFixed(2)}</td>
-                  <td style={{ fontSize: '0.8rem' }}>{e.activo}</td>
+                   <td style={{ fontSize: '0.8rem' }}>{e.usuario}</td>
+                   <td style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fbbf24' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
+                  <td style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: 'bold' }}>${getPagoMesActual(e).toFixed(2)}</td>
+                  <td style={{ 
+                    fontSize: '0.85rem', 
+                    color: calculateDebe(e) > 0 ? '#f87171' : (calculateDebe(e) < 0 ? '#34d399' : '#94a3b8'),
+                    fontWeight: 'bold'
+                  }}>
+                    {calculateDebe(e) > 0 ? `Debe $${calculateDebe(e).toFixed(2)}` : (calculateDebe(e) < 0 ? `A favor $${Math.abs(calculateDebe(e)).toFixed(2)}` : '$0.00')}
+                  </td>
+                   <td style={{ fontSize: '0.8rem' }}>{e.activo}</td>
                   <td>
                     <button
                       onClick={() => openPagoModal(e)}

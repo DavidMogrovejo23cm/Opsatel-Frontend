@@ -16,6 +16,7 @@ import ExtrasGeneral from './pages/ExtrasGeneral';
 import ExtraPagos from './pages/ExtraPagos';
 import HojaRuta from './pages/HojaRuta';
 import Tickets from './pages/Tickets';
+import ONT from './pages/ONT';
 
 
 function App() {
@@ -44,6 +45,11 @@ function App() {
             <Route path="tecnica" element={
               <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
                 <Tecnica />
+              </ProtectedRoute>
+            } />
+            <Route path="ont" element={
+              <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
+                <ONT />
               </ProtectedRoute>
             } />
 

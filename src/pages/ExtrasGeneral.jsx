@@ -26,13 +26,14 @@ const ExtrasGeneral = () => {
         contacto: '',
         proveedor: 'OPSATEL',
         usuario: '',
-        contrasena: '',
+        contrasena: 'TV2026.@',
         cuentas: '1',
         mac_smart_one: '',
         observaciones: '',
-        estado: 'FIJO',
+        estado: '30 DÍAS',
         valor: 0,
         activo: 'SI',
+        fecha_ingreso: new Date().toISOString().split('T')[0],
         // Inicializar campos mensuales en el form
         ...Object.fromEntries(
             ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"].flatMap(m => [
@@ -47,6 +48,52 @@ const ExtrasGeneral = () => {
     };
 
     const [formData, setFormData] = useState(initialForm);
+    const [iptvBouquets, setIptvBouquets] = useState([1, 2, 5]);
+    const [iptvOutputs, setIptvOutputs] = useState([1, 2]);
+
+    useEffect(() => {
+        if (!isEditing && formData.nombre_cliente && formData.cod) {
+            const nameParts = formData.nombre_cliente.trim().split(' ').filter(p => p.length > 0);
+            
+            if (nameParts.length > 0) {
+                const apellido = nameParts[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                const nombreLetra = nameParts[1] ? nameParts[1][0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '') : '';
+                
+                setFormData(prev => ({
+                    ...prev,
+                    usuario: `${formData.cod}${apellido}${nombreLetra}`
+                }));
+            }
+        }
+    }, [formData.nombre_cliente, formData.cod, isEditing]);
+
+    const getIptvScript = () => {
+        const useExp = formData.estado === '30 DÍAS';
+        return `INSERT INTO lines (
+  member_id, username, password, bouquet, allowed_outputs, max_connections,
+  admin_enabled, enabled, ${useExp ? 'exp_date, ' : ''}is_restreamer, is_trial, is_mag, is_e2, is_stalker, is_isplock,
+  allowed_ips, allowed_ua, created_at, force_server_id, bypass_ua
+) VALUES (
+  1, '${formData.usuario}', '${formData.contrasena}', '[${iptvBouquets}]', '[${iptvOutputs}]', ${formData.cuentas || 1},
+  1, 1, ${useExp ? "UNIX_TIMESTAMP() + (30 * 86400), " : ""}0, 0, 0, 0, 0, 0, '[]', '[]', UNIX_TIMESTAMP(), 0, 0
+);`;
+    };
+
+    const handleBouquetChange = (id) => {
+        if (iptvBouquets.includes(id)) {
+            setIptvBouquets(prev => prev.filter(b => b !== id));
+        } else {
+            setIptvBouquets(prev => [...prev, id]);
+        }
+    };
+
+    const handleOutputChange = (id) => {
+        if (iptvOutputs.includes(id)) {
+            setIptvOutputs(prev => prev.filter(o => o !== id));
+        } else {
+            setIptvOutputs(prev => [...prev, id]);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -71,6 +118,28 @@ const ExtrasGeneral = () => {
             .filter(n => !isNaN(n));
         const max = Math.max(0, ...numbers);
         return `${max + 1}C`;
+    };
+
+    const calculateDebe = (e) => {
+        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        const currentMonthIdx = new Date().getMonth();
+        let totalDebe = 0;
+        
+        // Determinar mes de inicio basado en fecha_ingreso
+        let startMonthIdx = 0;
+        if (e.fecha_ingreso) {
+            const mesIngreso = parseInt(e.fecha_ingreso.split('-')[1]);
+            startMonthIdx = mesIngreso - 1;
+        }
+
+        for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
+            const m = listMonths[i];
+            const saldoMes = (parseFloat(e[`${m}_pago`] || 0) === 0 && (parseFloat(e[`${m}_saldo`] || 0) === 0)) 
+                ? parseFloat(e.valor || 0) 
+                : parseFloat(e[`${m}_saldo`] || 0);
+            totalDebe += saldoMes;
+        }
+        return totalDebe;
     };
 
     const stats = useMemo(() => {
@@ -229,38 +298,65 @@ const ExtrasGeneral = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                         <thead>
                             <tr style={{ background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                <th style={{ width: '100px', zIndex: 10, position: 'sticky', left: 0, background: '#1e293b', padding: '15px' }}>COD</th>
-                                <th style={{ width: '250px', zIndex: 10, position: 'sticky', left: '100px', background: '#1e293b', padding: '15px' }}>NOMBRE CLIENTE</th>
-                                <th style={{ width: '150px', padding: '15px' }}>CONTACTO</th>
-                                <th style={{ width: '150px', padding: '15px' }}>PROVEEDOR</th>
-                                <th style={{ width: '150px', padding: '15px' }}>USUARIO</th>
-                                <th style={{ width: '150px', padding: '15px' }}>CONTRASEÑA</th>
-                                <th style={{ width: '100px', padding: '15px' }}>CUENTAS</th>
-                                <th style={{ width: '180px', padding: '15px' }}>MAC SMART ONE</th>
-                                <th style={{ width: '200px', padding: '15px' }}>OBSERVACIONES</th>
-                                <th style={{ width: '120px', padding: '15px' }}>ESTADO</th>
-                                <th style={{ width: '120px', padding: '15px' }}>VALOR</th>
-                                <th style={{ width: '100px', padding: '15px' }}>ACTIVO</th>
-                                <th style={{ width: '120px', padding: '15px', textAlign: 'center' }}>ACCIONES</th>
-                                {months.map(m => <th key={m} style={{ width: '600px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '15px' }} colSpan="6">{m.toUpperCase()}</th>)}
+                                <th rowSpan="2" style={{ width: '80px', zIndex: 11, position: 'sticky', left: 0, background: '#1e293b', padding: '15px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>COD</th>
+                                <th rowSpan="2" style={{ width: '220px', zIndex: 11, position: 'sticky', left: '80px', background: '#1e293b', padding: '15px', borderRight: '2px solid #3b82f6' }}>NOMBRE CLIENTE</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTACTO</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>PROVEEDOR</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>USUARIO</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTRASEÑA</th>
+                                <th rowSpan="2" style={{ width: '80px', padding: '15px' }}>CUENTAS</th>
+                                <th rowSpan="2" style={{ width: '160px', padding: '15px' }}>MAC SMART ONE</th>
+                                <th rowSpan="2" style={{ width: '180px', padding: '15px' }}>OBSERVACIONES</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>VALOR</th>
+                                <th rowSpan="2" style={{ width: '120px', padding: '15px' }}>ESTADO</th>
+                                <th rowSpan="2" style={{ width: '120px', padding: '15px' }}>SALDO</th>
+                                <th rowSpan="2" style={{ width: '100px', padding: '15px' }}>ACTIVO</th>
+                                <th rowSpan="2" style={{ width: '120px', padding: '15px', textAlign: 'center' }}>ACCIONES</th>
+                                {months.map(m => (
+                                    <th key={m} style={{ width: '600px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '10px', background: '#1e1b4b' }} colSpan="6">
+                                        {m.toUpperCase()}
+                                    </th>
+                                ))}
+                            </tr>
+                            <tr style={{ background: '#0f172a', fontSize: '0.7rem' }}>
+                                {months.map(m => (
+                                    <React.Fragment key={m + '_sub'}>
+                                        <th style={{ width: '100px', padding: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>Factura</th>
+                                        <th style={{ width: '100px', padding: '8px' }}>Fecha</th>
+                                        <th style={{ width: '100px', padding: '8px', color: '#34d399' }}>Pago</th>
+                                        <th style={{ width: '100px', padding: '8px' }}>Banco</th>
+                                        <th style={{ width: '100px', padding: '8px' }}>Ref</th>
+                                        <th style={{ width: '100px', padding: '8px', color: '#f87171' }}>Saldo</th>
+                                    </React.Fragment>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.map(e => (
                                 <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ position: 'sticky', left: 0, background: '#0f172a', padding: '14px', color: '#a855f7', fontWeight: 'bold' }}>{e.cod}</td>
-                                    <td style={{ position: 'sticky', left: '100px', background: '#0f172a', padding: '14px', fontWeight: 'bold' }}>{e.nombre_cliente}</td>
-                                    <td style={{ padding: '14px' }}>{e.contacto}</td>
-                                    <td style={{ padding: '14px' }}>{e.proveedor}</td>
-                                    <td style={{ padding: '14px' }}>{e.usuario}</td>
-                                    <td style={{ padding: '14px', fontFamily: 'monospace', color: '#fbbf24' }}>{e.contrasena || '-'}</td>
-                                    <td style={{ padding: '14px' }}>{e.cuentas}</td>
-                                    <td style={{ padding: '14px' }}>{e.mac_smart_one || '-'}</td>
-                                    <td style={{ padding: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.observaciones || '-'}</td>
-                                    <td style={{ padding: '14px' }}>{e.estado}</td>
-                                    <td style={{ padding: '14px' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
-                                    <td style={{ padding: '14px' }}>{e.activo}</td>
-                                    <td style={{ padding: '14px', textAlign: 'center' }}>
+                                    <td style={{ position: 'sticky', left: 0, zIndex: 5, width: '80px', background: '#0f172a', padding: '14px', color: '#a855f7', fontWeight: 'bold', borderRight: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.cod}</td>
+                                    <td style={{ position: 'sticky', left: '80px', zIndex: 5, width: '220px', background: '#0f172a', padding: '14px', fontWeight: 'bold', borderRight: '2px solid #3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre_cliente}</td>
+                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.contacto}</td>
+                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.proveedor}</td>
+                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.usuario}</td>
+                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.contrasena || '-'}</td>
+                                    <td style={{ width: '80px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.cuentas}</td>
+                                    <td style={{ width: '160px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.mac_smart_one || '-'}</td>
+                                    <td style={{ width: '180px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.observaciones}>{e.observaciones || '-'}</td>
+                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', fontWeight: 'bold' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
+                                    <td style={{ width: '120px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.estado}</td>
+                                    <td style={{ 
+                                        width: '120px',
+                                        padding: '14px', 
+                                        borderRight: '1px solid rgba(255,255,255,0.05)',
+                                        color: calculateDebe(e) > 0 ? '#f87171' : (calculateDebe(e) < 0 ? '#34d399' : '#94a3b8'),
+                                        fontWeight: 'bold',
+                                        textAlign: 'center'
+                                    }}>
+                                        ${calculateDebe(e).toFixed(2)}
+                                    </td>
+                                    <td style={{ width: '100px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.activo}</td>
+                                    <td style={{ width: '120px', padding: '14px', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                             <button onClick={() => handleEdit(e)} title="Editar todos los datos (incluyendo meses)" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -283,12 +379,12 @@ const ExtrasGeneral = () => {
 
                                         return (
                                             <React.Fragment key={m}>
-                                                <td style={{ borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_factura'] || '-'}</td>
-                                                <td style={{ padding: '8px', fontSize: '0.7rem', opacity: 0.8 }}>{e[l + '_fecha_pago'] || '-'}</td>
-                                                <td style={{ padding: '8px', color: '#10b981', fontWeight: 'bold' }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
-                                                <td style={{ padding: '8px', fontSize: '0.75rem' }}>{e[l + '_banco'] || '-'}</td>
-                                                <td style={{ padding: '8px', fontSize: '0.7rem' }}>{e[l + '_cod'] || '-'}</td>
-                                                <td style={{ padding: '8px', color: saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8', fontWeight: 'bold' }}>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_factura'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_fecha_pago'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center' }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_banco'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_cod'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8', fontWeight: 'bold', textAlign: 'center' }}>
                                                     ${saldoAMostrar.toFixed(2)}
                                                 </td>
                                             </React.Fragment>
@@ -370,11 +466,12 @@ const ExtrasGeneral = () => {
                                         <input className="input" type="number" step="0.01" name="valor" value={formData.valor} onChange={e => setFormData({ ...formData, valor: e.target.value })} required />
                                     </div>
                                     <div className="form-group">
-                                        <label className="label">ESTADO (FIJO/SEMIFIJO/INFINITO)</label>
+                                        <label className="label">ESTADO</label>
                                         <select className="input" name="estado" value={formData.estado} onChange={e => setFormData({ ...formData, estado: e.target.value })} style={{ background: '#1e293b' }}>
+                                            <option value="30 DÍAS">30 DÍAS</option>
+                                            <option value="INFINITO">INFINITO</option>
                                             <option value="FIJO">FIJO</option>
                                             <option value="SEMIFIJO">SEMIFIJO</option>
-                                            <option value="INFINITO">INFINITO</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -384,9 +481,75 @@ const ExtrasGeneral = () => {
                                             <option value="NO">NO</option>
                                         </select>
                                     </div>
+                                    <div className="form-group">
+                                        <label className="label">FECHA DE INGRESO</label>
+                                        <input className="input" type="date" name="fecha_ingreso" value={formData.fecha_ingreso} onChange={e => setFormData({ ...formData, fecha_ingreso: e.target.value })} />
+                                    </div>
                                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
                                         <label className="label">OBSERVACIONES</label>
                                         <textarea className="input" name="observaciones" value={formData.observaciones} onChange={e => setFormData({ ...formData, observaciones: e.target.value })} rows="3" style={{ resize: 'none' }}></textarea>
+                                    </div>
+
+                                    {/* GENERADOR DE SCRIPT IPTV */}
+                                    <div style={{ gridColumn: 'span 2', background: 'rgba(59, 130, 246, 0.05)', padding: '24px', borderRadius: '15px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '20px' }}>
+                                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#60a5fa' }}>GENERADOR DE SCRIPT IPTV</h3>
+                                        
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                            <div className="input-group">
+                                                <label className="label">BOUQUETS</label>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
+                                                    {[
+                                                        { id: 1, label: 'TV VIVO' },
+                                                        { id: 2, label: 'PELICULAS' },
+                                                        { id: 5, label: 'SERIES' },
+                                                        { id: 10, label: 'ADULTOS' }
+                                                    ].map(b => (
+                                                        <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>
+                                                            <input type="checkbox" checked={iptvBouquets.includes(b.id)} onChange={() => handleBouquetChange(b.id)} />
+                                                            {b.label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="input-group">
+                                                <label className="label">OUTPUTS</label>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
+                                                    {[
+                                                        { id: 1, label: 'HLS' },
+                                                        { id: 2, label: 'MPEGTS' },
+                                                        { id: 3, label: 'RTMP' }
+                                                    ].map(o => (
+                                                        <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>
+                                                            <input type="checkbox" checked={iptvOutputs.includes(o.id)} onChange={() => handleOutputChange(o.id)} />
+                                                            {o.label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ position: 'relative' }}>
+                                            <label className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                SCRIPT SQL
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(getIptvScript());
+                                                        alert("Script copiado!");
+                                                    }}
+                                                    style={{ background: '#3b82f6', border: 'none', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer' }}
+                                                >
+                                                    COPIAR
+                                                </button>
+                                            </label>
+                                            <pre style={{ 
+                                                background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '10px', 
+                                                fontSize: '0.7rem', color: '#c7d2fe', border: '1px solid rgba(255,255,255,0.05)',
+                                                whiteSpace: 'pre-wrap', fontFamily: 'monospace', margin: '4px 0 0 0'
+                                            }}>
+                                                {getIptvScript()}
+                                            </pre>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
