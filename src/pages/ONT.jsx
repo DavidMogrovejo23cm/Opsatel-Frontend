@@ -54,6 +54,19 @@ const ONT = () => {
     navigator.clipboard.writeText(text);
   };
 
+  const getIptvScript = (data) => {
+    if (!data.iptv_activar) return '';
+    const useExp = data.iptv_exp_date && data.iptv_exp_date !== 'Nunca';
+    return `INSERT INTO lines (
+  member_id, username, password, bouquet, allowed_outputs, max_connections,
+  admin_enabled, enabled, ${useExp ? 'exp_date, ' : ''}is_restreamer, is_trial, is_mag, is_e2, is_stalker, is_isplock,
+  allowed_ips, allowed_ua, created_at, force_server_id, bypass_ua
+) VALUES (
+  ${data.iptv_member_id || 1}, '${data.iptv_user}', '${data.iptv_pass}', '${data.iptv_bouquets}', '${data.iptv_outputs}', ${data.iptv_max_conn},
+  1, 1, ${useExp ? "UNIX_TIMESTAMP() + (30 * 86400), " : ""}0, 0, 0, 0, 0, 0, '[]', '[]', UNIX_TIMESTAMP(), 0, 0
+);`;
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }} 
@@ -179,6 +192,24 @@ const ONT = () => {
                     </div>
                     <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
                       {c.breach}
+                    </pre>
+                  </div>
+                )}
+
+                {/* IPTV SCRIPT (only if active) */}
+                {c.iptv_activar && (
+                  <div className="command-box">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc', textTransform: 'uppercase' }}>Script Activación IPTV</label>
+                      <button 
+                        onClick={() => copyToClipboard(getIptvScript(c), 'Script IPTV')}
+                        style={{ background: 'rgba(192, 132, 252, 0.15)', border: '1px solid rgba(192, 132, 252, 0.3)', color: '#d8b4fe', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                    <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.7rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)', maxHeight: '150px', overflowY: 'auto' }}>
+                      {getIptvScript(c)}
                     </pre>
                   </div>
                 )}

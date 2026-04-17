@@ -92,7 +92,14 @@ const Admin = () => {
       bank_plus: cliente.bank_plus || '',
       adicional: cliente.adicional || '',
       notas_pago: cliente.notas_pago || '',
-      observaciones_edit: cliente.observaciones || ''
+      observaciones_edit: cliente.observaciones || '',
+      cortesiaMode: 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
+      cortesiaPct: '',
+      original_internet: internetSugerido,
+      original_plus: cliente.plus || '0',
+      original_adicional: cliente.adicional || '0',
+      descuentoValue: 0,
+      iptvDescuentoValue: 0
     });
     setEfectivoRecibido('');
     setShowPagoModal(true);
@@ -112,11 +119,16 @@ const Admin = () => {
         return alert('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
+      // LÓGICA DE LIQUIDACIÓN: Calculamos los descuentos (Cortesías) por separado del efectivo
+      const descInternet = pagoData.cortesiaMode !== 'NONE' ? parseFloat(pagoData.descuentoValue || 0) : 0;
+      const descPlus = pagoData.cortesiaMode === 'TOTAL' ? parseFloat(pagoData.iptvDescuentoValue || 0) : 0;
+      const descAdicional = pagoData.cortesiaMode === 'TOTAL' ? parseFloat(pagoData.original_adicional || 0) : 0;
+
       await clienteService.pagar(selectedCliente.id, {
         monto: parseFloat(pagoData.monto),
         metodo_pago: pagoData.metodo,
         mes_correspondiente: new Date().toISOString().slice(0, 7),
-        referencia: `Pago vía Admin - ${pagoData.metodo}`,
+        referencia: `Pago vía Admin - ${pagoData.metodo}${pagoData.cortesiaMode !== 'NONE' ? ' (CORTESÍA)' : ''}`,
         facturas: noneIfEmpty(pagoData.facturas),
         internet_payment: noneIfEmpty(pagoData.internet_payment),
         app: noneIfEmpty(pagoData.app),
@@ -127,7 +139,15 @@ const Admin = () => {
         plus: noneIfEmpty(pagoData.plus),
         bank_plus: noneIfEmpty(pagoData.bank_plus),
         adicional: noneIfEmpty(pagoData.adicional),
-        notas_pago: (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : null
+        descuento_internet: descInternet,
+        descuento_plus: descPlus,
+        descuento_adicional: descAdicional,
+        notas_pago: (() => {
+          let nota = (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : '';
+          if (pagoData.cortesiaMode === 'TOTAL') nota += ' [CORTESÍA TOTAL]';
+          if (pagoData.cortesiaMode === 'PARCIAL') nota += ` [DESCUENTO ${pagoData.cortesiaPct || 0}% PLAN]`;
+          return nota.trim() || null;
+        })()
       });
 
       // Guardar observaciones si fueron modificadas
@@ -562,7 +582,7 @@ const Admin = () => {
               </div>
 
               <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--glass-border)' }}>
-                {parseFloat(selectedCliente.saldo || 0) > 0 && (
+                {(parseFloat(selectedCliente.saldo || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
                     <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
@@ -598,6 +618,122 @@ const Admin = () => {
                     <span style={{ color: (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)) > 0 ? '#f87171' : '#4ade80' }}>
                       ${(parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2)}
                     </span>
+                  </div>
+                </div>
+
+                {/* SECCIÓN DE CORTESÍA */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="cortesia_total"
+                      checked={pagoData.cortesiaMode === 'TOTAL'}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const mode = isChecked ? 'TOTAL' : 'NONE';
+                        if (isChecked) {
+                          setPagoData({
+                            ...pagoData,
+                            cortesiaMode: mode,
+                            internet_payment: "0",
+                            plus: "0",
+                            adicional: "0",
+                            monto: "0",
+                            descuentoValue: pagoData.original_internet,
+                            iptvDescuentoValue: pagoData.original_plus
+                          });
+                        } else {
+                          const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.original_plus) + parseFloat(pagoData.original_adicional)).toFixed(2);
+                          setPagoData({
+                            ...pagoData,
+                            cortesiaMode: mode,
+                            internet_payment: pagoData.original_internet,
+                            plus: pagoData.original_plus,
+                            adicional: pagoData.original_adicional,
+                            monto: originalTotal,
+                            descuentoValue: 0,
+                            iptvDescuentoValue: 0
+                          });
+                        }
+                      }}
+                      style={{ width: '18px', height: '18px', accentColor: '#var(--primary)' }}
+                    />
+                    <label htmlFor="cortesia_total" style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total</label>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="cortesia_parcial"
+                        checked={pagoData.cortesiaMode === 'PARCIAL'}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          const mode = isChecked ? 'PARCIAL' : 'NONE';
+                          if (isChecked) {
+                            setPagoData({ ...pagoData, cortesiaMode: mode });
+                          } else {
+                            const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.original_plus) + parseFloat(pagoData.original_adicional)).toFixed(2);
+                            setPagoData({
+                              ...pagoData,
+                              cortesiaMode: mode,
+                              internet_payment: pagoData.original_internet,
+                              plus: pagoData.original_plus,
+                              monto: originalTotal,
+                              cortesiaPct: '',
+                              descuentoValue: 0,
+                              iptvDescuentoValue: 0
+                            });
+                          }
+                        }}
+                        style={{ width: '18px', height: '18px', accentColor: '#var(--primary)' }}
+                      />
+                      <label htmlFor="cortesia_parcial" style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Parcial</label>
+                    </div>
+                    {pagoData.cortesiaMode === 'PARCIAL' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '28px' }}>
+                        <input 
+                          type="number" 
+                          placeholder="%"
+                          className="input"
+                          style={{ width: '80px', marginBottom: 0, padding: '6px 10px', textAlign: 'center', fontSize: '1rem', fontWeight: 'bold', color: '#818cf8', border: '1px solid #818cf8' }}
+                          min="0" max="100"
+                          value={pagoData.cortesiaPct}
+                          onChange={(e) => {
+                            const valStr = e.target.value;
+                            if (valStr === "") {
+                              setPagoData({ 
+                                ...pagoData, 
+                                cortesiaPct: "", 
+                                internet_payment: pagoData.original_internet,
+                                monto: (parseFloat(pagoData.original_internet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2),
+                                descuentoValue: 0
+                              });
+                              return;
+                            }
+                            const pct = Math.min(100, Math.max(0, parseFloat(valStr) || 0));
+                            const planPrice = parseFloat(planesList.find(p => p.nombre.toLowerCase() === selectedCliente?.plan?.toLowerCase())?.precio || 0);
+                            const internetSugerido = parseFloat(pagoData.original_internet || 0);
+
+                            const baseDescuento = (internetSugerido > 0 && planPrice > 0) ? Math.min(planPrice, internetSugerido) : (internetSugerido || 0);
+                            
+                            const descuento = (baseDescuento * pct / 100);
+                            const nuevoInternet = (internetSugerido - descuento).toFixed(2);
+                            
+                            const total = (parseFloat(nuevoInternet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2);
+                            
+                            setPagoData({
+                              ...pagoData,
+                              cortesiaPct: pct,
+                              internet_payment: nuevoInternet,
+                              monto: total,
+                              descuentoValue: descuento
+                            });
+                          }}
+                        />
+                        <span style={{ fontSize: '0.9rem', color: '#818cf8', fontWeight: 'bold' }}>% Descuento</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
