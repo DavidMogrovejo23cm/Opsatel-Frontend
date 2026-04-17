@@ -212,7 +212,7 @@ const HojaRuta = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <div>
                         <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: '#a78bfa' }}>
-                            📋 Hoja de Ruta Unificada
+                            Hoja de Ruta
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
                             Gestión centralizada de instalaciones y actividades técnicas.
