@@ -43,6 +43,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: 'divider-1', type: 'divider', roles: ['administrador', 'secretario'] },
     { path: '/extras-general', label: 'Extras Gral', icon: '🌍', roles: ['administrador', 'secretario'] },
     { path: '/extras-pagos', label: 'Extra Pagos', icon: '💸', roles: ['administrador', 'secretario'] },
+    { path: '/upload-db', label: 'Subir BD', icon: '📤', roles: ['administrador', 'secretario'] },
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
   ];
 

@@ -71,6 +71,9 @@ export const clienteService = {
   actualizarConFotos: (id, formData) => api.patch(`/clientes/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  uploadDatabase: (formData) => api.post('/clientes/upload-db', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 export const extrasService = {

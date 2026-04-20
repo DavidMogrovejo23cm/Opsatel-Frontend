@@ -17,6 +17,7 @@ import ExtraPagos from './pages/ExtraPagos';
 import HojaRuta from './pages/HojaRuta';
 import Tickets from './pages/Tickets';
 import ONT from './pages/ONT';
+import SubirBD from './pages/SubirBD';
 
 
 function App() {
@@ -87,6 +88,11 @@ function App() {
             <Route path="extras-pagos" element={
               <ProtectedRoute roles={['administrador', 'secretario']}>
                 <ExtraPagos />
+              </ProtectedRoute>
+            } />
+            <Route path="upload-db" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <SubirBD />
               </ProtectedRoute>
             } />
 

@@ -366,3 +366,8 @@ select.input option {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Evitar scroll del fondo cuando un modal está abierto */
+body:has(.modal-overlay) {
+  overflow: hidden;
+}

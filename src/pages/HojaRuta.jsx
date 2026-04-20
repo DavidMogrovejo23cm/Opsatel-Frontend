@@ -63,7 +63,10 @@ const HojaRuta = () => {
         const term = clientSearchTerm.toLowerCase();
         return clientes
             .filter(c => {
-                if (modalSource === 'CLIENTE') return c.estado?.toUpperCase() !== 'ACTIVO';
+                if (modalSource === 'CLIENTE') {
+                    const state = c.estado?.toLowerCase() || '';
+                    return state === 'pendiente' || state === 'pendiente de activacion';
+                }
                 return c.estado?.toUpperCase() === 'ACTIVO';
             })
             .filter(c =>
@@ -361,7 +364,7 @@ const HojaRuta = () => {
                                             <div className="client-picker" style={{ position: 'relative' }}>
                                                 <input
                                                     className="input"
-                                                    placeholder="Escriba nombre o ID..."
+                                                    placeholder="Escriba nombre o ID para buscar..."
                                                     value={clientSearchTerm}
                                                     onChange={e => {
                                                         setClientSearchTerm(e.target.value);
@@ -370,7 +373,7 @@ const HojaRuta = () => {
                                                     onFocus={() => setShowClientList(true)}
                                                     style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}
                                                 />
-                                                {showClientList && clientSearchTerm && (
+                                                {showClientList && (
                                                     <div className="client-list glass" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, maxHeight: '250px', overflowY: 'auto' }}>
                                                         {activatedClients.map(c => (
                                                             <div key={c.id} className="client-item" onClick={() => handleSelectClient(c)} style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
