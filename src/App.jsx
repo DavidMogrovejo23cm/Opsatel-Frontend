@@ -19,6 +19,7 @@ import Tickets from './pages/Tickets';
 import ONT from './pages/ONT';
 import SubirBD from './pages/SubirBD';
 import CallCenter from './pages/CallCenter';
+import Balance from './pages/Balance';
 
 
 function App() {
@@ -110,6 +111,11 @@ function App() {
             <Route path="call-center" element={
               <ProtectedRoute roles={['administrador', 'secretario', 'tecnico']}>
                 <CallCenter />
+              </ProtectedRoute>
+            } />
+            <Route path="balance" element={
+              <ProtectedRoute roles={['administrador', 'secretario']}>
+                <Balance />
               </ProtectedRoute>
             } />
           </Route>

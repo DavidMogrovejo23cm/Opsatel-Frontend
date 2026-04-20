@@ -151,4 +151,20 @@ export const callCenterService = {
   eliminar: (id) => api.delete(`/callcenter/${id}`),
 };
 
+export const balanceService = {
+  // Egresos
+  listarEgresos: (mes) => api.get('/balance/egresos' + (mes ? `?mes=${mes}` : '')),
+  crearEgreso: (data) => api.post('/balance/egresos', data),
+  actualizarEgreso: (id, data) => api.patch(`/balance/egresos/${id}`, data),
+  eliminarEgreso: (id) => api.delete(`/balance/egresos/${id}`),
+  // Proyectos
+  listarProyectos: () => api.get('/balance/proyectos'),
+  crearProyecto: (data) => api.post('/balance/proyectos', data),
+  actualizarProyecto: (id, data) => api.patch(`/balance/proyectos/${id}`, data),
+  eliminarProyecto: (id) => api.delete(`/balance/proyectos/${id}`),
+  // Reportes
+  reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
+  reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),
+};
+
 export default api;
