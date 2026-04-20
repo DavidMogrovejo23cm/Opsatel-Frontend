@@ -18,6 +18,7 @@ import HojaRuta from './pages/HojaRuta';
 import Tickets from './pages/Tickets';
 import ONT from './pages/ONT';
 import SubirBD from './pages/SubirBD';
+import CallCenter from './pages/CallCenter';
 
 
 function App() {
@@ -104,6 +105,11 @@ function App() {
             <Route path="tickets" element={
               <ProtectedRoute roles={['administrador']}>
                 <Tickets />
+              </ProtectedRoute>
+            } />
+            <Route path="call-center" element={
+              <ProtectedRoute roles={['administrador', 'secretario', 'tecnico']}>
+                <CallCenter />
               </ProtectedRoute>
             } />
           </Route>

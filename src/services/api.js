@@ -144,4 +144,11 @@ export const ticketsService = {
   eliminar: (id) => api.delete(`/tickets/${id}`),
 };
 
+export const callCenterService = {
+  listar: () => api.get('/callcenter/'),
+  crear: (data) => api.post('/callcenter/', data),
+  actualizar: (id, data) => api.patch(`/callcenter/${id}`, data),
+  eliminar: (id) => api.delete(`/callcenter/${id}`),
+};
+
 export default api;
