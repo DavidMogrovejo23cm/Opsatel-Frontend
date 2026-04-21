@@ -162,6 +162,16 @@ export const balanceService = {
   crearProyecto: (data) => api.post('/balance/proyectos', data),
   actualizarProyecto: (id, data) => api.patch(`/balance/proyectos/${id}`, data),
   eliminarProyecto: (id) => api.delete(`/balance/proyectos/${id}`),
+  // Proyecto → Pagos (cuotas/aportes)
+  listarPagosProyecto: (proyId) => api.get(`/balance/proyectos/${proyId}/pagos`),
+  crearPagoProyecto: (proyId, data) => api.post(`/balance/proyectos/${proyId}/pagos`, data),
+  actualizarPagoProyecto: (proyId, pagoId, data) => api.patch(`/balance/proyectos/${proyId}/pagos/${pagoId}`, data),
+  eliminarPagoProyecto: (proyId, pagoId) => api.delete(`/balance/proyectos/${proyId}/pagos/${pagoId}`),
+  // Proyecto → Gastos por subcategoría (nóminas)
+  listarGastosProyecto: (proyId) => api.get(`/balance/proyectos/${proyId}/gastos`),
+  crearGastoProyecto: (proyId, data) => api.post(`/balance/proyectos/${proyId}/gastos`, data),
+  actualizarGastoProyecto: (proyId, gastoId, data) => api.patch(`/balance/proyectos/${proyId}/gastos/${gastoId}`, data),
+  eliminarGastoProyecto: (proyId, gastoId) => api.delete(`/balance/proyectos/${proyId}/gastos/${gastoId}`),
   // Reportes
   reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
   reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),

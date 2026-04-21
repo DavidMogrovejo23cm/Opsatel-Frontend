@@ -97,17 +97,23 @@ const HojaRuta = () => {
         });
 
         // Ordenamiento: 1. Fecha Pedido (created_at desc), 2. Fecha Programacion (fecha), 3. Hora (hora)
+        // Ordenamiento: 1. Fecha Programada (fecha), 2. Hora (hora), 3. Fecha Creación (created_at desc)
         return filtered.sort((a, b) => {
-            // Primero por fecha de creación (pedido)
-            const dateA = new Date(a.created_at || 0).getTime();
-            const dateB = new Date(b.created_at || 0).getTime();
-            if (dateA !== dateB) return dateB - dateA;
-
-            // Luego por fecha programada
-            if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+            // Primero por fecha programada
+            if (a.fecha !== b.fecha) {
+                // Asumiendo formato YYYY-MM-DD
+                return a.fecha.localeCompare(b.fecha);
+            }
 
             // Luego por hora
-            return a.hora.localeCompare(b.hora);
+            if (a.hora !== b.hora) {
+                return a.hora.localeCompare(b.hora);
+            }
+
+            // Luego por fecha de creación (pedido) - el más nuevo arriba si coinciden fecha y hora
+            const dateA = new Date(a.created_at || 0).getTime();
+            const dateB = new Date(b.created_at || 0).getTime();
+            return dateB - dateA;
         });
     }, [registros, searchTerm, dateFilter]);
 
@@ -176,22 +182,39 @@ const HojaRuta = () => {
             alert("Solo el administrador puede cambiar el estado de la hoja de ruta");
             return;
         }
-        const nextEstado = currentEstado === 'Pendiente' ? 'Realizado' : 'Pendiente';
+        
+        let nextEstado = 'Pendiente';
+        if (currentEstado === 'Pendiente') nextEstado = 'En proceso';
+        else if (currentEstado === 'En proceso') nextEstado = 'Realizado';
+        else nextEstado = 'Pendiente';
+
         try {
             await hojaRutaService.actualizar(id, { estado: nextEstado });
             fetchData(true);
         } catch (err) {
-            alert("Error al actualizar estado");
+            console.error(err);
+            const msg = err.response?.data?.detail || err.message;
+            alert("No se pudo cambiar el estado: " + msg);
         }
     };
 
     const handleSaveTechObs = async () => {
+        if (!editingId) return;
+        setSubmitting(true);
         try {
-            await hojaRutaService.actualizar(techId, { observacion_tecnico: techObs });
-            setShowTechModal(false);
-            fetchData();
+            // Enviamos SOLO la observación para evitar problemas de permisos con el estado
+            await hojaRutaService.actualizar(editingId, { 
+                observacion_tecnico: formData.observacion_tecnico 
+            });
+            setShowObsModal(false);
+            fetchData(true);
+            alert("Observación técnica guardada correctamente");
         } catch (err) {
-            alert("Error al guardar observación");
+            console.error(err);
+            const msg = err.response?.data?.detail || err.message;
+            alert("Error al guardar observación: " + msg);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -282,7 +305,7 @@ const HojaRuta = () => {
                                         <td>
                                             <button
                                                 onClick={() => toggleEstado(r.id, r.estado)}
-                                                className={`status-chip ${r.estado === 'Realizado' ? 'success' : 'pending'}`}
+                                                className={`status-chip ${r.estado === 'Realizado' ? 'success' : (r.estado === 'En proceso' ? 'processing' : 'pending')}`}
                                                 disabled={user.rol?.toLowerCase() !== 'administrador'}
                                                 style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
                                             >
@@ -546,7 +569,9 @@ const HojaRuta = () => {
                                 <div className="modal-actions">
                                     <button type="button" onClick={() => setShowObsModal(false)} className="btn btn-secondary">Cerrar</button>
                                     {(user.rol?.toLowerCase() === 'tecnico' || user.rol?.toLowerCase() === 'administrador') && (
-                                        <button type="submit" className="btn btn-primary" disabled={submitting}>Guardar</button>
+                                        <button type="button" onClick={handleSaveTechObs} className="btn btn-primary" disabled={submitting}>
+                                            {submitting ? 'Guardando...' : 'Guardar Observación'}
+                                        </button>
                                     )}
                                 </div>
                             </form>
@@ -558,6 +583,7 @@ const HojaRuta = () => {
             <style>{`
                 .status-chip { border: 1px solid; padding: 4px 12px; borderRadius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
+                .status-chip.processing { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
                 .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
                 .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
