@@ -92,7 +92,7 @@ const Admin = () => {
       bank_plus: cliente.bank_plus || '',
       adicional: cliente.adicional || '',
       notas_pago: cliente.notas_pago || '',
-      observaciones_edit: cliente.observaciones || '',
+      comentarios_edit: cliente.comentarios || '',
       cortesiaMode: 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
       cortesiaPct: '',
       original_internet: internetSugerido,
@@ -150,10 +150,10 @@ const Admin = () => {
         })()
       });
 
-      // Guardar observaciones si fueron modificadas
-      if (pagoData.observaciones_edit !== undefined) {
+      // Guardar comentarios del contrato si fueron modificados
+      if (pagoData.comentarios_edit !== undefined) {
         await clienteService.updateAdmin(selectedCliente.id, {
-          observaciones: pagoData.observaciones_edit
+          comentarios: pagoData.comentarios_edit
         });
       }
 
@@ -170,7 +170,7 @@ const Admin = () => {
         plus: pagoData.plus,
         adicional: pagoData.adicional,
         notas_pago: pagoData.notas_pago,
-        observaciones: pagoData.observaciones_edit,
+        comentarios: pagoData.comentarios_edit,
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
@@ -324,7 +324,7 @@ const Admin = () => {
                     >
                       {!planesList.some(p => p.nombre === c.plan) && (
                         <option value={c.plan}>{c.plan}</option>
-                       )}
+                      )}
                       {planesList.map(p => (
                         <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre} (${p.precio})</option>
                       ))}
@@ -441,50 +441,23 @@ const Admin = () => {
                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Notas del Cliente</h3>
               </div>
 
-                {/* Comentarios de Contrato */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.85rem', color: '#60a5fa', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
-                    Comentarios del Contrato (Lectura)
-                  </label>
-                  <div style={{
+              {/* Comentarios de Contrato Editables */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.85rem', color: '#60a5fa', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
+                  Comentarios del Contrato
+                </label>
+                <textarea
+                  value={pagoData.comentarios_edit ?? selectedCliente?.comentarios ?? ''}
+                  onChange={(e) => setPagoData({ ...pagoData, comentarios_edit: e.target.value })}
+                  placeholder="Escriba comentarios del contrato..."
+                  style={{
+                    flex: 1,
+                    minHeight: '200px',
+                    width: '100%',
                     background: 'rgba(59, 130, 246, 0.05)',
                     border: '1px solid rgba(59, 130, 246, 0.2)',
                     borderRadius: '12px',
-                    padding: '12px',
-                    fontSize: '0.85rem',
-                    lineHeight: '1.6',
                     color: 'white',
-                    minHeight: '80px',
-                    whiteSpace: 'pre-wrap',
-                    fontStyle: 'italic'
-                  }}>
-                    {selectedCliente?.comentarios ? (
-                      selectedCliente.comentarios.split('/').map((line, idx) => (
-                        <React.Fragment key={idx}>{line}<br /></React.Fragment>
-                      ))
-                    ) : (
-                      <span style={{ opacity: 0.5 }}>Sin comentarios registrados...</span>
-                    )}
-                  </div>
-                </div>
-
-              {/* Observaciones Generales/Técnicas */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 'bold' }}>
-                  Observaciones
-                </label>
-                <textarea
-                  value={pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''}
-                  onChange={(e) => setPagoData({ ...pagoData, observaciones_edit: e.target.value })}
-                  placeholder="Escriba observaciones del cliente..."
-                  style={{
-                    flex: 1,
-                    minHeight: '120px',
-                    width: '100%',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(96, 165, 250, 0.2)',
-                    borderRadius: '12px',
-                    color: 'var(--text-muted)',
                     padding: '12px',
                     fontSize: '0.85rem',
                     lineHeight: '1.6',
@@ -494,72 +467,22 @@ const Admin = () => {
                   }}
                 />
 
-                {/* Historial Técnico (Hoja de Ruta) */}
-                {(() => {
-                  const hrMatches = (hojaRutaList || [])
-                    .filter(h => Number(h.cliente_id) === Number(selectedCliente?.id))
-                    .sort((a, b) => new Date(b.created_at || b.id || 0) - new Date(a.created_at || a.id || 0));
-                  
-                  const lastHR = hrMatches[0];
-
-                  if (lastHR && (lastHR.observacion || lastHR.observacion_tecnico)) {
-                    return (
-                      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '4px' }}>
-                          <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>Última Actividad Técnica</h4>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{lastHR.fecha} - {lastHR.actividad}</span>
-                        </div>
-                        
-                        {lastHR.observacion && (
-                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.08)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
-                            <label style={{ fontSize: '0.7rem', color: '#fbbf24', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
-                              Problema Reportado
-                            </label>
-                            <div style={{ fontSize: '0.85rem', color: 'white', fontStyle: 'italic' }}>
-                              {lastHR.observacion}
-                            </div>
-                          </div>
-                        )}
-
-                        {lastHR.observacion_tecnico && (
-                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                            <label style={{ fontSize: '0.7rem', color: '#10b981', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
-                              observacion tecnica
-                            </label>
-                            <div style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: '500' }}>
-                              {lastHR.observacion_tecnico}
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: 'rgba(16,185,129,0.5)', marginTop: '6px', textAlign: 'right' }}>
-                              - {lastHR.tecnico} ({lastHR.fecha})
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
-                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No hay reportes técnicos recientes</span>
-                    </div>
-                  );
-                })()}
-
                 <button
                   className="btn btn-secondary"
-                  style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
+                  style={{ width: '100%', fontSize: '0.8rem', padding: '8px', marginTop: '16px' }}
                   onClick={async () => {
                     try {
                       await clienteService.updateAdmin(selectedCliente.id, {
-                        observaciones: pagoData.observaciones_edit ?? selectedCliente?.observaciones ?? ''
+                        comentarios: pagoData.comentarios_edit ?? selectedCliente?.comentarios ?? ''
                       });
-                      alert('Observaciones guardadas correctamente.');
+                      alert('Comentarios del contrato guardados correctamente.');
                       fetchData();
                     } catch (err) {
-                      alert('Error al guardar observaciones.');
+                      alert('Error al guardar comentarios.');
                     }
                   }}
                 >
-                  💾 Guardar Observaciones
+                  💾 Guardar Comentarios
                 </button>
               </div>
             </motion.div>
@@ -624,8 +547,8 @@ const Admin = () => {
                 {/* SECCIÓN DE CORTESÍA */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       id="cortesia_total"
                       checked={pagoData.cortesiaMode === 'TOTAL'}
                       onChange={(e) => {
@@ -663,8 +586,8 @@ const Admin = () => {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         id="cortesia_parcial"
                         checked={pagoData.cortesiaMode === 'PARCIAL'}
                         onChange={(e) => {
@@ -692,8 +615,8 @@ const Admin = () => {
                     </div>
                     {pagoData.cortesiaMode === 'PARCIAL' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '28px' }}>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           placeholder="%"
                           className="input"
                           style={{ width: '80px', marginBottom: 0, padding: '6px 10px', textAlign: 'center', fontSize: '1rem', fontWeight: 'bold', color: '#818cf8', border: '1px solid #818cf8' }}
@@ -702,9 +625,9 @@ const Admin = () => {
                           onChange={(e) => {
                             const valStr = e.target.value;
                             if (valStr === "") {
-                              setPagoData({ 
-                                ...pagoData, 
-                                cortesiaPct: "", 
+                              setPagoData({
+                                ...pagoData,
+                                cortesiaPct: "",
                                 internet_payment: pagoData.original_internet,
                                 monto: (parseFloat(pagoData.original_internet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2),
                                 descuentoValue: 0
@@ -716,12 +639,12 @@ const Admin = () => {
                             const internetSugerido = parseFloat(pagoData.original_internet || 0);
 
                             const baseDescuento = (internetSugerido > 0 && planPrice > 0) ? Math.min(planPrice, internetSugerido) : (internetSugerido || 0);
-                            
+
                             const descuento = (baseDescuento * pct / 100);
                             const nuevoInternet = (internetSugerido - descuento).toFixed(2);
-                            
+
                             const total = (parseFloat(nuevoInternet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2);
-                            
+
                             setPagoData({
                               ...pagoData,
                               cortesiaPct: pct,

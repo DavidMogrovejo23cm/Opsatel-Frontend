@@ -418,28 +418,14 @@ const HojaRuta = () => {
                                         <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Datos Seleccionados</h3>
                                         {selectedClient || editingId ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                <div>
-                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Nombre</label>
-                                                    <div style={{ fontSize: '0.85rem' }}>{formData.nombre_cliente || selectedClient?.nombre || '-'}</div>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Celular</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{formData.celular_cliente || selectedClient?.celular || '-'}</div>
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Parroquia</label>
-                                                        <div style={{ fontSize: '0.85rem' }}>{formData.parroquia || selectedClient?.parroquia || '-'}</div>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Ubicación Física</label>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{formData.ubicacion_cliente || selectedClient?.ubicacion || selectedClient?.direccion || '-'}</div>
-                                                </div>
-                                                {(selectedClient?.comentarios) && (
+                                                {(selectedClient?.comentarios) ? (
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
                                                         <div style={{ fontSize: '0.75rem', color: '#fcd34d', fontStyle: 'italic' }}>{selectedClient.comentarios}</div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ padding: '20px 0', textAlign: 'center', opacity: 0.3 }}>
+                                                        <p style={{ fontSize: '0.7rem' }}>Sin comentarios de contrato</p>
                                                     </div>
                                                 )}
                                             </div>
