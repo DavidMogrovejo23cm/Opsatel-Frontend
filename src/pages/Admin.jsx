@@ -484,6 +484,56 @@ const Admin = () => {
                 >
                   💾 Guardar Comentarios
                 </button>
+
+                {/* Historial Técnico (Hoja de Ruta) - RESTAURADO */}
+                {(() => {
+                  const hrMatches = (hojaRutaList || [])
+                    .filter(h => Number(h.cliente_id) === Number(selectedCliente?.id))
+                    .sort((a, b) => new Date(b.created_at || b.id || 0) - new Date(a.created_at || a.id || 0));
+
+                  const lastHR = hrMatches[0];
+
+                  if (lastHR && (lastHR.observacion || lastHR.observacion_tecnico)) {
+                    return (
+                      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '4px' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>Última Actividad Técnica</h4>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{lastHR.fecha} - {lastHR.actividad}</span>
+                        </div>
+
+                        {lastHR.observacion && (
+                          <div style={{ padding: '12px', background: 'rgba(251, 191, 36, 0.08)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#fbbf24', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+                              Problema Reportado
+                            </label>
+                            <div style={{ fontSize: '0.85rem', color: 'white', fontStyle: 'italic' }}>
+                              {lastHR.observacion}
+                            </div>
+                          </div>
+                        )}
+
+                        {lastHR.observacion_tecnico && (
+                          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#10b981', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+                              Observación Técnica
+                            </label>
+                            <div style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: '500' }}>
+                              {lastHR.observacion_tecnico}
+                            </div>
+                            <div style={{ fontSize: '0.6rem', color: 'rgba(16,185,129,0.5)', marginTop: '6px', textAlign: 'right' }}>
+                              - {lastHR.tecnico} ({lastHR.fecha})
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No hay reportes técnicos recientes</span>
+                    </div>
+                  );
+                })()}
               </div>
             </motion.div>
 

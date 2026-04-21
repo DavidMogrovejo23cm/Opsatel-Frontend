@@ -161,17 +161,36 @@ const HojaRuta = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
+        
+        // Limpiar cliente_id si es string vacío para evitar error de validación en backend
+        const cleanData = { 
+            ...formData,
+            cliente_id: formData.cliente_id === '' ? null : formData.cliente_id 
+        };
+
         try {
             if (editingId) {
-                await hojaRutaService.actualizar(editingId, formData);
+                await hojaRutaService.actualizar(editingId, cleanData);
             } else {
-                await hojaRutaService.crear(formData);
+                await hojaRutaService.crear(cleanData);
             }
             setShowModal(false);
             setShowObsModal(false);
             fetchData();
         } catch (err) {
-            alert(err.response?.data?.detail || "Error al procesar");
+            console.error("Error en handleSubmit:", err);
+            let errorMsg = "Error al procesar";
+            const detail = err.response?.data?.detail;
+            
+            if (typeof detail === 'string') {
+                errorMsg = detail;
+            } else if (Array.isArray(detail)) {
+                errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
+            } else if (typeof detail === 'object' && detail !== null) {
+                errorMsg = JSON.stringify(detail);
+            }
+            
+            alert(errorMsg);
         } finally {
             setSubmitting(false);
         }
@@ -383,7 +402,9 @@ const HojaRuta = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {!editingId && (
                                         <div>
-                                            <label className="label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar y Seleccionar Cliente ({modalSource})</label>
+                                            <label className="label" style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                {modalSource === 'CLIENTE' ? 'Buscar y Seleccionar Cliente' : 'Seleccionar Cliente (Opcional)'}
+                                            </label>
                                             <div className="client-picker" style={{ position: 'relative' }}>
                                                 <input
                                                     className="input"
@@ -402,6 +423,11 @@ const HojaRuta = () => {
                                                             <div key={c.id} className="client-item" onClick={() => handleSelectClient(c)} style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                                 <div style={{ fontWeight: 'bold' }}>#{c.id} - {c.nombre}</div>
                                                                 <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{c.parroquia} | {c.celular}</div>
+                                                                {c.comentarios && (
+                                                                    <div style={{ fontSize: '0.65rem', color: '#fcd34d', fontStyle: 'italic', marginTop: '4px' }}>
+                                                                        💬 {c.comentarios}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ))}
                                                         {activatedClients.length === 0 && (
@@ -415,24 +441,32 @@ const HojaRuta = () => {
 
                                     {/* CUADRO DE INFORMACIÓN DEL CLIENTE (CONTRACT DATA) */}
                                     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '20px', flex: 1 }}>
-                                        <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Datos Seleccionados</h3>
-                                        {selectedClient || editingId ? (
+                                        <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Previsualización Contrato</h3>
+                                        {selectedClient ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                {(selectedClient?.comentarios) ? (
+                                                <div>
+                                                    <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Cliente Seleccionado</label>
+                                                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{selectedClient.nombre}</div>
+                                                </div>
+                                                {selectedClient.comentarios ? (
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
                                                         <div style={{ fontSize: '0.75rem', color: '#fcd34d', fontStyle: 'italic' }}>{selectedClient.comentarios}</div>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ padding: '20px 0', textAlign: 'center', opacity: 0.3 }}>
-                                                        <p style={{ fontSize: '0.7rem' }}>Sin comentarios de contrato</p>
+                                                    <div style={{ padding: '10px 0', opacity: 0.3 }}>
+                                                        <p style={{ fontSize: '0.7rem' }}>Sin comentarios registrados</p>
                                                     </div>
                                                 )}
                                             </div>
+                                        ) : editingId ? (
+                                            <div style={{ textAlign: 'center', opacity: 0.5 }}>
+                                                <p style={{ fontSize: '0.75rem' }}>Editando registro existente</p>
+                                            </div>
                                         ) : (
-                                            <div style={{ padding: '40px 0', textAlign: 'center', opacity: 0.3 }}>
-                                                <div style={{ fontSize: '2rem' }}>👤</div>
-                                                <p style={{ fontSize: '0.7rem' }}>Seleccione un cliente para ver sus detalles</p>
+                                            <div style={{ padding: '30px 0', textAlign: 'center', opacity: 0.3 }}>
+                                                <div style={{ fontSize: '1.5rem', marginBottom: '10px' }}>👤</div>
+                                                <p style={{ fontSize: '0.7rem' }}>{modalSource === 'GENERAL' ? 'Actividad para externo (Opcional elegir cliente)' : 'Seleccione un cliente para ver comentarios'}</p>
                                             </div>
                                         )}
                                     </div>

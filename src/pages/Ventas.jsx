@@ -90,13 +90,13 @@ const Ventas = () => {
       setFormData({
         ...formData,
         tercera_edad: checked,
-        plan: checked ? 'TERCERA EDAD' : '' 
+        plan: checked ? 'TERCERA EDAD' : ''
       });
     } else if (name === 'plan') {
       const selectedPlan = planesList.find(p => p.nombre === value);
       const baseScreens = selectedPlan?.pantallas || 1;
-      setFormData({ 
-        ...formData, 
+      setFormData({
+        ...formData,
         plan: value,
         iptv_max_conn: baseScreens,
         plus: '0'
@@ -484,7 +484,7 @@ const Ventas = () => {
         </div>
 
         <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', marginTop: '10px' }}>
-          <label className="label">Comentarios del Contrato</label>
+          <label className="label">Comentarios (Ordenar con un - para que sea mas legible y separar con un enter para salto de linea)</label>
           <textarea
             className="input"
             name="comentarios"
