@@ -634,6 +634,8 @@ const Admin = () => {
                     <label htmlFor="cortesia_total" style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total</label>
                   </div>
 
+                  {/* Se oculta visualmente la cortesía parcial pero se mantiene la lógica en el código */}
+                  {/* 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <input
@@ -708,6 +710,7 @@ const Admin = () => {
                       </div>
                     )}
                   </div>
+                  */}
                 </div>
               </div>
 
