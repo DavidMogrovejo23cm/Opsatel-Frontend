@@ -6,7 +6,7 @@ import axios from 'axios';
 // Aquí es donde React se comunica con FastAPI. 
 // Axios actúa como el puente que envía y trae datos hacia la Base de Datos.
 // Si el backend se mueve a un servidor real, debes cambiar esto por la IP pública o dominio.
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -175,6 +175,11 @@ export const balanceService = {
   // Reportes
   reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
   reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),
+  // Colchon (Fondo de reserva)
+  listarColchon: () => api.get('/balance/colchon'),
+  crearColchon: (data) => api.post('/balance/colchon', data),
+  actualizarColchon: (id, data) => api.patch(`/balance/colchon/${id}`, data),
+  eliminarColchon: (id) => api.delete(`/balance/colchon/${id}`),
 };
 
 export default api;

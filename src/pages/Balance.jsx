@@ -14,25 +14,26 @@ const P = {
   ingreso: '#10b981', egreso: '#f43f5e', proyecto: '#f59e0b',
   internet: '#0ea5e9', iptv: '#ec4899', extras: '#8b5cf6',
   adic: '#14b8a6', balance: '#6366f1',
+  pichincha: '#facc15', jep: '#fb923c', efectivo: '#4ade80',
   cat: { operacional: '#f59e0b', nomina: '#0ea5e9', proyecto: '#8b5cf6', otro: '#94a3b8' }
 };
 
-const CATEGORIAS    = ['operacional', 'nomina', 'proyecto', 'otro'];
-const CAT_LABELS    = { operacional: '⚙️ Operacional', nomina: '👔 Nómina', proyecto: '🏗️ Proyecto', otro: '📦 Otro' };
-const METODOS       = ['Efectivo', 'Pichincha', 'JEP', 'Datatfast', 'Otro'];
-const ESTADOS_PROY  = ['En progreso', 'Completado', 'Pausado'];
+const CATEGORIAS = ['operacional', 'nomina', 'proyecto', 'otro'];
+const CAT_LABELS = { operacional: '⚙️ Operacional', nomina: '👔 Nómina', proyecto: '🏗️ Proyecto', otro: '📦 Otro' };
+const METODOS = ['Efectivo', 'Pichincha', 'JEP', 'Datatfast', 'Otro'];
+const ESTADOS_PROY = ['En progreso', 'Completado', 'Pausado'];
 
 // Subcategorías predefinidas para proyectos (editable como texto libre)
-const SUBCATS_PROY  = ['VIATICOS', 'CONSTRUCCION', 'COMPRAS', 'HERRAJERIA', 'VARIOS', 'INVERSIONISTA', 'TECNICO CAMPO', 'ADMINISTRATIVO'];
+const SUBCATS_PROY = ['VIATICOS', 'CONSTRUCCION', 'COMPRAS', 'HERRAJERIA', 'VARIOS', 'INVERSIONISTA', 'TECNICO CAMPO', 'ADMINISTRATIVO'];
 // Subcategorías predefinidas para egresos generales
-const SUBCATS_EGR   = ['VIATICOS', 'NOMINA', 'SERVICIOS', 'EQUIPOS', 'MANTENIMIENTO', 'CONSTRUCCION', 'COMPRAS', 'ADMINISTRATIVO', 'OTROS'];
+const SUBCATS_EGR = ['VIATICOS', 'NOMINA', 'SERVICIOS', 'EQUIPOS', 'MANTENIMIENTO', 'CONSTRUCCION', 'COMPRAS', 'ADMINISTRATIVO', 'OTROS'];
 
-const now         = new Date();
+const now = new Date();
 const DEFAULT_MES = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 const DEFAULT_ANIO = now.getFullYear();
 
-const fmt   = n   => `$${Number(n || 0).toFixed(2)}`;
-const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const fmt = n => `$${Number(n || 0).toFixed(2)}`;
+const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTES UI
@@ -40,9 +41,11 @@ const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 function Card({ title, value, icon, color, sub }) {
   return (
     <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}44`,
+      style={{
+        background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}44`,
         borderLeft: `4px solid ${color}`, borderRadius: 16, padding: '20px 22px',
-        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0
+      }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '1.6rem' }}>{icon}</span>
         <span style={{ color, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{title}</span>
@@ -65,8 +68,10 @@ function SectionTitle({ icon, text }) {
 
 function Badge({ text, color }) {
   return (
-    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
-      background: `${color}22`, color, border: `1px solid ${color}44` }}>{text}</span>
+    <span style={{
+      padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
+      background: `${color}22`, color, border: `1px solid ${color}44`
+    }}>{text}</span>
   );
 }
 
@@ -75,13 +80,17 @@ function Badge({ text, color }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, maxWidth = 560, children }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999,
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
       background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+    }}>
       <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        style={{ background: 'linear-gradient(145deg,#1a1040,#1e1550)',
+        style={{
+          background: 'linear-gradient(145deg,#1a1040,#1e1550)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24, padding: 28,
-          width: '100%', maxWidth, maxHeight: '92vh', overflowY: 'auto' }}>
+          width: '100%', maxWidth, maxHeight: '92vh', overflowY: 'auto'
+        }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <h2 style={{ margin: 0, fontSize: '1.05rem' }}>{title}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>&times;</button>
@@ -98,7 +107,11 @@ const IS = {
   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
   color: 'white', fontSize: '0.9rem', boxSizing: 'border-box',
   outline: 'none', fontFamily: 'Outfit, sans-serif',
+  appearance: 'none', // Quitar flecha default para customización
 };
+
+// Estilos para las opciones de los selects (para que no salgan blancas)
+const OS = { background: '#1a1040', color: 'white' };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EGRESO FORM  (con campo "en qué se gastó")
@@ -146,7 +159,7 @@ function EgresoForm({ initial, onSave, onClose }) {
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Categoría</label>
           <select style={IS} value={form.categoria} onChange={e => set('categoria', e.target.value)}>
-            {CATEGORIAS.map(c => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
+            {CATEGORIAS.map(c => <option key={c} value={c} style={OS}>{CAT_LABELS[c]}</option>)}
           </select>
         </div>
         <div>
@@ -154,15 +167,11 @@ function EgresoForm({ initial, onSave, onClose }) {
           <input style={IS} type="number" step="0.01" min="0" value={form.monto} onChange={e => set('monto', e.target.value)} required />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Fecha</label>
-          <input style={IS} type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Método de Pago</label>
           <select style={IS} value={form.metodo_pago} onChange={e => set('metodo_pago', e.target.value)}>
-            {METODOS.map(m => <option key={m} value={m}>{m}</option>)}
+            {METODOS.map(m => <option key={m} value={m} style={OS}>{m}</option>)}
           </select>
         </div>
       </div>
@@ -347,28 +356,112 @@ function GastoProyectoForm({ initial, proyId, onSave, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COLCHON FORM
+// ─────────────────────────────────────────────────────────────────────────────
+function ColchonForm({ initial, onSave, onClose }) {
+  const [form, setForm] = useState(initial || { descripcion: '', monto: '', fecha: new Date().toISOString().split('T')[0] });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (!form.descripcion || !form.monto) return alert('Completa descripción y monto.');
+    await onSave({ ...form, monto: parseFloat(form.monto) });
+    onClose();
+  };
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Descripción / Concepto</label>
+        <input style={IS} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} required placeholder="Ej: Reserva para equipos…" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Monto ($)</label>
+          <input style={IS} type="number" step="0.01" min="0" value={form.monto} onChange={e => set('monto', e.target.value)} required />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Fecha</label>
+          <input style={IS} type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 6 }}>
+        <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Cancelar</button>
+        <button type="submit" style={{ padding: '10px 20px', borderRadius: 10, background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Guardar</button>
+      </div>
+    </form>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MONTH NAVIGATION BAR (Horizontal Strip)
+// ─────────────────────────────────────────────────────────────────────────────
+function MonthNavBar({ value, onChange }) {
+  const [aStr, mNum] = value.split('-');
+  const currentMonthIdx = parseInt(mNum, 10) - 1;
+  const currentYear = parseInt(aStr, 10);
+  
+  const shortMonths = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, marginBottom: 15 }}>
+        <button onClick={() => onChange(`${currentYear - 1}-${mNum}`)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 950, letterSpacing: 2, background: 'linear-gradient(90deg, #fff, rgba(255,255,255,0.5))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{currentYear}</h2>
+        <button onClick={() => onChange(`${currentYear + 1}-${mNum}`)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+      </div>
+      
+      <div style={{ 
+        display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap',
+        background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)'
+      }}>
+        {shortMonths.map((m, i) => {
+          const isSelected = i === currentMonthIdx;
+          const mVal = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+          return (
+            <button 
+              key={m}
+              onClick={() => onChange(mVal)}
+              style={{ 
+                padding: '12px 20px', borderRadius: 14, border: 'none',
+                background: isSelected ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
+                color: isSelected ? 'white' : 'rgba(255,255,255,0.4)',
+                cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '0.85rem',
+                fontWeight: isSelected ? 900 : 600, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.3)' : 'none',
+                transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+              }}
+            >
+              {m}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PROYECTO DETALLE (modal con nóminas internas)
 // ─────────────────────────────────────────────────────────────────────────────
 function ProyectoDetalle({ proyecto, onClose }) {
-  const [tab, setTab]             = useState('pagos');   // 'pagos' | 'gastos'
-  const [pagos, setPagos]         = useState([]);
-  const [gastos, setGastos]       = useState({ grupos: {}, total: 0, flat: [] });
+  const [tab, setTab] = useState('pagos');   // 'pagos' | 'gastos'
+  const [pagos, setPagos] = useState([]);
+  const [gastos, setGastos] = useState({ grupos: {}, total: 0, flat: [] });
   const [modalPago, setModalPago] = useState(null);
   const [modalGasto, setModalGasto] = useState(null);
-  const [loadingP, setLoadingP]   = useState(false);
-  const [loadingG, setLoadingG]   = useState(false);
+  const [loadingP, setLoadingP] = useState(false);
+  const [loadingG, setLoadingG] = useState(false);
 
   const fetchPagos = useCallback(async () => {
     setLoadingP(true);
     try { const r = await balanceService.listarPagosProyecto(proyecto.id); setPagos(r.data); }
-    catch(e){ console.error(e); }
+    catch (e) { console.error(e); }
     setLoadingP(false);
   }, [proyecto.id]);
 
   const fetchGastos = useCallback(async () => {
     setLoadingG(true);
     try { const r = await balanceService.listarGastosProyecto(proyecto.id); setGastos(r.data); }
-    catch(e){ console.error(e); }
+    catch (e) { console.error(e); }
     setLoadingG(false);
   }, [proyecto.id]);
 
@@ -376,7 +469,7 @@ function ProyectoDetalle({ proyecto, onClose }) {
 
   const savePago = async data => {
     if (data.id) await balanceService.actualizarPagoProyecto(proyecto.id, data.id, data);
-    else          await balanceService.crearPagoProyecto(proyecto.id, data);
+    else await balanceService.crearPagoProyecto(proyecto.id, data);
     fetchPagos();
   };
   const deletePago = async id => {
@@ -387,7 +480,7 @@ function ProyectoDetalle({ proyecto, onClose }) {
 
   const saveGasto = async data => {
     if (data.id) await balanceService.actualizarGastoProyecto(proyecto.id, data.id, data);
-    else          await balanceService.crearGastoProyecto(proyecto.id, data);
+    else await balanceService.crearGastoProyecto(proyecto.id, data);
     fetchGastos();
   };
   const deleteGasto = async id => {
@@ -396,23 +489,27 @@ function ProyectoDetalle({ proyecto, onClose }) {
     fetchGastos();
   };
 
-  const totalPagos  = pagos.reduce((s, p) => s + parseFloat(p.valor || 0), 0);
+  const totalPagos = pagos.reduce((s, p) => s + parseFloat(p.valor || 0), 0);
   const estadoColor = proyecto.estado === 'Completado' ? P.ingreso : proyecto.estado === 'Pausado' ? P.egreso : P.proyecto;
-  const pct         = proyecto.monto_total > 0 ? Math.min(100, (proyecto.monto_invertido / proyecto.monto_total) * 100) : 0;
+  const pct = proyecto.monto_total > 0 ? Math.min(100, (proyecto.monto_invertido / proyecto.monto_total) * 100) : 0;
 
   const th = (label, right = false) => (
     <th style={{ padding: '10px 12px', textAlign: right ? 'right' : 'left', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{label}</th>
   );
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000,
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
       background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-      padding: '20px', overflowY: 'auto' }}>
+      padding: '20px', overflowY: 'auto'
+    }}>
       <motion.div initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        style={{ background: 'linear-gradient(145deg,#130d35,#1a1040)',
+        style={{
+          background: 'linear-gradient(145deg,#130d35,#1a1040)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24,
-          width: '100%', maxWidth: 900, padding: 28 }}>
+          width: '100%', maxWidth: 900, padding: 28
+        }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
@@ -430,10 +527,10 @@ function ProyectoDetalle({ proyecto, onClose }) {
         {/* KPIs del proyecto */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 12, marginBottom: 22 }}>
           {[
-            { label: 'Presupuesto',   value: fmt(proyecto.monto_total),     color: P.balance },
-            { label: 'Total Aportes', value: fmt(totalPagos),               color: P.ingreso },
-            { label: 'Costo Gastos',  value: fmt(gastos.total),             color: P.egreso },
-            { label: 'Avance',        value: `${pct.toFixed(1)}%`,          color: P.proyecto },
+            { label: 'Presupuesto', value: fmt(proyecto.monto_total), color: P.balance },
+            { label: 'Total Aportes', value: fmt(totalPagos), color: P.ingreso },
+            { label: 'Costo Gastos', value: fmt(gastos.total), color: P.egreso },
+            { label: 'Avance', value: `${pct.toFixed(1)}%`, color: P.proyecto },
           ].map(k => (
             <div key={k.label} style={{ background: `${k.color}12`, border: `1px solid ${k.color}33`, borderRadius: 12, padding: '12px 16px' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{k.label}</div>
@@ -449,7 +546,7 @@ function ProyectoDetalle({ proyecto, onClose }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {[['pagos','💳 Pagos al Proyecto'],['gastos','📊 Gastos Generales']].map(([id, label]) => (
+          {[['pagos', '💳 Pagos al Proyecto'], ['gastos', '📊 Gastos Generales']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{
               padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', fontWeight: 600,
               border: tab === id ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(255,255,255,0.06)',
@@ -471,7 +568,7 @@ function ProyectoDetalle({ proyecto, onClose }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                      {[['Ítem'],['Descripción'],['Fecha'],['Tipo de Pago'],['Valor','right'],['',]].map(([h, r], i) => (
+                      {[['Ítem'], ['Descripción'], ['Fecha'], ['Tipo de Pago'], ['Valor', 'right'], ['',]].map(([h, r], i) => (
                         <th key={i} style={{ padding: '10px 12px', textAlign: r ? 'right' : 'left', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
                       ))}
                     </tr>
@@ -618,42 +715,44 @@ function ProyectoDetalle({ proyecto, onClose }) {
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 const Balance = () => {
-  const [vista, setVista]           = useState('mensual');
-  const [mes, setMes]               = useState(DEFAULT_MES);
-  const [anio, setAnio]             = useState(DEFAULT_ANIO);
-  const [report, setReport]         = useState(null);
+  const [vista, setVista] = useState('mensual');
+  const [mes, setMes] = useState(DEFAULT_MES);
+  const [anio, setAnio] = useState(DEFAULT_ANIO);
+  const [report, setReport] = useState(null);
   const [reportAnual, setReportAnual] = useState(null);
-  const [egresos, setEgresos]       = useState([]);
-  const [proyectos, setProyectos]   = useState([]);
-  const [loading, setLoading]       = useState(false);
+  const [egresos, setEgresos] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [modalEgreso, setModalEgreso] = useState(null);
-  const [modalProy, setModalProy]   = useState(null);
+  const [modalProy, setModalProy] = useState(null);
+  const [modalColchon, setModalColchon] = useState(null);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
+  const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
 
   // ── FETCH ──
-  const fetchMensual  = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteMensual(mes); setReport(r.data); } catch(e){} setLoading(false); }, [mes]);
-  const fetchAnual    = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch(e){} setLoading(false); }, [anio]);
-  const fetchEgresos  = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch(e){} }, []);
-  const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch(e){} }, []);
+  const fetchMensual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteMensual(mes); setReport(r.data); } catch (e) { } setLoading(false); }, [mes]);
+  const fetchAnual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch (e) { } setLoading(false); }, [anio]);
+  const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
+  const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
 
-  useEffect(() => { if (vista==='mensual')  fetchMensual();  }, [vista, fetchMensual]);
-  useEffect(() => { if (vista==='anual')    fetchAnual();    }, [vista, fetchAnual]);
-  useEffect(() => { if (vista==='egresos')  fetchEgresos();  }, [vista, fetchEgresos]);
-  useEffect(() => { if (vista==='proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
+  useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
+  useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
+  useEffect(() => { if (vista === 'egresos') fetchEgresos(); }, [vista, fetchEgresos]);
+  useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
 
   const handleSaveEgreso = async data => {
     if (data.id) await balanceService.actualizarEgreso(data.id, data);
-    else          await balanceService.crearEgreso(data);
-    fetchEgresos(); if (vista==='mensual') fetchMensual();
+    else await balanceService.crearEgreso(data);
+    fetchEgresos(); if (vista === 'mensual') fetchMensual();
   };
   const handleDeleteEgreso = async id => {
     if (!window.confirm('¿Eliminar este egreso?')) return;
     await balanceService.eliminarEgreso(id);
-    fetchEgresos(); if (vista==='mensual') fetchMensual();
+    fetchEgresos(); if (vista === 'mensual') fetchMensual();
   };
   const handleSaveProy = async data => {
     if (data.id) await balanceService.actualizarProyecto(data.id, data);
-    else          await balanceService.crearProyecto(data);
+    else await balanceService.crearProyecto(data);
     fetchProyectos();
   };
   const handleDeleteProy = async id => {
@@ -662,13 +761,108 @@ const Balance = () => {
     fetchProyectos();
   };
 
+  const handleSaveColchon = async data => {
+    if (data.id) await balanceService.actualizarColchon(data.id, data);
+    else await balanceService.crearColchon(data);
+    if (vista === 'mensual') fetchMensual();
+  };
+  const handleDeleteColchon = async id => {
+    if (!window.confirm('¿Eliminar este registro del colchón?')) return;
+    await balanceService.eliminarColchon(id);
+    if (vista === 'mensual') fetchMensual();
+  };
+
+  const handleExportar = () => {
+    if (!report) return;
+    const { ingresos, egresos, proyectos, colchon, balance_neto } = report;
+    const [aStr, mNum] = mes.split('-');
+    const mLabel = MONTH_NAMES[parseInt(mNum, 10) - 1];
+    
+    let csv = `REPORTE FINANCIERO - ${mLabel.toUpperCase()} ${aStr}\n\n`;
+    
+    csv += "RESUMEN GENERAL\n";
+    csv += `Ingresos Total,${ingresos.total}\n`;
+    csv += `Egresos Total,${egresos.total}\n`;
+    csv += `Inversion Proyectos,${proyectos.total}\n`;
+    csv += `Balance Neto,${balance_neto}\n\n`;
+    
+    csv += "DETALLE DE INGRESOS\n";
+    csv += "Concepto,Monto\n";
+    csv += `Internet,${ingresos.internet.total}\n`;
+    csv += `IPTV,${ingresos.iptv.total}\n`;
+    csv += `Extras,${ingresos.extras.total}\n`;
+    csv += `Adicional,${ingresos.adicional}\n\n`;
+    
+    csv += "DETALLE DE EGRESOS\n";
+    csv += "Descripcion,Categoria,Subcategoria,Metodo,Monto\n";
+    egresos.lista.forEach(e => {
+      csv += `"${e.descripcion}","${e.categoria}","${e.subcategoria || ''}","${e.metodo_pago}",${e.monto}\n`;
+    });
+    csv += `\nTOTAL EGRESOS,,,,${egresos.total}\n\n`;
+    
+    if (colchon?.lista?.length > 0) {
+      csv += "CAJA DE COLCHON\n";
+      csv += "Fecha,Concepto,Monto\n";
+      colchon.lista.forEach(c => {
+        csv += `"${c.fecha}","${c.descripcion}",${c.monto}\n`;
+      });
+      csv += `TOTAL COLCHON,,${colchon.total}\n`;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Balance_Opsatel_${mLabel}_${aStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportarAnual = () => {
+    if (!reportAnual) return;
+    const { meses, totales, proyectos } = reportAnual;
+    
+    let csv = `REPORTE FINANCIERO ANUAL - ${anio}\n\n`;
+    
+    csv += "RESUMEN ANUAL\n";
+    csv += `Ingresos Total,${totales.ingresos}\n`;
+    csv += `Egresos Total,${totales.egresos}\n`;
+    csv += `Balance Neto Anual,${totales.balance}\n\n`;
+    
+    csv += "EVOLUCION MENSUAL\n";
+    csv += "Mes,Internet,IPTV,Extras/Adic,Total Ingresos,Egresos,Balance\n";
+    meses.forEach(m => {
+      csv += `${m.label},${m.internet},${m.iptv},${m.extras+m.adicional},${m.ingresos},${m.egresos},${m.balance}\n`;
+    });
+    
+    if (proyectos?.length > 0) {
+      csv += "\nPROYECTOS DEL AÑO\n";
+      csv += "Nombre,Monto Total,Invertido,Estado\n";
+      proyectos.forEach(p => {
+        csv += `"${p.nombre}",${p.monto_total},${p.monto_invertido},"${p.estado}"\n`;
+      });
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Balance_Anual_Opsatel_${anio}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const Tab = ({ id, label, icon }) => (
     <button id={`tab-balance-${id}`} onClick={() => setVista(id)} style={{
       padding: '10px 18px', borderRadius: 12, cursor: 'pointer',
       fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', fontWeight: 600,
-      border: vista===id ? '1px solid rgba(255,255,255,0.22)' : '1px solid transparent',
-      background: vista===id ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.03)',
-      color: vista===id ? '#fff' : 'rgba(255,255,255,0.55)',
+      border: vista === id ? '1px solid rgba(255,255,255,0.22)' : '1px solid transparent',
+      background: vista === id ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.03)',
+      color: vista === id ? '#fff' : 'rgba(255,255,255,0.55)',
       transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 7,
     }}>
       <span>{icon}</span>{label}
@@ -686,130 +880,216 @@ const Balance = () => {
   const renderMensual = () => {
     if (!report) return null;
     const { ingresos, egresos: egData, proyectos: proyData, balance_neto } = report;
-    const pieIngr = [
-      { name: 'Internet', value: ingresos.internet.total, color: P.internet },
-      { name: 'IP TV',    value: ingresos.iptv.total,    color: P.iptv },
-      { name: 'Adicional',value: ingresos.adicional,     color: P.adic },
-      { name: 'Extras',   value: ingresos.extras.total,  color: P.extras },
-    ].filter(x => x.value > 0);
     const barData = [
-      { name:'Ingresos', total: ingresos.total,   fill: P.ingreso },
-      { name:'Egresos',  total: egData.total,     fill: P.egreso },
-      { name:'Proyectos',total: proyData.total,   fill: P.proyecto },
-      { name:'Balance',  total: Math.abs(balance_neto), fill: balance_neto>=0 ? P.ingreso : P.egreso },
+      { name: 'Ingresos', total: ingresos.total, fill: P.ingreso },
+      { name: 'Egresos', total: egData.total, fill: P.egreso },
+      { name: 'Proyectos', total: proyData.total, fill: P.proyecto },
+      { name: 'Balance', total: Math.abs(balance_neto), fill: balance_neto >= 0 ? P.ingreso : P.egreso },
     ];
-    const [mesNum, anioStr] = mes.split('-');
-    const mesLabel = MONTH_NAMES[parseInt(mesNum,10)-1] + ' ' + anioStr;
+    const [anioStr, mesNum] = mes.split('-');
+    const mesLabel = MONTH_NAMES[parseInt(mesNum, 10) - 1] + ' ' + anioStr;
+
+    const egByCat = Object.entries(egData.detalle || {}).map(([name, value]) => ({ name: CAT_LABELS[name] || name, value, color: P.cat[name] || '#94a3b8' })).filter(x => x.value > 0);
+    const egByMetodo = egData.lista.reduce((acc, eg) => {
+      acc[eg.metodo_pago] = (acc[eg.metodo_pago] || 0) + parseFloat(eg.monto);
+      return acc;
+    }, {});
+    const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
-          <label style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.9rem' }}>Mes:</label>
-          <input type="month" value={mes} onChange={e => setMes(e.target.value)}
-            style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', outline: 'none' }} />
-          <button onClick={fetchMensual} style={{ padding: '8px 18px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem' }}>Cargar</button>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>📅 {mesLabel}</span>
+        <MonthNavBar value={mes} onChange={val => setMes(val)} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '12px 24px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 10, background: 'rgba(99,102,241,0.2)', borderRadius: 12 }}>📊</div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Resumen Operativo</h3>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cierre de caja para {mesLabel}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={fetchMensual} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>🔄 Refrescar</button>
+            <button onClick={handleExportar} style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: '0 4px 15px rgba(99,102,241,0.3)' }}>📥 Exportar Reporte</button>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 16, marginBottom: 32 }}>
-          <Card icon="📥" title="Ingresos" color={P.ingreso} value={fmt(ingresos.total)} />
-          <Card icon="📤" title="Egresos"  color={P.egreso}  value={fmt(egData.total)} />
-          <Card icon="🏗️" title="Proyectos" color={P.proyecto} value={fmt(proyData.total)} />
-          <Card icon={balance_neto>=0?'💚':'🔴'} title="Balance Neto"
-            color={balance_neto>=0?P.ingreso:P.egreso} value={fmt(balance_neto)}
-            sub={balance_neto>=0?'Superávit':'Déficit'} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginBottom: 32 }}>
+          <Card icon="📥" title="Ingresos" color={P.ingreso} value={fmt(ingresos.total)} sub="Total recaudado" />
+          <Card icon="📤" title="Egresos" color={P.egreso} value={fmt(egData.total)} sub="Gastos operativos" />
+          <Card icon="🏗️" title="Proyectos" color={P.proyecto} value={fmt(proyData.total)} sub="Inversión en obras" />
+          <Card icon={balance_neto >= 0 ? '💰' : '⚠️'} title="Balance Neto"
+            color={balance_neto >= 0 ? P.ingreso : P.egreso} value={fmt(balance_neto)}
+            sub={balance_neto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))', gap: 20, marginBottom: 28 }}>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 24 }}>
-            <h4 style={{ margin: '0 0 18px', fontSize: '0.95rem' }}>📊 Resumen Financiero</h4>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={barData} margin={{ top: 16, right: 10, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => '$'+v} />
-                <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                <Bar dataKey="total" radius={[8,8,0,0]} barSize={38}>
-                  {barData.map((e,i) => <Cell key={i} fill={e.fill} />)}
-                  <LabelList dataKey="total" position="top" fill="#e2e8f0" fontSize={12} formatter={fmt} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px,1fr))', gap: 20, marginBottom: 32 }}>
+          {/* Gráfica Principal */}
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>📊 Flujo de Caja</h4>
+              <Badge text="Resumen" color={P.balance} />
+            </div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                <Bar dataKey="total" radius={[6, 6, 0, 0]} barSize={45}>
+                  {barData.map((e, i) => <Cell key={i} fill={e.fill} fillOpacity={0.9} />)}
+                  <LabelList dataKey="total" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 24 }}>
-            <h4 style={{ margin: '0 0 18px', fontSize: '0.95rem' }}>🥧 Desglose de Ingresos</h4>
-            {pieIngr.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={pieIngr} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
-                    {pieIngr.map((e,i) => <Cell key={i} fill={e.color} />)}
-                  </Pie>
-                  <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                  <Legend iconType="circle" iconSize={10} formatter={(v,e) => <span style={{ color:'#e2e8f0', fontSize:'0.8rem' }}>{v}: {fmt(e.payload.value)}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: 60 }}>Sin ingresos este mes</div>}
-          </div>
-        </div>
 
-        {/* Ingresos desglosados */}
-        <SectionTitle icon="💰" text="Desglose de Ingresos" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))', gap: 14, marginBottom: 28 }}>
-          {[
-            { label: '🌐 Internet', total: ingresos.internet.total, color: P.internet, rows: [['Efectivo',ingresos.internet.efectivo,P.ingreso],['Pichincha',ingresos.internet.pichincha,'#fbbf24'],['JEP',ingresos.internet.jep,P.balance]] },
-            { label: '📺 IP TV',    total: ingresos.iptv.total,    color: P.iptv,     rows: [['Efectivo',ingresos.iptv.efectivo,P.ingreso],['Pichincha',ingresos.iptv.pichincha,'#fbbf24']] },
-            { label: '🌍 Extras',   total: ingresos.extras.total,  color: P.extras,   rows: [['Efectivo',ingresos.extras.efectivo,P.ingreso],['Pichincha',ingresos.extras.pichincha,'#fbbf24'],['JEP',ingresos.extras.jep,P.balance]] },
-          ].map(({ label, total, color, rows }) => (
-            <div key={label} style={{ background: `${color}0d`, border: `1px solid ${color}33`, borderRadius: 14, padding: 18 }}>
-              <div style={{ color, fontWeight: 700, fontSize: '0.9rem', marginBottom: 10 }}>{label} — {fmt(total)}</div>
-              {rows.map(([l,v,c]) => (
-                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{l}</span>
-                  <span style={{ color: c, fontWeight: 700 }}>{fmt(v)}</span>
+          {/* Gráficas de Torta */}
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24 }}>
+            <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700 }}>🥧 Distribución de Gastos</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={egByCat} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
+                      {egByCat.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    </Pie>
+                    <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR MÉTODO</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={pieMetodo} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
+                      {pieMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    </Pie>
+                    <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginTop: 15 }}>
+              {egByCat.map(c => (
+                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.color }} />
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{c.name}</span>
                 </div>
               ))}
             </div>
-          ))}
-          <div style={{ background: `${P.adic}0d`, border: `1px solid ${P.adic}33`, borderRadius: 14, padding: 18 }}>
-            <div style={{ color: P.adic, fontWeight: 700, fontSize: '0.9rem', marginBottom: 8 }}>➕ Adicional — {fmt(ingresos.adicional)}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Servicios adicionales cobrados a clientes principales.</div>
           </div>
         </div>
 
-        {/* Egresos del mes */}
-        <SectionTitle icon="📤" text="Egresos del Mes" />
+        {/* Resumen Tipo Excel - Side by Side */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
+          <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 18, padding: 20 }}>
+            <h5 style={{ margin: '0 0 15px', color: P.ingreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🟢 Resumen de Ingresos <span style={{ flex: 1, height: 1, background: 'rgba(16,185,129,0.2)' }} />
+            </h5>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: '🌐 Internet', val: ingresos.internet.total, sub: `Recaudado de ${ingresos.internet.cantidad || 0} clientes` },
+                { label: '📺 IP TV', val: ingresos.iptv.total, sub: 'Servicios de televisión' },
+                { label: '🌍 Extras', val: ingresos.extras.total, sub: 'Pagos adicionales y diversos' },
+                { label: '➕ Adicional', val: ingresos.adicional, sub: 'Otros conceptos' },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{item.label}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.sub}</div>
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.ingreso }}>{fmt(item.val)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 18, padding: 20 }}>
+            <h5 style={{ margin: '0 0 15px', color: P.egreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🔴 Resumen de Egresos <span style={{ flex: 1, height: 1, background: 'rgba(244,63,94,0.2)' }} />
+            </h5>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {Object.entries(egData.detalle || {}).map(([cat, val]) => (
+                <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize' }}>{CAT_LABELS[cat] || cat}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Gasto mensual</div>
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.egreso }}>{fmt(val)}</div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(244,63,94,0.1)', borderRadius: 12, marginTop: 5, border: '1px solid rgba(244,63,94,0.2)' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>TOTAL GASTOS</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: P.egreso }}>{fmt(egData.total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Egresos del mes - Vista Excel */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+          <SectionTitle icon="📋" text="Detalle de Egresos (Hoja de Cálculo)" margin={0} />
+          <div style={{ position: 'relative', width: 280 }}>
+            <input 
+              type="text" 
+              placeholder="🔍 Buscar en egresos..." 
+              value={filtroEgreso}
+              onChange={e => setFiltroEgreso(e.target.value)}
+              style={{ ...IS, padding: '8px 14px 8px 36px', fontSize: '0.82rem', background: 'rgba(255,255,255,0.04)' }}
+            />
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔎</span>
+          </div>
+        </div>
         {egData.lista.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 14 }}>
-            Sin egresos registrados. <button onClick={() => setVista('egresos')} style={{ background:'none',border:'none',color:P.egreso,cursor:'pointer',fontWeight:700 }}>Agregar uno</button>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 20, border: '1px dashed rgba(255,255,255,0.1)' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 10 }}>📭</div>
+            Sin egresos registrados para este período.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.08)' }}>
-                  {['Descripción','En qué se gastó','Categoría','Fecha','Método','Monto'].map(h => (
-                    <th key={h} style={{ padding: '11px 14px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+          <div style={{ overflowX: 'auto', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                  {['Descripción', 'En qué se gastó', 'Categoría', 'Método', 'Monto'].map(h => (
+                    <th key={h} style={{ padding: '14px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {egData.lista.map(eg => (
-                  <tr key={eg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 600 }}>{eg.descripcion}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                {egData.lista
+                  .filter(e => {
+                    const search = filtroEgreso.toLowerCase();
+                    return e.descripcion.toLowerCase().includes(search) || 
+                           (e.subcategoria && e.subcategoria.toLowerCase().includes(search)) ||
+                           e.categoria.toLowerCase().includes(search) ||
+                           e.metodo_pago.toLowerCase().includes(search);
+                  })
+                  .map((eg, idx) => (
+                  <tr key={eg.id} style={{
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                    transition: 'background 0.2s'
+                  }} className="hover-row">
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '10px 14px' }}><Badge text={CAT_LABELS[eg.categoria] || eg.categoria} color={P.cat[eg.categoria]||'#94a3b8'} /></td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{eg.fecha}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{eg.metodo_pago}</td>
-                    <td style={{ padding: '10px 14px', color: P.egreso, fontWeight: 800 }}>{fmt(eg.monto)}</td>
+                    <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[eg.categoria] || eg.categoria} color={P.cat[eg.categoria] || '#94a3b8'} /></td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: P.egreso, fontWeight: 800, fontSize: '0.95rem' }}>{fmt(eg.monto)}</td>
                   </tr>
                 ))}
-                <tr style={{ background: 'rgba(244,63,94,0.05)', fontWeight: 800 }}>
-                  <td colSpan={5} style={{ padding: '12px 14px', color: P.egreso }}>TOTAL EGRESOS</td>
-                  <td style={{ padding: '12px 14px', color: P.egreso, fontSize: '1rem' }}>{fmt(egData.total)}</td>
-                </tr>
               </tbody>
+              <tfoot style={{ position: 'sticky', bottom: 0 }}>
+                <tr style={{ background: 'rgba(244,63,94,0.15)', backdropFilter: 'blur(10px)', fontWeight: 900 }}>
+                  <td colSpan={4} style={{ padding: '16px', color: 'white', letterSpacing: 1 }}>TOTAL GASTOS DEL MES</td>
+                  <td style={{ padding: '16px', color: P.egreso, fontSize: '1.2rem', textAlign: 'left' }}>{fmt(egData.total)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
@@ -821,7 +1101,7 @@ const Balance = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))', gap: 14 }}>
               {proyData.lista.map(p => {
                 const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
-                const ec  = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
+                const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
                 return (
                   <div key={p.id} style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 14, padding: 18 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -842,6 +1122,53 @@ const Balance = () => {
             </div>
           </>
         )}
+
+        {/* ── SECCIÓN COLCHÓN (Excel-like) ── */}
+        <SectionTitle icon="💰" text="Caja de Colchón (Reserva de Capital)" />
+        <div style={{ background: 'rgba(16,185,129,0.03)', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 20, padding: 22, marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>Fondo de ahorro acumulado para emergencias o inversiones futuras.</p>
+            </div>
+            <button onClick={() => setModalColchon('crear')} style={{ padding: '9px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              ＋ Agregar Valor
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  {['Concepto / Descripción', 'Fecha', 'Monto ($)', 'Acciones'].map((h, i) => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: i === 2 ? 'right' : 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {!report.colchon?.lista || report.colchon.lista.length === 0 ? (
+                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No hay valores registrados en el colchón.</td></tr>
+                ) : report.colchon.lista.map((c, idx) => (
+                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.descripcion}</td>
+                    <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.4)' }}>{c.fecha}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '1rem' }}>{fmt(c.monto)}</td>
+                    <td style={{ padding: '12px 16px', display: 'flex', gap: 10, justifyContent: 'flex-start' }}>
+                      <button onClick={() => setModalColchon(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>✏️</button>
+                      <button onClick={() => handleDeleteColchon(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>🗑️</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: 'rgba(16,185,129,0.15)', borderTop: '2px solid rgba(16,185,129,0.3)' }}>
+                  <td colSpan={2} style={{ padding: '16px', fontWeight: 900, fontSize: '0.95rem', letterSpacing: 1 }}>TOTAL COLCHÓN ACUMULADO</td>
+                  <td style={{ padding: '16px', textAlign: 'right', fontWeight: 950, color: P.ingreso, fontSize: '1.25rem' }}>{fmt(report.colchon?.total || 0)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
@@ -852,72 +1179,102 @@ const Balance = () => {
   const renderAnual = () => {
     if (!reportAnual) return null;
     const { meses, totales, proyectos: pa } = reportAnual;
+
+    const stackedData = meses.map(m => ({
+      name: m.label,
+      Internet: m.internet,
+      IPTV: m.iptv,
+      Extras: m.extras + m.adicional,
+      Egresos: -m.egresos,
+      Balance: m.balance
+    }));
+
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
-          <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Año:</label>
-          <select value={anio} onChange={e => setAnio(parseInt(e.target.value,10))}
-            style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>
-            {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '12px 20px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>📆 Año Contable:</label>
+          <select value={anio} onChange={e => setAnio(parseInt(e.target.value, 10))}
+            style={{ ...IS, width: 'auto' }}>
+            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y} style={OS}>{y}</option>)}
           </select>
-          <button onClick={fetchAnual} style={{ padding: '8px 18px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem' }}>Cargar</button>
+          <button onClick={fetchAnual} style={{ padding: '8px 18px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>Cargar Reporte Anual</button>
+          <button onClick={handleExportarAnual} style={{ padding: '8px 18px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            📥 Exportar {anio}
+          </button>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>BALANCE GENERAL {anio}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 16, marginBottom: 32 }}>
-          <Card icon="📥" title="Ingresos Totales" color={P.ingreso} value={fmt(totales.ingresos)} sub={`Año ${anio}`} />
-          <Card icon="📤" title="Egresos Totales"  color={P.egreso}  value={fmt(totales.egresos)}  sub={`Año ${anio}`} />
-          <Card icon={totales.balance>=0?'💚':'🔴'} title="Balance Anual"
-            color={totales.balance>=0?P.ingreso:P.egreso} value={fmt(totales.balance)}
-            sub={totales.balance>=0?'Superávit':'Déficit'} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginBottom: 32 }}>
+          <Card icon="📈" title="Ingresos Anuales" color={P.ingreso} value={fmt(totales.ingresos)} sub={`Recaudación total ${anio}`} />
+          <Card icon="📉" title="Egresos Anuales" color={P.egreso} value={fmt(totales.egresos)} sub={`Gastos operativos ${anio}`} />
+          <Card icon={totales.balance >= 0 ? '💰' : '🚨'} title="Balance Neto Anual"
+            color={totales.balance >= 0 ? P.ingreso : P.egreso} value={fmt(totales.balance)}
+            sub={totales.balance >= 0 ? 'Rentabilidad Positiva' : 'Atención: Saldo Negativo'} />
+          <Card icon="🏗️" title="Proyectos" color={P.proyecto} value={pa.length} sub="Proyectos gestionados" />
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 24, marginBottom: 28 }}>
-          <h4 style={{ margin: '0 0 18px', fontSize: '0.95rem' }}>📈 Evolución {anio}</h4>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={meses} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
-              <defs>
-                <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={P.ingreso} stopOpacity={0.3}/><stop offset="95%" stopColor={P.ingreso} stopOpacity={0}/></linearGradient>
-                <linearGradient id="gE" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={P.egreso}  stopOpacity={0.3}/><stop offset="95%" stopColor={P.egreso}  stopOpacity={0}/></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="label" stroke="var(--text-muted)" tick={{ fill:'var(--text-muted)', fontSize:12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="var(--text-muted)" tick={{ fill:'var(--text-muted)', fontSize:12 }} axisLine={false} tickLine={false} tickFormatter={v=>'$'+v} />
-              <ReTooltip {...tooltipStyle} formatter={v=>fmt(v)} />
-              <Legend iconType="circle" iconSize={10} />
-              <Area type="monotone" dataKey="ingresos" stroke={P.ingreso} strokeWidth={2.5} fill="url(#gI)" name="Ingresos" />
-              <Area type="monotone" dataKey="egresos"  stroke={P.egreso}  strokeWidth={2.5} fill="url(#gE)" name="Egresos" />
-            </AreaChart>
+
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 28, marginBottom: 32, boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>📊 Evolución Financiera Mensual</h4>
+            <div style={{ display: 'flex', gap: 15 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem' }}><div style={{ width: 10, height: 10, background: P.ingreso, borderRadius: 2 }} /> Ingresos</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem' }}><div style={{ width: 10, height: 10, background: P.egreso, borderRadius: 2 }} /> Egresos</div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={stackedData} margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+              <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+              <Legend verticalAlign="top" height={36} iconType="circle" />
+              <Bar dataKey="Internet" stackId="a" fill={P.internet} barSize={35} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="IPTV" stackId="a" fill={P.iptv} />
+              <Bar dataKey="Extras" stackId="a" fill={P.extras} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Egresos" stackId="b" fill={P.egreso} radius={[0, 0, 4, 4]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
-        <SectionTitle icon="📋" text="Detalle por Mes" />
-        <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+
+        <SectionTitle icon="📗" text={`Resumen Consolidado ${anio}`} />
+        <div style={{ overflowX: 'auto', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                {['Mes','Internet','IP TV','Adicional','Extras','Ingresos','Egresos','Balance'].map((h,i) => (
-                  <th key={h} style={{ padding: '13px 14px', textAlign: i===0?'left':'right', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+              <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                {['Mes', '🌐 Internet', '📺 IPTV', '💰 Otros', '📥 Ingresos', '📤 Egresos', '⚖️ Balance'].map((h, i) => (
+                  <th key={h} style={{ padding: '16px', textAlign: i === 0 ? 'left' : 'right', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {meses.map((m, i) => (
-                <tr key={m.mes} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: i%2===0?'transparent':'rgba(255,255,255,0.015)' }}>
-                  <td style={{ padding: '10px 14px', fontWeight: 700 }}>{m.label}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: P.internet }}>{fmt(m.internet)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: P.iptv }}>{fmt(m.iptv)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: P.adic }}>{fmt(m.adicional)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: P.extras }}>{fmt(m.extras)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: P.ingreso }}>{fmt(m.ingresos)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: P.egreso }}>{fmt(m.egresos)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: m.balance>=0?P.ingreso:P.egreso }}>{m.balance>=0?'+':''}{fmt(m.balance)}</td>
+                <tr key={m.mes} style={{
+                  borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                  transition: 'background 0.2s'
+                }} className="hover-row">
+                  <td style={{ padding: '12px 16px', fontWeight: 800, color: 'white' }}>{m.label.toUpperCase()}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet, fontWeight: 600 }}>{fmt(m.internet)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: P.iptv, fontWeight: 600 }}>{fmt(m.iptv)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: P.extras, fontWeight: 600 }}>{fmt(m.extras + m.adicional)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '0.95rem' }}>{fmt(m.ingresos)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: P.egreso, fontWeight: 600 }}>{fmt(m.egresos)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: m.balance >= 0 ? P.ingreso : P.egreso, fontSize: '1rem', background: m.balance >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(244,63,94,0.05)' }}>
+                    {m.balance >= 0 ? '+' : ''}{fmt(m.balance)}
+                  </td>
                 </tr>
               ))}
-              <tr style={{ background: 'rgba(99,102,241,0.08)', borderTop: '2px solid rgba(99,102,241,0.3)' }}>
-                <td style={{ padding: 14, fontWeight: 800 }}>TOTAL {anio}</td>
-                <td colSpan={4} />
-                <td style={{ padding: 14, textAlign: 'right', fontWeight: 800, color: P.ingreso }}>{fmt(totales.ingresos)}</td>
-                <td style={{ padding: 14, textAlign: 'right', fontWeight: 800, color: P.egreso  }}>{fmt(totales.egresos)}</td>
-                <td style={{ padding: 14, textAlign: 'right', fontWeight: 800, color: totales.balance>=0?P.ingreso:P.egreso }}>{totales.balance>=0?'+':''}{fmt(totales.balance)}</td>
-              </tr>
             </tbody>
+            <tfoot style={{ position: 'sticky', bottom: 0 }}>
+              <tr style={{ background: 'rgba(99,102,241,0.2)', backdropFilter: 'blur(10px)', fontWeight: 900 }}>
+                <td style={{ padding: '18px 16px', color: 'white', letterSpacing: 1 }}>TOTAL ANUAL {anio}</td>
+                <td colSpan={3} />
+                <td style={{ padding: '18px 16px', textAlign: 'right', color: P.ingreso, fontSize: '1.2rem' }}>{fmt(totales.ingresos)}</td>
+                <td style={{ padding: '18px 16px', textAlign: 'right', color: P.egreso, fontSize: '1.1rem' }}>{fmt(totales.egresos)}</td>
+                <td style={{ padding: '18px 16px', textAlign: 'right', color: totales.balance >= 0 ? P.ingreso : P.egreso, fontSize: '1.3rem' }}>{fmt(totales.balance)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -927,52 +1284,89 @@ const Balance = () => {
   // ─────────────────────────────────────────────────────────────────
   // VISTA EGRESOS
   // ─────────────────────────────────────────────────────────────────
-  const renderEgresos = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1rem' }}>📤 Gestión de Egresos</h3>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Registra todos los gastos con su subcategoría.</p>
+  const renderEgresos = () => {
+    const sortedEgresos = [...egresos].sort((a, b) => {
+      if (a.categoria !== b.categoria) return a.categoria.localeCompare(b.categoria);
+      return b.fecha.localeCompare(a.fecha);
+    });
+
+    // Grouping by category for visual hierarchy
+    const groupedEgresos = sortedEgresos.reduce((acc, eg) => {
+      acc[eg.categoria] = acc[eg.categoria] || [];
+      acc[eg.categoria].push(eg);
+      return acc;
+    }, {});
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📖 Libro de Egresos</h3>
+            <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Listado histórico de gastos operativos y proyectos.</p>
+          </div>
+          <button id="btn-nuevo-egreso" onClick={() => setModalEgreso('crear')}
+            style={{ padding: '12px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
+            ＋ Registrar Nuevo Egreso
+          </button>
         </div>
-        <button id="btn-nuevo-egreso" onClick={() => setModalEgreso('crear')}
-          style={{ padding: '10px 22px', borderRadius: 12, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          ＋ Nuevo Egreso
-        </button>
-      </div>
-      <div style={{ overflowX: 'auto', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-          <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              {['Descripción','En qué se gastó','Categoría','Fecha','Mes','Método','Monto',''].map(h => (
-                <th key={h} style={{ padding: '13px 14px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {egresos.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No hay egresos registrados.</td></tr>
-            ) : egresos.map(eg => (
-              <tr key={eg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '10px 14px', fontWeight: 600, maxWidth: 200 }}>{eg.descripcion}</td>
-                <td style={{ padding: '10px 14px' }}>
-                  {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>}
-                </td>
-                <td style={{ padding: '10px 14px' }}><Badge text={CAT_LABELS[eg.categoria]||eg.categoria} color={P.cat[eg.categoria]||'#94a3b8'} /></td>
-                <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{eg.fecha}</td>
-                <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{eg.mes}</td>
-                <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{eg.metodo_pago}</td>
-                <td style={{ padding: '10px 14px', color: P.egreso, fontWeight: 800 }}>{fmt(eg.monto)}</td>
-                <td style={{ padding: '10px 14px', display: 'flex', gap: 6 }}>
-                  <button onClick={() => setModalEgreso(eg)} style={{ background: 'rgba(99,102,241,0.15)', border: 'none', borderRadius: 8, color: P.balance, padding: '5px 9px', cursor: 'pointer' }}>✏️</button>
-                  <button onClick={() => handleDeleteEgreso(eg.id)} style={{ background: 'rgba(244,63,94,0.1)', border: 'none', borderRadius: 8, color: P.egreso, padding: '5px 9px', cursor: 'pointer' }}>🗑️</button>
-                </td>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
+          {CATEGORIAS.map(cat => {
+            const total = egresos.filter(e => e.categoria === cat).reduce((s, e) => s + parseFloat(e.monto), 0);
+            return (
+              <div key={cat} style={{ background: `${P.cat[cat]}0a`, border: `1px solid ${P.cat[cat]}33`, borderRadius: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: P.cat[cat] }}>{CAT_LABELS[cat].toUpperCase()}</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{fmt(total)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ overflowX: 'auto', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                {['Concepto', 'Subcategoría', 'Fecha', 'Mes', 'Método', 'Monto', 'Acciones'].map(h => (
+                  <th key={h} style={{ padding: '16px', textAlign: h === 'Monto' ? 'right' : 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {egresos.length === 0 ? (
+                <tr><td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>📭 No hay egresos registrados todavía.</td></tr>
+              ) : Object.entries(groupedEgresos).map(([cat, list]) => (
+                <React.Fragment key={cat}>
+                  <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <td colSpan={7} style={{ padding: '10px 16px', color: P.cat[cat], fontWeight: 800, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}>
+                      ▶ {CAT_LABELS[cat]}
+                    </td>
+                  </tr>
+                  {list.map(eg => (
+                    <tr key={eg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }} className="hover-row">
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.5)' }}>{eg.fecha}</td>
+                      <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.3)' }}>{eg.mes}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.7rem' }}>{eg.metodo_pago.toUpperCase()}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: P.egreso, fontWeight: 800, fontSize: '1rem' }}>{fmt(eg.monto)}</td>
+                      <td style={{ padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
+                        <button onClick={() => setModalEgreso(eg)} style={{ background: 'rgba(99,102,241,0.1)', border: 'none', borderRadius: 8, color: P.balance, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>✏️</button>
+                        <button onClick={() => handleDeleteEgreso(eg.id)} style={{ background: 'rgba(244,63,94,0.1)', border: 'none', borderRadius: 8, color: P.egreso, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ─────────────────────────────────────────────────────────────────
   // VISTA PROYECTOS
@@ -994,7 +1388,7 @@ const Balance = () => {
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: 16, gridColumn: '1/-1' }}>No hay proyectos registrados.</div>
         ) : proyectos.map(p => {
           const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
-          const ec  = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
+          const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
           return (
             <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 18, padding: 22 }}>
@@ -1046,11 +1440,11 @@ const Balance = () => {
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 28, padding: 6, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content' }}>
-        <Tab id="mensual"   label="Reporte Mensual"  icon="📅" />
-        <Tab id="anual"     label="Reporte Anual"    icon="📆" />
-        <Tab id="egresos"   label="Egresos"          icon="📤" />
-        <Tab id="proyectos" label="Proyectos"        icon="🏗️" />
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+        <Tab id="mensual" label="Resumen Mensual" icon="📊" />
+        <Tab id="anual" label="Evolución Anual" icon="📈" />
+        <Tab id="egresos" label="Libro de Egresos" icon="📖" />
+        <Tab id="proyectos" label="Proyectos & Obras" icon="🏗️" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -1061,9 +1455,9 @@ const Balance = () => {
             </div>
           ) : (
             <>
-              {vista === 'mensual'   && renderMensual()}
-              {vista === 'anual'     && renderAnual()}
-              {vista === 'egresos'   && renderEgresos()}
+              {vista === 'mensual' && renderMensual()}
+              {vista === 'anual' && renderAnual()}
+              {vista === 'egresos' && renderEgresos()}
               {vista === 'proyectos' && renderProyectos()}
             </>
           )}
@@ -1072,21 +1466,28 @@ const Balance = () => {
 
       {/* Modal Egreso */}
       {modalEgreso !== null && (
-        <Modal title={modalEgreso==='crear'?'➕ Nuevo Egreso':'✏️ Editar Egreso'} onClose={() => setModalEgreso(null)}>
-          <EgresoForm initial={modalEgreso!=='crear'?{...modalEgreso}:null} onSave={handleSaveEgreso} onClose={() => setModalEgreso(null)} />
+        <Modal title={modalEgreso === 'crear' ? '➕ Nuevo Egreso' : '✏️ Editar Egreso'} onClose={() => setModalEgreso(null)}>
+          <EgresoForm initial={modalEgreso !== 'crear' ? { ...modalEgreso } : null} onSave={handleSaveEgreso} onClose={() => setModalEgreso(null)} />
         </Modal>
       )}
 
       {/* Modal Proyecto */}
       {modalProy !== null && (
-        <Modal title={modalProy==='crear'?'➕ Nuevo Proyecto':'✏️ Editar Proyecto'} onClose={() => setModalProy(null)}>
-          <ProyectoForm initial={modalProy!=='crear'?{...modalProy}:null} onSave={handleSaveProy} onClose={() => setModalProy(null)} />
+        <Modal title={modalProy === 'crear' ? '➕ Nuevo Proyecto' : '✏️ Editar Proyecto'} onClose={() => setModalProy(null)}>
+          <ProyectoForm initial={modalProy !== 'crear' ? { ...modalProy } : null} onSave={handleSaveProy} onClose={() => setModalProy(null)} />
         </Modal>
       )}
 
       {/* Detalle de Proyecto (modal con nóminas) */}
       {proyDetalle !== null && (
         <ProyectoDetalle proyecto={proyDetalle} onClose={() => setProyDetalle(null)} />
+      )}
+
+      {/* Modal Colchon */}
+      {modalColchon !== null && (
+        <Modal title={modalColchon === 'crear' ? '➕ Agregar al Colchón' : '✏️ Editar Colchón'} onClose={() => setModalColchon(null)}>
+          <ColchonForm initial={modalColchon !== 'crear' ? { ...modalColchon } : null} onSave={handleSaveColchon} onClose={() => setModalColchon(null)} />
+        </Modal>
       )}
     </div>
   );

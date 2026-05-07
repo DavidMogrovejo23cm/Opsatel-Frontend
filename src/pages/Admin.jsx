@@ -805,10 +805,10 @@ const Admin = () => {
                 {/* 4. MÉTODO (MORADO) */}
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Método</label>
-                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
-                    {bancosList.length === 0 && <option value="EFECTIVO">EFECTIVO</option>}
+                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
+                    {bancosList.length === 0 && <option value="EFECTIVO" style={{ background: '#1e1b4b', color: 'white' }}>EFECTIVO</option>}
                     {bancosList.map(b => (
-                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
                     ))}
                   </select>
                 </div>
@@ -826,10 +826,10 @@ const Admin = () => {
                 {/* 6. BANK PLUS (MORADO) */}
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Bank Plus</label>
-                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
-                    <option value="" style={{ background: '#1e1b4b' }}>Ninguno</option>
+                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
+                    <option value="" style={{ background: '#1e1b4b', color: 'white' }}>Ninguno</option>
                     {bancosList.map(b => (
-                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b' }}>{b.nombre}</option>
+                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
                     ))}
                   </select>
                 </div>
