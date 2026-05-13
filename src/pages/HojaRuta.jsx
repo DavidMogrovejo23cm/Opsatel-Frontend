@@ -265,18 +265,18 @@ const HojaRuta = () => {
 
     return (
         <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                    <div>
-                        <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: 0, color: '#a78bfa' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass hr-main-container">
+                <div className="hr-header">
+                    <div className="hr-header-info">
+                        <h1 className="hr-title">
                             Hoja de Ruta
                         </h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '5px' }}>
+                        <p className="hr-subtitle">
                             Gestión centralizada de instalaciones y actividades técnicas.
                         </p>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div className="hr-actions">
+                        <div className="hr-date-filter">
                             <span style={{ fontSize: '0.8rem', opacity: 0.7 }}> Fecha:</span>
                             <input
                                 type="date"
@@ -290,24 +290,23 @@ const HojaRuta = () => {
                             )}
                         </div>
                         <input
-                            className="input"
+                            className="input hr-search"
                             placeholder="Buscar técnico, cliente o zona..."
-                            style={{ width: '250px', marginBottom: 0, borderRadius: '15px' }}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
-                        <button onClick={() => handleOpenModal('CLIENTE')} className="btn btn-primary" style={{ padding: '12px 20px' }}>
+                        <button onClick={() => handleOpenModal('CLIENTE')} className="btn btn-primary hr-btn">
                             + Programar Instalación
                         </button>
-                        <button onClick={() => handleOpenModal('GENERAL')} className="btn btn-secondary" style={{ padding: '12px 20px', border: '1px solid #7e22ce', color: '#a78bfa' }}>
+                        <button onClick={() => handleOpenModal('GENERAL')} className="btn btn-secondary hr-btn-secondary">
                             + Nueva Actividad
                         </button>
                     </div>
                 </div>
 
                 {loading ? <p>Cargando datos...</p> : (
-                    <div style={{ overflowX: 'auto', borderRadius: '15px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                    <div className="hr-table-container">
+                        <table className="hr-table">
                             <thead>
                                 <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', opacity: 0.8 }}>
                                     <th style={{ padding: '15px' }}>F. Pedido</th>
@@ -409,7 +408,7 @@ const HojaRuta = () => {
                                 <button onClick={() => setShowModal(false)} className="close-btn" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 900 ? 'minmax(350px, 1fr) 2fr' : '1fr', gap: '30px' }}>
+                            <div className="hr-modal-grid">
                                 {/* COLUMNA IZQUIERDA: BÚSQUEDA Y DATOS DEL CLIENTE */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {!editingId && (
@@ -613,14 +612,26 @@ const HojaRuta = () => {
             </AnimatePresence>
 
             <style>{`
-                .status-chip { border: 1px solid; padding: 4px 12px; borderRadius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
+                .hr-main-container { width: 100%; padding: 24px; }
+                .hr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+                .hr-title { font-size: 2.4rem; font-weight: 900; margin: 0; color: #a78bfa; }
+                .hr-subtitle { color: var(--text-muted); font-size: 1rem; margin-top: 5px; }
+                .hr-actions { display: flex; gap: 16px; align-items: center; }
+                .hr-date-filter { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+                .hr-search { width: 250px; margin-bottom: 0; border-radius: 15px; }
+                .hr-btn { padding: 12px 20px; }
+                .hr-btn-secondary { padding: 12px 20px; border: 1px solid #7e22ce; color: #a78bfa; }
+                .hr-table-container { overflow-x: auto; border-radius: 15px; }
+                .hr-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+
+                .status-chip { border: 1px solid; padding: 4px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
                 .status-chip.processing { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
                 .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
                 .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
                 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-                .modal-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
+                .hr-modal-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
                 .client-info { padding: 20px; font-size: 0.8rem; }
                 .client-info h4 { margin-top: 0; margin-bottom: 15px; color: #a78bfa; }
                 .client-info p { margin: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
@@ -629,6 +640,29 @@ const HojaRuta = () => {
                 .client-list { position: absolute; top: 100%; left: 0; right: 0; background: #1e1b4b; border-radius: 10px; z-index: 100; max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
                 .client-item { padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
                 .client-item:hover { background: rgba(255,255,255,0.1); }
+
+                /* RESPONSIVE */
+                @media (max-width: 1200px) {
+                    .hr-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+                    .hr-actions { width: 100%; flex-wrap: wrap; }
+                    .hr-search { flex: 1; min-width: 200px; }
+                }
+
+                @media (max-width: 768px) {
+                    .hr-main-container { padding: 15px; }
+                    .hr-title { font-size: 1.8rem; }
+                    .hr-actions { flex-direction: column; align-items: stretch; }
+                    .hr-search, .hr-date-filter, .hr-btn, .hr-btn-secondary { width: 100% !important; }
+                    .hr-modal-grid { grid-template-columns: 1fr; }
+                    .modal-content { padding: 20px; border-radius: 15px; }
+                    .hr-table th, .hr-table td { font-size: 0.7rem; padding: 10px 5px; }
+                }
+
+                @media (max-width: 480px) {
+                    .hr-title { font-size: 1.5rem; }
+                    .modal-header h2 { font-size: 1.1rem; }
+                    .modal-content { padding: 15px; }
+                }
             `}</style>
         </>
     );

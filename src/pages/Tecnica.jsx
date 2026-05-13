@@ -307,16 +307,8 @@ const Tecnica = () => {
   };
 
   return (
-    <div className="grid-tecnica" style={{
-      display: 'grid',
-      gridTemplateColumns: (selectedCliente && window.innerWidth > 1024) ? '1fr 2fr' : '1fr',
-      gap: '24px'
-    }}>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{
-        maxHeight: '80vh',
-        overflowY: 'auto',
-        display: (selectedCliente && window.innerWidth <= 1024) ? 'none' : 'block'
-      }}>
+    <div className={`tecnica-layout ${selectedCliente ? 'has-selected' : ''}`}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass tecnica-list">
         <h2 style={{ marginBottom: '16px' }}>Pendientes de Activación</h2>
         <div style={{ marginBottom: '16px' }}>
           <input
@@ -365,20 +357,16 @@ const Tecnica = () => {
             className="glass-card glass"
             style={{ maxHeight: '85vh', overflowY: 'auto' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0 }}>Configuración Técnica: {selectedCliente.nombre}</h3>
-              {window.innerWidth <= 1024 && (
-                <button className="btn btn-secondary" onClick={() => setSelectedCliente(null)}>Atrás</button>
-              )}
+            <div className="page-header" style={{ marginBottom: '20px' }}>
+              <div className="page-header-info">
+                <h3 style={{ margin: 0 }}>Configuración Técnica: {selectedCliente.nombre}</h3>
+              </div>
+              <button className="btn btn-secondary tecnica-back-btn" onClick={() => setSelectedCliente(null)}>Atrás</button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{
-              display: 'grid',
-              gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr',
-              gap: '12px'
-            }}>
+            <form onSubmit={handleSubmit} className="grid-responsive" style={{ gap: '12px' }}>
 
-              <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+              <div className="input-group tecnica-wide-field">
                 <label className="label" style={{ color: '#4ade80' }}>MAC del Equipo</label>
                 <input
                   className="input"
@@ -419,18 +407,18 @@ const Tecnica = () => {
                 </select>
               </div>
 
-              <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+              <div className="input-group tecnica-wide-field">
                 <label className="label">ONT (Generado por servidor)</label>
                 <textarea className="input" name="ont" value={formData.ont} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
               </div>
 
-              <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+              <div className="input-group tecnica-wide-field">
                 <label className="label">Servicio (Generado por servidor)</label>
                 <textarea className="input" name="servicio" value={formData.servicio} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
               </div>
 
               {hasBreach && (
-                <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+                <div className="input-group" style={{ gridColumn: 'span 2' }}>
                   <label className="label">Breach (Generado por servidor)</label>
                   <textarea className="input" name="breach" value={formData.breach} onChange={handleChange} style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace', border: '1px solid var(--primary)' }} />
                 </div>
@@ -530,7 +518,7 @@ const Tecnica = () => {
               </div>
 
               {/* IPTV ACTIVATION SECTION */}
-              <div className="input-group" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '12px' }}>
+              <div className="input-group tecnica-wide-field" style={{ background: 'rgba(99, 102, 241, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: formData.iptv_activar ? '16px' : '0' }}>
                   <input
                     type="checkbox"
@@ -545,7 +533,7 @@ const Tecnica = () => {
                 </div>
 
                 {formData.iptv_activar && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="iptv-grid" style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid-responsive" style={{ gap: '12px' }}>
                     <div className="input-group">
                       <label className="label">IPTV Username</label>
                       <input className="input" name="iptv_user" value={formData.iptv_user} onChange={handleChange} placeholder="Username" />
@@ -567,7 +555,7 @@ const Tecnica = () => {
                       <input className="input" type="number" name="iptv_max_conn" value={formData.iptv_max_conn} onChange={handleChange} />
                     </div>
 
-                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                    <div className="input-group tecnica-wide-field">
                       <label className="label">Bouquets (Plan de Canales)</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                         {[
@@ -588,7 +576,7 @@ const Tecnica = () => {
                       </div>
                     </div>
 
-                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                    <div className="input-group tecnica-wide-field">
                       <label className="label">Access Outputs</label>
                       <div style={{ display: 'flex', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                         {[
@@ -608,12 +596,12 @@ const Tecnica = () => {
                       </div>
                     </div>
 
-                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                    <div className="input-group tecnica-wide-field">
                       <label className="label">Admin Notes</label>
                       <textarea className="input" name="iptv_notes" value={formData.iptv_notes} onChange={handleChange} style={{ height: '60px' }} />
                     </div>
 
-                    <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
+                    <div className="input-group tecnica-wide-field" style={{ marginTop: '10px' }}>
                       <label className="label" style={{ color: '#818cf8', display: 'flex', justifyContent: 'space-between' }}>
                         Script de Activación (SQL)
                         <button
@@ -645,7 +633,7 @@ const Tecnica = () => {
                 )}
               </div>
 
-              <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+              <div className="input-group tecnica-wide-field">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="label">Ubicación GPS (Copiada del Contrato)</label>
                   <button
@@ -679,7 +667,7 @@ const Tecnica = () => {
                 />
               </div>
 
-              <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setSelectedCliente(null)}>Cancelar</button>
                 <button
                   type="button"
@@ -725,9 +713,23 @@ const Tecnica = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <style>{`
+        .tecnica-layout { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        .tecnica-list { max-height: 80vh; overflow-y: auto; }
+        .tecnica-back-btn { display: none; }
+
+        @media (min-width: 1025px) {
+          .tecnica-layout.has-selected { grid-template-columns: 350px 1fr; }
+          .tecnica-wide-field { grid-column: span 2; }
+        }
+
+        @media (max-width: 1024px) {
+          .tecnica-layout.has-selected .tecnica-list { display: none; }
+          .tecnica-back-btn { display: block; }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default Tecnica;
-//este es un texto de prueba para validar commit sin erro del frontend

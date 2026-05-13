@@ -245,7 +245,7 @@ const Configuraciones = () => {
     const tabs = ['Nodos', 'Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
 
     const renderTable = (data, columns, type) => (
-        <div style={{ marginTop: '20px', overflowX: 'auto' }}>
+        <div className="table-container" style={{ marginTop: '20px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                     <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
@@ -298,11 +298,15 @@ const Configuraciones = () => {
 
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card glass" style={{ minHeight: '80vh' }}>
-            <h1 style={{ marginBottom: '24px', fontSize: '1.8rem', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Configuraciones del Sistema
-            </h1>
+            <div className="page-header">
+                <div className="page-header-info">
+                    <h1 style={{ background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        Configuraciones del Sistema
+                    </h1>
+                </div>
+            </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div className="page-actions" style={{ gap: '10px', marginBottom: '20px' }}>
                 {tabs.map(tab => (
                     <button
                         key={tab}

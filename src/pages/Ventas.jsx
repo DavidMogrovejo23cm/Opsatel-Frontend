@@ -222,11 +222,7 @@ const Ventas = () => {
       <h1 style={{ marginBottom: '24px', fontSize: '1.8rem' }}>Registro de Nuevo Cliente</h1>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid-2-resp" style={{
-          display: 'grid',
-          gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr',
-          gap: '20px'
-        }}>
+        <div className="grid-responsive" style={{ gap: '20px' }}>
           <div className="input-group">
             <label className="label">Nombre Completo (Apellidos y Nombres)</label>
             <input className="input" name="nombre" value={formData.nombre} onChange={handleChange} required />
@@ -243,7 +239,7 @@ const Ventas = () => {
             <label className="label">Correo Electrónico</label>
             <input className="input" type="email" name="correo" value={formData.correo} onChange={handleChange} />
           </div>
-          <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+          <div className="input-group" style={{ gridColumn: 'span 2' }}>
             <label className="label">Dirección</label>
             <input className="input" name="direccion" value={formData.direccion} onChange={handleChange} required />
           </div>
@@ -428,7 +424,7 @@ const Ventas = () => {
           </div>
         </div>
 
-        <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
+        <div className="input-group" style={{ gridColumn: 'span 2' }}>
           <label className="label">Ubicación</label>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input
@@ -483,7 +479,7 @@ const Ventas = () => {
           </div>
         </div>
 
-        <div className="input-group" style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2', marginTop: '10px' }}>
+        <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
           <label className="label">Comentarios (Ordenar con un - para que sea mas legible y separar con un enter para salto de linea)</label>
           <textarea
             className="input"

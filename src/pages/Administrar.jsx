@@ -123,22 +123,24 @@ const Administrar = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div className="page-header">
+        <div className="page-header-info">
           <h1>Administrar Recientes</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Clientes creados en los últimos 7 días.</p>
+          <p>Clientes creados en los últimos 7 días.</p>
         </div>
-        <input
-          className="input"
-          placeholder="Buscar..."
-          style={{ maxWidth: '280px', marginBottom: 0 }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div className="page-actions">
+          <input
+            className="input"
+            placeholder="Buscar..."
+            style={{ maxWidth: '280px', marginBottom: 0 }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       {loading ? <p>Cargando...</p> : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>

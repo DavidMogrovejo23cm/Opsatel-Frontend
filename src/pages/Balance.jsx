@@ -1310,7 +1310,7 @@ const Balance = () => {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
+        <div className="grid-responsive" style={{ marginBottom: 28 }}>
           {CATEGORIAS.map(cat => {
             const total = egresos.filter(e => e.categoria === cat).reduce((s, e) => s + parseFloat(e.monto), 0);
             return (
@@ -1383,7 +1383,7 @@ const Balance = () => {
           ＋ Nuevo Proyecto
         </button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 18 }}>
+      <div className="grid-responsive">
         {proyectos.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: 16, gridColumn: '1/-1' }}>No hay proyectos registrados.</div>
         ) : proyectos.map(p => {
@@ -1433,14 +1433,16 @@ const Balance = () => {
   // ─────────────────────────────────────────────────────────────────
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>📒 Balance & Finanzas</h1>
-        <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Ingresos, egresos y nóminas de proyectos — reporte mensual y anual completo.
-        </p>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1>📒 Balance & Finanzas</h1>
+          <p>
+            Ingresos, egresos y nóminas de proyectos — reporte mensual y anual completo.
+          </p>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+      <div className="page-actions" style={{ marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
         <Tab id="mensual" label="Resumen Mensual" icon="📊" />
         <Tab id="anual" label="Evolución Anual" icon="📈" />
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />

@@ -135,17 +135,17 @@ const General = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div className="page-header">
+        <div className="page-header-info">
           <h1>Vista General de Clientes</h1>
-          <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginTop: '4px' }}>
+          <p>
             💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="page-actions">
           <select
             className="input"
-            style={{ maxWidth: '200px', marginBottom: 0, background: '#1e1b4b' }}
+            style={{ marginBottom: 0, background: '#1e1b4b' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -157,7 +157,7 @@ const General = () => {
           <input
             className="input"
             placeholder="Buscar por ID, Nombre o Cédula..."
-            style={{ maxWidth: '300px', marginBottom: 0 }}
+            style={{ marginBottom: 0 }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -165,7 +165,7 @@ const General = () => {
       </div>
 
       {loading ? <p>Cargando datos...</p> : (
-        <div style={{ overflowX: 'auto', maxHeight: '72vh', border: '1px solid var(--glass-border)', borderRadius: '12px' }}>
+        <div className="table-container" style={{ maxHeight: '72vh' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
               <tr>

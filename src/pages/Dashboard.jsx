@@ -279,10 +279,14 @@ const Dashboard = () => {
 
 
   return (
-    <div>
-      <h1 style={{ marginBottom: '32px' }}>Panel de Control</h1>
+    <div className="dashboard-container">
+      <div className="page-header">
+        <div className="page-header-info">
+            <h1>Panel de Control</h1>
+        </div>
+      </div>
 
-      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+      <div className="grid-responsive" style={{ marginBottom: '40px' }}>
         {cards.map((card, i) => (
           <motion.div
             key={card.title}
@@ -515,7 +519,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+      <div className="grid-responsive">
         <div className="glass-card glass" style={{ padding: '24px' }}>
           <h3 style={{ marginBottom: '16px' }}>📝 Últimos Pagos Registrados</h3>
           {loading ? <p>Cargando reportes...</p> : (
