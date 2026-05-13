@@ -257,21 +257,23 @@ const ExtrasGeneral = () => {
         <div style={{ color: 'white', padding: '10px' }}>
 
             {/* HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: '900', margin: 0 }}>Extras General</h1>
-                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Control administrativo de servicios y cobranzas.</p>
+            <div className="page-header" style={{ marginBottom: '24px' }}>
+                <div className="page-header-info">
+                    <h1 style={{ fontWeight: '900', margin: 0 }}>Extras General</h1>
+                    <p style={{ marginTop: '4px' }}>Control administrativo de servicios y cobranzas.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="page-actions">
                     <input
-                        style={{ padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', width: '250px' }}
+                        className="input"
+                        style={{ width: '100%', maxWidth: '250px', marginBottom: 0 }}
                         placeholder="Buscar cliente..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                     <button
+                        className="btn btn-primary"
                         onClick={handleOpenModal}
-                        style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+                        style={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
                     >
                         + Nuevo Servicio
                     </button>
@@ -279,13 +281,13 @@ const ExtrasGeneral = () => {
             </div>
 
             {/* STATS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
+            <div className="grid-responsive" style={{ marginBottom: '32px' }}>
                 {[
                     { label: 'Saldo Pendiente', val: `$${stats.pend.toLocaleString()}`, color: '#f87171' },
                     { label: 'Servicios Activos', val: stats.activos, color: '#34d399' },
                     { label: 'Total Clientes', val: stats.total, color: '#3b82f6' }
                 ].map((s, i) => (
-                    <div key={i} className="glass" style={{ padding: '24px', borderRadius: '20px' }}>
+                    <div key={i} className="glass-card glass" style={{ padding: '24px' }}>
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: '900', color: s.color }}>{s.val}</div>
                     </div>
@@ -293,9 +295,9 @@ const ExtrasGeneral = () => {
             </div>
 
             {/* TABLE */}
-            <div className="glass" style={{ borderRadius: '20px', overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto', maxHeight: '65vh' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <div className="table-container">
+                <div style={{ maxHeight: '65vh' }}>
+                    <table style={{ tableLayout: 'fixed' }}>
                         <thead>
                             <tr style={{ background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                 <th rowSpan="2" style={{ width: '80px', zIndex: 11, position: 'sticky', left: 0, background: '#1e293b', padding: '15px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>COD</th>
@@ -358,13 +360,13 @@ const ExtrasGeneral = () => {
                                     <td style={{ width: '100px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.activo}</td>
                                     <td style={{ width: '120px', padding: '14px', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                            <button onClick={() => handleEdit(e)} title="Editar todos los datos (incluyendo meses)" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
+                                            <button className="btn" onClick={() => handleEdit(e)} title="Editar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                             </button>
-                                            <button onClick={() => handleOpenPago(e)} title="Registrar Pago" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
+                                            <button className="btn" onClick={() => handleOpenPago(e)} title="Cobrar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a4.5 4.5 0 1 0 0 9h5a4.5 4.5 0 1 1 0 9H6"></path></svg>
                                             </button>
-                                            <button onClick={() => handleDelete(e.id)} title="Eliminar" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
+                                            <button className="btn" onClick={() => handleDelete(e.id)} title="Eliminar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                             </button>
                                         </div>
@@ -379,11 +381,11 @@ const ExtrasGeneral = () => {
 
                                         return (
                                             <React.Fragment key={m}>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_factura'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_fecha_pago'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_factura'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8 }}>{e[l + '_fecha_pago'] || '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center' }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_banco'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e[l + '_cod'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_banco'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem' }}>{e[l + '_cod'] || '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8', fontWeight: 'bold', textAlign: 'center' }}>
                                                     ${saldoAMostrar.toFixed(2)}
                                                 </td>
@@ -404,23 +406,25 @@ const ExtrasGeneral = () => {
                     background: 'rgba(2, 6, 23, 0.95)', zIndex: 9999,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
                 }}>
-                    <div className="glass" style={{ width: '100%', maxWidth: '900px', padding: '40px', borderRadius: '30px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: '900', margin: 0 }}>{isEditing ? 'Editar' : 'Registrar'} Servicio</h2>
-                            <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
+                    <div className="glass-card glass" style={{ width: '100%', maxWidth: '900px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="page-header" style={{ marginBottom: '24px' }}>
+                            <div className="page-header-info">
+                                <h2 style={{ fontWeight: '900', margin: 0 }}>{isEditing ? 'Editar' : 'Registrar'} Servicio</h2>
+                            </div>
+                            <button className="btn btn-secondary" onClick={() => setShowModal(false)} style={{ minWidth: 'auto', padding: '4px 12px', fontSize: '1.5rem' }}>&times;</button>
                         </div>
 
                         {/* TABS SELECTOR */}
-                        <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid rgba(255,255,255,0.1)', overflowX: 'auto', paddingBottom: '4px' }}>
                             <button 
                                 onClick={() => setActiveTab('general')}
-                                style={{ padding: '10px 20px', background: 'none', border: 'none', borderBottom: activeTab === 'general' ? '2px solid #3b82f6' : 'none', color: activeTab === 'general' ? '#3b82f6' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}
+                                style={{ padding: '10px 20px', background: 'none', border: 'none', borderBottom: activeTab === 'general' ? '2px solid #3b82f6' : 'none', color: activeTab === 'general' ? '#3b82f6' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                                 DATOS GENERALES
                             </button>
                             <button 
                                 onClick={() => setActiveTab('pagos')}
-                                style={{ padding: '10px 20px', background: 'none', border: 'none', borderBottom: activeTab === 'pagos' ? '2px solid #3b82f6' : 'none', color: activeTab === 'pagos' ? '#3b82f6' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}
+                                style={{ padding: '10px 20px', background: 'none', border: 'none', borderBottom: activeTab === 'pagos' ? '2px solid #3b82f6' : 'none', color: activeTab === 'pagos' ? '#3b82f6' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                                 PAGOS MENSUALES
                             </button>
@@ -428,7 +432,7 @@ const ExtrasGeneral = () => {
 
                         <form onSubmit={handleSubmit}>
                             {activeTab === 'general' ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div className="grid-responsive">
                                     <div className="form-group">
                                         <label className="label">CÓDIGO (COD)</label>
                                         <input className="input" name="cod" value={formData.cod} disabled style={{ background: 'rgba(255,255,255,0.02)', cursor: 'not-allowed' }} />
@@ -437,7 +441,7 @@ const ExtrasGeneral = () => {
                                         <label className="label">PROVEEDOR</label>
                                         <input className="input" name="proveedor" value={formData.proveedor} onChange={e => setFormData({ ...formData, proveedor: e.target.value })} />
                                     </div>
-                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <div className="form-group grid-span-2">
                                         <label className="label">NOMBRE DEL CLIENTE</label>
                                         <input className="input" name="nombre_cliente" value={formData.nombre_cliente} onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })} required />
                                     </div>
@@ -485,16 +489,16 @@ const ExtrasGeneral = () => {
                                         <label className="label">FECHA DE INGRESO</label>
                                         <input className="input" type="date" name="fecha_ingreso" value={formData.fecha_ingreso} onChange={e => setFormData({ ...formData, fecha_ingreso: e.target.value })} />
                                     </div>
-                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <div className="form-group grid-span-2">
                                         <label className="label">OBSERVACIONES</label>
                                         <textarea className="input" name="observaciones" value={formData.observaciones} onChange={e => setFormData({ ...formData, observaciones: e.target.value })} rows="3" style={{ resize: 'none' }}></textarea>
                                     </div>
 
                                     {/* GENERADOR DE SCRIPT IPTV */}
-                                    <div style={{ gridColumn: 'span 2', background: 'rgba(59, 130, 246, 0.05)', padding: '24px', borderRadius: '15px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '20px' }}>
+                                    <div className="grid-span-2" style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '16px', borderRadius: '15px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '20px' }}>
                                         <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#60a5fa' }}>GENERADOR DE SCRIPT IPTV</h3>
                                         
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                        <div className="grid-responsive" style={{ marginBottom: '20px' }}>
                                             <div className="input-group">
                                                 <label className="label">BOUQUETS</label>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
@@ -533,11 +537,12 @@ const ExtrasGeneral = () => {
                                                 SCRIPT SQL
                                                 <button 
                                                     type="button" 
+                                                    className="btn btn-primary"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(getIptvScript());
                                                         alert("Script copiado!");
                                                     }}
-                                                    style={{ background: '#3b82f6', border: 'none', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer' }}
+                                                    style={{ padding: '2px 8px', fontSize: '0.6rem', minWidth: 'auto' }}
                                                 >
                                                     COPIAR
                                                 </button>
@@ -553,13 +558,13 @@ const ExtrasGeneral = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     {filteredMonths.map(m => {
                                         const l = m.toLowerCase();
                                         return (
-                                            <div key={m} style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <div key={m} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                 <h4 style={{ margin: '0 0 15px 0', color: '#3b82f6', textTransform: 'uppercase', fontSize: '0.9rem' }}>{m}</h4>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                                                <div className="grid-responsive" style={{ gap: '15px' }}>
                                                     <div>
                                                         <label className="label">Factura</label>
                                                         <input className="input" value={formData[`${l}_factura`]} onChange={e => setFormData({...formData, [`${l}_factura`]: e.target.value})} />
@@ -602,10 +607,6 @@ const ExtrasGeneral = () => {
                                                             step="0.01" 
                                                             value={formData[`${l}_saldo`]} 
                                                             onChange={e => {
-                                                                const sVal = parseFloat(e.target.value) || 0;
-                                                                const base = parseFloat(formData.valor) || 0;
-                                                                // Si el usuario edita el saldo directamente, opcionalmente ajustamos el pago?
-                                                                // Por ahora dejamos que el saldo sea libre pero sugerimos que editen el pago.
                                                                 setFormData({...formData, [`${l}_saldo`]: e.target.value});
                                                             }} 
                                                         />
@@ -617,9 +618,9 @@ const ExtrasGeneral = () => {
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '40px', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', borderRadius: '12px', cursor: 'pointer' }}>Cerrar</button>
-                                <button type="submit" disabled={submitting} style={{ padding: '12px 48px', background: '#3b82f6', border: 'none', color: 'white', fontWeight: 'bold', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '30px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
+                                <button type="submit" className="btn btn-primary" disabled={submitting}>
                                     {submitting ? 'Registrando...' : (isEditing ? 'Guardar Cambios' : 'Registrar Servicio')}
                                 </button>
                             </div>
@@ -633,13 +634,13 @@ const ExtrasGeneral = () => {
                 <div style={{
                     position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
                     background: 'rgba(2, 6, 23, 0.95)', zIndex: 10000,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
                 }}>
-                    <div className="glass" style={{ width: '450px', padding: '32px', borderRadius: '24px' }}>
-                        <h2 style={{ marginBottom: '8px' }}>Registrar Pago</h2>
+                    <div className="glass-card glass" style={{ width: '100%', maxWidth: '450px', padding: '24px' }}>
+                        <h2 style={{ marginBottom: '8px', fontWeight: '900' }}>Registrar Pago</h2>
                         <p style={{ color: '#94a3b8', marginBottom: '24px', fontSize: '0.9rem' }}>Pagar servicio de <b>{selectedForPago?.nombre_cliente}</b></p>
                         
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div className="grid-responsive" style={{ gap: '16px' }}>
                             <div className="form-group">
                                 <label className="label">Mes de inicio</label>
                                 <select className="input" value={pagoData.mes} onChange={e => setPagoData({...pagoData, mes: e.target.value})} style={{ background: '#1e293b' }}>
@@ -660,21 +661,13 @@ const ExtrasGeneral = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px', marginTop: '32px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setShowPagoModal(false)} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', borderRadius: '10px', cursor: 'pointer' }}>Cerrar</button>
-                            <button onClick={handleConfirmPago} style={{ padding: '10px 30px', background: '#10b981', border: 'none', color: 'white', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer' }}>Confirmar Pago</button>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cerrar</button>
+                            <button className="btn btn-primary" style={{ background: '#10b981' }} onClick={handleConfirmPago}>Confirmar Pago</button>
                         </div>
                     </div>
                 </div>
             )}
-
-            <style>{`
-                .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06); }
-                .label { display: block; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em; }
-                .input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 10px; outline: none; transition: border 0.3s; font-size: 0.85rem; }
-                .input:focus { border-color: #3b82f6; }
-                th { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; text-align: left; }
-            `}</style>
         </div>
     );
 };

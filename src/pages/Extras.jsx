@@ -93,17 +93,24 @@ const Extras = () => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1>Administrar Extras (Registro)</h1>
-        <button className="btn btn-primary" onClick={() => { setIsEditing(false); setShowAddModal(true); }}>
-          ➕ Agregar Cliente Extra
-        </button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%' }}>
+      
+      {/* HEADER */}
+      <div className="page-header" style={{ marginBottom: '24px' }}>
+        <div className="page-header-info">
+          <h1 style={{ fontWeight: '900', margin: 0 }}>Administrar Extras <span style={{ color: '#94a3b8', fontSize: '1rem', fontWeight: '400' }}>(Registro)</span></h1>
+          <p>Configuración y alta de servicios adicionales.</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" onClick={() => { setIsEditing(false); setShowAddModal(true); }} style={{ whiteSpace: 'nowrap' }}>
+            ➕ Agregar Cliente Extra
+          </button>
+        </div>
       </div>
 
       {loading ? <p>Cargando registros...</p> : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="table-container">
+          <table>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 <th style={{ padding: '12px' }}>COD</th>
@@ -128,8 +135,8 @@ const Extras = () => {
                         <td style={{ fontSize: '0.8rem' }}>{e.activo}</td>
                         <td>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => handleEdit(e)}>✏️</button>
-                                <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#f87171' }} onClick={() => handleDelete(e.id)}>🗑️</button>
+                                <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem', minWidth: 'auto' }} onClick={() => handleEdit(e)}>✏️</button>
+                                <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#f87171', minWidth: 'auto' }} onClick={() => handleDelete(e.id)}>🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -143,67 +150,66 @@ const Extras = () => {
       {showAddModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(12px)',
+          background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(12px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '20px', zIndex: 9999
         }}>
-          <div className="glass" style={{ 
+          <div className="glass-card glass" style={{ 
             width: '100%', maxWidth: '650px', 
-            padding: '40px', borderRadius: '24px',
-            maxHeight: 'calc(100vh - 40px)', 
-            overflowY: 'auto',
-            position: 'relative',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            padding: '24px', 
+            maxHeight: '90vh', 
+            overflowY: 'auto'
           }}>
-            <button 
-              onClick={() => setShowAddModal(false)}
-              style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
-            >
-              &times;
-            </button>
-
-            <h2 style={{ marginBottom: '8px', fontSize: '1.5rem' }}>{isEditing ? 'Editar' : 'Nuevo'} Cliente Extra</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '32px' }}>
-              Complete la información técnica y de cobro del servicio.
-            </p>
+            <div className="page-header" style={{ marginBottom: '24px' }}>
+              <div className="page-header-info">
+                <h2 style={{ fontWeight: '900', margin: 0 }}>{isEditing ? 'Editar' : 'Nuevo'} Cliente Extra</h2>
+                <p style={{ fontSize: '0.85rem' }}>Complete la información técnica y de cobro.</p>
+              </div>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowAddModal(false)}
+                style={{ minWidth: 'auto', padding: '4px 12px', fontSize: '1.5rem' }}
+              >
+                &times;
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="grid-responsive">
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>COD</label>
+                  <label className="label">COD</label>
                   <input className="input" name="cod" placeholder="Ej: 1C" value={formData.cod} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Proveedor</label>
+                  <label className="label">Proveedor</label>
                   <input className="input" name="proveedor" placeholder="Ej: OPSATEL" value={formData.proveedor} onChange={handleChange} />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Nombre Completo</label>
+                <div className="form-group grid-span-2">
+                  <label className="label">Nombre Completo</label>
                   <input className="input" name="nombre_cliente" placeholder="Nombre completo del cliente" value={formData.nombre_cliente} onChange={handleChange} required />
                 </div>
 
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Usuario</label>
+                  <label className="label">Usuario</label>
                   <input className="input" name="usuario" placeholder="Username" value={formData.usuario} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Contraseña</label>
+                  <label className="label">Contraseña</label>
                   <input className="input" name="contrasena" type="text" placeholder="Password" value={formData.contrasena} onChange={handleChange} />
                 </div>
 
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Contacto (Celular)</label>
+                  <label className="label">Contacto (Celular)</label>
                   <input className="input" name="contacto" placeholder="099..." value={formData.contacto} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Cuentas</label>
+                  <label className="label">Cuentas</label>
                   <input className="input" name="cuentas" type="number" value={formData.cuentas} onChange={handleChange} />
                 </div>
 
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Estado Pago</label>
+                  <label className="label">Estado Pago</label>
                   <select className="input" name="estado" value={formData.estado} onChange={handleChange} style={{ background: '#0f172a' }}>
                     <option value="FIJO" style={{ background: '#0f172a' }}>FIJO</option>
                     <option value="SEMIFIJO" style={{ background: '#0f172a' }}>SEMIFIJO</option>
@@ -212,24 +218,24 @@ const Extras = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Valor Mensual ($)</label>
+                  <label className="label">Valor Mensual ($)</label>
                   <input className="input" type="number" step="0.01" name="valor" value={formData.valor} onChange={handleChange} required />
                 </div>
 
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Mac Smart One</label>
+                  <label className="label">Mac Smart One</label>
                   <input className="input" name="mac_smart_one" placeholder="Mac Address" value={formData.mac_smart_one} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Activo</label>
+                  <label className="label">Activo</label>
                   <select className="input" name="activo" value={formData.activo} onChange={handleChange} style={{ background: '#0f172a' }}>
                     <option value="SI" style={{ background: '#0f172a' }}>SÍ (Habilitado)</option>
                     <option value="NO" style={{ background: '#0f172a' }}>NO (Inhabilitado)</option>
                   </select>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="label" style={{ fontSize: '0.75rem', marginBottom: '6px', color: 'var(--primary)' }}>Observaciones</label>
+                <div className="form-group grid-span-2">
+                  <label className="label">Observaciones</label>
                   <textarea 
                     className="input" 
                     name="observaciones" 
@@ -241,11 +247,11 @@ const Extras = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '32px' }}>
-                <button type="button" className="btn btn-secondary" style={{ padding: '10px 24px' }} onClick={() => setShowAddModal(false)}>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '32px', flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '10px 32px' }}>
+                <button type="submit" className="btn btn-primary">
                   {isEditing ? 'Guardar Cambios' : 'Registrar Cliente'}
                 </button>
               </div>
