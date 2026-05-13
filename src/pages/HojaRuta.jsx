@@ -8,6 +8,8 @@ const HojaRuta = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showObsModal, setShowObsModal] = useState(false);
+    const [showAdminObsModal, setShowAdminObsModal] = useState(false);
+    const [adminObsText, setAdminObsText] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
@@ -60,7 +62,7 @@ const HojaRuta = () => {
 
     // Bloquear scroll del fondo cuando el modal está abierto
     useEffect(() => {
-        if (showModal || showObsModal) {
+        if (showModal || showObsModal || showAdminObsModal) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -68,7 +70,7 @@ const HojaRuta = () => {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [showModal, showObsModal]);
+    }, [showModal, showObsModal, showAdminObsModal]);
 
     const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
@@ -295,12 +297,16 @@ const HojaRuta = () => {
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
-                        <button onClick={() => handleOpenModal('CLIENTE')} className="btn btn-primary hr-btn">
-                            + Programar Instalación
-                        </button>
-                        <button onClick={() => handleOpenModal('GENERAL')} className="btn btn-secondary hr-btn-secondary">
-                            + Nueva Actividad
-                        </button>
+                        {user.rol?.toLowerCase() === 'administrador' && (
+                            <>
+                                <button onClick={() => handleOpenModal('CLIENTE')} className="btn btn-primary hr-btn">
+                                    + Programar Instalación
+                                </button>
+                                <button onClick={() => handleOpenModal('GENERAL')} className="btn btn-secondary hr-btn-secondary">
+                                    + Nueva Actividad
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -309,7 +315,8 @@ const HojaRuta = () => {
                         <table className="hr-table">
                             <thead>
                                 <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', opacity: 0.8 }}>
-                                    <th style={{ padding: '15px' }}>F. Pedido</th>
+                                    <th style={{ padding: '15px', width: '40px' }}></th>
+                                    <th style={{ padding: '10px' }}>F. Pedido</th>
                                     <th>Programación</th>
                                     <th>Estado / Acciones</th>
                                     <th>Técnico</th>
@@ -323,7 +330,19 @@ const HojaRuta = () => {
                             <tbody>
                                 {sortedRegistros.map(r => (
                                     <tr key={r.id} className="glass-row" style={{ background: 'rgba(255,255,255,0.02)', transition: '0.2s' }}>
-                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px' }}>
+                                        <td style={{ padding: '10px 0 10px 15px', borderRadius: '12px 0 0 12px', width: '40px' }}>
+                                            <button 
+                                                onClick={() => {
+                                                    setAdminObsText(r.observacion || 'Sin observaciones');
+                                                    setShowAdminObsModal(true);
+                                                }}
+                                                style={{ background: 'rgba(167, 139, 250, 0.1)', border: '1px solid rgba(167, 139, 250, 0.2)', color: '#a78bfa', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}
+                                                title="Ver Observaciones"
+                                            >
+                                                👁️
+                                            </button>
+                                        </td>
+                                        <td style={{ padding: '15px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
                                                 {r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}
                                             </div>
@@ -606,6 +625,37 @@ const HojaRuta = () => {
                                     )}
                                 </div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* MODAL OBSERVACIÓN ADMIN */}
+            <AnimatePresence>
+                {showAdminObsModal && (
+                    <div className="modal-overlay">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '500px' }}>
+                            <div className="modal-header">
+                                <h2 style={{ margin: 0 }}>👁️ Observaciones de Actividad</h2>
+                                <button onClick={() => setShowAdminObsModal(false)} className="close-btn" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+                            </div>
+                            <div style={{ padding: '20px 0' }}>
+                                <div className="preserve-breaks" style={{ 
+                                    background: 'rgba(255,255,255,0.02)', 
+                                    padding: '20px', 
+                                    borderRadius: '15px', 
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    fontSize: '0.9rem',
+                                    lineHeight: '1.6',
+                                    color: '#e2e8f0',
+                                    minHeight: '100px'
+                                }}>
+                                    {adminObsText}
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setShowAdminObsModal(false)} className="btn btn-primary" style={{ width: '100%' }}>Entendido</button>
+                            </div>
                         </motion.div>
                     </div>
                 )}
