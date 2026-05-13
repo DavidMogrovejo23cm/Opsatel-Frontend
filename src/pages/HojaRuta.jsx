@@ -58,6 +58,18 @@ const HojaRuta = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // Bloquear scroll del fondo cuando el modal está abierto
+    useEffect(() => {
+        if (showModal || showObsModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showModal, showObsModal]);
+
     const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
@@ -605,7 +617,7 @@ const HojaRuta = () => {
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
                 .status-chip.processing { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
                 .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
-                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
                 .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
                 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
                 .modal-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
