@@ -366,7 +366,7 @@ const Tecnica = () => {
 
             <form onSubmit={handleSubmit} className="grid-responsive" style={{ gap: '12px' }}>
 
-              <div className="input-group tecnica-wide-field">
+              <div className="input-group grid-span-2">
                 <label className="label" style={{ color: '#4ade80' }}>MAC del Equipo</label>
                 <input
                   className="input"
@@ -407,12 +407,12 @@ const Tecnica = () => {
                 </select>
               </div>
 
-              <div className="input-group tecnica-wide-field">
+              <div className="input-group grid-span-2">
                 <label className="label">ONT (Generado por servidor)</label>
                 <textarea className="input" name="ont" value={formData.ont} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
               </div>
 
-              <div className="input-group tecnica-wide-field">
+              <div className="input-group grid-span-2">
                 <label className="label">Servicio (Generado por servidor)</label>
                 <textarea className="input" name="servicio" value={formData.servicio} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
               </div>
@@ -555,7 +555,7 @@ const Tecnica = () => {
                       <input className="input" type="number" name="iptv_max_conn" value={formData.iptv_max_conn} onChange={handleChange} />
                     </div>
 
-                    <div className="input-group tecnica-wide-field">
+                    <div className="input-group grid-span-2">
                       <label className="label">Bouquets (Plan de Canales)</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                         {[
@@ -576,7 +576,7 @@ const Tecnica = () => {
                       </div>
                     </div>
 
-                    <div className="input-group tecnica-wide-field">
+                    <div className="input-group grid-span-2">
                       <label className="label">Access Outputs</label>
                       <div style={{ display: 'flex', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                         {[
@@ -596,7 +596,7 @@ const Tecnica = () => {
                       </div>
                     </div>
 
-                    <div className="input-group tecnica-wide-field">
+                    <div className="input-group grid-span-2">
                       <label className="label">Admin Notes</label>
                       <textarea className="input" name="iptv_notes" value={formData.iptv_notes} onChange={handleChange} style={{ height: '60px' }} />
                     </div>
@@ -633,7 +633,7 @@ const Tecnica = () => {
                 )}
               </div>
 
-              <div className="input-group tecnica-wide-field">
+              <div className="input-group grid-span-2">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="label">Ubicación GPS (Copiada del Contrato)</label>
                   <button
@@ -720,7 +720,6 @@ const Tecnica = () => {
 
         @media (min-width: 1025px) {
           .tecnica-layout.has-selected { grid-template-columns: 350px 1fr; }
-          .tecnica-wide-field { grid-column: span 2; }
         }
 
         @media (max-width: 1024px) {

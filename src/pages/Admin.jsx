@@ -580,7 +580,7 @@ const Admin = () => {
                 </div>
 
                 {/* SECCIÓN DE CORTESÍA */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
+                <div className="grid-responsive" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input
                       type="checkbox"
@@ -720,7 +720,7 @@ const Admin = () => {
                     </button>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="grid-responsive">
                   <div>
                     <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
                     <input
@@ -754,7 +754,7 @@ const Admin = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', paddingRight: '10px', margin: '0 -8px' }}>
+              <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
                 {/* 1. INTERNET PAY (AZUL) */}
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Internet Pay.</label>
@@ -776,7 +776,7 @@ const Admin = () => {
                 </div>
 
                 {/* 3. COMENTARIOS DE PAGO / REPARACIÓN (MORADO) - Se guarda en 'observaciones' */}
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <div className="form-group grid-span-2">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
                   <textarea
                     className="input"

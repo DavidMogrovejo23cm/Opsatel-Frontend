@@ -272,6 +272,24 @@ select.input option {
 
   .glass-card { padding: 16px !important; }
 
+  /* Contenedor de tabla con scroll horizontal suave */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+  }
+
+  /* Utilidad para expandir elementos en el grid solo en escritorio */
+  @media (min-width: 1025px) {
+    .grid-span-2 {
+      grid-column: span 2;
+    }
+  }
+
   /* Tables scroll horizontally */
   table {
     display: block;
@@ -479,5 +497,12 @@ td {
   
   .glass-card {
     padding: 16px;
+  }
+}
+
+/* Utilidad para expandir elementos en el grid solo en escritorio */
+@media (min-width: 1025px) {
+  .grid-span-2 {
+    grid-column: span 2;
   }
 }
