@@ -21,6 +21,7 @@ const Tecnica = () => {
   const [hasBreach, setHasBreach] = useState(false);
   const [editUbicacion, setEditUbicacion] = useState(false);
   const [searchPendientes, setSearchPendientes] = useState('');
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved, error
 
   const [nodosList, setNodosList] = useState([]);
   const [puertosList, setPuertosList] = useState([]);
@@ -50,6 +51,28 @@ const Tecnica = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // AUTO-SAVE EFFECT
+  useEffect(() => {
+    if (!selectedCliente) return;
+
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        await clienteService.actualizar(selectedCliente.id, {
+          ...formData,
+          breach: hasBreach ? formData.breach : 'NONE'
+        });
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error("Auto-save error:", error);
+        setSaveStatus('error');
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timer);
+  }, [formData, hasBreach, selectedCliente]);
 
   // Realiza la consulta centralizada al backend y recibe las fórmulas GPON resueltas
   const fetchValoresTecnicos = async (puerto, mac, breach) => {
@@ -353,6 +376,12 @@ const Tecnica = () => {
             <div className="page-header" style={{ marginBottom: '20px' }}>
               <div className="page-header-info">
                 <h3 style={{ margin: 0 }}>Configuración Técnica: {selectedCliente.nombre}</h3>
+                <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                  {saveStatus === 'saving' && <span style={{ color: 'var(--primary)' }}>⏳ Guardando cambios...</span>}
+                  {saveStatus === 'saved' && <span style={{ color: '#4ade80' }}>✔ Cambios guardados</span>}
+                  {saveStatus === 'error' && <span style={{ color: '#f87171' }}>⚠️ Error al auto-guardar</span>}
+                  {saveStatus === 'idle' && <span style={{ color: 'var(--text-muted)' }}>Autoguardado activo</span>}
+                </div>
               </div>
               <button className="btn btn-secondary tecnica-back-btn" onClick={() => setSelectedCliente(null)}>Atrás</button>
             </div>

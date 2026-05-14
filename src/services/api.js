@@ -59,7 +59,17 @@ export const clienteService = {
   activar: (id, data) => api.patch(`/clientes/${id}/configuracion-tecnica`, data),
   updateAdmin: (id, data) => api.patch(`/clientes/${id}/administracion`, data),
   pagar: (id, data) => api.post(`/clientes/${id}/pagar`, data),
-  getNextTecnicoValues: (nodo, puerto, mac = '', nombre = '', hasBreach = false, cliente_id = '') => api.get(`/clientes/siguiente-valor-tecnico?nodo=${encodeURIComponent(nodo)}&puerto=${puerto}&mac=${encodeURIComponent(mac)}&nombre=${encodeURIComponent(nombre)}&has_breach=${hasBreach}&cliente_id=${cliente_id}`),
+  getNextTecnicoValues: (nodo, puerto, mac = '', nombre = '', hasBreach = false, cliente_id = '') =>
+    api.get('/clientes/siguiente-valor-tecnico', {
+      params: {
+        nodo,
+        puerto,
+        mac,
+        nombre,
+        has_breach: !!hasBreach,
+        cliente_id
+      }
+    }),
   facturacionGlobal: () => api.post('/clientes/facturacion-mensual-global'),
   cierreMensualGlobal: () => api.post('/clientes/cierre-mensual-global'),
   pagoGlobalTest: () => api.post('/clientes/pago-global-test'),

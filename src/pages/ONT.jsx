@@ -10,6 +10,7 @@ const ClientCard = ({ c }) => {
     breach: c.breach || ''
   });
   const [generating, setGenerating] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved, error
 
   const fetchValores = async (newMac) => {
     if (!c.puerto || !c.nodo || !newMac) return;
@@ -20,27 +21,59 @@ const ClientCard = ({ c }) => {
         c.puerto,
         newMac,
         c.nombre,
-        (c.breach && c.breach.trim().length > 0 && c.breach.toUpperCase() !== 'NONE'),
+        !!(c.breach && c.breach.trim().length > 0 && c.breach.toUpperCase() !== 'NONE'),
         c.id
       );
-      setLines({
+      
+      const newLines = {
         ont: res.data.ont || '',
         servicio: res.data.servicio || '',
         breach: res.data.breach || ''
+      };
+      
+      setLines(newLines);
+
+      // AUTO-SAVE: Guardamos automáticamente la MAC y los comandos generados
+      setSaveStatus('saving');
+      await clienteService.actualizar(c.id, { 
+        mac: newMac,
+        ont: newLines.ont,
+        servicio: newLines.servicio,
+        breach: newLines.breach,
+        id_port: res.data.id_port,
+        service_port: res.data.service_port,
+        ip: res.data.ip
       });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      
     } catch (error) {
-      console.error("Error generating lines in ONT page", error);
+      console.error("Error generating/saving lines in ONT page", error);
+      setSaveStatus('error');
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleMacChange = (e) => {
-    const val = e.target.value;
-    setMac(val);
-    if (val.length >= 12) { // Evitar llamadas excesivas, generar solo cuando parezca una MAC completa
-      fetchValores(val);
+  // Auto-generar si el cliente ya tiene MAC pero no tiene comandos guardados
+  useEffect(() => {
+    if (mac && mac.length >= 12 && (!lines.ont || lines.ont === '')) {
+      fetchValores(mac);
     }
+  }, []);
+
+  useEffect(() => {
+    if (mac.length >= 12) {
+      const timer = setTimeout(() => {
+        fetchValores(mac);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [mac]);
+
+  const handleMacChange = (e) => {
+    const val = e.target.value.trim().toUpperCase();
+    setMac(val);
   };
 
   const copyToClipboard = (text, label) => {
@@ -95,7 +128,7 @@ const ClientCard = ({ c }) => {
           
           <div style={{ marginTop: '12px', marginBottom: '8px' }}>
             <label style={{ fontSize: '0.7rem', color: '#4ade80', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>MAC DEL EQUIPO</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input 
                 type="text"
                 className="input"
@@ -112,20 +145,11 @@ const ClientCard = ({ c }) => {
                   marginBottom: 0
                 }}
               />
-              <button
-                onClick={async () => {
-                  try {
-                    await clienteService.actualizar(c.id, { mac: mac });
-                    alert('✅ MAC guardada correctamente');
-                  } catch (err) {
-                    alert('❌ Error al guardar MAC');
-                  }
-                }}
-                className="btn btn-primary"
-                style={{ padding: '0 15px', fontSize: '0.75rem', height: '40px' }}
-              >
-                Guardar
-              </button>
+              <div style={{ minWidth: '100px', fontSize: '0.75rem', textAlign: 'right' }}>
+                {saveStatus === 'saving' && <span style={{ color: 'var(--primary)' }}>⏳ Guardando...</span>}
+                {saveStatus === 'saved' && <span style={{ color: '#4ade80' }}>✔ Guardado</span>}
+                {saveStatus === 'error' && <span style={{ color: '#f87171' }}>❌ Error</span>}
+              </div>
             </div>
           </div>
 
