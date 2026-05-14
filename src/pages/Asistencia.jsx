@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const TARGET_LAT = -2.922000;
 const TARGET_LNG = -79.066444;
-const MAX_DISTANCE = 10; // 10 metros exactos según requerimiento
+const MAX_DISTANCE = 30; // 30 metros exactos según requerimiento
 
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000; // Radio de la Tierra en metros
@@ -25,7 +25,7 @@ const Asistencia = () => {
   const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error
   const [distance, setDistance] = useState(null);
   const [coords, setCoords] = useState(null);
-  
+
   // Estados para Admin
   const [asistencias, setAsistencias] = useState([]);
   const [filtroFecha, setFiltroFecha] = useState(new Date().toISOString().split('T')[0]);
@@ -80,7 +80,7 @@ const Asistencia = () => {
   const registrarAsistencia = async () => {
     try {
       setLoading(true);
-      
+
       let biometriaOk = false;
 
       // Intentar validación biométrica real
@@ -88,7 +88,7 @@ const Asistencia = () => {
         try {
           const challenge = new Uint8Array(32);
           window.crypto.getRandomValues(challenge);
-          
+
           const options = {
             publicKey: {
               challenge,
@@ -106,7 +106,7 @@ const Asistencia = () => {
               }
             }
           };
-          
+
           await navigator.credentials.create(options);
           biometriaOk = true;
         } catch (e) {
@@ -124,7 +124,8 @@ const Asistencia = () => {
         ubicacion: `${coords.lat}, ${coords.lng}`,
         distancia_metros: distance,
         dispositivo_info: navigator.userAgent,
-        biometria_validada: biometriaOk
+        biometria_validada: biometriaOk,
+        hora_dispositivo: new Date().toLocaleTimeString('es-EC', { hour12: false })
       };
 
       await asistenciaService.registrar(payload);
@@ -145,17 +146,17 @@ const Asistencia = () => {
           <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Control de Asistencia</h1>
           <p style={{ color: 'var(--text-muted)' }}>Registro de entrada basado en ubicación y biometría.</p>
         </div>
-        
+
         {user?.rol === 'administrador' && (
           <div className="glass asistencia-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px' }}>
-            <button 
+            <button
               onClick={() => setActiveTab('registrar')}
               className={`btn ${activeTab === 'registrar' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
             >
               Registrar
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('admin')}
               className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
@@ -168,7 +169,7 @@ const Asistencia = () => {
 
       <AnimatePresence mode="wait">
         {activeTab === 'registrar' ? (
-          <motion.div 
+          <motion.div
             key="registrar"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -213,9 +214,9 @@ const Asistencia = () => {
                 <>
                   <h3 style={{ color: '#4ade80' }}>Ubicación Validada</h3>
                   <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede con la validación de huella.</p>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }} 
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}
                     onClick={registrarAsistencia}
                     disabled={loading}
                   >
@@ -231,25 +232,25 @@ const Asistencia = () => {
                 </>
               )}
             </div>
-            
+
             <div style={{ marginTop: '24px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Ubicación requerida: 2°55'19.2"S 79°03'59.2"W (Oficina Central)
             </div>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="admin"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
             <div className="asistencia-filters" style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input 
-                type="date" 
-                className="input" 
+              <input
+                type="date"
+                className="input"
                 value={filtroFecha}
                 onChange={(e) => setFiltroFecha(e.target.value)}
-                style={{ flex: '1', minWidth: '150px', maxWidth: '300px', marginBottom: 0 }} 
+                style={{ flex: '1', minWidth: '150px', maxWidth: '300px', marginBottom: 0 }}
               />
               <button className="btn btn-secondary" onClick={fetchAsistencias} style={{ flex: '1', maxWidth: '120px' }}>Actualizar</button>
             </div>
