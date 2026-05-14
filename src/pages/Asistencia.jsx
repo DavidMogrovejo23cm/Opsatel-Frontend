@@ -3,8 +3,8 @@ import { asistenciaService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const TARGET_LAT = -2.9219599113762724;
-const TARGET_LNG = -79.06648871936522;
+const TARGET_LAT = -2.922000;
+const TARGET_LNG = -79.066444;
 const MAX_DISTANCE = 10; // 10 metros exactos según requerimiento
 
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -208,7 +208,7 @@ const Asistencia = () => {
             </div>
             
             <div style={{ marginTop: '24px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Ubicación requerida: -2.9219, -79.0664 (Oficina Central)
+              Ubicación requerida: 2°55'19.2"S 79°03'59.2"W (Oficina Central)
             </div>
           </motion.div>
         ) : (
