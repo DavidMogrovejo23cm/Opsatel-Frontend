@@ -20,6 +20,7 @@ import ONT from './pages/ONT';
 import SubirBD from './pages/SubirBD';
 import CallCenter from './pages/CallCenter';
 import Balance from './pages/Balance';
+import Asistencia from './pages/Asistencia';
 
 
 function App() {
@@ -116,6 +117,11 @@ function App() {
             <Route path="balance" element={
               <ProtectedRoute roles={['administrador', 'secretario']}>
                 <Balance />
+              </ProtectedRoute>
+            } />
+            <Route path="asistencia" element={
+              <ProtectedRoute>
+                <Asistencia />
               </ProtectedRoute>
             } />
           </Route>

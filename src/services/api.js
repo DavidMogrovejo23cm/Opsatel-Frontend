@@ -192,4 +192,9 @@ export const balanceService = {
   eliminarColchon: (id) => api.delete(`/balance/colchon/${id}`),
 };
 
+export const asistenciaService = {
+  registrar: (data) => api.post('/asistencia/registrar', data),
+  listar: (inicio, fin) => api.get(`/asistencia/?fecha_inicio=${inicio || ''}&fecha_fin=${fin || ''}`),
+};
+
 export default api;
