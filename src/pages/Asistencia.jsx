@@ -81,17 +81,42 @@ const Asistencia = () => {
     try {
       setLoading(true);
       
-      // Simulación de Biometría / Huella
-      // En una implementación real, aquí se usaría WebAuthn (navigator.credentials.get)
-      // Para este entorno, mostramos un mensaje indicando que se requiere validación
+      let biometriaOk = false;
+
+      // Intentar validación biométrica real
       if (window.PublicKeyCredential) {
         try {
-          // Esto disparará el prompt nativo de huella/faceid si el dispositivo lo soporta
-          // Nota: Requiere HTTPS y configuración de dominio
-          console.log("Iniciando validación biométrica...");
-          // alert("Por favor, valida tu huella/rostro en el dispositivo");
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+          
+          const options = {
+            publicKey: {
+              challenge,
+              rp: { name: "Opsatel" },
+              user: {
+                id: new Uint8Array(16),
+                name: user.username,
+                displayName: user.username
+              },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+              timeout: 60000,
+              authenticatorSelection: {
+                authenticatorAttachment: "platform",
+                userVerification: "required"
+              }
+            }
+          };
+          
+          await navigator.credentials.create(options);
+          biometriaOk = true;
         } catch (e) {
-          console.log("Biometría no disponible o cancelada");
+          console.error("Error en biometría:", e);
+          // Si el usuario cancela o el dispositivo no soporta, biometriaOk sigue en false
+          // pero igual permitimos el registro si el admin lo desea, o podemos bloquearlo.
+          // El usuario pidió que pida permiso de huella, así que si falla lanzamos error.
+          alert("❌ Error de validación biométrica. Asegúrate de usar tu huella o reconocimiento facial.");
+          setLoading(false);
+          return;
         }
       }
 
@@ -99,7 +124,7 @@ const Asistencia = () => {
         ubicacion: `${coords.lat}, ${coords.lng}`,
         distancia_metros: distance,
         dispositivo_info: navigator.userAgent,
-        biometria_validada: true
+        biometria_validada: biometriaOk
       };
 
       await asistenciaService.registrar(payload);
