@@ -2,6 +2,212 @@ import React, { useEffect, useState } from 'react';
 import { clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 
+const ClientCard = ({ c }) => {
+  const [mac, setMac] = useState(c.mac || '');
+  const [lines, setLines] = useState({
+    ont: c.ont || '',
+    servicio: c.servicio || '',
+    breach: c.breach || ''
+  });
+  const [generating, setGenerating] = useState(false);
+
+  const fetchValores = async (newMac) => {
+    if (!c.puerto || !c.nodo || !newMac) return;
+    setGenerating(true);
+    try {
+      const res = await clienteService.getNextTecnicoValues(
+        c.nodo,
+        c.puerto,
+        newMac,
+        c.nombre,
+        (c.breach && c.breach.trim().length > 0 && c.breach.toUpperCase() !== 'NONE'),
+        c.id
+      );
+      setLines({
+        ont: res.data.ont || '',
+        servicio: res.data.servicio || '',
+        breach: res.data.breach || ''
+      });
+    } catch (error) {
+      console.error("Error generating lines in ONT page", error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleMacChange = (e) => {
+    const val = e.target.value;
+    setMac(val);
+    if (val.length >= 12) { // Evitar llamadas excesivas, generar solo cuando parezca una MAC completa
+      fetchValores(val);
+    }
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const getIptvScript = (data) => {
+    if (!data.iptv_activar) return '';
+    const useExp = data.iptv_exp_date && data.iptv_exp_date !== 'Nunca';
+    return `INSERT INTO lines (
+  member_id, username, password, bouquet, allowed_outputs, max_connections,
+  admin_enabled, enabled, ${useExp ? 'exp_date, ' : ''}is_restreamer, is_trial, is_mag, is_e2, is_stalker, is_isplock,
+  allowed_ips, allowed_ua, created_at, force_server_id, bypass_ua
+) VALUES (
+  ${data.iptv_member_id || 1}, '${data.iptv_user}', '${data.iptv_pass}', '${data.iptv_bouquets}', '${data.iptv_outputs}', ${data.iptv_max_conn},
+  1, 1, ${useExp ? "UNIX_TIMESTAMP() + (30 * 86400), " : ""}0, 0, 0, 0, 0, 0, '[]', '[]', UNIX_TIMESTAMP(), 0, 0
+);`;
+  };
+
+  return (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="glass"
+      style={{
+        padding: '24px',
+        borderRadius: '20px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(30, 41, 59, 0.4)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ width: '100%' }}>
+          <span style={{ 
+            fontSize: '0.7rem', 
+            background: 'var(--primary)', 
+            color: 'white', 
+            padding: '2px 8px', 
+            borderRadius: '4px',
+            textTransform: 'uppercase',
+            fontWeight: 'bold',
+            display: 'inline-block',
+            marginBottom: '4px'
+          }}>
+            ID: {c.id}
+          </span>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{c.nombre}</h3>
+          
+          <div style={{ marginTop: '12px', marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.7rem', color: '#4ade80', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>MAC DEL EQUIPO</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input 
+                type="text"
+                className="input"
+                value={mac}
+                onChange={handleMacChange}
+                placeholder="MAC del equipo..."
+                style={{ 
+                  flex: 1, 
+                  padding: '8px 12px', 
+                  fontSize: '0.85rem', 
+                  border: '1px solid #4ade80', 
+                  background: 'rgba(74, 222, 128, 0.05)',
+                  color: '#fff',
+                  marginBottom: 0
+                }}
+              />
+              <button
+                onClick={async () => {
+                  try {
+                    await clienteService.actualizar(c.id, { mac: mac });
+                    alert('✅ MAC guardada correctamente');
+                  } catch (err) {
+                    alert('❌ Error al guardar MAC');
+                  }
+                }}
+                className="btn btn-primary"
+                style={{ padding: '0 15px', fontSize: '0.75rem', height: '40px' }}
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            📅 Activado: {c.instalation_date} | 📍 {c.nodo} | 🔌 Puerto: {c.puerto || 'N/A'}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px', opacity: generating ? 0.5 : 1, transition: '0.3s' }}>
+        {/* ONT COMMAND */}
+        <div className="command-box">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#818cf8', textTransform: 'uppercase' }}>Comando ONT</label>
+            <button 
+              onClick={() => copyToClipboard(lines.ont, 'Comando ONT')}
+              style={{ background: 'rgba(129, 140, 248, 0.15)', border: '1px solid rgba(129, 140, 248, 0.3)', color: '#a5b4fc', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Copiar
+            </button>
+          </div>
+          <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
+            {lines.ont || 'N/A'}
+          </pre>
+        </div>
+
+        {/* SERVICE COMMAND */}
+        <div className="command-box">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#34d399', textTransform: 'uppercase' }}>Comando Servicio</label>
+            <button 
+              onClick={() => copyToClipboard(lines.servicio, 'Comando Servicio')}
+              style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#6ee7b7', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Copiar
+            </button>
+          </div>
+          <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
+            {lines.servicio || 'N/A'}
+          </pre>
+        </div>
+
+        {/* BRIDGE COMMAND */}
+        {(lines.breach && lines.breach.trim().length > 0 && lines.breach.toUpperCase() !== 'NONE') && (
+          <div className="command-box">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#fb923c', textTransform: 'uppercase' }}>Comando Bridge</label>
+              <button 
+                onClick={() => copyToClipboard(lines.breach, 'Comando Bridge')}
+                style={{ background: 'rgba(251, 146, 60, 0.15)', border: '1px solid rgba(251, 146, 60, 0.3)', color: '#fdba74', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Copiar
+              </button>
+            </div>
+            <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
+              {lines.breach}
+            </pre>
+          </div>
+        )}
+
+        {/* IPTV SCRIPT (only if active) */}
+        {c.iptv_activar && (
+          <div className="command-box">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc', textTransform: 'uppercase' }}>Script Activación IPTV</label>
+              <button 
+                onClick={() => copyToClipboard(getIptvScript(c), 'Script IPTV')}
+                style={{ background: 'rgba(192, 132, 252, 0.15)', border: '1px solid rgba(192, 132, 252, 0.3)', color: '#d8b4fe', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Copiar
+              </button>
+            </div>
+            <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.7rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)', maxHeight: '150px', overflowY: 'auto' }}>
+              {getIptvScript(c)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 const ONT = () => {
   const [clientes, setClientes] = useState([]);
   const [filteredClientes, setFilteredClientes] = useState([]);
@@ -50,23 +256,6 @@ const ONT = () => {
     setFilteredClientes(results);
   }, [search, clientes]);
 
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  const getIptvScript = (data) => {
-    if (!data.iptv_activar) return '';
-    const useExp = data.iptv_exp_date && data.iptv_exp_date !== 'Nunca';
-    return `INSERT INTO lines (
-  member_id, username, password, bouquet, allowed_outputs, max_connections,
-  admin_enabled, enabled, ${useExp ? 'exp_date, ' : ''}is_restreamer, is_trial, is_mag, is_e2, is_stalker, is_isplock,
-  allowed_ips, allowed_ua, created_at, force_server_id, bypass_ua
-) VALUES (
-  ${data.iptv_member_id || 1}, '${data.iptv_user}', '${data.iptv_pass}', '${data.iptv_bouquets}', '${data.iptv_outputs}', ${data.iptv_max_conn},
-  1, 1, ${useExp ? "UNIX_TIMESTAMP() + (30 * 86400), " : ""}0, 0, 0, 0, 0, 0, '[]', '[]', UNIX_TIMESTAMP(), 0, 0
-);`;
-  };
-
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }} 
@@ -107,114 +296,7 @@ const ONT = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '24px' }}>
           {filteredClientes.map(c => (
-            <motion.div 
-              key={c.id}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass"
-              style={{
-                padding: '24px',
-                borderRadius: '20px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                background: 'rgba(30, 41, 59, 0.4)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <span style={{ 
-                    fontSize: '0.7rem', 
-                    background: 'var(--primary)', 
-                    color: 'white', 
-                    padding: '2px 8px', 
-                    borderRadius: '4px',
-                    textTransform: 'uppercase',
-                    fontWeight: 'bold',
-                    display: 'inline-block',
-                    marginBottom: '4px'
-                  }}>
-                    ID: {c.id}
-                  </span>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{c.nombre}</h3>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    📅 Activado: {c.instalation_date} | 📍 {c.nodo}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                {/* ONT COMMAND */}
-                <div className="command-box">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#818cf8', textTransform: 'uppercase' }}>Comando ONT</label>
-                    <button 
-                      onClick={() => copyToClipboard(c.ont, 'Comando ONT')}
-                      style={{ background: 'rgba(129, 140, 248, 0.15)', border: '1px solid rgba(129, 140, 248, 0.3)', color: '#a5b4fc', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Copiar
-                    </button>
-                  </div>
-                  <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    {c.ont || 'N/A'}
-                  </pre>
-                </div>
-
-                {/* SERVICE COMMAND */}
-                <div className="command-box">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#34d399', textTransform: 'uppercase' }}>Comando Servicio</label>
-                    <button 
-                      onClick={() => copyToClipboard(c.servicio, 'Comando Servicio')}
-                      style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#6ee7b7', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Copiar
-                    </button>
-                  </div>
-                  <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    {c.servicio || 'N/A'}
-                  </pre>
-                </div>
-
-                {/* BRIDGE COMMAND (only if explicitely present and not empty) */}
-                {c.breach && c.breach.trim().length > 0 && c.breach.toUpperCase() !== 'NONE' && (
-                  <div className="command-box">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#fb923c', textTransform: 'uppercase' }}>Comando Bridge</label>
-                      <button 
-                        onClick={() => copyToClipboard(c.breach, 'Comando Bridge')}
-                        style={{ background: 'rgba(251, 146, 60, 0.15)', border: '1px solid rgba(251, 146, 60, 0.3)', color: '#fdba74', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                      >
-                        Copiar
-                      </button>
-                    </div>
-                    <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      {c.breach}
-                    </pre>
-                  </div>
-                )}
-
-                {/* IPTV SCRIPT (only if active) */}
-                {c.iptv_activar && (
-                  <div className="command-box">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc', textTransform: 'uppercase' }}>Script Activación IPTV</label>
-                      <button 
-                        onClick={() => copyToClipboard(getIptvScript(c), 'Script IPTV')}
-                        style={{ background: 'rgba(192, 132, 252, 0.15)', border: '1px solid rgba(192, 132, 252, 0.3)', color: '#d8b4fe', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                      >
-                        Copiar
-                      </button>
-                    </div>
-                    <pre style={{ margin: 0, padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.7rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.05)', maxHeight: '150px', overflowY: 'auto' }}>
-                      {getIptvScript(c)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+            <ClientCard key={c.id} c={c} />
           ))}
         </div>
       )}

@@ -124,13 +124,6 @@ const Tecnica = () => {
     fetchValoresTecnicos(puerto, formData.mac, hasBreach);
   };
 
-  const handleMacChange = (e) => {
-    const mac = e.target.value;
-    setFormData(prev => ({ ...prev, mac }));
-    if (formData.puerto) {
-      fetchValoresTecnicos(formData.puerto, mac, hasBreach);
-    }
-  };
 
   const handleBreachChange = (e) => {
     const val = e.target.value === 'SI';
@@ -259,7 +252,7 @@ const Tecnica = () => {
 
     // Validación manual de campos obligatorios
     const requiredKeys = [
-      'mac', 'puerto', 'ont', 'servicio', 'id_port', 'service_port', 'ip',
+      'puerto', 'ont', 'servicio', 'id_port', 'service_port', 'ip',
       'dispositivo', 'potencia', 'nap', 'tecnico', 'activador', 'red', 'clave',
       'ubicacion'
     ];
@@ -366,18 +359,6 @@ const Tecnica = () => {
 
             <form onSubmit={handleSubmit} className="grid-responsive" style={{ gap: '12px' }}>
 
-              <div className="input-group grid-span-2">
-                <label className="label" style={{ color: '#4ade80' }}>MAC del Equipo</label>
-                <input
-                  className="input"
-                  name="mac"
-                  value={formData.mac}
-                  onChange={handleMacChange}
-                  required
-                  placeholder="Introduce la MAC"
-                  style={{ border: '1px solid #4ade80' }}
-                />
-              </div>
 
               <div className="input-group">
                 <label className="label">Puerto (Zona: {selectedCliente.nodo})</label>
@@ -407,23 +388,8 @@ const Tecnica = () => {
                 </select>
               </div>
 
-              <div className="input-group grid-span-2">
-                <label className="label">ONT (Generado por servidor)</label>
-                <textarea className="input" name="ont" value={formData.ont} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
-              </div>
-
-              <div className="input-group grid-span-2">
-                <label className="label">Servicio (Generado por servidor)</label>
-                <textarea className="input" name="servicio" value={formData.servicio} onChange={handleChange} required style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace' }} />
-              </div>
-
-              {hasBreach && (
-                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="label">Breach (Generado por servidor)</label>
-                  <textarea className="input" name="breach" value={formData.breach} onChange={handleChange} style={{ height: '60px', fontSize: '0.75rem', fontFamily: 'monospace', border: '1px solid var(--primary)' }} />
-                </div>
-              )}
-
+              {/* Las textareas de ONT, Servicio y Breach se han movido a la página de ONT según requerimiento */}
+              
               <div className="input-group">
                 <label className="label">ID Port</label>
                 <input
