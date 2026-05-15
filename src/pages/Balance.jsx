@@ -930,18 +930,20 @@ const Balance = () => {
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>📊 Flujo de Caja</h4>
               <Badge text="Resumen" color={P.balance} />
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
-                <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
-                <Bar dataKey="total" radius={[6, 6, 0, 0]} barSize={45}>
-                  {barData.map((e, i) => <Cell key={i} fill={e.fill} fillOpacity={0.9} />)}
-                  <LabelList dataKey="total" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ width: '100%', height: '250px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                  <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                  <Bar dataKey="total" radius={[6, 6, 0, 0]} barSize={45}>
+                    {barData.map((e, i) => <Cell key={i} fill={e.fill} fillOpacity={0.9} />)}
+                    <LabelList dataKey="total" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Gráficas de Torta */}
@@ -950,25 +952,29 @@ const Balance = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={egByCat} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
-                      {egByCat.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Pie>
-                    <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: '160px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={egByCat} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
+                        {egByCat.map((e, i) => <Cell key={i} fill={e.color} />)}
+                      </Pie>
+                      <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
               <div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR MÉTODO</p>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={pieMetodo} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
-                      {pieMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Pie>
-                    <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: '160px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieMetodo} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
+                        {pieMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
+                      </Pie>
+                      <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginTop: 15 }}>
@@ -1222,19 +1228,21 @@ const Balance = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem' }}><div style={{ width: 10, height: 10, background: P.egreso, borderRadius: 2 }} /> Egresos</div>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={stackedData} margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
-              <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
-              <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Bar dataKey="Internet" stackId="a" fill={P.internet} barSize={35} radius={[0, 0, 0, 0]} />
-              <Bar dataKey="IPTV" stackId="a" fill={P.iptv} />
-              <Bar dataKey="Extras" stackId="a" fill={P.extras} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Egresos" stackId="b" fill={P.egreso} radius={[0, 0, 4, 4]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: '320px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stackedData} margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                <Legend verticalAlign="top" height={36} iconType="circle" />
+                <Bar dataKey="Internet" stackId="a" fill={P.internet} barSize={35} radius={[0, 0, 0, 0]} />
+                <Bar dataKey="IPTV" stackId="a" fill={P.iptv} />
+                <Bar dataKey="Extras" stackId="a" fill={P.extras} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Egresos" stackId="b" fill={P.egreso} radius={[0, 0, 4, 4]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <SectionTitle icon="📗" text={`Resumen Consolidado ${anio}`} />

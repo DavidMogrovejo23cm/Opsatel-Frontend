@@ -231,7 +231,7 @@ const Asistencia = () => {
                           <p style={{ color: '#f87171', margin: 0, fontSize: '0.9rem' }}>{dailyStatus.mensaje_restriccion}</p>
                         </div>
                       ) : (
-                        <p style={{ color: '#4ade80', marginBottom: '24px' }}>Cumpliste el tiempo mínimo. Ya puedes registrar tu salida.</p>
+                        <p style={{ color: '#4ade80', marginBottom: '24px' }}>Ya puedes registrar tu salida.</p>
                       )}
 
                       <button 
@@ -240,7 +240,7 @@ const Asistencia = () => {
                         onClick={checkLocation}
                         disabled={!dailyStatus.puede_salir}
                       >
-                        Verificar Ubicación para Salida
+                        {dailyStatus.puede_salir ? 'Verificar Ubicación' : 'Esperar Tiempo Mínimo'}
                       </button>
                     </>
                   ) : null}
