@@ -194,6 +194,8 @@ export const balanceService = {
 
 export const asistenciaService = {
   registrar: (data) => api.post('/asistencia/registrar', data),
+  registrarSalida: (data) => api.post('/asistencia/registrar-salida', data),
+  getEstadoHoy: () => api.get('/asistencia/estado-hoy'),
   listar: (inicio, fin) => api.get(`/asistencia/?fecha_inicio=${inicio || ''}&fecha_fin=${fin || ''}`),
 };
 

@@ -22,19 +22,44 @@ const Asistencia = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('registrar');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error
+  const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error, success_exit
   const [distance, setDistance] = useState(null);
   const [coords, setCoords] = useState(null);
+  
+  const [dailyStatus, setDailyStatus] = useState({
+    ha_entrado: false,
+    ha_salido: false,
+    puede_salir: false,
+    mensaje_restriccion: null
+  });
 
   // Estados para Admin
   const [asistencias, setAsistencias] = useState([]);
   const [filtroFecha, setFiltroFecha] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'admin' && user?.rol === 'administrador') {
       fetchAsistencias();
     }
   }, [activeTab, filtroFecha]);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await asistenciaService.getEstadoHoy();
+      setDailyStatus(res.data);
+      if (res.data.ha_salido) {
+        setStatus('success_exit');
+      } else if (res.data.ha_entrado) {
+        setStatus('idle'); // Reutilizamos idle pero el texto cambiará según dailyStatus
+      }
+    } catch (err) {
+      console.error("Error al obtener estado:", err);
+    }
+  };
 
   const fetchAsistencias = async () => {
     try {
@@ -77,18 +102,15 @@ const Asistencia = () => {
     );
   };
 
-  const registrarAsistencia = async () => {
+  const registrarAccion = async () => {
     try {
       setLoading(true);
-
+      
       let biometriaOk = false;
-
-      // Intentar validación biométrica real
       if (window.PublicKeyCredential) {
         try {
           const challenge = new Uint8Array(32);
           window.crypto.getRandomValues(challenge);
-
           const options = {
             publicKey: {
               challenge,
@@ -106,15 +128,10 @@ const Asistencia = () => {
               }
             }
           };
-
           await navigator.credentials.create(options);
           biometriaOk = true;
         } catch (e) {
-          console.error("Error en biometría:", e);
-          // Si el usuario cancela o el dispositivo no soporta, biometriaOk sigue en false
-          // pero igual permitimos el registro si el admin lo desea, o podemos bloquearlo.
-          // El usuario pidió que pida permiso de huella, así que si falla lanzamos error.
-          alert("❌ Error de validación biométrica. Asegúrate de usar tu huella o reconocimiento facial.");
+          alert("❌ Error de validación biométrica.");
           setLoading(false);
           return;
         }
@@ -128,11 +145,17 @@ const Asistencia = () => {
         hora_dispositivo: new Date().toLocaleTimeString('es-EC', { hour12: false })
       };
 
-      await asistenciaService.registrar(payload);
-      setStatus('success');
-      alert("✅ Asistencia registrada correctamente");
+      if (!dailyStatus.ha_entrado) {
+        await asistenciaService.registrar(payload);
+        alert("✅ Entrada registrada correctamente");
+      } else {
+        await asistenciaService.registrarSalida(payload);
+        alert("✅ Salida registrada correctamente");
+      }
+      
+      fetchStatus(); // Actualizar estado después de registrar
     } catch (err) {
-      alert("❌ Error: " + (err.response?.data?.detail || "No se pudo registrar"));
+      alert("❌ Error: " + (err.response?.data?.detail || "No se pudo procesar"));
       setStatus('error');
     } finally {
       setLoading(false);
@@ -144,19 +167,19 @@ const Asistencia = () => {
       <div className="asistencia-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Control de Asistencia</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Registro de entrada basado en ubicación y biometría.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Registro de entrada y salida basado en ubicación y biometría.</p>
         </div>
-
+        
         {user?.rol === 'administrador' && (
           <div className="glass asistencia-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px' }}>
-            <button
+            <button 
               onClick={() => setActiveTab('registrar')}
               className={`btn ${activeTab === 'registrar' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
             >
               Registrar
             </button>
-            <button
+            <button 
               onClick={() => setActiveTab('admin')}
               className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
@@ -169,7 +192,7 @@ const Asistencia = () => {
 
       <AnimatePresence mode="wait">
         {activeTab === 'registrar' ? (
-          <motion.div
+          <motion.div 
             key="registrar"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -179,21 +202,48 @@ const Asistencia = () => {
           >
             <div className="glass asistencia-main-card" style={{ padding: '40px 20px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
               <div style={{ fontSize: '4rem', marginBottom: '20px' }}>
-                {status === 'idle' && '📍'}
+                {status === 'idle' && (dailyStatus.ha_entrado ? '🏠' : '📍')}
                 {status === 'checking' && '⏳'}
                 {status === 'ready' && '🔓'}
                 {status === 'out_of_range' && '🚫'}
                 {status === 'success' && '✅'}
+                {status === 'success_exit' && '👋'}
                 {status === 'error' && '❌'}
               </div>
 
               {status === 'idle' && (
                 <>
-                  <h3>Listo para registrar</h3>
-                  <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Debes estar en la oficina para activar tu asistencia.</p>
-                  <button className="btn btn-primary" style={{ width: '100%', padding: '16px' }} onClick={checkLocation}>
-                    Verificar Ubicación
-                  </button>
+                  {!dailyStatus.ha_entrado ? (
+                    <>
+                      <h3>Listo para registrar Entrada</h3>
+                      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Debes estar en la oficina para activar tu asistencia.</p>
+                      <button className="btn btn-primary" style={{ width: '100%', padding: '16px' }} onClick={checkLocation}>
+                        Verificar Ubicación
+                      </button>
+                    </>
+                  ) : !dailyStatus.ha_salido ? (
+                    <>
+                      <h3>Listo para registrar Salida</h3>
+                      <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>Entrada registrada a las: <b>{dailyStatus.hora_entrada}</b></p>
+                      
+                      {!dailyStatus.puede_salir ? (
+                        <div className="glass" style={{ padding: '15px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '24px' }}>
+                          <p style={{ color: '#f87171', margin: 0, fontSize: '0.9rem' }}>{dailyStatus.mensaje_restriccion}</p>
+                        </div>
+                      ) : (
+                        <p style={{ color: '#4ade80', marginBottom: '24px' }}>Cumpliste el tiempo mínimo. Ya puedes registrar tu salida.</p>
+                      )}
+
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ width: '100%', padding: '16px' }} 
+                        onClick={checkLocation}
+                        disabled={!dailyStatus.puede_salir}
+                      >
+                        Verificar Ubicación para Salida
+                      </button>
+                    </>
+                  ) : null}
                 </>
               )}
 
@@ -214,21 +264,28 @@ const Asistencia = () => {
                 <>
                   <h3 style={{ color: '#4ade80' }}>Ubicación Validada</h3>
                   <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede con la validación de huella.</p>
-                  <button
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}
-                    onClick={registrarAsistencia}
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }} 
+                    onClick={registrarAccion}
                     disabled={loading}
                   >
-                    {loading ? 'Procesando...' : 'Registrar con Huella'}
+                    {loading ? 'Procesando...' : (dailyStatus.ha_entrado ? 'Registrar Salida' : 'Registrar Entrada')}
                   </button>
                 </>
               )}
 
               {status === 'success' && (
                 <>
-                  <h3 style={{ color: '#4ade80' }}>Asistencia Completada</h3>
+                  <h3 style={{ color: '#4ade80' }}>Entrada Completada</h3>
                   <p>Has registrado tu entrada correctamente hoy.</p>
+                </>
+              )}
+
+              {status === 'success_exit' && (
+                <>
+                  <h3 style={{ color: '#4ade80' }}>Salida Completada</h3>
+                  <p>Has registrado tu jornada de hoy. ¡Hasta pronto!</p>
                 </>
               )}
             </div>
@@ -260,7 +317,8 @@ const Asistencia = () => {
                 <thead>
                   <tr>
                     <th>Usuario</th>
-                    <th>Hora Entrada</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
                     <th>Distancia</th>
                     <th>Biometría</th>
                     <th>Dispositivo</th>
@@ -268,13 +326,14 @@ const Asistencia = () => {
                 </thead>
                 <tbody>
                   {asistencias.length === 0 ? (
-                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>No hay registros para este día.</td></tr>
+                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No hay registros para este día.</td></tr>
                   ) : asistencias.map(a => (
                     <tr key={a.id}>
                       <td><div style={{ fontWeight: 'bold' }}>{a.nombre_usuario}</div></td>
                       <td>{a.hora_entrada}</td>
+                      <td>{a.hora_salida || '--:--'}</td>
                       <td>{Math.round(a.distance_meters || a.distancia_metros)}m</td>
-                      <td>{a.biometria_validada ? '✅' : '❌'}</td>
+                      <td>{a.biometria_validada && (a.hora_salida ? a.biometria_salida_validada : true) ? '✅' : '❌'}</td>
                       <td style={{ fontSize: '0.7rem', opacity: 0.6, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.dispositivo_info}</td>
                     </tr>
                   ))}
