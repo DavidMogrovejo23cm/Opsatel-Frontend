@@ -190,6 +190,8 @@ export const balanceService = {
   crearColchon: (data) => api.post('/balance/colchon', data),
   actualizarColchon: (id, data) => api.patch(`/balance/colchon/${id}`, data),
   eliminarColchon: (id) => api.delete(`/balance/colchon/${id}`),
+  // Historial de Clientes
+  historialClientes: () => api.get('/balance/historial-clientes'),
 };
 
 export const asistenciaService = {

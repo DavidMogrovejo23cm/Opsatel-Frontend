@@ -25,7 +25,7 @@ const Asistencia = () => {
   const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error, success_exit
   const [distance, setDistance] = useState(null);
   const [coords, setCoords] = useState(null);
-  
+
   const [dailyStatus, setDailyStatus] = useState({
     ha_entrado: false,
     ha_salido: false,
@@ -105,7 +105,7 @@ const Asistencia = () => {
   const registrarAccion = async () => {
     try {
       setLoading(true);
-      
+
       let biometriaOk = false;
       if (window.PublicKeyCredential) {
         try {
@@ -152,7 +152,7 @@ const Asistencia = () => {
         await asistenciaService.registrarSalida(payload);
         alert("✅ Salida registrada correctamente");
       }
-      
+
       fetchStatus(); // Actualizar estado después de registrar
     } catch (err) {
       alert("❌ Error: " + (err.response?.data?.detail || "No se pudo procesar"));
@@ -169,17 +169,17 @@ const Asistencia = () => {
           <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Control de Asistencia</h1>
           <p style={{ color: 'var(--text-muted)' }}>Registro de entrada y salida basado en ubicación y biometría.</p>
         </div>
-        
+
         {user?.rol === 'administrador' && (
           <div className="glass asistencia-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px' }}>
-            <button 
+            <button
               onClick={() => setActiveTab('registrar')}
               className={`btn ${activeTab === 'registrar' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
             >
               Registrar
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('admin')}
               className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
@@ -192,7 +192,7 @@ const Asistencia = () => {
 
       <AnimatePresence mode="wait">
         {activeTab === 'registrar' ? (
-          <motion.div 
+          <motion.div
             key="registrar"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -225,7 +225,7 @@ const Asistencia = () => {
                     <>
                       <h3>Listo para registrar Salida</h3>
                       <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>Entrada registrada a las: <b>{dailyStatus.hora_entrada}</b></p>
-                      
+
                       {!dailyStatus.puede_salir ? (
                         <div className="glass" style={{ padding: '15px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '24px' }}>
                           <p style={{ color: '#f87171', margin: 0, fontSize: '0.9rem' }}>{dailyStatus.mensaje_restriccion}</p>
@@ -234,9 +234,9 @@ const Asistencia = () => {
                         <p style={{ color: '#4ade80', marginBottom: '24px' }}>Ya puedes registrar tu salida.</p>
                       )}
 
-                      <button 
-                        className="btn btn-primary" 
-                        style={{ width: '100%', padding: '16px' }} 
+                      <button
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '16px' }}
                         onClick={checkLocation}
                         disabled={!dailyStatus.puede_salir}
                       >
@@ -264,9 +264,9 @@ const Asistencia = () => {
                 <>
                   <h3 style={{ color: '#4ade80' }}>Ubicación Validada</h3>
                   <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede con la validación de huella.</p>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }} 
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}
                     onClick={registrarAccion}
                     disabled={loading}
                   >
@@ -321,7 +321,6 @@ const Asistencia = () => {
                     <th>Salida</th>
                     <th>Distancia</th>
                     <th>Biometría</th>
-                    <th>Dispositivo</th>
                   </tr>
                 </thead>
                 <tbody>
