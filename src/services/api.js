@@ -185,6 +185,7 @@ export const balanceService = {
   // Reportes
   reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
   reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),
+  exportarReporteExcel: (mes) => api.get(`/balance/reporte-excel?mes=${mes}`, { responseType: 'blob' }),
   // Colchon (Fondo de reserva)
   listarColchon: () => api.get('/balance/colchon'),
   crearColchon: (data) => api.post('/balance/colchon', data),

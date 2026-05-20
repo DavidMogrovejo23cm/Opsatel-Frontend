@@ -1115,52 +1115,27 @@ const Balance = () => {
     if (vista === 'mensual') fetchMensual();
   };
 
-  const handleExportar = () => {
-    if (!report) return;
-    const { ingresos, egresos, proyectos, colchon, balance_neto } = report;
-    const [aStr, mNum] = mes.split('-');
-    const mLabel = MONTH_NAMES[parseInt(mNum, 10) - 1];
-    
-    let csv = `REPORTE FINANCIERO - ${mLabel.toUpperCase()} ${aStr}\n\n`;
-    
-    csv += "RESUMEN GENERAL\n";
-    csv += `Ingresos Total,${ingresos.total}\n`;
-    csv += `Egresos Total,${egresos.total}\n`;
-    csv += `Inversion Proyectos,${proyectos.total}\n`;
-    csv += `Balance Neto,${balance_neto}\n\n`;
-    
-    csv += "DETALLE DE INGRESOS\n";
-    csv += "Concepto,Monto\n";
-    csv += `Internet,${ingresos.internet.total}\n`;
-    csv += `IPTV,${ingresos.iptv.total}\n`;
-    csv += `Extras,${ingresos.extras.total}\n`;
-    csv += `Adicional,${ingresos.adicional}\n\n`;
-    
-    csv += "DETALLE DE EGRESOS\n";
-    csv += "Descripcion,Categoria,Subcategoria,Metodo,Monto\n";
-    egresos.lista.forEach(e => {
-      csv += `"${e.descripcion}","${e.categoria}","${e.subcategoria || ''}","${e.metodo_pago}",${e.monto}\n`;
-    });
-    csv += `\nTOTAL EGRESOS,,,,${egresos.total}\n\n`;
-    
-    if (colchon?.lista?.length > 0) {
-      csv += "CAJA DE COLCHON\n";
-      csv += "Fecha,Concepto,Monto\n";
-      colchon.lista.forEach(c => {
-        csv += `"${c.fecha}","${c.descripcion}",${c.monto}\n`;
-      });
-      csv += `TOTAL COLCHON,,${colchon.total}\n`;
+  const handleExportar = async () => {
+    try {
+      setLoading(true);
+      const [aStr, mNum] = mes.split('-');
+      const mLabel = MONTH_NAMES[parseInt(mNum, 10) - 1];
+      const response = await balanceService.exportarReporteExcel(mes);
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Balance_Opsatel_${mLabel}_${aStr}.xlsx`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error(error);
+      alert("Error al exportar el reporte Excel");
+    } finally {
+      setLoading(false);
     }
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Balance_Opsatel_${mLabel}_${aStr}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleExportarAnual = () => {
