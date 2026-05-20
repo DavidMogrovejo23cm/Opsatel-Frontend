@@ -798,8 +798,28 @@ function HistorialClientes({ mesTarget }) {
     (c.plan && c.plan.toLowerCase().includes(filtro.toLowerCase()))
   );
 
-  const filteredActivos = filtered.filter(c => !c.estado || c.estado.toLowerCase() === 'activo');
-  const filteredRecientes = filtered.filter(c => c.estado && c.estado.toLowerCase() !== 'activo');
+  const filteredActivos = filtered.filter(c => {
+    const isActivo = !c.estado || c.estado.toLowerCase() === 'activo';
+    const isNew = c.instalation_date && c.instalation_date.startsWith(mesTarget);
+    return isActivo && !isNew;
+  });
+
+  const filteredRecientes = filtered.filter(c => {
+    const isActivo = c.estado && c.estado.toLowerCase() === 'activo';
+    const isNew = c.instalation_date && c.instalation_date.startsWith(mesTarget);
+    return isActivo && isNew;
+  });
+
+  const filteredProspectos = filtered.filter(c => 
+    c.estado && c.estado.toLowerCase() !== 'activo'
+  );
+
+  const totalTarifaRecientes = filteredRecientes.reduce((acc, c) => acc + parseFloat(c.tarifa_mensual || 0), 0);
+  const pagosPorMetodo = filteredRecientes.reduce((acc, c) => {
+    const metodo = (c.bank || 'Efectivo').trim() || 'Efectivo';
+    acc[metodo] = (acc[metodo] || 0) + parseFloat(c.tarifa_mensual || 0);
+    return acc;
+  }, {});
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ paddingBottom: 40 }}>
@@ -825,14 +845,14 @@ function HistorialClientes({ mesTarget }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           
-          {/* SECCIÓN 1: CLIENTES RECIÉN AGREGADOS */}
+          {/* SECCIÓN 1: CLIENTES RECIÉN ACTIVADOS */}
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ marginBottom: 16 }}>
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>📋</span> Clientes Recién Agregados (Prospectos & Activación)
+                <span>📋</span> Clientes Recién Activados (Nuevos este mes)
               </h4>
               <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                Clientes recién registrados en espera de activación de servicio o aprobación técnica.
+                Clientes activados recientemente durante el mes de facturación seleccionado.
               </p>
             </div>
             
@@ -842,10 +862,11 @@ function HistorialClientes({ mesTarget }) {
                   <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Solicitado</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Estado</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Contratado</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Fecha Activación</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Método Pago</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa/Mes</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Saldo Inicial</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Deuda Actual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -857,26 +878,92 @@ function HistorialClientes({ mesTarget }) {
                       <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
-                      <td style={{ padding: '12px 16px' }}>{getEstadoBadge(c.estado)}</td>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.instalation_date || '—'}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{c.bank || 'Efectivo'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(c.tarifa_mensual)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: parseFloat(c.saldo_total || 0) > 0 ? P.egreso : P.ingreso }}>
                         {fmt(c.saldo_total)}
                       </td>
                     </tr>
                   ))}
+                  {filteredRecientes.length > 0 && (
+                    <tr style={{ background: 'rgba(255,255,255,0.03)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>Total Clientes Nuevos del Mes:</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '0.9rem' }}>
+                        {fmt(totalTarifaRecientes)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: filteredRecientes.reduce((acc, c) => acc + parseFloat(c.saldo_total || 0), 0) > 0 ? P.egreso : P.ingreso }}>
+                        {fmt(filteredRecientes.reduce((acc, c) => acc + parseFloat(c.saldo_total || 0), 0))}
+                      </td>
+                    </tr>
+                  )}
                   {filteredRecientes.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        ✨ No hay nuevos clientes pendientes o en activación.
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        ✨ No hay clientes activados recientemente en este mes.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+
+            {filteredRecientes.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16, padding: '12px 18px', background: 'rgba(255,255,255,0.015)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Métodos de Pago Utilizados:</span>
+                {Object.entries(pagosPorMetodo).map(([metodo, total]) => (
+                  <div key={metodo} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span style={{ fontWeight: 600 }}>{metodo}:</span>
+                    <span style={{ color: P.ingreso, fontWeight: 700 }}>{fmt(total)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* SECCIÓN 2: CARTERA DE CLIENTES ACTIVOS */}
+          {/* SECCIÓN 2: PROSPECTOS EN ESPERA (SIN ACTIVAR) */}
+          {filteredProspectos.length > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ marginBottom: 16 }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>⏳</span> Prospectos en Espera (Sin Activar)
+                </h4>
+                <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  Clientes registrados que aún están pendientes de instalación o activación técnica.
+                </p>
+              </div>
+              
+              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Solicitado</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Estado</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa Estimada</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProspectos.map((c, idx) => (
+                      <tr key={c.id} style={{ 
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                      }} className="hover-row">
+                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
+                        <td style={{ padding: '12px 16px' }}>{getEstadoBadge(c.estado)}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(c.tarifa_mensual)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN 3: CARTERA DE CLIENTES ACTIVOS */}
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ marginBottom: 16 }}>
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
