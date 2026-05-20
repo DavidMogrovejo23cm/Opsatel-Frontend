@@ -921,48 +921,6 @@ function HistorialClientes({ mesTarget }) {
             )}
           </div>
 
-          {/* SECCIÓN 2: PROSPECTOS EN ESPERA (SIN ACTIVAR) */}
-          {filteredProspectos.length > 0 && (
-            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ marginBottom: 16 }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>⏳</span> Prospectos en Espera (Sin Activar)
-                </h4>
-                <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  Clientes registrados que aún están pendientes de instalación o activación técnica.
-                </p>
-              </div>
-              
-              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Solicitado</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Estado</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa Estimada</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProspectos.map((c, idx) => (
-                      <tr key={c.id} style={{ 
-                        borderBottom: '1px solid rgba(255,255,255,0.03)',
-                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
-                      }} className="hover-row">
-                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
-                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
-                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>{getEstadoBadge(c.estado)}</td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(c.tarifa_mensual)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           {/* SECCIÓN 3: CARTERA DE CLIENTES ACTIVOS */}
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ marginBottom: 16 }}>
