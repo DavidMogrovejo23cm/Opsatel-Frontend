@@ -745,15 +745,65 @@ function HistorialClientes({ mesTarget }) {
     });
   }
 
+  const getEstadoBadge = (estado) => {
+    const est = (estado || '').toLowerCase().trim();
+    if (est === 'en activación' || est === 'en activacion') {
+      return (
+        <span style={{
+          padding: '4px 8px',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          fontWeight: 'bold',
+          background: 'rgba(251, 191, 36, 0.15)',
+          color: '#fbbf24',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+        }}>
+          🛠️ En Activación
+        </span>
+      );
+    } else if (est === 'pendiente') {
+      return (
+        <span style={{
+          padding: '4px 8px',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          fontWeight: 'bold',
+          background: 'rgba(96, 165, 250, 0.15)',
+          color: '#60a5fa',
+          border: '1px solid rgba(96, 165, 250, 0.3)',
+        }}>
+          ⏳ Pendiente
+        </span>
+      );
+    } else {
+      return (
+        <span style={{
+          padding: '4px 8px',
+          borderRadius: '6px',
+          fontSize: '0.75rem',
+          fontWeight: 'bold',
+          background: 'rgba(255, 255, 255, 0.1)',
+          color: 'var(--text-muted)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+        }}>
+          {estado || 'Sin estado'}
+        </span>
+      );
+    }
+  };
+
   const filtered = clientes.filter(c => 
     c.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
     (c.nodo && c.nodo.toLowerCase().includes(filtro.toLowerCase())) ||
     (c.plan && c.plan.toLowerCase().includes(filtro.toLowerCase()))
   );
 
+  const filteredActivos = filtered.filter(c => !c.estado || c.estado.toLowerCase() === 'activo');
+  const filteredRecientes = filtered.filter(c => c.estado && c.estado.toLowerCase() !== 'activo');
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ paddingBottom: 40 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Historial de Deudas (Cartera)</h3>
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>Distribución de la deuda total en los últimos 6 meses</p>
@@ -773,72 +823,143 @@ function HistorialClientes({ mesTarget }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Cargando historial...</div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-              <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                <th style={{ padding: '14px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>Cliente</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>Nodo</th>
-                <th style={{ padding: '14px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>Tarifa/Mes</th>
-                <th style={{ padding: '14px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>Deuda Total</th>
-                {months.map(m => (
-                  <th key={m.key} style={{ padding: '14px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>{m.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c, idx) => {
-                let saldoPendiente = parseFloat(c.saldo_total || 0);
-                const tarifa = parseFloat(c.tarifa_mensual || 0);
-                const isDeudor = saldoPendiente > 0;
-                
-                return (
-                  <tr key={c.id} style={{ 
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
-                  }} className="hover-row">
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(tarifa)}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: isDeudor ? P.egreso : P.ingreso }}>
-                      {fmt(saldoPendiente)}
-                    </td>
-                    {months.map((m, i) => {
-                      let cellVal = 0;
-                      if (saldoPendiente > 0) {
-                        if (tarifa > 0) {
-                           if (i === months.length - 1) {
-                             cellVal = saldoPendiente;
-                           } else {
-                             cellVal = Math.min(saldoPendiente, tarifa);
-                           }
-                           saldoPendiente -= cellVal;
-                        } else {
-                           if (i === 0) {
-                             cellVal = saldoPendiente;
-                             saldoPendiente = 0;
-                           }
-                        }
-                      }
-                      const hasDebt = cellVal > 0;
-                      return (
-                        <td key={m.key} style={{ 
-                          padding: '12px 16px', textAlign: 'right', 
-                          color: hasDebt ? P.egreso : 'var(--text-muted)', 
-                          fontWeight: hasDebt ? 700 : 400 
-                        }}>
-                          {hasDebt ? fmt(cellVal) : <span style={{opacity:0.4}}>Pagado</span>}
-                        </td>
-                      );
-                    })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          
+          {/* SECCIÓN 1: CLIENTES RECIÉN AGREGADOS */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ marginBottom: 16 }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>📋</span> Clientes Recién Agregados (Prospectos & Activación)
+              </h4>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                Clientes recién registrados en espera de activación de servicio o aprobación técnica.
+              </p>
+            </div>
+            
+            <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Solicitado</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Estado</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa/Mes</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Saldo Inicial</th>
                   </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={4 + months.length} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No se encontraron clientes.</td></tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {filteredRecientes.map((c, idx) => (
+                    <tr key={c.id} style={{ 
+                      borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                    }} className="hover-row">
+                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
+                      <td style={{ padding: '12px 16px' }}>{getEstadoBadge(c.estado)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(c.tarifa_mensual)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: parseFloat(c.saldo_total || 0) > 0 ? P.egreso : P.ingreso }}>
+                        {fmt(c.saldo_total)}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredRecientes.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        ✨ No hay nuevos clientes pendientes o en activación.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: CARTERA DE CLIENTES ACTIVOS */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ marginBottom: 16 }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>💰</span> Cartera General (Clientes Activos)
+              </h4>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                Historial de deudas consolidadas y control de cartera de clientes activos.
+              </p>
+            </div>
+
+            <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa/Mes</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Deuda Total</th>
+                    {months.map(m => (
+                      <th key={m.key} style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>{m.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredActivos.map((c, idx) => {
+                    let saldoPendiente = parseFloat(c.saldo_total || 0);
+                    const tarifa = parseFloat(c.tarifa_mensual || 0);
+                    const isDeudor = saldoPendiente > 0;
+                    
+                    return (
+                      <tr key={c.id} style={{ 
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                      }} className="hover-row">
+                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(tarifa)}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: isDeudor ? P.egreso : P.ingreso }}>
+                          {fmt(saldoPendiente)}
+                        </td>
+                        {months.map((m, i) => {
+                          let cellVal = 0;
+                          if (saldoPendiente > 0) {
+                            if (tarifa > 0) {
+                               if (i === months.length - 1) {
+                                 cellVal = saldoPendiente;
+                               } else {
+                                 cellVal = Math.min(saldoPendiente, tarifa);
+                               }
+                               saldoPendiente -= cellVal;
+                            } else {
+                               if (i === 0) {
+                                 cellVal = saldoPendiente;
+                                 saldoPendiente = 0;
+                               }
+                            }
+                          }
+                          const hasDebt = cellVal > 0;
+                          return (
+                            <td key={m.key} style={{ 
+                              padding: '12px 16px', textAlign: 'right', 
+                              color: hasDebt ? P.egreso : 'var(--text-muted)', 
+                              fontWeight: hasDebt ? 700 : 400 
+                            }}>
+                              {hasDebt ? fmt(cellVal) : <span style={{opacity:0.4}}>Pagado</span>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                  {filteredActivos.length === 0 && (
+                    <tr>
+                      <td colSpan={4 + months.length} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                        No se encontraron clientes activos.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
         </div>
       )}
     </motion.div>
