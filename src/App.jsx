@@ -21,6 +21,7 @@ import SubirBD from './pages/SubirBD';
 import CallCenter from './pages/CallCenter';
 import Balance from './pages/Balance';
 import Asistencia from './pages/Asistencia';
+import WhatsApp from './pages/WhatsApp';
 
 
 function App() {
@@ -80,6 +81,12 @@ function App() {
             <Route path="config" element={
               <ProtectedRoute roles={['administrador']}>
                 <Configuraciones />
+              </ProtectedRoute>
+            } />
+
+            <Route path="whatsapp" element={
+              <ProtectedRoute roles={['administrador']}>
+                <WhatsApp />
               </ProtectedRoute>
             } />
 
