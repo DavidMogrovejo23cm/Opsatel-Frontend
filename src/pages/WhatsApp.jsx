@@ -12,6 +12,7 @@ const WhatsApp = () => {
     
     // Envío programado
     const [hora, setHora] = useState('');
+    const [fecha, setFecha] = useState('');
     const [mensajeProgramado, setMensajeProgramado] = useState('ESTE ES UN MENSAJE DE PRUEBA NO RESPONDER');
     const [configuracion, setConfiguracion] = useState(null);
     const [editandoConfig, setEditandoConfig] = useState(false);
@@ -34,6 +35,7 @@ const WhatsApp = () => {
             if (respuesta.hora) {
                 setHora(respuesta.hora);
                 setMensajeProgramado(respuesta.mensaje);
+                setFecha(respuesta.fecha || '');
             }
         } catch (error) {
             console.error("Error cargando configuración:", error);
@@ -76,12 +78,15 @@ const WhatsApp = () => {
         }
 
         try {
+            const fechaParaEnviar = fecha ? fecha : (editandoConfig ? 'vaciar' : null);
             if (editandoConfig && configuracion?.id) {
-                await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado);
+                await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado, fechaParaEnviar);
                 alert('✅ Configuración actualizada');
             } else {
-                await whatsappService.programar(hora, mensajeProgramado);
-                alert('✅ Envío programado para las ' + hora);
+                await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar);
+                let msg = '✅ Envío programado para las ' + hora;
+                if (fecha) msg += ' el día ' + fecha;
+                alert(msg);
             }
             setEditandoConfig(false);
             cargarConfiguracion();
@@ -99,6 +104,7 @@ const WhatsApp = () => {
                 alert('✅ Programación eliminada');
                 setConfiguracion(null);
                 setHora('');
+                setFecha('');
                 setMensajeProgramado('');
             }
         } catch (error) {
@@ -225,15 +231,31 @@ const WhatsApp = () => {
                             }}>
                                 <h4 style={{ color: '#86efac', margin: '0 0 15px 0' }}>✅ Envío Programado</h4>
                                 
-                                <div style={{ marginBottom: '15px' }}>
-                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0' }}>Hora:</p>
-                                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                        {configuracion.hora}
-                                    </p>
+                                <div style={{ display: 'flex', gap: '30px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                                    <div>
+                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Hora:</p>
+                                        <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
+                                            {configuracion.hora}
+                                        </p>
+                                    </div>
+                                    {configuracion.fecha && (
+                                        <div>
+                                            <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Fecha:</p>
+                                            <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
+                                                {configuracion.fecha}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Tipo de Envío:</p>
+                                        <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
+                                            {configuracion.fecha ? '📅 Único Programado' : '🔁 Recurrente Diario'}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div style={{ marginBottom: '15px' }}>
-                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0' }}>Mensaje:</p>
+                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Mensaje:</p>
                                     <div style={{ 
                                         background: 'rgba(0,0,0,0.3)',
                                         padding: '10px',
@@ -273,18 +295,34 @@ const WhatsApp = () => {
                                 borderRadius: '8px',
                                 marginBottom: '20px'
                             }}>
-                                <div className="input-group">
-                                    <label className="label">Hora (HH:MM)</label>
-                                    <input 
-                                        type="time"
-                                        className="input" 
-                                        value={hora}
-                                        onChange={e => setHora(e.target.value)}
-                                        style={{ marginTop: '8px' }}
-                                    />
-                                    <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                        Hora en zona horaria de Ecuador (GMT-5)
-                                    </small>
+                                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                                    <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
+                                        <label className="label">Hora (HH:MM)</label>
+                                        <input 
+                                            type="time"
+                                            className="input" 
+                                            value={hora}
+                                            onChange={e => setHora(e.target.value)}
+                                            style={{ marginTop: '8px' }}
+                                        />
+                                        <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                            Hora en zona horaria de Ecuador (GMT-5)
+                                        </small>
+                                    </div>
+
+                                    <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
+                                        <label className="label">Fecha (Opcional)</label>
+                                        <input 
+                                            type="date"
+                                            className="input" 
+                                            value={fecha}
+                                            onChange={e => setFecha(e.target.value)}
+                                            style={{ marginTop: '8px' }}
+                                        />
+                                        <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                            Vacío = Se envía todos los días a esa hora
+                                        </small>
+                                    </div>
                                 </div>
 
                                 <div className="input-group" style={{ marginTop: '15px' }}>

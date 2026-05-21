@@ -27,11 +27,12 @@ export const whatsappService = {
     }),
 
   // Programar envío automático
-  programar: (hora, mensaje, enviar_a_todos = true) =>
+  programar: (hora, mensaje, enviar_a_todos = true, fecha = null) =>
     api.post('/whatsapp/programar', {
       hora: hora,
       mensaje: mensaje,
-      enviar_a_todos: enviar_a_todos
+      enviar_a_todos: enviar_a_todos,
+      fecha: fecha
     }),
 
   // Obtener configuración actual
@@ -39,10 +40,11 @@ export const whatsappService = {
     api.get('/whatsapp/configuracion'),
 
   // Actualizar configuración
-  actualizarConfiguracion: (config_id, hora, mensaje) =>
+  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null) =>
     api.patch(`/whatsapp/configuracion/${config_id}`, {
       hora: hora,
-      mensaje: mensaje
+      mensaje: mensaje,
+      fecha: fecha
     }),
 
   // Eliminar configuración
