@@ -130,6 +130,8 @@ export const configuracionService = {
   crearParroquia: (data) => api.post('/configuraciones/parroquias', data),
   actualizarParroquia: (id, data) => api.patch(`/configuraciones/parroquias/${id}`, data),
   eliminarParroquia: (id) => api.delete(`/configuraciones/parroquias/${id}`),
+  // Eliminar todos los clientes
+  deleteAllClientes: () => api.delete('/clientes/all'),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

@@ -28,6 +28,7 @@ const Configuraciones = () => {
     const [isEditingPuerto, setIsEditingPuerto] = useState(null);
     const [newParroquia, setNewParroquia] = useState({ nombre: '' });
     const [isEditingParroquia, setIsEditingParroquia] = useState(null);
+    const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
 
     const fetchData = async () => {
         const user = configuracionService.getCurrentUser();
@@ -242,7 +243,7 @@ const Configuraciones = () => {
         setActiveTab('Parroquias');
     };
 
-    const tabs = ['Nodos', 'Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base'];
+    const tabs = ['Nodos', 'Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base', 'Eliminar Clientes'];
 
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
@@ -512,6 +513,73 @@ const Configuraciones = () => {
                                 <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={finanzasBase.jep} onChange={e => setFinanzasBase({ ...finanzasBase, jep: e.target.value })} placeholder="Ej. 50.00" />
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Finanzas Base')}>Guardar Valores Base</button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'Eliminar Clientes' && (
+                    <div>
+                        <h3 style={{ color: '#ef4444', marginBottom: '20px' }}>⚠️ Eliminar Todos los Clientes</h3>
+                        <p style={{ color: '#fca5a5', marginBottom: '20px', fontSize: '0.95rem' }}>
+                            Esta acción es <strong>IRREVERSIBLE</strong>. Se eliminarán TODOS los clientes de la base de datos.
+                            Se requiere contraseña de administrador para confirmar.
+                        </p>
+                        <div style={{ 
+                            background: 'rgba(239, 68, 68, 0.1)', 
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            maxWidth: '400px'
+                        }}>
+                            <div className="input-group">
+                                <label className="label" style={{ color: '#fca5a5' }}>Contraseña de Administrador</label>
+                                <input 
+                                    type="password" 
+                                    className="input" 
+                                    value={passwordDeleteClientes} 
+                                    onChange={e => setPasswordDeleteClientes(e.target.value)}
+                                    placeholder="Ingrese la contraseña"
+                                    style={{ marginTop: '8px' }}
+                                />
+                            </div>
+                            <button 
+                                className="btn" 
+                                onClick={async () => {
+                                    if (passwordDeleteClientes !== 'admin1.@') {
+                                        alert('❌ Contraseña incorrecta');
+                                        return;
+                                    }
+                                    if (!window.confirm('⚠️ ¿ESTÁS SEGURO? Esta acción eliminará TODOS los clientes del sistema.\n\nEsta acción NO se puede deshacer.')) {
+                                        return;
+                                    }
+                                    if (!window.confirm('CONFIRMACIÓN FINAL: ¿Eliminar TODOS los clientes?')) {
+                                        return;
+                                    }
+                                    try {
+                                        await configuracionService.deleteAllClientes();
+                                        alert('✅ Todos los clientes han sido eliminados exitosamente.');
+                                        setPasswordDeleteClientes('');
+                                        fetchData();
+                                    } catch (error) {
+                                        alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+                                    }
+                                }}
+                                style={{
+                                    marginTop: '15px',
+                                    background: passwordDeleteClientes === 'admin1.@' ? '#ef4444' : '#9ca3af',
+                                    color: 'white',
+                                    padding: '10px 20px',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                    fontWeight: 'bold',
+                                    width: '100%',
+                                    opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6
+                                }}
+                                disabled={passwordDeleteClientes !== 'admin1.@'}
+                            >
+                                🗑️ Eliminar Todos los Clientes
+                            </button>
                         </div>
                     </div>
                 )}
