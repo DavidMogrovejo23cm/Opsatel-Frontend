@@ -13,6 +13,7 @@ const WhatsApp = () => {
     // Envío programado
     const [hora, setHora] = useState('');
     const [fecha, setFecha] = useState('');
+    const [recurrencia, setRecurrencia] = useState('diario');
     const [mensajeProgramado, setMensajeProgramado] = useState('ESTE ES UN MENSAJE DE PRUEBA NO RESPONDER');
     const [configuracion, setConfiguracion] = useState(null);
     const [editandoConfig, setEditandoConfig] = useState(false);
@@ -36,6 +37,7 @@ const WhatsApp = () => {
                 setHora(respuesta.hora);
                 setMensajeProgramado(respuesta.mensaje);
                 setFecha(respuesta.fecha || '');
+                setRecurrencia(respuesta.recurrencia || 'diario');
             }
         } catch (error) {
             console.error("Error cargando configuración:", error);
@@ -59,13 +61,27 @@ const WhatsApp = () => {
 
         setEnviando(true);
         try {
+            // Limpiar y formatear número para el enlace directo de WhatsApp Web
+            let numero_limpio = numeroManual.replace(/[^0-9]/g, '');
+            if (numero_limpio.length > 0) {
+                if (numero_limpio.startsWith('0')) {
+                    numero_limpio = '593' + numero_limpio.substring(1);
+                } else if (!numero_limpio.startsWith('593') && numero_limpio.length === 9) {
+                    numero_limpio = '593' + numero_limpio;
+                }
+                
+                // Abrir pestaña en el navegador del usuario para enviar el mensaje real
+                window.open(`https://web.whatsapp.com/send?phone=${numero_limpio}&text=${encodeURIComponent(mensajeManual)}`, '_blank');
+            }
+
+            // Registrar en historial del servidor
             const respuesta = await whatsappService.enviarManual(numeroManual, mensajeManual);
-            alert('✅ ' + respuesta.message);
+            alert('✅ Mensaje registrado e intentando enviar por WhatsApp Web');
             setNumeroManual('');
             setMensajeManual('');
             cargarHistorial();
         } catch (error) {
-            alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+            alert('❌ Error al registrar en servidor: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviando(false);
         }
@@ -78,20 +94,41 @@ const WhatsApp = () => {
         }
 
         try {
-            const fechaParaEnviar = fecha ? fecha : (editandoConfig ? 'vaciar' : null);
+            const fechaParaEnviar = (recurrencia === 'unico' || recurrencia === 'mensual') ? fecha : (editandoConfig ? 'vaciar' : null);
             if (editandoConfig && configuracion?.id) {
-                await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado, fechaParaEnviar);
+                await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado, fechaParaEnviar, recurrencia);
                 alert('✅ Configuración actualizada');
             } else {
-                await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar);
+                await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar, recurrencia);
                 let msg = '✅ Envío programado para las ' + hora;
-                if (fecha) msg += ' el día ' + fecha;
+                if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
+                if (recurrencia === 'mensual' && fecha) msg += ' el día ' + new Date(fecha + 'T00:00:00').getDate() + ' de cada mes';
                 alert(msg);
             }
             setEditandoConfig(false);
             cargarConfiguracion();
         } catch (error) {
             alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const manejarEnviarMensajePendiente = async (msg) => {
+        let numero_limpio = msg.numero.replace(/[^0-9]/g, '');
+        if (numero_limpio.startsWith('0')) {
+            numero_limpio = '593' + numero_limpio.substring(1);
+        } else if (!numero_limpio.startsWith('593') && numero_limpio.length === 9) {
+            numero_limpio = '593' + numero_limpio;
+        }
+        
+        // Abrir pestaña en el navegador
+        window.open(`https://web.whatsapp.com/send?phone=${numero_limpio}&text=${encodeURIComponent(msg.mensaje)}`, '_blank');
+        
+        try {
+            await whatsappService.marcarEnviado(msg.id);
+            alert('✅ Mensaje marcado como enviado en el historial');
+            cargarHistorial();
+        } catch (error) {
+            console.error("Error al marcar mensaje como enviado:", error);
         }
     };
 
@@ -240,16 +277,22 @@ const WhatsApp = () => {
                                     </div>
                                     {configuracion.fecha && (
                                         <div>
-                                            <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Fecha:</p>
+                                            <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>
+                                                {configuracion.recurrencia === 'mensual' ? 'Día de cobro/envío:' : 'Fecha única:'}
+                                            </p>
                                             <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                                {configuracion.fecha}
+                                                {configuracion.recurrencia === 'mensual' 
+                                                    ? `Día ${new Date(configuracion.fecha + 'T00:00:00').getDate()} de cada mes` 
+                                                    : configuracion.fecha}
                                             </p>
                                         </div>
                                     )}
                                     <div>
                                         <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Tipo de Envío:</p>
                                         <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                            {configuracion.fecha ? '📅 Único Programado' : '🔁 Recurrente Diario'}
+                                            {configuracion.recurrencia === 'mensual' 
+                                                ? '🗓️ Recurrente Mensual' 
+                                                : (configuracion.recurrencia === 'unico' ? '📅 Único Programado' : '🔁 Recurrente Diario')}
                                         </p>
                                     </div>
                                 </div>
@@ -311,18 +354,42 @@ const WhatsApp = () => {
                                     </div>
 
                                     <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
-                                        <label className="label">Fecha (Opcional)</label>
-                                        <input 
-                                            type="date"
+                                        <label className="label">Tipo de Recurrencia</label>
+                                        <select 
                                             className="input" 
-                                            value={fecha}
-                                            onChange={e => setFecha(e.target.value)}
-                                            style={{ marginTop: '8px' }}
-                                        />
+                                            value={recurrencia} 
+                                            onChange={e => {
+                                                setRecurrencia(e.target.value);
+                                                if (e.target.value === 'diario') setFecha('');
+                                            }}
+                                            style={{ marginTop: '8px', height: '40px', background: '#0e1726', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0 10px' }}
+                                        >
+                                            <option value="diario">🔁 Recurrente Diario (Todos los días)</option>
+                                            <option value="unico">📅 Envío Único (Una fecha fija)</option>
+                                            <option value="mensual">🗓️ Recurrente Mensual (Mismo día del mes)</option>
+                                        </select>
                                         <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                            Vacío = Se envía todos los días a esa hora
+                                            ¿Cada cuánto se enviará este mensaje?
                                         </small>
                                     </div>
+
+                                    {(recurrencia === 'unico' || recurrencia === 'mensual') && (
+                                        <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
+                                            <label className="label">
+                                                {recurrencia === 'mensual' ? 'Día base para mes (Elige fecha)' : 'Fecha de envío'}
+                                            </label>
+                                            <input 
+                                                type="date"
+                                                className="input" 
+                                                value={fecha}
+                                                onChange={e => setFecha(e.target.value)}
+                                                style={{ marginTop: '8px' }}
+                                            />
+                                            <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                                {recurrencia === 'mensual' ? 'El día de la fecha elegida se repetirá todos los meses (ej: el 15)' : 'Fecha exacta del envío.'}
+                                            </small>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="input-group" style={{ marginTop: '15px' }}>
@@ -403,6 +470,7 @@ const WhatsApp = () => {
                                             <th style={{ padding: '12px' }}>Mensaje</th>
                                             <th style={{ padding: '12px' }}>Tipo</th>
                                             <th style={{ padding: '12px' }}>Estado</th>
+                                            <th style={{ padding: '12px' }}>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -412,7 +480,7 @@ const WhatsApp = () => {
                                                 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                                             >
                                                 <td style={{ padding: '12px', fontSize: '0.9rem' }}>
-                                                    {msg.fecha}
+                                                    {msg.fecha || 'Pendiente'}
                                                 </td>
                                                 <td style={{ padding: '12px', fontFamily: 'monospace' }}>
                                                     {msg.numero}
@@ -436,11 +504,37 @@ const WhatsApp = () => {
                                                         borderRadius: '4px',
                                                         fontSize: '0.85rem',
                                                         fontWeight: 'bold',
-                                                        background: msg.estado === 'enviado' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                                        color: msg.estado === 'enviado' ? '#86efac' : '#fca5a5'
+                                                        background: msg.estado === 'enviado' 
+                                                            ? 'rgba(34, 197, 94, 0.2)' 
+                                                            : (msg.estado === 'pendiente' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
+                                                        color: msg.estado === 'enviado' 
+                                                            ? '#86efac' 
+                                                            : (msg.estado === 'pendiente' ? '#fef08a' : '#fca5a5')
                                                     }}>
-                                                        {msg.estado === 'enviado' ? '✅ Enviado' : '❌ Fallido'}
+                                                        {msg.estado === 'enviado' 
+                                                            ? '✅ Enviado' 
+                                                            : (msg.estado === 'pendiente' ? '⏳ Pendiente' : '❌ Fallido')}
                                                     </span>
+                                                </td>
+                                                <td style={{ padding: '12px' }}>
+                                                    {msg.estado === 'pendiente' && (
+                                                        <button 
+                                                            className="btn btn-primary"
+                                                            onClick={() => manejarEnviarMensajePendiente(msg)}
+                                                            style={{ 
+                                                                padding: '6px 12px', 
+                                                                fontSize: '0.8rem', 
+                                                                background: 'linear-gradient(90deg, #eab308, #ca8a04)',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontWeight: 'bold',
+                                                                color: '#000'
+                                                            }}
+                                                        >
+                                                            ⚡ Enviar
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

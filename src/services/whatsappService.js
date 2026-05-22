@@ -27,12 +27,13 @@ export const whatsappService = {
     }),
 
   // Programar envío automático
-  programar: (hora, mensaje, enviar_a_todos = true, fecha = null) =>
+  programar: (hora, mensaje, enviar_a_todos = true, fecha = null, recurrencia = "diario") =>
     api.post('/whatsapp/programar', {
       hora: hora,
       mensaje: mensaje,
       enviar_a_todos: enviar_a_todos,
-      fecha: fecha
+      fecha: fecha,
+      recurrencia: recurrencia
     }),
 
   // Obtener configuración actual
@@ -40,11 +41,12 @@ export const whatsappService = {
     api.get('/whatsapp/configuracion'),
 
   // Actualizar configuración
-  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null) =>
+  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null, recurrencia = null) =>
     api.patch(`/whatsapp/configuracion/${config_id}`, {
       hora: hora,
       mensaje: mensaje,
-      fecha: fecha
+      fecha: fecha,
+      recurrencia: recurrencia
     }),
 
   // Eliminar configuración
@@ -56,6 +58,10 @@ export const whatsappService = {
     api.get('/whatsapp/historial', {
       params: { limite: limite }
     }),
+
+  // Marcar mensaje como enviado en el historial
+  marcarEnviado: (historial_id) =>
+    api.post(`/whatsapp/historial/${historial_id}/marcar-enviado`),
 
   // Obtener usuario actual
   getCurrentUser: () => {
