@@ -195,6 +195,11 @@ export const balanceService = {
   eliminarColchon: (id) => api.delete(`/balance/colchon/${id}`),
   // Historial de Clientes
   historialClientes: () => api.get('/balance/historial-clientes'),
+  // Gastos Fijos (recurrentes mensuales)
+  listarGastosFijos: () => api.get('/balance/gastos-fijos'),
+  crearGastoFijo: (data) => api.post('/balance/gastos-fijos', data),
+  actualizarGastoFijo: (id, data) => api.patch(`/balance/gastos-fijos/${id}`, data),
+  eliminarGastoFijo: (id) => api.delete(`/balance/gastos-fijos/${id}`),
 };
 
 export const asistenciaService = {

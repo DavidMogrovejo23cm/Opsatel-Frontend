@@ -392,6 +392,60 @@ function ColchonForm({ initial, onSave, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GASTO FIJO FORM
+// ─────────────────────────────────────────────────────────────────────────────
+function GastoFijoForm({ initial, onSave, onClose }) {
+  const [form, setForm] = useState(initial || {
+    descripcion: '', monto: '', categoria: 'operacional', metodo_pago: 'Efectivo', activo: true, notas: ''
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (!form.descripcion || !form.monto) return alert('Completa descripción y monto.');
+    await onSave({ ...form, monto: parseFloat(form.monto) });
+    onClose();
+  };
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Descripción del Gasto Fijo</label>
+        <input style={IS} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} required placeholder="Ej: Arriendo oficina, Internet empresa…" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Monto Mensual ($)</label>
+          <input style={IS} type="number" step="0.01" min="0" value={form.monto} onChange={e => set('monto', e.target.value)} required />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Categoría</label>
+          <select style={IS} value={form.categoria} onChange={e => set('categoria', e.target.value)}>
+            {CATEGORIAS.map(c => <option key={c} value={c} style={OS}>{CAT_LABELS[c]}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Método de Pago</label>
+        <select style={IS} value={form.metodo_pago} onChange={e => set('metodo_pago', e.target.value)}>
+          {METODOS.map(m => <option key={m} value={m} style={OS}>{m}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Notas (opcional)</label>
+        <textarea style={{ ...IS, resize: 'vertical', minHeight: 52 }} value={form.notas} onChange={e => set('notas', e.target.value)} />
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+        <input type="checkbox" checked={form.activo} onChange={e => set('activo', e.target.checked)} style={{ width: 16, height: 16, accentColor: P.ingreso }} />
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.87rem' }}>Activo (se cobra este mes)</span>
+      </label>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 6 }}>
+        <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Cancelar</button>
+        <button type="submit" style={{ padding: '10px 20px', borderRadius: 10, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Guardar</button>
+      </div>
+    </form>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MONTH NAVIGATION BAR (Horizontal Strip)
 // ─────────────────────────────────────────────────────────────────────────────
 function MonthNavBar({ value, onChange }) {
@@ -1023,10 +1077,12 @@ const Balance = () => {
   const [reportAnual, setReportAnual] = useState(null);
   const [egresos, setEgresos] = useState([]);
   const [proyectos, setProyectos] = useState([]);
+  const [gastosFijos, setGastosFijos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalEgreso, setModalEgreso] = useState(null);
   const [modalProy, setModalProy] = useState(null);
   const [modalColchon, setModalColchon] = useState(null);
+  const [modalGastoFijo, setModalGastoFijo] = useState(null);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
 
@@ -1035,11 +1091,13 @@ const Balance = () => {
   const fetchAnual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch (e) { } setLoading(false); }, [anio]);
   const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
+  const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
 
   useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
-  useEffect(() => { if (vista === 'egresos') fetchEgresos(); }, [vista, fetchEgresos]);
+  useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
+  useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
 
   const handleSaveEgreso = async data => {
     if (data.id) await balanceService.actualizarEgreso(data.id, data);
@@ -1070,6 +1128,19 @@ const Balance = () => {
   const handleDeleteColchon = async id => {
     if (!window.confirm('¿Eliminar este registro del colchón?')) return;
     await balanceService.eliminarColchon(id);
+    if (vista === 'mensual') fetchMensual();
+  };
+
+  const handleSaveGastoFijo = async data => {
+    if (data.id) await balanceService.actualizarGastoFijo(data.id, data);
+    else await balanceService.crearGastoFijo(data);
+    fetchGastosFijos();
+    if (vista === 'mensual') fetchMensual();
+  };
+  const handleDeleteGastoFijo = async id => {
+    if (!window.confirm('¿Eliminar este gasto fijo?')) return;
+    await balanceService.eliminarGastoFijo(id);
+    fetchGastosFijos();
     if (vista === 'mensual') fetchMensual();
   };
 
@@ -1456,6 +1527,35 @@ const Balance = () => {
         <div style={{ marginTop: 32 }}>
           <HistorialClientes mesTarget={mes} />
         </div>
+
+        {/* ── SECCIÓN GASTOS FIJOS en vista mensual ── */}
+        {report?.egresos?.gastos_fijos?.length > 0 && (
+          <>
+            <SectionTitle icon="🔒" text="Egresos Fijos del Mes (Aplicados Automáticamente)" />
+            <div style={{ background: 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.15)', borderRadius: 16, padding: 18, marginBottom: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <button onClick={() => setVista('gastos-fijos')} style={{ padding: '7px 16px', borderRadius: 10, background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.3)', color: P.egreso, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'Outfit, sans-serif' }}>
+                  ⚙️ Gestionar Egresos Fijos
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {report.egresos.gastos_fijos.map(gf => (
+                  <div key={gf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
+                    <div>
+                      <div style={{ fontSize: '0.87rem', fontWeight: 700 }}>{gf.descripcion}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{CAT_LABELS[gf.categoria] || gf.categoria} · {gf.metodo_pago}</div>
+                    </div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: P.egreso }}>{fmt(gf.monto)}</div>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(244,63,94,0.1)', borderRadius: 10, borderTop: '1px solid rgba(244,63,94,0.2)', marginTop: 4 }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>TOTAL GASTOS FIJOS</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: P.egreso }}>{fmt(report.egresos.total_gastos_fijos)}</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -1718,6 +1818,96 @@ const Balance = () => {
   );
 
   // ─────────────────────────────────────────────────────────────────
+  // VISTA GASTOS FIJOS
+  // ─────────────────────────────────────────────────────────────────
+  const renderGastosFijos = () => {
+    const totalFijos = gastosFijos.filter(g => g.activo).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
+    const totalInactivos = gastosFijos.filter(g => !g.activo).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>🔒 Egresos Fijos Mensuales</h3>
+            <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Gastos recurrentes que se cobran automáticamente cada mes.</p>
+          </div>
+          <button onClick={() => setModalGastoFijo('crear')}
+            style={{ padding: '12px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
+            ＋ Nuevo Egreso Fijo
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
+          <div style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.25)', borderRadius: 16, padding: '18px 22px' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Total Activos / Mes</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f43f5e' }}>${totalFijos.toFixed(2)}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{gastosFijos.filter(g => g.activo).length} gasto(s) activo(s)</div>
+          </div>
+          <div style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: '18px 22px' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Inactivos (Pausados)</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#94a3b8' }}>${totalInactivos.toFixed(2)}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{gastosFijos.filter(g => !g.activo).length} gasto(s) pausado(s)</div>
+          </div>
+          <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '18px 22px' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Total Anual Estimado</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#6366f1' }}>${(totalFijos * 12).toFixed(2)}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>Proyección a 12 meses</div>
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                {['Estado', 'Concepto', 'Categoría', 'Método', 'Monto/Mes', 'Acciones'].map((h, i) => (
+                  <th key={h} style={{ padding: '14px 16px', textAlign: h === 'Monto/Mes' ? 'right' : 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {gastosFijos.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 10 }}>🔒</div>
+                  No hay egresos fijos registrados aún.
+                </td></tr>
+              ) : gastosFijos.map((g, idx) => (
+                <tr key={g.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', opacity: g.activo ? 1 : 0.5, transition: 'background 0.2s' }} className="hover-row">
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: g.activo ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.1)', color: g.activo ? '#10b981' : '#94a3b8', border: `1px solid ${g.activo ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}` }}>
+                      {g.activo ? '● ACTIVO' : '○ PAUSADO'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontWeight: 700, color: 'white' }}>
+                    {g.descripcion}
+                    {g.notas && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{g.notas}</div>}
+                  </td>
+                  <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[g.categoria] || g.categoria} color={P.cat[g.categoria] || '#94a3b8'} /></td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ color: g.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {(g.metodo_pago || 'Efectivo').toUpperCase()}</span>
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: P.egreso, fontWeight: 900, fontSize: '1rem' }}>{fmt(g.monto)}</td>
+                  <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                    <button onClick={() => setModalGastoFijo(g)} style={{ background: 'rgba(99,102,241,0.1)', border: 'none', borderRadius: 8, color: P.balance, padding: '6px 10px', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => handleDeleteGastoFijo(g.id)} style={{ background: 'rgba(244,63,94,0.1)', border: 'none', borderRadius: 8, color: P.egreso, padding: '6px 10px', cursor: 'pointer' }}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {gastosFijos.length > 0 && (
+              <tfoot>
+                <tr style={{ background: 'rgba(244,63,94,0.12)', borderTop: '2px solid rgba(244,63,94,0.3)' }}>
+                  <td colSpan={4} style={{ padding: '16px', fontWeight: 900, letterSpacing: 1 }}>TOTAL FIJO MENSUAL (ACTIVOS)</td>
+                  <td style={{ padding: '16px', textAlign: 'right', color: P.egreso, fontSize: '1.3rem', fontWeight: 900 }}>{fmt(totalFijos)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // RENDER PRINCIPAL
   // ─────────────────────────────────────────────────────────────────
   return (
@@ -1735,6 +1925,7 @@ const Balance = () => {
         <Tab id="mensual" label="Resumen Mensual" icon="📊" />
         <Tab id="anual" label="Evolución Anual" icon="📈" />
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />
+        <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
         <Tab id="proyectos" label="Proyectos & Obras" icon="🏗️" />
       </div>
 
@@ -1749,6 +1940,7 @@ const Balance = () => {
               {vista === 'mensual' && renderMensual()}
               {vista === 'anual' && renderAnual()}
               {vista === 'egresos' && renderEgresos()}
+              {vista === 'gastos-fijos' && renderGastosFijos()}
               {vista === 'proyectos' && renderProyectos()}
             </>
           )}
@@ -1778,6 +1970,13 @@ const Balance = () => {
       {modalColchon !== null && (
         <Modal title={modalColchon === 'crear' ? '➕ Agregar al Colchón' : '✏️ Editar Colchón'} onClose={() => setModalColchon(null)}>
           <ColchonForm initial={modalColchon !== 'crear' ? { ...modalColchon } : null} onSave={handleSaveColchon} onClose={() => setModalColchon(null)} />
+        </Modal>
+      )}
+
+      {/* Modal Gasto Fijo */}
+      {modalGastoFijo !== null && (
+        <Modal title={modalGastoFijo === 'crear' ? '➕ Nuevo Egreso Fijo' : '✏️ Editar Egreso Fijo'} onClose={() => setModalGastoFijo(null)}>
+          <GastoFijoForm initial={modalGastoFijo !== 'crear' ? { ...modalGastoFijo } : null} onSave={handleSaveGastoFijo} onClose={() => setModalGastoFijo(null)} />
         </Modal>
       )}
     </div>
