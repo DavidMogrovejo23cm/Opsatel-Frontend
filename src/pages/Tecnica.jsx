@@ -513,7 +513,7 @@ const Tecnica = () => {
               </div>
 
               {/* IPTV ACTIVATION SECTION */}
-              <div className="input-group tecnica-wide-field" style={{ background: 'rgba(99, 102, 241, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '12px' }}>
+              <div className="input-group grid-span-2" style={{ background: 'rgba(99, 102, 241, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: formData.iptv_activar ? '16px' : '0' }}>
                   <input
                     type="checkbox"
@@ -596,7 +596,7 @@ const Tecnica = () => {
                       <textarea className="input" name="iptv_notes" value={formData.iptv_notes} onChange={handleChange} style={{ height: '60px' }} />
                     </div>
 
-                    <div className="input-group tecnica-wide-field" style={{ marginTop: '10px' }}>
+                    <div className="input-group grid-span-2" style={{ marginTop: '10px' }}>
                       <label className="label" style={{ color: '#818cf8', display: 'flex', justifyContent: 'space-between' }}>
                         Script de Activación (SQL)
                         <button

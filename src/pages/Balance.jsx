@@ -772,6 +772,7 @@ function HistorialClientes({ mesTarget }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState('');
+  const [filtroCartera, setFiltroCartera] = useState('');
 
   const fetchHistorial = useCallback(async () => {
     setLoading(true);
@@ -855,7 +856,8 @@ function HistorialClientes({ mesTarget }) {
   const filteredActivos = filtered.filter(c => {
     const isActivo = !c.estado || c.estado.toLowerCase() === 'activo';
     const isNew = c.instalation_date && c.instalation_date.startsWith(mesTarget);
-    return isActivo && !isNew;
+    const matchesCartera = c.nombre.toLowerCase().includes(filtroCartera.toLowerCase());
+    return isActivo && !isNew && matchesCartera;
   });
 
   const filteredRecientes = filtered.filter(c => {
@@ -977,13 +979,25 @@ function HistorialClientes({ mesTarget }) {
 
           {/* SECCIÓN 3: CARTERA DE CLIENTES ACTIVOS */}
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ marginBottom: 16 }}>
-              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>💰</span> Cartera General (Clientes Activos)
-              </h4>
-              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                Historial de deudas consolidadas y control de cartera de clientes activos.
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>💰</span> Cartera General (Clientes Activos)
+                </h4>
+                <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  Historial de deudas consolidadas y control de cartera de clientes activos.
+                </p>
+              </div>
+              <div style={{ position: 'relative', width: 260 }}>
+                <input 
+                  type="text" 
+                  placeholder="🔍 Buscar cliente por nombre..." 
+                  value={filtroCartera}
+                  onChange={e => setFiltroCartera(e.target.value)}
+                  style={{ ...IS, padding: '8px 12px 8px 32px', fontSize: '0.8rem' }}
+                />
+                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: '0.85rem' }}>🔎</span>
+              </div>
             </div>
 
             <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>

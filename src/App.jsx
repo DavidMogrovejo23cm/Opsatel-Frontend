@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -23,6 +23,13 @@ import Balance from './pages/Balance';
 import Asistencia from './pages/Asistencia';
 import WhatsApp from './pages/WhatsApp';
 
+function HomeRedirect() {
+  const { user } = useAuth();
+  if (user?.rol === 'tecnico') {
+    return <Navigate to="/hoja-ruta" replace />;
+  }
+  return <Dashboard />;
+}
 
 function App() {
   return (
@@ -36,7 +43,7 @@ function App() {
               <Layout />
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
+            <Route index element={<HomeRedirect />} />
             <Route path="general" element={<General />} />
             
             {/* Rutas de Ventas/Secretaría */}
