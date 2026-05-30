@@ -481,7 +481,7 @@ const HojaRuta = () => {
                                                 {selectedClient.comentarios ? (
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
-                                                        <div style={{ fontSize: '0.75rem', color: '#fcd34d', fontStyle: 'italic' }}>{selectedClient.comentarios}</div>
+                                                        <div style={{ fontSize: '1rem', color: '#fcd34d', fontStyle: 'italic', lineHeight: '1.6' }}>{selectedClient.comentarios}</div>
                                                     </div>
                                                 ) : (
                                                     <div style={{ padding: '10px 0', opacity: 0.3 }}>
