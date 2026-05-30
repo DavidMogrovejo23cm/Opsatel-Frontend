@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 
@@ -40,6 +40,7 @@ const Ventas = () => {
     cedula_tipo: '',
     ubicacion: '',
     tercera_edad: false,
+    plan_corporativo: false,
     precio_plan_especial: 0,
     comentarios: '',
     fecha_firma: new Date().toISOString().split('T')[0]
@@ -90,7 +91,15 @@ const Ventas = () => {
       setFormData({
         ...formData,
         tercera_edad: checked,
+        plan_corporativo: checked ? false : formData.plan_corporativo,
         plan: checked ? 'TERCERA EDAD' : ''
+      });
+    } else if (name === 'plan_corporativo') {
+      setFormData({
+        ...formData,
+        plan_corporativo: checked,
+        tercera_edad: checked ? false : formData.tercera_edad,
+        plan: checked ? 'CORPORATIVO' : ''
       });
     } else if (name === 'plan') {
       const selectedPlan = planesList.find(p => p.nombre === value);
@@ -200,6 +209,7 @@ const Ventas = () => {
         direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', iptv_max_conn: 0, tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         tercera_edad: false,
+        plan_corporativo: false,
         precio_plan_especial: 0,
         comentarios: '',
         fecha_firma: new Date().toISOString().split('T')[0]
@@ -213,12 +223,70 @@ const Ventas = () => {
     }
   };
 
+  // Cálculo de Prorrateo en tiempo real (misma fórmula que el backend)
+  const prorrateo = useMemo(() => {
+    let tarifa = 0;
+    if (formData.tercera_edad || formData.plan_corporativo) {
+      tarifa = parseFloat(formData.precio_plan_especial) || 0;
+    } else if (formData.plan) {
+      const selectedPlan = planesList.find(p => p.nombre === formData.plan);
+      tarifa = parseFloat(selectedPlan?.precio) || 0;
+    }
+    if (tarifa === 0 || !formData.fecha_firma) return null;
+
+    const fecha = new Date(formData.fecha_firma + 'T12:00:00');
+    const year = fecha.getFullYear();
+    const month = fecha.getMonth();
+    const day = fecha.getDate();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const activeDays = totalDays - day + 1;
+    const monto = (tarifa / totalDays) * activeDays;
+
+    return { monto: monto.toFixed(2), activeDays, totalDays, tarifa };
+  }, [formData.plan, formData.precio_plan_especial, formData.tercera_edad, formData.plan_corporativo, formData.fecha_firma, planesList]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="glass-card glass"
+      style={{ position: 'relative' }}
     >
+      {/* WIDGET PRORRATEO - Esquina superior derecha */}
+      {prorrateo && (
+        <div style={{
+          position: 'absolute',
+          top: '24px',
+          right: '24px',
+          background: 'rgba(129, 140, 248, 0.08)',
+          border: '1px solid rgba(129, 140, 248, 0.35)',
+          borderRadius: '14px',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          backdropFilter: 'blur(12px)',
+          zIndex: 10
+        }}>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: '0.55rem', color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '2px' }}>
+              Pago Inicial
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#a78bfa', lineHeight: 1 }}>
+              ${prorrateo.monto}
+            </div>
+          </div>
+          <div style={{ borderLeft: '1px solid rgba(129, 140, 248, 0.25)', paddingLeft: '12px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+              {prorrateo.activeDays} de {prorrateo.totalDays} días
+            </div>
+            <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+              Plan: ${prorrateo.tarifa}/mes
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 style={{ marginBottom: '24px', fontSize: '1.8rem' }}>Registro de Nuevo Cliente</h1>
 
       <form onSubmit={handleSubmit}>
@@ -261,7 +329,7 @@ const Ventas = () => {
               ))}
             </select>
           </div>
-          {!formData.tercera_edad ? (
+          {!formData.tercera_edad && !formData.plan_corporativo ? (
             <div className="input-group">
               <label className="label">Plan Contratado</label>
               <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
@@ -274,7 +342,7 @@ const Ventas = () => {
           ) : (
             <div className="input-group">
               <label className="label">Plan Contratado</label>
-              <input className="input" name="plan" value="TERCERA EDAD" readOnly style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }} />
+              <input className="input" name="plan" value={formData.tercera_edad ? 'TERCERA EDAD' : 'CORPORATIVO'} readOnly style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }} />
             </div>
           )}
           <div className="input-group">
@@ -304,7 +372,7 @@ const Ventas = () => {
               required
             />
           </div>
-          <div className="input-group" style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
               <input
                 type="checkbox"
@@ -315,10 +383,22 @@ const Ventas = () => {
               />
               Tercera Edad
             </label>
+            <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+              <input
+                type="checkbox"
+                name="plan_corporativo"
+                checked={formData.plan_corporativo}
+                onChange={handleChange}
+                style={{ width: '18px', height: '18px', accentColor: '#818cf8' }}
+              />
+              Plan Corporativo
+            </label>
           </div>
-          {formData.tercera_edad && (
+          {(formData.tercera_edad || formData.plan_corporativo) && (
             <div className="input-group">
-              <label className="label">Valor Plan Especial ($)</label>
+              <label className="label">
+                {formData.plan_corporativo ? 'Valor Plan Corporativo ($)' : 'Valor Plan Especial ($)'}
+              </label>
               <input
                 className="input"
                 type="number"
@@ -328,7 +408,7 @@ const Ventas = () => {
                 onChange={handleChange}
                 required
                 placeholder="Precio mensual"
-                style={{ border: '1px solid #f59e0b' }}
+                style={{ border: `1px solid ${formData.plan_corporativo ? '#818cf8' : '#f59e0b'}` }}
               />
             </div>
           )}
