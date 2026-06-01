@@ -41,7 +41,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador'] },
     { path: '/balance', label: 'Balance', icon: '📒', roles: ['administrador'] },
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
-
+    { path: '/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['administrador'] },
     { path: '/tickets', label: 'Tickets Dev', icon: '🎫', roles: ['administrador'] },
     { path: 'divider-1', type: 'divider', roles: ['administrador', 'secretario'] },
     { path: '/extras-general', label: 'Extras Gral', icon: '🌍', roles: ['administrador'] },
