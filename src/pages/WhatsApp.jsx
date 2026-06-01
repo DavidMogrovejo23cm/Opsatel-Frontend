@@ -18,16 +18,66 @@ const WhatsApp = () => {
     const [configuracion, setConfiguracion] = useState(null);
     const [editandoConfig, setEditandoConfig] = useState(false);
     
+    // Difusión Masiva (Global)
+    const [mensajeGlobal, setMensajeGlobal] = useState('');
+    const [enviandoGlobal, setEnviandoGlobal] = useState(false);
+
+    // Estado del puente (Conexión QR)
+    const [connectionStatus, setConnectionStatus] = useState('OFFLINE');
+    const [qrCodeData, setQrCodeData] = useState(null);
+    const [cargandoConexion, setCargandoConexion] = useState(false);
+
     // Historial
     const [historial, setHistorial] = useState([]);
 
     useEffect(() => {
         cargarConfiguracion();
         cargarHistorial();
+        cargarEstadoConexion();
+        
         // Recargar historial cada 30 segundos
         const intervalo = setInterval(cargarHistorial, 30000);
         return () => clearInterval(intervalo);
     }, []);
+
+    // Polling del estado de conexión cuando estamos en la pestaña de Conexión o si no está conectado
+    useEffect(() => {
+        let intervaloConexion;
+        
+        const poll = () => {
+            cargarEstadoConexion(false); // Silencioso
+        };
+
+        if (activeTab === 'Conexión QR' || connectionStatus !== 'CONNECTED') {
+            poll();
+            intervaloConexion = setInterval(poll, 5000);
+        }
+        
+        return () => {
+            if (intervaloConexion) clearInterval(intervaloConexion);
+        };
+    }, [activeTab, connectionStatus]);
+
+    const cargarEstadoConexion = async (mostrarCargando = true) => {
+        if (mostrarCargando) setCargandoConexion(true);
+        try {
+            const respuesta = await whatsappService.obtenerStatusBridge();
+            setConnectionStatus(respuesta.data.status);
+            
+            if (respuesta.data.status === 'QR_READY') {
+                const resQr = await whatsappService.obtenerQrBridge();
+                setQrCodeData(resQr.data.qr);
+            } else {
+                setQrCodeData(null);
+            }
+        } catch (error) {
+            console.error("Error cargando estado de conexión:", error);
+            setConnectionStatus('OFFLINE');
+            setQrCodeData(null);
+        } finally {
+            if (mostrarCargando) setCargandoConexion(false);
+        }
+    };
 
     const cargarConfiguracion = async () => {
         try {
@@ -61,27 +111,14 @@ const WhatsApp = () => {
 
         setEnviando(true);
         try {
-            // Limpiar y formatear número para el enlace directo de WhatsApp Web
-            let numero_limpio = numeroManual.replace(/[^0-9]/g, '');
-            if (numero_limpio.length > 0) {
-                if (numero_limpio.startsWith('0')) {
-                    numero_limpio = '593' + numero_limpio.substring(1);
-                } else if (!numero_limpio.startsWith('593') && numero_limpio.length === 9) {
-                    numero_limpio = '593' + numero_limpio;
-                }
-                
-                // Abrir pestaña en el navegador del usuario para enviar el mensaje real
-                window.open(`https://web.whatsapp.com/send?phone=${numero_limpio}&text=${encodeURIComponent(mensajeManual)}`, '_blank');
-            }
-
-            // Registrar en historial del servidor
-            const respuesta = await whatsappService.enviarManual(numeroManual, mensajeManual);
-            alert('✅ Mensaje registrado e intentando enviar por WhatsApp Web');
+            // Enviar a través de la pasarela silenciosa del backend
+            await whatsappService.enviarManual(numeroManual, mensajeManual);
+            alert('✅ Mensaje enviado exitosamente desde el servidor');
             setNumeroManual('');
             setMensajeManual('');
             cargarHistorial();
         } catch (error) {
-            alert('❌ Error al registrar en servidor: ' + (error.response?.data?.detail || error.message));
+            alert('❌ Error al enviar mensaje: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviando(false);
         }
@@ -113,22 +150,14 @@ const WhatsApp = () => {
     };
 
     const manejarEnviarMensajePendiente = async (msg) => {
-        let numero_limpio = msg.numero.replace(/[^0-9]/g, '');
-        if (numero_limpio.startsWith('0')) {
-            numero_limpio = '593' + numero_limpio.substring(1);
-        } else if (!numero_limpio.startsWith('593') && numero_limpio.length === 9) {
-            numero_limpio = '593' + numero_limpio;
-        }
-        
-        // Abrir pestaña en el navegador
-        window.open(`https://web.whatsapp.com/send?phone=${numero_limpio}&text=${encodeURIComponent(msg.mensaje)}`, '_blank');
-        
         try {
+            // Enviar mensaje pendiente directamente usando la pasarela
+            await whatsappService.enviarManual(msg.numero, msg.mensaje);
             await whatsappService.marcarEnviado(msg.id);
-            alert('✅ Mensaje marcado como enviado en el historial');
+            alert('✅ Mensaje enviado y marcado en el historial');
             cargarHistorial();
         } catch (error) {
-            console.error("Error al marcar mensaje como enviado:", error);
+            alert('❌ Error al enviar mensaje pendiente: ' + (error.response?.data?.detail || error.message));
         }
     };
 
@@ -149,6 +178,102 @@ const WhatsApp = () => {
         }
     };
 
+    const manejarEnvioGlobal = async () => {
+        if (!mensajeGlobal.trim()) {
+            alert('⚠️ Por favor ingresa el mensaje para la difusión masiva.');
+            return;
+        }
+
+        const confirmacion1 = window.confirm(
+            '⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\n' +
+            'Estás a punto de enviar un mensaje masivo a TODOS los clientes con estado "Activo" en Opsatel.\n' +
+            'Esto enviará mensajes uno tras otro de forma asíncrona.\n\n' +
+            '¿Estás seguro de continuar con el envío?'
+        );
+        if (!confirmacion1) return;
+
+        const confirmacion2 = window.confirm(
+            '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD 🚨\n\n' +
+            '¿Realmente deseas ejecutar la difusión masiva ahora?\n' +
+            'Este proceso NO se puede cancelar una vez iniciado.'
+        );
+        if (!confirmacion2) return;
+
+        setEnviandoGlobal(true);
+        try {
+            await whatsappService.enviarGlobal(mensajeGlobal);
+            alert('🚀 Difusión masiva iniciada en segundo plano con éxito. Puedes revisar el avance en la pestaña de Historial.');
+            setMensajeGlobal('');
+            setActiveTab('Historial');
+            cargarHistorial();
+        } catch (error) {
+            alert('❌ Error al iniciar difusión: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setEnviandoGlobal(false);
+        }
+    };
+
+    // Renderizar indicador de estado de conexión
+    const renderConnectionBadge = () => {
+        let text = 'Desconocido';
+        let color = '#9ca3af';
+        let bgColor = 'rgba(156, 163, 175, 0.15)';
+        let animate = false;
+
+        switch (connectionStatus) {
+            case 'CONNECTED':
+                text = 'Conectado';
+                color = '#4ade80';
+                bgColor = 'rgba(74, 222, 128, 0.15)';
+                break;
+            case 'QR_READY':
+                text = 'Esperando Vinculación QR';
+                color = '#f59e0b';
+                bgColor = 'rgba(245, 158, 11, 0.15)';
+                animate = true;
+                break;
+            case 'INITIALIZING':
+                text = 'Iniciando en Servidor...';
+                color = '#60a5fa';
+                bgColor = 'rgba(96, 165, 250, 0.15)';
+                animate = true;
+                break;
+            case 'OFFLINE':
+            case 'DISCONNECTED':
+                text = 'Desconectado / Offline';
+                color = '#f87171';
+                bgColor = 'rgba(248, 113, 113, 0.15)';
+                break;
+            default:
+                break;
+        }
+
+        return (
+            <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                color: color,
+                background: bgColor,
+                border: `1px solid ${color}33`,
+                marginLeft: '15px'
+            }}>
+                <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: color,
+                    animation: animate ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'
+                }}></span>
+                {text}
+            </div>
+        );
+    };
+
     return (
         <motion.div 
             initial={{ opacity: 0, y: 20 }} 
@@ -158,22 +283,25 @@ const WhatsApp = () => {
         >
             <div className="page-header">
                 <div className="page-header-info">
-                    <h1 style={{ background: 'linear-gradient(90deg, #06b6d4, #06d4af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        📱 Centro de WhatsApp
-                    </h1>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <h1 style={{ background: 'linear-gradient(90deg, #06b6d4, #06d4af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
+                            📱 Centro de WhatsApp
+                        </h1>
+                        {renderConnectionBadge()}
+                    </div>
                     <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-                        Envía mensajes automáticos y programados a todos tus clientes
+                        Envía y gestiona notificaciones automáticas y masivas usando la pasarela de WhatsApp.
                     </p>
                 </div>
             </div>
 
-            <div className="page-actions" style={{ gap: '10px', marginBottom: '20px' }}>
-                {['Envío Manual', 'Envío Programado', 'Historial'].map(tab => (
+            <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
+                {['Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR'].map(tab => (
                     <button
                         key={tab}
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setActiveTab(tab)}
-                        style={{ padding: '8px 16px' }}
+                        style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
                     >
                         {tab}
                     </button>
@@ -187,7 +315,7 @@ const WhatsApp = () => {
                     <div>
                         <h3>📤 Enviar Mensaje Manual</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Envía un mensaje de WhatsApp a un número específico. Se abrirá Chrome automáticamente.
+                            Envía un mensaje de WhatsApp a un número específico directamente desde el servidor.
                         </p>
 
                         <div style={{ 
@@ -204,11 +332,11 @@ const WhatsApp = () => {
                                     className="input" 
                                     value={numeroManual}
                                     onChange={e => setNumeroManual(e.target.value)}
-                                    placeholder="+593999999999 o 999999999"
+                                    placeholder="+593999999999 o 0999999999"
                                     style={{ marginTop: '8px' }}
                                 />
                                 <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                    Incluye código de país (+593) o solo el número sin 0
+                                    Incluye código de país (+593) o el número móvil (se autocompletará con el prefijo de Ecuador).
                                 </small>
                             </div>
 
@@ -230,25 +358,22 @@ const WhatsApp = () => {
                             <button 
                                 className="btn btn-primary"
                                 onClick={manejarEnvioManual}
-                                disabled={enviando}
-                                style={{ marginTop: '15px', width: '100%', opacity: enviando ? 0.6 : 1 }}
+                                disabled={enviando || connectionStatus !== 'CONNECTED'}
+                                style={{ 
+                                    marginTop: '15px', 
+                                    width: '100%', 
+                                    opacity: (enviando || connectionStatus !== 'CONNECTED') ? 0.6 : 1 
+                                }}
                             >
-                                {enviando ? '⏳ Enviando...' : '✉️ Enviar Mensaje'}
+                                {connectionStatus !== 'CONNECTED' 
+                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
+                                    : (enviando ? '⏳ Enviando...' : '✉️ Enviar Mensaje desde Servidor')
+                                }
                             </button>
-                        </div>
-
-                        <div style={{ 
-                            background: 'rgba(59, 130, 246, 0.05)',
-                            border: '1px solid rgba(59, 130, 246, 0.3)',
-                            padding: '15px',
-                            borderRadius: '8px'
-                        }}>
-                            <p style={{ color: '#93c5fd', margin: 0, fontSize: '0.9rem' }}>
-                                <strong>ℹ️ Importante:</strong> Se abrirá Chrome automáticamente. Debes tener WhatsApp Web abierto y escaneado en el navegador.
-                            </p>
                         </div>
                     </div>
                 )}
+            
 
                 {/* ENVÍO PROGRAMADO */}
                 {activeTab === 'Envío Programado' && (
@@ -266,11 +391,11 @@ const WhatsApp = () => {
                                 borderRadius: '8px',
                                 marginBottom: '20px'
                             }}>
-                                <h4 style={{ color: '#86efac', margin: '0 0 15px 0' }}>✅ Envío Programado</h4>
+                                <h4 style={{ color: '#86efac', margin: '0 0 15px 0' }}>✅ Envío Programado Activo</h4>
                                 
                                 <div style={{ display: 'flex', gap: '30px', marginBottom: '15px', flexWrap: 'wrap' }}>
                                     <div>
-                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Hora:</p>
+                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Hora de envío:</p>
                                         <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
                                             {configuracion.hora}
                                         </p>
@@ -298,7 +423,7 @@ const WhatsApp = () => {
                                 </div>
 
                                 <div style={{ marginBottom: '15px' }}>
-                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Mensaje:</p>
+                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Mensaje a despachar:</p>
                                     <div style={{ 
                                         background: 'rgba(0,0,0,0.3)',
                                         padding: '10px',
@@ -349,7 +474,7 @@ const WhatsApp = () => {
                                             style={{ marginTop: '8px' }}
                                         />
                                         <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                            Hora en zona horaria de Ecuador (GMT-5)
+                                            Hora local en Ecuador (GMT-5)
                                         </small>
                                     </div>
 
@@ -369,14 +494,14 @@ const WhatsApp = () => {
                                             <option value="mensual">🗓️ Recurrente Mensual (Mismo día del mes)</option>
                                         </select>
                                         <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                            ¿Cada cuánto se enviará este mensaje?
+                                            Frecuencia con la que se disparará el cron.
                                         </small>
                                     </div>
 
                                     {(recurrencia === 'unico' || recurrencia === 'mensual') && (
                                         <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
                                             <label className="label">
-                                                {recurrencia === 'mensual' ? 'Día base para mes (Elige fecha)' : 'Fecha de envío'}
+                                                {recurrencia === 'mensual' ? 'Día base del mes' : 'Fecha exacta de envío'}
                                             </label>
                                             <input 
                                                 type="date"
@@ -386,7 +511,7 @@ const WhatsApp = () => {
                                                 style={{ marginTop: '8px' }}
                                             />
                                             <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                                {recurrencia === 'mensual' ? 'El día de la fecha elegida se repetirá todos los meses (ej: el 15)' : 'Fecha exacta del envío.'}
+                                                {recurrencia === 'mensual' ? 'Se repetirá el mismo día de cada mes (ej: el 15)' : 'Fecha fija.'}
                                             </small>
                                         </div>
                                     )}
@@ -403,7 +528,7 @@ const WhatsApp = () => {
                                         style={{ marginTop: '8px', fontFamily: 'monospace' }}
                                     />
                                     <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                        Se enviará a todos los clientes con celular registrado. Caracteres: {mensajeProgramado.length}
+                                        Caracteres: {mensajeProgramado.length}
                                     </small>
                                 </div>
 
@@ -412,7 +537,7 @@ const WhatsApp = () => {
                                     onClick={manejarProgramacion}
                                     style={{ marginTop: '15px', width: '100%' }}
                                 >
-                                    {editandoConfig ? '💾 Actualizar' : '⏰ Programar Envío'}
+                                    {editandoConfig ? '💾 Actualizar Configuración' : '⏰ Guardar Envío Programado'}
                                 </button>
                                 
                                 {editandoConfig && (
@@ -424,31 +549,85 @@ const WhatsApp = () => {
                                         }}
                                         style={{ marginTop: '10px', width: '100%' }}
                                     >
-                                        ❌ Cancelar
+                                        ❌ Cancelar Edición
                                     </button>
                                 )}
                             </div>
                         )}
+                    </div>
+                )}
+
+
+                {/* DIFUSIÓN MASIVA */}
+                {activeTab === 'Difusión Masiva' && (
+                    <div>
+                        <h3>📢 Difusión Global de Emergencia</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
+                            Envía un mensaje masivo a todos los clientes que se encuentran en estado **"Activo"**. El proceso corre en segundo plano y no congela el servidor.
+                        </p>
 
                         <div style={{ 
-                            background: 'rgba(251, 146, 60, 0.05)',
-                            border: '1px solid rgba(251, 146, 60, 0.3)',
+                            background: 'rgba(239, 68, 68, 0.05)', 
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            marginBottom: '20px'
+                        }}>
+                            <div className="input-group">
+                                <label className="label" style={{ color: '#fca5a5', fontWeight: 'bold' }}>⚠️ Mensaje de Difusión Masiva</label>
+                                <textarea 
+                                    className="input" 
+                                    value={mensajeGlobal}
+                                    onChange={e => setMensajeGlobal(e.target.value)}
+                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para todos los clientes activos..."
+                                    rows="5"
+                                    style={{ marginTop: '8px', fontFamily: 'monospace', borderColor: 'rgba(239,68,68,0.2)' }}
+                                />
+                                <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                    Caracteres: {mensajeGlobal.length}. Recuerda usar un lenguaje claro.
+                                </small>
+                            </div>
+
+                            <button 
+                                className="btn"
+                                onClick={manejarEnvioGlobal}
+                                disabled={enviandoGlobal || connectionStatus !== 'CONNECTED'}
+                                style={{ 
+                                    marginTop: '20px', 
+                                    width: '100%', 
+                                    background: 'linear-gradient(90deg, #ef4444, #b91c1c)',
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    opacity: (enviandoGlobal || connectionStatus !== 'CONNECTED') ? 0.6 : 1
+                                }}
+                            >
+                                {connectionStatus !== 'CONNECTED' 
+                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
+                                    : (enviandoGlobal ? '⏳ Difundiendo en background...' : '🚀 Lanzar Difusión Masiva')
+                                }
+                            </button>
+                        </div>
+
+                        <div style={{ 
+                            background: 'rgba(245, 158, 11, 0.05)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
                             padding: '15px',
                             borderRadius: '8px'
                         }}>
-                            <p style={{ color: '#fed7aa', margin: 0, fontSize: '0.9rem' }}>
-                                <strong>⚠️ Nota:</strong> El sistema verificará la hora cada minuto. Chrome debe estar abierto con WhatsApp Web sincronizado.
+                            <p style={{ color: '#fde047', margin: 0, fontSize: '0.85rem' }}>
+                                <strong>🚨 Doble Seguridad:</strong> Se solicitarán dos confirmaciones adicionales antes de despachar la difusión. Por favor, asegúrate de que el texto es correcto.
                             </p>
                         </div>
                     </div>
                 )}
 
+
                 {/* HISTORIAL */}
                 {activeTab === 'Historial' && (
                     <div>
-                        <h3>📋 Historial de Mensajes</h3>
+                        <h3>📋 Historial de Envíos</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Últimos {historial.length} mensajes enviados
+                            Listado de los últimos mensajes despachados por el sistema.
                         </p>
 
                         {historial.length === 0 ? (
@@ -458,7 +637,7 @@ const WhatsApp = () => {
                                 color: 'var(--text-muted)'
                             }}>
                                 <p style={{ fontSize: '3rem', margin: '0 0 10px 0' }}>📭</p>
-                                <p>No hay mensajes en el historial</p>
+                                <p>No hay mensajes registrados en el historial</p>
                             </div>
                         ) : (
                             <div style={{ overflowX: 'auto' }}>
@@ -470,7 +649,7 @@ const WhatsApp = () => {
                                             <th style={{ padding: '12px' }}>Mensaje</th>
                                             <th style={{ padding: '12px' }}>Tipo</th>
                                             <th style={{ padding: '12px' }}>Estado</th>
-                                            <th style={{ padding: '12px' }}>Acciones</th>
+                                            <th style={{ padding: '12px' }}>Re-enviar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -496,7 +675,9 @@ const WhatsApp = () => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '12px', fontSize: '0.9rem' }}>
-                                                    {msg.tipo === 'automatico' ? '⏰ Automático' : '📤 Manual'}
+                                                    {msg.tipo === 'automatico' 
+                                                        ? '⏰ Programado' 
+                                                        : (msg.tipo === 'difusion_global' ? '📢 Difusión' : '📤 Manual')}
                                                 </td>
                                                 <td style={{ padding: '12px' }}>
                                                     <span style={{
@@ -517,22 +698,20 @@ const WhatsApp = () => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '12px' }}>
-                                                    {msg.estado === 'pendiente' && (
+                                                    {msg.estado === 'fallido' && (
                                                         <button 
-                                                            className="btn btn-primary"
+                                                            className="btn btn-secondary"
                                                             onClick={() => manejarEnviarMensajePendiente(msg)}
                                                             style={{ 
                                                                 padding: '6px 12px', 
                                                                 fontSize: '0.8rem', 
-                                                                background: 'linear-gradient(90deg, #eab308, #ca8a04)',
-                                                                border: 'none',
+                                                                border: '1px solid rgba(255,255,255,0.1)',
                                                                 borderRadius: '4px',
                                                                 cursor: 'pointer',
-                                                                fontWeight: 'bold',
-                                                                color: '#000'
+                                                                fontWeight: 'bold'
                                                             }}
                                                         >
-                                                            ⚡ Enviar
+                                                            🔄 Reintentar
                                                         </button>
                                                     )}
                                                 </td>
@@ -544,7 +723,128 @@ const WhatsApp = () => {
                         )}
                     </div>
                 )}
+
+
+                {/* CONEXIÓN QR */}
+                {activeTab === 'Conexión QR' && (
+                    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                        <h3>🔗 Vinculación de WhatsApp Web</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '30px', fontSize: '0.9rem' }}>
+                            Conecta tu cuenta de WhatsApp para habilitar los envíos automatizados desde el servidor.
+                        </p>
+
+                        <div style={{
+                            maxWidth: '450px',
+                            margin: '0 auto',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            padding: '30px',
+                            borderRadius: '16px'
+                        }}>
+                            {cargandoConexion ? (
+                                <div style={{ padding: '40px 0' }}>
+                                    <div className="spinner" style={{ margin: '0 auto 15px auto', width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                    <p style={{ color: 'var(--text-muted)' }}>Cargando estado del puente...</p>
+                                </div>
+                            ) : (
+                                <div>
+                                    {connectionStatus === 'CONNECTED' && (
+                                        <div style={{ padding: '20px 0' }}>
+                                            <div style={{ fontSize: '4.5rem', marginBottom: '15px' }}>✅</div>
+                                            <h4 style={{ color: '#4ade80', fontSize: '1.25rem', marginBottom: '10px' }}>¡WhatsApp Conectado!</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                                Tu número de WhatsApp está exitosamente vinculado al servidor de Opsatel.
+                                                Los envíos se despacharán de manera instantánea y silenciosa en segundo plano.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {connectionStatus === 'QR_READY' && (
+                                        <div>
+                                            <h4 style={{ color: '#f59e0b', fontSize: '1.2rem', marginBottom: '15px' }}>Escanea el Código QR</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '25px', lineHeight: '1.4' }}>
+                                                Ve a tu celular, abre WhatsApp $\rightarrow$ **Dispositivos Vinculados** y presiona **Vincular Dispositivo**.
+                                            </p>
+                                            
+                                            {qrCodeData ? (
+                                                <div style={{ 
+                                                    background: '#fff', 
+                                                    padding: '15px', 
+                                                    borderRadius: '12px', 
+                                                    display: 'inline-block',
+                                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                                                    marginBottom: '20px'
+                                                }}>
+                                                    <img 
+                                                        src={qrCodeData} 
+                                                        alt="Código QR de WhatsApp" 
+                                                        style={{ width: '220px', height: '220px', display: 'block' }} 
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div style={{
+                                                    height: '220px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    background: 'rgba(0,0,0,0.2)',
+                                                    borderRadius: '12px',
+                                                    marginBottom: '20px',
+                                                    border: '1px dashed rgba(255,255,255,0.1)'
+                                                }}>
+                                                    <span style={{ color: 'var(--text-muted)' }}>Cargando imagen QR...</span>
+                                                </div>
+                                            )}
+                                            
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                El código QR se refresca automáticamente. La sesión persistirá tras conectarse.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {(connectionStatus === 'INITIALIZING' || connectionStatus === 'DISCONNECTED') && (
+                                        <div style={{ padding: '20px 0' }}>
+                                            <div className="spinner" style={{ margin: '0 auto 20px auto', width: '35px', height: '35px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                            <h4 style={{ color: '#f59e0b', fontSize: '1.15rem', marginBottom: '10px' }}>
+                                                {connectionStatus === 'INITIALIZING' ? 'Inicializando Sesión...' : 'Sesión Desconectada'}
+                                            </h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                                El servidor está cargando el motor de WhatsApp Web en segundo plano. Esto puede demorar unos segundos.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {connectionStatus === 'OFFLINE' && (
+                                        <div style={{ padding: '20px 0' }}>
+                                            <div style={{ fontSize: '4rem', marginBottom: '15px' }}>⚠️</div>
+                                            <h4 style={{ color: '#f87171', fontSize: '1.2rem', marginBottom: '10px' }}>Servidor Puente Fuera de Línea</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '20px' }}>
+                                                No se puede conectar con el microservicio en el puerto `3001`. Asegúrate de que el script de Node.js esté ejecutándose en el servidor.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        onClick={() => cargarEstadoConexion(true)}
+                                        style={{ width: '100%', marginTop: '10px' }}
+                                    >
+                                        🔄 Actualizar Estado
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
+            
+            {/* Animación de spin para el spinner de carga */}
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
         </motion.div>
     );
 };

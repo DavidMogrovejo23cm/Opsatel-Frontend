@@ -63,6 +63,18 @@ export const whatsappService = {
   marcarEnviado: (historial_id) =>
     api.post(`/whatsapp/historial/${historial_id}/marcar-enviado`),
 
+  // Obtener estado del puente
+  obtenerStatusBridge: () =>
+    api.get('/whatsapp/status-bridge'),
+
+  // Obtener código QR del puente
+  obtenerQrBridge: () =>
+    api.get('/whatsapp/qr-bridge'),
+
+  // Difusión global masiva
+  enviarGlobal: (mensaje) =>
+    api.post('/whatsapp/enviar-global', { mensaje: mensaje }),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
