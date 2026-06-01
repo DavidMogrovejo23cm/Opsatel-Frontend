@@ -24,6 +24,7 @@ const WhatsApp = () => {
 
     // Estado del puente (Conexión QR)
     const [connectionStatus, setConnectionStatus] = useState('OFFLINE');
+    const [connectionData, setConnectionData] = useState(null);
     const [qrCodeData, setQrCodeData] = useState(null);
     const [cargandoConexion, setCargandoConexion] = useState(false);
 
@@ -48,7 +49,7 @@ const WhatsApp = () => {
             cargarEstadoConexion(false); // Silencioso
         };
 
-        if (activeTab === 'Conexión QR' || connectionStatus !== 'CONNECTED') {
+        if (activeTab === 'Conexión QR' || (connectionStatus !== 'CONNECTED' && connectionStatus !== 'GREEN_API')) {
             poll();
             intervaloConexion = setInterval(poll, 5000);
         }
@@ -62,9 +63,11 @@ const WhatsApp = () => {
         if (mostrarCargando) setCargandoConexion(true);
         try {
             const respuesta = await whatsappService.obtenerStatusBridge();
-            setConnectionStatus(respuesta.data.status);
+            const data = respuesta.data;
+            setConnectionStatus(data.status);
+            setConnectionData(data);
             
-            if (respuesta.data.status === 'QR_READY') {
+            if (data.status === 'QR_READY') {
                 const resQr = await whatsappService.obtenerQrBridge();
                 setQrCodeData(resQr.data.qr);
             } else {
@@ -73,6 +76,7 @@ const WhatsApp = () => {
         } catch (error) {
             console.error("Error cargando estado de conexión:", error);
             setConnectionStatus('OFFLINE');
+            setConnectionData(null);
             setQrCodeData(null);
         } finally {
             if (mostrarCargando) setCargandoConexion(false);
@@ -243,6 +247,17 @@ const WhatsApp = () => {
                 text = 'Desconectado / Offline';
                 color = '#f87171';
                 bgColor = 'rgba(248, 113, 113, 0.15)';
+                break;
+            case 'GREEN_API':
+                text = '✅ Green API Conectado';
+                color = '#4ade80';
+                bgColor = 'rgba(74, 222, 128, 0.15)';
+                break;
+            case 'GREEN_API_NO_CREDENTIALS':
+                text = '⚠️ Green API sin credenciales';
+                color = '#f59e0b';
+                bgColor = 'rgba(245, 158, 11, 0.15)';
+                animate = true;
                 break;
             default:
                 break;
@@ -763,7 +778,7 @@ const WhatsApp = () => {
                                         <div>
                                             <h4 style={{ color: '#f59e0b', fontSize: '1.2rem', marginBottom: '15px' }}>Escanea el Código QR</h4>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '25px', lineHeight: '1.4' }}>
-                                                Ve a tu celular, abre WhatsApp $\rightarrow$ **Dispositivos Vinculados** y presiona **Vincular Dispositivo**.
+                                                Ve a tu celular → Abre WhatsApp → <strong>Dispositivos Vinculados</strong> → <strong>Vincular dispositivo</strong>.
                                             </p>
                                             
                                             {qrCodeData ? (
@@ -799,6 +814,63 @@ const WhatsApp = () => {
                                             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                                 El código QR se refresca automáticamente. La sesión persistirá tras conectarse.
                                             </p>
+                                        </div>
+                                    )}
+
+                                    {/* GREEN API - Configurado correctamente */}
+                                    {connectionStatus === 'GREEN_API' && (
+                                        <div style={{ textAlign: 'left', padding: '10px 0' }}>
+                                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                                <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>🟢</div>
+                                                <h4 style={{ color: '#4ade80', fontSize: '1.2rem', margin: 0 }}>Green API Activo</h4>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '6px' }}>
+                                                    Instancia: <code style={{ color: '#67e8f9' }}>{connectionData?.instance_id}</code>
+                                                </p>
+                                            </div>
+                                            <div style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '10px', padding: '15px', marginBottom: '15px' }}>
+                                                <p style={{ color: '#86efac', fontSize: '0.9rem', margin: '0 0 8px 0' }}>
+                                                    <strong>✅ El backend envía mensajes vía Green API.</strong>
+                                                </p>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: '1.5' }}>
+                                                    La sesión y el QR de WhatsApp se gestionan en el panel de Green API. Si tu número se desconectó o necesitas vincular de nuevo, sigue los pasos de abajo.
+                                                </p>
+                                            </div>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '10px', fontWeight: 'bold' }}>Para vincular / re-vincular tu número:</p>
+                                            <ol style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.8', paddingLeft: '20px' }}>
+                                                <li>Ve a <a href="https://console.green-api.com" target="_blank" rel="noreferrer" style={{ color: '#67e8f9' }}>console.green-api.com</a></li>
+                                                <li>Selecciona tu instancia y haz clic en <strong>"Scan QR code"</strong></li>
+                                                <li>Escanea el QR con tu WhatsApp desde tu celular</li>
+                                                <li>Cuando el estado cambie a <strong>"Online"</strong>, los envíos funcionarán automáticamente</li>
+                                            </ol>
+                                        </div>
+                                    )}
+
+                                    {/* GREEN API - Sin credenciales */}
+                                    {connectionStatus === 'GREEN_API_NO_CREDENTIALS' && (
+                                        <div style={{ padding: '10px 0', textAlign: 'left' }}>
+                                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                                <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>⚙️</div>
+                                                <h4 style={{ color: '#f59e0b', fontSize: '1.2rem' }}>Configurar Green API</h4>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                                    El proveedor es <code>green-api</code> pero faltan las credenciales en el servidor.
+                                                </p>
+                                            </div>
+                                            <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '15px', marginBottom: '15px' }}>
+                                                <p style={{ color: '#fde047', fontSize: '0.85rem', margin: '0 0 8px 0', fontWeight: 'bold' }}>Pasos para configurar:</p>
+                                                <ol style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.9', paddingLeft: '20px', margin: 0 }}>
+                                                    <li>Crea una cuenta gratis en <a href="https://green-api.com" target="_blank" rel="noreferrer" style={{ color: '#67e8f9' }}>green-api.com</a></li>
+                                                    <li>Crea una nueva instancia y copia el <strong>Instance ID</strong> y el <strong>Token</strong></li>
+                                                    <li>En Railway → Variables de entorno del backend, agrega:<br/>
+                                                        <code style={{ color: '#86efac', display: 'block', marginTop: '5px', background: 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                                            WHATSAPP_PROVIDER = green-api<br/>
+                                                            WHATSAPP_INSTANCE_ID = tu_instance_id<br/>
+                                                            WHATSAPP_TOKEN = tu_token_api
+                                                        </code>
+                                                    </li>
+                                                    <li>Redeploy del backend en Railway</li>
+                                                    <li>Escanea el QR en el panel de Green API con tu WhatsApp</li>
+                                                </ol>
+                                            </div>
                                         </div>
                                     )}
 
