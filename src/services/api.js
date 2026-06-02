@@ -1,12 +1,8 @@
 import axios from 'axios';
 
-// ========================================================================
-// CONEXIÓN FRONTEND -> BACKEND (API)
-// ========================================================================
-// Aquí es donde React se comunica con FastAPI. 
-// Axios actúa como el puente que envía y trae datos hacia la Base de Datos.
-// Si el backend se mueve a un servidor real, debes cambiar esto por la IP pública o dominio.
-const API_BASE_URL = 'https://web-production-d6621.up.railway.app';
+// En desarrollo local: Vite proxy redirige automáticamente al backend en localhost:8000
+// En producción (Railway/VPS): Cambiar por la URL del backend desplegado.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -83,6 +79,9 @@ export const clienteService = {
   }),
   uploadDatabase: (formData) => api.post('/clientes/upload-db', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  downloadDatabase: () => api.get('/clientes/descargar-completo', {
+    responseType: 'blob'
   }),
 };
 

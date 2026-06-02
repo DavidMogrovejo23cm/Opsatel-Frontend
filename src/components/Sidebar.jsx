@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/extras-pagos', label: 'Extra Pagos', icon: '💸', roles: ['administrador'] },
     { path: '/asistencia', label: 'Asistencia', icon: '⏰', roles: ['administrador', 'secretario', 'tecnico', 'instalador'] },
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
-    { path: '/upload-db', label: 'Subir BD', icon: '📤', roles: ['administrador'] },
+    { path: '/upload-db', label: 'Base de Datos', icon: '📂', roles: ['administrador'] },
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
   ];
 
