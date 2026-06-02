@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// En desarrollo local: usa el proxy de Vite (rutas relativas → localhost:8000)
-// En producción: define VITE_API_URL en el entorno del frontend
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// En desarrollo local (Vite dev server): usa el proxy vacío para redirigir a localhost:8000
+// En producción (desplegado): usa la URL del backend en Railway por defecto
+const API_BASE_URL = import.meta.env.DEV 
+  ? '' 
+  : (import.meta.env.VITE_API_URL || 'https://web-production-d6621.up.railway.app');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
