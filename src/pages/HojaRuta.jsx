@@ -75,11 +75,20 @@ const HojaRuta = () => {
     const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
         const term = clientSearchTerm.toLowerCase();
+
+        // Clientes que ya tienen instalación programada (ignorar el registro que se está editando)
+        const clientesYaProgramados = new Set(
+            registros
+                .filter(r => r.cliente_id && r.id !== editingId)
+                .map(r => r.cliente_id)
+        );
+
         return clientes
             .filter(c => {
                 if (modalSource === 'CLIENTE') {
                     const state = c.estado?.toLowerCase() || '';
-                    return state === 'pendiente' || state === 'pendiente de activacion';
+                    const yaAgendado = clientesYaProgramados.has(c.id);
+                    return (state === 'pendiente' || state === 'pendiente de activacion') && !yaAgendado;
                 }
                 return c.estado?.toUpperCase() === 'ACTIVO';
             })
@@ -90,7 +99,7 @@ const HojaRuta = () => {
                 c.parroquia?.toLowerCase().includes(term)
             )
             .sort((a, b) => a.id - b.id);
-    }, [clientes, clientSearchTerm, modalSource]);
+    }, [clientes, clientSearchTerm, modalSource, registros, editingId]);
 
     const [dateFilter, setDateFilter] = useState('');
 
@@ -364,11 +373,35 @@ const HojaRuta = () => {
                                         <td style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#fff' }}>{r.tecnico}</td>
                                         <td>
                                             <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{r.nombre_cliente}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.celular_cliente}</div>
+                                            {r.celular_cliente ? (
+                                                <a
+                                                    href={`https://wa.me/${r.celular_cliente.replace(/[^0-9]/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ fontSize: '0.7rem', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                    title="Abrir en WhatsApp"
+                                                >
+                                                    📱 {r.celular_cliente}
+                                                </a>
+                                            ) : (
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</div>
+                                            )}
                                         </td>
                                         <td>
                                             <div style={{ fontSize: '0.75rem' }}>{r.parroquia}</div>
-                                            <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{r.ubicacion_cliente}</div>
+                                            {r.ubicacion_cliente ? (
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.ubicacion_cliente)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ fontSize: '0.65rem', color: '#60a5fa', textDecoration: 'none', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                    title="Abrir en Google Maps"
+                                                >
+                                                    📍 {r.ubicacion_cliente}
+                                                </a>
+                                            ) : (
+                                                <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>—</div>
+                                            )}
                                         </td>
                                         <td>
                                             <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>

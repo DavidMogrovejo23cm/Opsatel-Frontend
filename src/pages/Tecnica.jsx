@@ -335,15 +335,15 @@ const Tecnica = () => {
             style={{ width: '100%', fontSize: '0.9rem' }}
           />
         </div>
-        {clientes.filter(c => 
-          c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) || 
+        {clientes.filter(c =>
+          c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) ||
           c.id.toString().includes(searchPendientes)
         ).length === 0 ? (
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No hay pendientes de activación.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {clientes.filter(c => 
-              c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) || 
+            {clientes.filter(c =>
+              c.nombre.toLowerCase().includes(searchPendientes.toLowerCase()) ||
               c.id.toString().includes(searchPendientes)
             ).map(c => (
               <div
@@ -418,7 +418,7 @@ const Tecnica = () => {
               </div>
 
               {/* Las textareas de ONT, Servicio y Breach se han movido a la página de ONT según requerimiento */}
-              
+
               <div className="input-group">
                 <label className="label">ID Port</label>
                 <input
@@ -458,7 +458,7 @@ const Tecnica = () => {
               </div>
 
               <div className="input-group">
-                <label className="label">Potencia (Rango: -6 a -27)</label>
+                <label className="label">Potencia (Rango: -6 a -24)</label>
                 <input
                   className="input"
                   name="potencia"

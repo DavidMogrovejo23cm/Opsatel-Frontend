@@ -1,22 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'https://web-production-d6621.up.railway.app';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor para inyectar Token en cada petición
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import api from './api';
 
 export const whatsappService = {
   // Envío manual

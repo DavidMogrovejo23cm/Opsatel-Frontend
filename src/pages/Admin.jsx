@@ -270,6 +270,7 @@ const Admin = () => {
                 <th>Plan Base</th>
                 <th>Pantallas IPTV</th>
                 <th>Pendiente</th>
+                <th>Instalación / Últ. Visita</th>
                 <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
               </tr>
@@ -357,6 +358,25 @@ const Admin = () => {
                         ${parseFloat(c.total_pago).toFixed(2)}
                       </span>
                     )}
+                  </td>
+                  <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                    {(() => {
+                      const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
+                      const instRecord = clientHR.find(h => h.actividad?.toUpperCase() === 'INSTALACION');
+                      const fInstalacion = instRecord ? instRecord.fecha : (c.instalation_date || '-');
+                      
+                      const visitRecords = clientHR
+                        .filter(h => h.actividad?.toUpperCase() === 'VISITA TECNICA' && h.fecha)
+                        .sort((a, b) => b.fecha.localeCompare(a.fecha));
+                      const fVisita = visitRecords.length > 0 ? visitRecords[0].fecha : '-';
+                      
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div><span style={{ color: 'var(--text-muted)' }}>Inst:</span> {fInstalacion}</div>
+                          <div><span style={{ color: 'var(--text-muted)' }}>Visita:</span> {fVisita}</div>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td style={{ fontSize: '0.75rem', color: '#a78bfa', whiteSpace: 'pre-wrap', maxWidth: '180px' }}>
                     {c.notas_pago || '-'}
