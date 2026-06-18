@@ -1271,7 +1271,7 @@ const Balance = () => {
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button onClick={fetchMensual} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>🔄 Refrescar</button>
-            <button onClick={handleExportar} style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: '0 4px 15px rgba(99,102,241,0.3)' }}>📥 Exportar Reporte</button>
+            <button onClick={handleExportar} title="Genera el reporte Excel mensual estructurado con formato para la presentación ante el regulador ARCOTEL" style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', transition: 'transform 0.2s' }}>📥 Exportar Arcotel</button>
           </div>
         </div>
 

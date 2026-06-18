@@ -153,7 +153,7 @@ const Tickets = () => {
                             <h2 style={{ marginBottom: '24px' }}>📝 Nuevo Ticket de Desarrollo</h2>
                             
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label className="label">Título del Ticket</label>
+                                <label className="label">Título del asunto</label>
                                 <input 
                                     className="input" 
                                     placeholder="Ej: Error en el cálculo de IPTV..." 
