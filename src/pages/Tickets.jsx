@@ -163,7 +163,7 @@ const Tickets = () => {
                             </div>
 
                             <div className="form-group">
-                                <label className="label">Descripción Detallada (Permite Pegar Fotos Ctrl+V)</label>
+                                <label className="label">Descripción Detallada del ticket (Permite Pegar Fotos Ctrl+V)</label>
                                 <div 
                                     ref={contentRef}
                                     contentEditable
