@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 
-const API_BASE_URL = 'http://127.0.0.1:8000'; // Make sure this matches api.js
+const API_BASE_URL = ''; // Use same origin and nginx proxy in production
 
 const Reportes = () => {
   const [reportes, setReportes] = useState([]);

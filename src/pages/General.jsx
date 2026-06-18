@@ -301,8 +301,8 @@ const General = () => {
                               }
                               if (col === 'fotos_cedula') {
                                 return <div style={{ display: 'flex', gap: '8px' }}>
-                                  {c.cedula_frontal && <a href={`http://127.0.0.1:8000${c.cedula_frontal}`} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
-                                  {c.cedula_posterior && <a href={`http://127.0.0.1:8000${c.cedula_posterior}`} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
+                                  {c.cedula_frontal && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
+                                  {c.cedula_posterior && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
                                   {!c.cedula_frontal && !c.cedula_posterior && '-'}
                                 </div>;
                               }
