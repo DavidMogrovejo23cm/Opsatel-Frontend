@@ -26,6 +26,7 @@ const Tecnica = () => {
   const [nodosList, setNodosList] = useState([]);
   const [puertosList, setPuertosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
+  const [cajasNapList, setCajasNapList] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -35,14 +36,16 @@ const Tecnica = () => {
         c.estado?.toUpperCase() === 'PENDIENTE'
       ).sort((a, b) => a.id - b.id));
 
-      const [paRes, puRes, plRes] = await Promise.all([
+      const [paRes, puRes, plRes, cnRes] = await Promise.all([
         configuracionService.getNodos(),
         configuracionService.getPuertos(),
-        configuracionService.getPlanes()
+        configuracionService.getPlanes(),
+        configuracionService.getCajasNap().catch(() => ({ data: [] }))
       ]);
       setNodosList(paRes.data);
       setPuertosList(puRes.data);
       setPlanesList(plRes.data);
+      setCajasNapList(cnRes.data);
     } catch (error) {
       console.error("Error fetching data", error);
     }
@@ -488,8 +491,39 @@ const Tecnica = () => {
               </div>
 
               <div className="input-group">
-                <label className="label">NAP</label>
-                <input className="input" name="nap" value={formData.nap} onChange={handleChange} required />
+                <label className="label">Caja NAP</label>
+                <select
+                  className="input"
+                  name="nap"
+                  value={formData.nap}
+                  onChange={handleChange}
+                  required
+                  style={{ appearance: 'none', background: 'rgba(255, 255, 255, 0.03)', color: 'var(--text-main)' }}
+                >
+                  <option value="">Seleccione Caja NAP...</option>
+                  {(() => {
+                    const nodoObj = nodosList.find(n => n.nombre?.toUpperCase() === selectedCliente?.nodo?.toUpperCase());
+                    const cajasFiltradas = nodoObj
+                      ? cajasNapList.filter(c => c.nodo_id === nodoObj.id)
+                      : cajasNapList;
+                    return cajasFiltradas.map(c => (
+                      <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                    ));
+                  })()}
+                  {formData.nap && !cajasNapList.some(c => c.nombre === formData.nap) && (
+                    <option value={formData.nap}>{formData.nap}</option>
+                  )}
+                </select>
+                {(() => {
+                  const nodoObj = nodosList.find(n => n.nombre?.toUpperCase() === selectedCliente?.nodo?.toUpperCase());
+                  const cajasFiltradas = nodoObj ? cajasNapList.filter(c => c.nodo_id === nodoObj.id) : cajasNapList;
+                  if (cajasFiltradas.length === 0) return (
+                    <span style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
+                      ⚠️ Sin cajas para este nodo. Añádalas en Configuraciones → Cajas NAP.
+                    </span>
+                  );
+                  return null;
+                })()}
               </div>
 
               <div className="input-group">

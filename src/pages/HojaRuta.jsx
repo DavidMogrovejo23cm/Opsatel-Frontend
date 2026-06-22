@@ -122,24 +122,18 @@ const HojaRuta = () => {
             return true;
         });
 
-        // Ordenamiento: 1. Fecha Pedido (created_at desc), 2. Fecha Programacion (fecha), 3. Hora (hora)
-        // Ordenamiento: 1. Fecha Programada (fecha), 2. Hora (hora), 3. Fecha Creación (created_at desc)
+        // Ordenamiento: 1. F. Pedido (created_at) descendente, 2. Fecha Programada descendente, 3. Hora descendente
         return filtered.sort((a, b) => {
-            // Primero por fecha programada
-            if (a.fecha !== b.fecha) {
-                // Asumiendo formato YYYY-MM-DD
-                return a.fecha.localeCompare(b.fecha);
-            }
-
-            // Luego por hora
-            if (a.hora !== b.hora) {
-                return a.hora.localeCompare(b.hora);
-            }
-
-            // Luego por fecha de creación (pedido) - el más nuevo arriba si coinciden fecha y hora
+            // Primero por fecha de pedido — el más reciente arriba
             const dateA = new Date(a.created_at || 0).getTime();
             const dateB = new Date(b.created_at || 0).getTime();
-            return dateB - dateA;
+            if (dateA !== dateB) return dateB - dateA;
+
+            // Luego por fecha programada descendente
+            if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
+
+            // Luego por hora ascendente — la más temprana arriba (08:00 → 10:00 → 18:00)
+            return (a.hora || '').localeCompare(b.hora || '');
         });
     }, [registros, searchTerm, dateFilter]);
 

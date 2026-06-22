@@ -261,7 +261,7 @@ const Configuraciones = () => {
 
     const handleEditCajaNap = (caja) => {
         setIsEditingCajaNap(caja.id);
-        setNewCajaNap({ nombre: caja.nombre });
+        setNewCajaNap({ nombre: caja.nombre, nodo_id: caja.nodo_id || null });
         setActiveTab('Cajas NAP');
     };
 
@@ -387,17 +387,31 @@ const Configuraciones = () => {
                 {activeTab === 'Cajas NAP' && (
                     <div>
                         <h3>Añadir Caja NAP</h3>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre de la Caja NAP</label>
-                                <input className="input" style={{ margin: 0 }} value={newCajaNap.nombre} onChange={e => setNewCajaNap({ nombre: e.target.value.toUpperCase() })} placeholder="Ej. CAJA 1804" />
+                                <input className="input" style={{ margin: 0 }} value={newCajaNap.nombre} onChange={e => setNewCajaNap({ ...newCajaNap, nombre: e.target.value.toUpperCase() })} placeholder="Ej. CAJA 1804" />
+                            </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Nodo / Zona</label>
+                                <select
+                                    className="input"
+                                    style={{ margin: 0, background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)' }}
+                                    value={newCajaNap.nodo_id || ''}
+                                    onChange={e => setNewCajaNap({ ...newCajaNap, nodo_id: e.target.value ? parseInt(e.target.value) : null })}
+                                >
+                                    <option value="">Sin nodo asignado</option>
+                                    {nodos.map(n => (
+                                        <option key={n.id} value={n.id}>{n.nombre}</option>
+                                    ))}
+                                </select>
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Cajas NAP')}>{isEditingCajaNap ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingCajaNap && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingCajaNap(null); setNewCajaNap({ nombre: '' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingCajaNap(null); setNewCajaNap({ nombre: '', nodo_id: null }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable(cajasNap, ['id', 'nombre'], 'Cajas NAP')}
+                        {renderTable(cajasNap, ['id', 'nombre', 'nodo_nombre'], 'Cajas NAP')}
                     </div>
                 )}
 
