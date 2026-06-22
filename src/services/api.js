@@ -127,6 +127,11 @@ export const configuracionService = {
   crearParroquia: (data) => api.post('/configuraciones/parroquias', data),
   actualizarParroquia: (id, data) => api.patch(`/configuraciones/parroquias/${id}`, data),
   eliminarParroquia: (id) => api.delete(`/configuraciones/parroquias/${id}`),
+  // Cajas NAP
+  getCajasNap: () => api.get('/configuraciones/cajas-nap'),
+  crearCajaNap: (data) => api.post('/configuraciones/cajas-nap', data),
+  actualizarCajaNap: (id, data) => api.patch(`/configuraciones/cajas-nap/${id}`, data),
+  eliminarCajaNap: (id) => api.delete(`/configuraciones/cajas-nap/${id}`),
   // Eliminar todos los clientes
   deleteAllClientes: () => api.delete('/clientes/all'),
   getCurrentUser: () => {

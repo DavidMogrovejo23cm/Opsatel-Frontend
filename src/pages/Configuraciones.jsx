@@ -11,6 +11,7 @@ const Configuraciones = () => {
     const [bancos, setBancos] = useState([]);
     const [puertos, setPuertos] = useState([]);
     const [parroquias, setParroquias] = useState([]);
+    const [cajasNap, setCajasNap] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
     const [finanzasBase, setFinanzasBase] = useState({ caja_chica: '0.00', pichincha: '0.00', jep: '0.00' });
 
@@ -28,6 +29,8 @@ const Configuraciones = () => {
     const [isEditingPuerto, setIsEditingPuerto] = useState(null);
     const [newParroquia, setNewParroquia] = useState({ nombre: '' });
     const [isEditingParroquia, setIsEditingParroquia] = useState(null);
+    const [newCajaNap, setNewCajaNap] = useState({ nombre: '' });
+    const [isEditingCajaNap, setIsEditingCajaNap] = useState(null);
     const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
 
     const fetchData = async () => {
@@ -35,14 +38,14 @@ const Configuraciones = () => {
         const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
 
         try {
-            // Reemplazo Promise.all por peticiones con manejo de error individual para que no se rompa todo si falla una (ej: 401/403 de usuarios)
-            const [paRes, plRes, baRes, puRes, ppRes, finRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes] = await Promise.all([
                 configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
                 configuracionService.getPuertos().catch(e => ({ data: [] })),
                 configuracionService.getParroquias().catch(e => ({ data: [] })),
-                configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } }))
+                configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } })),
+                configuracionService.getCajasNap().catch(e => ({ data: [] }))
             ]);
             
             setNodos(paRes.data);
@@ -50,6 +53,7 @@ const Configuraciones = () => {
             setBancos(baRes.data);
             setPuertos(puRes.data);
             setParroquias(ppRes.data);
+            setCajasNap(cnRes.data);
             
             if (finRes.data) {
                 setFinanzasBase({
@@ -101,7 +105,7 @@ const Configuraciones = () => {
                     nombre: newPlan.nombre, 
                     megas: parseInt(newPlan.megas) || 0,
                     precio: parseFloat(newPlan.precio),
-                    pantallas: parseInt(newPlan.pantallas) || 1
+                    pantallas: parseInt(newPlan.pantallas) === 0 ? 0 : (parseInt(newPlan.pantallas) || 1)
                 };
                 if (isEditingPlan) {
                     await configuracionService.actualizarPlan(isEditingPlan, planData);
@@ -178,6 +182,17 @@ const Configuraciones = () => {
                 }
                 setNewParroquia({ nombre: '' });
                 setIsEditingParroquia(null);
+            } else if (type === 'Cajas NAP') {
+                if (!newCajaNap.nombre?.trim()) return alert('El nombre es obligatorio');
+                if (isEditingCajaNap) {
+                    await configuracionService.actualizarCajaNap(isEditingCajaNap, newCajaNap);
+                    alert('Caja NAP actualizada');
+                } else {
+                    await configuracionService.crearCajaNap(newCajaNap);
+                    alert('Caja NAP creada');
+                }
+                setNewCajaNap({ nombre: '' });
+                setIsEditingCajaNap(null);
             }
             fetchData();
         } catch (error) {
@@ -194,6 +209,7 @@ const Configuraciones = () => {
             if (type === 'Puertos') await configuracionService.eliminarPuerto(id);
             if (type === 'Usuarios') await configuracionService.eliminarUsuario(id);
             if (type === 'Parroquias') await configuracionService.eliminarParroquia(id);
+            if (type === 'Cajas NAP') await configuracionService.eliminarCajaNap(id);
             fetchData();
         } catch (error) {
             alert('Error al eliminar');
@@ -243,7 +259,13 @@ const Configuraciones = () => {
         setActiveTab('Parroquias');
     };
 
-    const tabs = ['Nodos', 'Parroquias', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base', 'Eliminar Clientes'];
+    const handleEditCajaNap = (caja) => {
+        setIsEditingCajaNap(caja.id);
+        setNewCajaNap({ nombre: caja.nombre });
+        setActiveTab('Cajas NAP');
+    };
+
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base', 'Eliminar Clientes'];
 
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
@@ -277,6 +299,9 @@ const Configuraciones = () => {
                                 )}
                                 {type === 'Parroquias' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditParroquia(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
+                                )}
+                                {type === 'Cajas NAP' && (
+                                    <button className="btn btn-secondary" onClick={() => handleEditCajaNap(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                 )}
                                 {type === 'Planes' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditPlan(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
@@ -356,6 +381,23 @@ const Configuraciones = () => {
                             )}
                         </div>
                         {renderTable(parroquias, ['id', 'nombre'], 'Parroquias')}
+                    </div>
+                )}
+
+                {activeTab === 'Cajas NAP' && (
+                    <div>
+                        <h3>Añadir Caja NAP</h3>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Nombre de la Caja NAP</label>
+                                <input className="input" style={{ margin: 0 }} value={newCajaNap.nombre} onChange={e => setNewCajaNap({ nombre: e.target.value.toUpperCase() })} placeholder="Ej. CAJA 1804" />
+                            </div>
+                            <button className="btn btn-primary" onClick={() => handleCreate('Cajas NAP')}>{isEditingCajaNap ? 'Actualizar' : 'Guardar'}</button>
+                            {isEditingCajaNap && (
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingCajaNap(null); setNewCajaNap({ nombre: '' }); }}>Cancelar</button>
+                            )}
+                        </div>
+                        {renderTable(cajasNap, ['id', 'nombre'], 'Cajas NAP')}
                     </div>
                 )}
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { hojaRutaService, clienteService } from '../services/api';
+import { hojaRutaService, clienteService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
     const [clientes, setClientes] = useState([]);
+    const [cajasNap, setCajasNap] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showObsModal, setShowObsModal] = useState(false);
@@ -40,12 +41,14 @@ const HojaRuta = () => {
     const fetchData = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
-            const [hrRes, clRes] = await Promise.all([
+            const [hrRes, clRes, cnRes] = await Promise.all([
                 hojaRutaService.listar(),
-                clienteService.listar()
+                clienteService.listar(),
+                configuracionService.getCajasNap().catch(e => ({ data: [] }))
             ]);
             setRegistros(hrRes.data || []);
             setClientes(clRes.data || []);
+            setCajasNap(cnRes.data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -599,7 +602,20 @@ const HojaRuta = () => {
                                         </div>
                                         <div>
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Caja NAP / Referencia Lógica</label>
-                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_caja} onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })} placeholder="Ej: CAJA 1804" />
+                                            <select
+                                                className="input"
+                                                style={{ width: '100%', padding: '12px', boxSizing: 'border-box', background: '#1e293b', color: 'white' }}
+                                                value={formData.ubicacion_caja || ''}
+                                                onChange={e => setFormData({ ...formData, ubicacion_caja: e.target.value })}
+                                            >
+                                                <option value="">Seleccione una Caja NAP...</option>
+                                                {cajasNap.map(c => (
+                                                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                                                ))}
+                                                {formData.ubicacion_caja && !cajasNap.some(c => c.nombre === formData.ubicacion_caja) && (
+                                                    <option value={formData.ubicacion_caja}>{formData.ubicacion_caja}</option>
+                                                )}
+                                            </select>
                                         </div>
                                     </div>
 
