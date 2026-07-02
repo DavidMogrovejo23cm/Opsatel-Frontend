@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
+const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
   const { user, logout } = useAuth();
   const [pendientesCount, setPendientesCount] = React.useState(0);
   const navigate = useNavigate();
@@ -22,6 +22,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     const interval = setInterval(fetchCount, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleRefreshClick = async () => {
+    try {
+      const res = await clienteService.getPendientesCount();
+      setPendientesCount(res.data.count);
+    } catch (e) {
+      console.error('Error fetching pendientes count on refresh:', e);
+    }
+    if (typeof onRefresh === 'function') {
+      onRefresh();
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -96,6 +108,32 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             }}>
               OPSATEL
             </h2>
+            <motion.button
+              onClick={handleRefreshClick}
+              title="Actualizar datos"
+              whileHover={{ scale: 1.15, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '50%',
+                width: '26px',
+                height: '26px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'rgba(255, 255, 255, 0.85)',
+                marginLeft: '8px',
+                padding: 0,
+                fontSize: '0.8rem',
+                outline: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+            >
+              🔄
+            </motion.button>
           </div>
           {/* Close button — only visible when sidebar is open as drawer (mobile) */}
           <button
@@ -159,6 +197,27 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       flexShrink: 0
                     }}
                   />
+                )}
+                {item.path === '/hoja-ruta' && pendientesCount > 0 && (
+                  <span
+                    style={{
+                      background: '#f87171',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      borderRadius: '50%',
+                      minWidth: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      boxShadow: '0 0 8px rgba(248,113,113,0.8)',
+                      flexShrink: 0
+                    }}
+                  >
+                    {pendientesCount}
+                  </span>
                 )}
               </NavLink>
             );

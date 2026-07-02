@@ -4,6 +4,11 @@ import Sidebar from './Sidebar';
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -14,7 +19,7 @@ const Layout = () => {
         onClick={() => setIsSidebarOpen(false)}
       />
 
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} onRefresh={handleRefresh} />
       
       <main style={{ 
         marginLeft: 'var(--sidebar-width)', 
@@ -25,7 +30,7 @@ const Layout = () => {
         transition: 'all 0.3s ease'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <Outlet />
+          <Outlet key={refreshKey} />
         </div>
       </main>
 

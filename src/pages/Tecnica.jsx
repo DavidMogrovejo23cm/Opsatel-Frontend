@@ -109,7 +109,11 @@ const Tecnica = () => {
     setHasBreach(false);
     setEditUbicacion(false);
 
-    const hasIptv = (cliente.iptv_max_conn || 0) > 0 || (parseFloat(cliente.plus || 0) > 0);
+    const planBase = planesList.find(p => p.nombre === cliente.plan);
+    const basePantallas = planBase ? (planBase.pantallas ?? 0) : 0;
+    const extraPantallas = parseFloat(cliente.plus || 0) / 2;
+    const totalPantallas = basePantallas + extraPantallas;
+    const hasIptv = totalPantallas > 0;
 
     // Generar username: ID + Primer Apellido + Primera Letra Nombre
     const nameParts = (cliente.nombre || '').trim().split(' ').filter(p => p.length > 0);
@@ -134,11 +138,7 @@ const Tecnica = () => {
       iptv_pass: hasIptv ? 'TV' + new Date().getFullYear() + '.@' : '',
       iptv_bouquets: hasIptv ? '[1,2,5]' : '[]',
       iptv_exp_date: hasIptv ? 'Nunca' : '',
-      // Prioritize the calculated screen count if plus is set, otherwise use stored iptv_max_conn
-      iptv_max_conn: (() => {
-        const baseScreens = planesList.find(p => p.nombre === cliente.plan)?.pantallas || 1;
-        return (parseFloat(cliente.plus || 0) > 0) ? (parseFloat(cliente.plus || 0) / 2 + baseScreens) : (cliente.iptv_max_conn || baseScreens);
-      })(),
+      iptv_max_conn: hasIptv ? totalPantallas : 0,
       iptv_outputs: hasIptv ? '[1,2]' : '[]',
       iptv_notes: '', iptv_member_id: 1
     });
@@ -209,7 +209,8 @@ const Tecnica = () => {
       // Prefer calculation from plus if it exists, otherwise use stored value
       // Las extras se calculan del valor 'plus' sumado a las base del plan
       iptv_max_conn: checked ? (() => {
-        const baseScreens = planesList.find(p => p.nombre === selectedCliente.plan)?.pantallas || 1;
+        const planBase = planesList.find(p => p.nombre === selectedCliente.plan);
+        const baseScreens = planBase ? (planBase.pantallas ?? 0) : 0;
         return (parseFloat(selectedCliente.plus || 0) > 0) ? (parseFloat(selectedCliente.plus || 0) / 2 + baseScreens) : baseScreens;
       })() : 0,
       plus: checked ? (selectedCliente.plus || '0') : '0'

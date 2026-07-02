@@ -321,10 +321,16 @@ const Admin = () => {
                   <td>
                     <input
                       type="number"
-                      value={(parseFloat(c.plus || 0) / 2 + (planesList.find(p => p.nombre === c.plan)?.pantallas || 1))}
+                      value={(() => {
+                        const planData = planesList.find(p => p.nombre === c.plan);
+                        const base = planData ? (planData.pantallas ?? 0) : 0;
+                        return base + parseFloat(c.plus || 0) / 2;
+                      })()}
                       onChange={async (e) => {
-                        const val = parseInt(e.target.value) || 1;
-                        const baseScreens = planesList.find(p => p.nombre === c.plan)?.pantallas || 1;
+                        const val = parseInt(e.target.value);
+                        if (isNaN(val) || val < 0) return;
+                        const planData = planesList.find(p => p.nombre === c.plan);
+                        const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
                         try {
                           await clienteService.updateAdmin(c.id, {
                             iptv_max_conn: val,
@@ -335,7 +341,7 @@ const Admin = () => {
                           console.error(error);
                         }
                       }}
-                      min="1"
+                      min="0"
                       style={{
                         width: '70px',
                         background: 'rgba(255,255,255,0.05)',
@@ -438,7 +444,8 @@ const Admin = () => {
                 border: '1px solid rgba(59, 130, 246, 0.3)',
                 boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                background: '#151030'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
@@ -547,7 +554,13 @@ const Admin = () => {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               className="glass glass-card"
-              style={{ width: '100%', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', position: 'relative' }}
+              style={{
+                width: '100%',
+                padding: '32px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                position: 'relative',
+                background: '#151030'
+              }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h2 style={{ margin: 0 }}>Registrar Pago</h2>
@@ -577,7 +590,11 @@ const Admin = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(parseFloat(pagoData.plus || 0) / 2 + (planesList.find(p => p.nombre === selectedCliente?.plan)?.pantallas || 1))} Pantallas):</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(() => {
+                    const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
+                    const base = planData ? (planData.pantallas ?? 0) : 0;
+                    return base + parseFloat(pagoData.plus || 0) / 2;
+                  })()} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                     ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
                   </span>
