@@ -191,16 +191,30 @@ const Ventas = () => {
     setLoading(true);
     setMessage(null);
     console.log("Enviando contrato con parroquia:", formData.parroquia);
+    let clienteId = null;
     try {
       const response = await clienteService.crear(formData);
-      const clienteId = response.data.id;
+      clienteId = response.data.id;
 
       // Subir fotos si existen
       if (fileFrontal || filePosterior) {
-        const uploadData = new FormData();
-        if (fileFrontal) uploadData.append('frontal', fileFrontal);
-        if (filePosterior) uploadData.append('posterior', filePosterior);
-        await clienteService.uploadCedula(clienteId, uploadData);
+        try {
+          const uploadData = new FormData();
+          if (fileFrontal) uploadData.append('frontal', fileFrontal);
+          if (filePosterior) uploadData.append('posterior', filePosterior);
+          await clienteService.uploadCedula(clienteId, uploadData);
+        } catch (uploadError) {
+          // Si falla la subida de fotos, eliminar el cliente para no dejar registros huérfanos
+          try { await clienteService.eliminar(clienteId); } catch (_) {}
+          const detail = uploadError.response?.data?.detail;
+          const errText = typeof detail === 'string'
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map(d => `${d.loc?.join('.') ?? ''}: ${d.msg}`).join(' | ')
+              : 'Error al subir las fotos de la cédula. El cliente no fue registrado.';
+          setMessage({ type: 'error', text: errText });
+          return;
+        }
       }
 
       setMessage({ type: 'success', text: `Cliente ${response.data.nombre} creado con éxito. ID: ${clienteId}` });
@@ -217,7 +231,23 @@ const Ventas = () => {
       setFileFrontal(null);
       setFilePosterior(null);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al crear el cliente. Verifique los datos.' });
+      // Parsear y mostrar el error exacto retornado por el backend
+      const detail = error.response?.data?.detail;
+      let errText = 'Error al crear el cliente.';
+      if (typeof detail === 'string') {
+        errText = detail;
+      } else if (Array.isArray(detail)) {
+        // Errores de validación Pydantic: [{loc: [...], msg: '...', type: '...'}, ...]
+        errText = detail.map(d => {
+          const field = d.loc ? d.loc.filter(l => l !== 'body').join(' → ') : '';
+          return field ? `Campo "${field}": ${d.msg}` : d.msg;
+        }).join('\n');
+      } else if (detail && typeof detail === 'object') {
+        errText = JSON.stringify(detail);
+      } else if (error.message) {
+        errText = error.message;
+      }
+      setMessage({ type: 'error', text: errText });
     } finally {
       setLoading(false);
     }
@@ -578,9 +608,12 @@ const Ventas = () => {
             marginBottom: '20px',
             background: message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             border: message.type === 'success' ? '1px solid #22c55e' : '1px solid #ef4444',
-            color: message.type === 'success' ? '#4ade80' : '#f87171'
+            color: message.type === 'success' ? '#4ade80' : '#f87171',
+            whiteSpace: 'pre-line',
+            fontSize: '0.9rem',
+            lineHeight: '1.6'
           }}>
-            {message.text}
+            {message.type === 'error' ? '⚠️ ' : '✅ '}{message.text}
           </div>
         )}
 

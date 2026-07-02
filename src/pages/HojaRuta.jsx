@@ -6,6 +6,7 @@ const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
     const [clientes, setClientes] = useState([]);
     const [cajasNap, setCajasNap] = useState([]);
+    const [planesList, setPlanesList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showObsModal, setShowObsModal] = useState(false);
@@ -41,14 +42,16 @@ const HojaRuta = () => {
     const fetchData = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
-            const [hrRes, clRes, cnRes] = await Promise.all([
+            const [hrRes, clRes, cnRes, plRes] = await Promise.all([
                 hojaRutaService.listar(),
                 clienteService.listar(),
-                configuracionService.getCajasNap().catch(e => ({ data: [] }))
+                configuracionService.getCajasNap().catch(e => ({ data: [] })),
+                configuracionService.getPlanes().catch(e => ({ data: [] }))
             ]);
             setRegistros(hrRes.data || []);
             setClientes(clRes.data || []);
             setCajasNap(cnRes.data || []);
+            setPlanesList(plRes.data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -502,12 +505,39 @@ const HojaRuta = () => {
                                     {/* CUADRO DE INFORMACIÓN DEL CLIENTE (CONTRACT DATA) */}
                                     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '20px', flex: 1 }}>
                                         <h3 style={{ fontSize: '0.8rem', color: '#818cf8', textTransform: 'uppercase', marginBottom: '15px', letterSpacing: '0.05em' }}>Previsualización Contrato</h3>
-                                        {selectedClient ? (
+                                        {selectedClient ? (() => {
+                                            const planInfo = planesList.find(p => p.nombre === selectedClient.plan);
+                                            const baseScreens = planInfo?.pantallas ?? 0;
+                                            const totalScreens = selectedClient.iptv_max_conn ?? 0;
+                                            const additionalScreens = Math.max(0, totalScreens - baseScreens);
+                                            return (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div>
                                                     <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Cliente Seleccionado</label>
                                                     <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{selectedClient.nombre}</div>
                                                 </div>
+                                                {/* CAMPO DE PANTALLAS IPTV - Solo visible en modo INSTALACIÓN */}
+                                                {modalSource === 'CLIENTE' && (
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Pantallas IPTV Contratadas</label>
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '10px',
+                                                            marginTop: '6px',
+                                                            background: 'rgba(129, 140, 248, 0.08)',
+                                                            border: '1px solid rgba(129, 140, 248, 0.3)',
+                                                            borderRadius: '10px',
+                                                            padding: '10px 14px'
+                                                        }}>
+                                                            <span style={{ fontSize: '1.6rem', fontWeight: 900, color: '#a78bfa', lineHeight: 1 }}>{totalScreens}</span>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>
+                                                                <span>📺 {baseScreens} del plan</span>
+                                                                <span>➕ {additionalScreens} adicional{additionalScreens !== 1 ? 'es' : ''}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {selectedClient.comentarios ? (
                                                     <div>
                                                         <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Comentarios Contrato</label>
@@ -519,7 +549,8 @@ const HojaRuta = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                        ) : editingId ? (
+                                            );
+                                        })() : editingId ? (
                                             <div style={{ textAlign: 'center', opacity: 0.5 }}>
                                                 <p style={{ fontSize: '0.75rem' }}>Editando registro existente</p>
                                             </div>
