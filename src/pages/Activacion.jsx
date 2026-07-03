@@ -15,6 +15,8 @@ const Activacion = () => {
   const [taskStatus, setTaskStatus] = useState(null);
   const [taskId, setTaskId] = useState(null);
   const [polling, setPolling] = useState(false);
+  const [macSource, setMacSource] = useState(null);
+  const [loadingMacs, setLoadingMacs] = useState(false);
 
   useEffect(() => {
     fetchClientes();
@@ -40,37 +42,41 @@ const Activacion = () => {
     setSelectedCliente(cliente);
     setShowMacModal(true);
     setSelectedCandidate(null);
+    setMacList([]); // limpiar lista anterior
+    setMacSource(null);
+    setLoadingMacs(true);
     try {
-      // Intentar endpoint dedicado en backend
+      // El backend ejecuta 'display ont autofind all' en la OLT Huawei.
+      // Si la OLT no responde, el backend hace fallback a la BD (solo clientes Pendiente/En Activación).
+      // El frontend NO debe tener su propio fallback de búsqueda en clientes.
       const res = await oltService.getMacCandidates(cliente.id, cliente.nodo, cliente.puerto).catch(() => null);
-      if (res && res.data && Array.isArray(res.data.candidates) && res.data.candidates.length) {
-        setMacList(res.data.candidates.map(c => ({ mac: c.mac, gpon_port: c.gpon_port, ont_id: c.ont_id, status: c.status, date: c.instalation_date }))); 
-        return;
-      }
-
-      // Fallback: compilar lista desde clientes
-      const r2 = await clienteService.listar();
-      const others = r2.data || [];
-      const macsMap = new Map();
-      others.sort((a, b) => b.id - a.id);
-      for (const o of others) {
-        if (o.mac) {
-          const clean = String(o.mac).trim().toUpperCase();
-          if (!macsMap.has(clean)) {
-            macsMap.set(clean, { mac: clean, date: o.instalation_date || null });
-          }
+      if (res && res.data) {
+        const candidates = res.data.candidates || [];
+        setMacList(candidates.map(c => ({
+          mac: c.mac,
+          gpon_port: c.gpon_port,
+          ont_id: c.ont_id,
+          status: c.status,
+          date: c.instalation_date,
+          cliente_nombre: c.cliente_nombre,
+        })));
+        // Determinar fuente de los datos
+        if (res.data.source) {
+          setMacSource(res.data.source);
+        } else {
+          const hasOltData = candidates.some(c => c.status && !c.status.includes('db-fallback') && !c.status.includes('cliente-mac'));
+          setMacSource(hasOltData ? 'olt' : 'db');
         }
+      } else {
+        setMacList([]);
+        setMacSource('error');
       }
-      if (cliente.mac) {
-        const m = String(cliente.mac).trim().toUpperCase();
-        macsMap.delete(m);
-        macsMap.set(m, { mac: m, date: cliente.instalation_date || null });
-      }
-      const macs = Array.from(macsMap.values());
-      setMacList(macs);
     } catch (e) {
       console.error(e);
       setMacList([]);
+      setMacSource('error');
+    } finally {
+      setLoadingMacs(false);
     }
   };
 
@@ -160,29 +166,109 @@ const Activacion = () => {
       {/* Modal de selección MAC */}
       {showMacModal && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div className="modal" style={{ width: '500px', maxWidth: '90%' }}>
             <h3>Seleccionar MAC para cliente {selectedCliente?.nombre}</h3>
-            <div style={{ maxHeight: 300, overflow: 'auto' }}>
-              {macList.length ? macList.map((m, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: 8, gap: 12, alignItems: 'center' }}>
-                  <div>
-                    <strong>{m.mac || 'Sin MAC'}</strong>
-                    <div style={{ fontSize: 12, color: '#888' }}>
-                      {m.gpon_port ? `GPON: ${m.gpon_port}` : ''} {m.ont_id ? `ONT: ${m.ont_id}` : ''}
-                      {m.status ? ` • ${m.status}` : ''}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{m.date || ''}</div>
-                  </div>
-                  <div>
-                    <button className="btn" onClick={() => setSelectedCandidate(m)}>Seleccionar</button>
-                  </div>
+            
+            {/* Indicador de procedencia de los datos */}
+            <div style={{ marginBottom: 12, padding: 8, borderRadius: 4, fontSize: 13, fontWeight: '500' }}>
+              {loadingMacs ? (
+                <div style={{ color: '#aaa' }}>Consultando OLT Huawei...</div>
+              ) : macSource === 'olt' ? (
+                <div style={{ color: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.1)', padding: '6px 10px', borderRadius: 4 }}>
+                  🟢 Detectado en tiempo real desde la OLT (autofind activo)
                 </div>
-              )) : <div>No hay MACs recientes</div>}
+              ) : macSource === 'db' ? (
+                <div style={{ color: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.1)', padding: '6px 10px', borderRadius: 4 }}>
+                  ⚠️ Fallback: Clientes pendientes en Base de Datos (OLT no disponible)
+                </div>
+              ) : macSource === 'error' ? (
+                <div style={{ color: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', padding: '6px 10px', borderRadius: 4 }}>
+                  ❌ Error al consultar la OLT. Mostrando fallback local.
+                </div>
+              ) : null}
             </div>
 
-            <div style={{ marginTop: 12 }}>
-              <button className="btn primary" onClick={confirmActivate} disabled={!selectedCandidate || creatingTask}>Activar</button>
+            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {loadingMacs ? (
+                <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>
+                  Buscando terminales ópticas detectadas...
+                </div>
+              ) : macList.length ? (
+                macList.map((m, idx) => {
+                  const isSelected = selectedCandidate && selectedCandidate.mac === m.mac;
+                  return (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        padding: 10, 
+                        gap: 12, 
+                        alignItems: 'center',
+                        backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                        border: isSelected ? '1px solid #2ecc71' : '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 6,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ fontSize: 15, color: isSelected ? '#2ecc71' : '#fff' }}>{m.mac || 'Sin MAC'}</strong>
+                        <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
+                          {m.gpon_port ? `GPON: ${m.gpon_port}` : ''} {m.ont_id ? ` • ONT ID: ${m.ont_id}` : ''}
+                          {m.status ? ` • Estado: ${m.status}` : ''}
+                        </div>
+                        {m.cliente_nombre && (
+                          <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic', marginTop: 2 }}>
+                            Asociado a: {m.cliente_nombre}
+                          </div>
+                        )}
+                        {m.date && <div style={{ fontSize: 11, color: '#666' }}>Fecha inst: {m.date}</div>}
+                      </div>
+                      <div>
+                        <button 
+                          className="btn" 
+                          onClick={() => setSelectedCandidate(m)}
+                          style={{
+                            backgroundColor: isSelected ? '#2ecc71' : '#34495e',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isSelected ? '✓ Seleccionado' : 'Seleccionar'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>
+                  No se encontraron terminales ópticas detectadas ni pendientes.
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button className="btn" onClick={() => setShowMacModal(false)}>Cancelar</button>
+              <button 
+                className="btn primary" 
+                onClick={confirmActivate} 
+                disabled={!selectedCandidate || creatingTask}
+                style={{
+                  backgroundColor: '#2ecc71',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  fontWeight: 'bold',
+                  opacity: (!selectedCandidate || creatingTask) ? 0.5 : 1,
+                  cursor: (!selectedCandidate || creatingTask) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {creatingTask ? 'Encolando...' : 'Confirmar y Activar'}
+              </button>
             </div>
           </div>
         </div>
