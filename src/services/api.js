@@ -211,4 +211,11 @@ export const asistenciaService = {
   listar: (inicio, fin) => api.get(`/asistencia/?fecha_inicio=${inicio || ''}&fecha_fin=${fin || ''}`),
 };
 
+export const oltService = {
+  createTask: (cliente_id, action, payload) => api.post('/olt-tasks/', { cliente_id, action, payload }),
+  getTask: (task_id) => api.get(`/olt-tasks/${task_id}`),
+  listTasks: (params) => api.get('/olt-tasks/', { params }),
+  getMacCandidates: (cliente_id, nodo = null, puerto = null, limit = 50) => api.get('/olt-tasks/mac-candidates', { params: { cliente_id, nodo, puerto, limit } }),
+};
+
 export default api;

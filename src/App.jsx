@@ -17,6 +17,7 @@ import ExtraPagos from './pages/ExtraPagos';
 import HojaRuta from './pages/HojaRuta';
 import Tickets from './pages/Tickets';
 import ONT from './pages/ONT';
+import Activacion from './pages/Activacion';
 import SubirBD from './pages/SubirBD';
 import CallCenter from './pages/CallCenter';
 import Balance from './pages/Balance';
@@ -62,6 +63,11 @@ function App() {
             <Route path="ont" element={
               <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
                 <ONT />
+              </ProtectedRoute>
+            } />
+            <Route path="activacion" element={
+              <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
+                <Activacion />
               </ProtectedRoute>
             } />
 
