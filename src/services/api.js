@@ -216,6 +216,11 @@ export const oltService = {
   getTask: (task_id) => api.get(`/olt-tasks/${task_id}`),
   listTasks: (params) => api.get('/olt-tasks/', { params }),
   getMacCandidates: (cliente_id, nodo = null, puerto = null, limit = 50) => api.get('/olt-tasks/mac-candidates', { params: { cliente_id, nodo, puerto, limit } }),
+  // OLT Config CRUD
+  listConfigs: () => api.get('/olt-tasks/config/'),
+  createConfig: (params) => api.post('/olt-tasks/config/', null, { params }),
+  updateConfig: (id, params) => api.put(`/olt-tasks/config/${id}`, null, { params }),
+  deleteConfig: (id) => api.delete(`/olt-tasks/config/${id}`),
 };
 
 export default api;

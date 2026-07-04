@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { configuracionService } from '../services/api';
+import { configuracionService, oltService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Configuraciones = () => {
     const [activeTab, setActiveTab] = useState('Nodos');
+
+    // OLT States
+    const [oltConfigs, setOltConfigs] = useState([]);
+    const [newOlt, setNewOlt] = useState({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' });
+    const [isEditingOlt, setIsEditingOlt] = useState(null);
+    const [oltSaving, setOltSaving] = useState(false);
 
     // States for data
     const [nodos, setNodos] = useState([]);
@@ -54,6 +60,16 @@ const Configuraciones = () => {
             setPuertos(puRes.data);
             setParroquias(ppRes.data);
             setCajasNap(cnRes.data);
+
+            // OLT configs (admin only)
+            if (isAdmin) {
+                try {
+                    const oltRes = await oltService.listConfigs();
+                    setOltConfigs(oltRes.data?.configs || []);
+                } catch (e) {
+                    console.warn('No se pudieron cargar las OLTs', e);
+                }
+            }
             
             if (finRes.data) {
                 setFinanzasBase({
@@ -265,7 +281,75 @@ const Configuraciones = () => {
         setActiveTab('Cajas NAP');
     };
 
-    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'Finanzas Base', 'Eliminar Clientes'];
+    // =========== OLT HANDLERS ===========
+    const handleOltSave = async () => {
+        if (!newOlt.nombre?.trim() || !newOlt.host?.trim()) return alert('Nombre y Host son obligatorios');
+        setOltSaving(true);
+        try {
+            const params = {
+                nombre: newOlt.nombre,
+                host: newOlt.host,
+                port: parseInt(newOlt.port) || 22,
+                username: newOlt.username || 'root',
+                password: newOlt.password || 'admin',
+                nodo_asociado: newOlt.nodo_asociado || null,
+                device_type: newOlt.device_type || 'huawei',
+            };
+            if (isEditingOlt) {
+                await oltService.updateConfig(isEditingOlt, params);
+                alert('OLT actualizada correctamente');
+            } else {
+                await oltService.createConfig(params);
+                alert('OLT registrada correctamente');
+            }
+            setNewOlt({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' });
+            setIsEditingOlt(null);
+            const oltRes = await oltService.listConfigs();
+            setOltConfigs(oltRes.data?.configs || []);
+        } catch (e) {
+            alert('Error: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setOltSaving(false);
+        }
+    };
+
+    const handleOltDelete = async (id) => {
+        if (!window.confirm('¿Eliminar esta OLT? Las tareas asociadas quedarán sin OLT.')) return;
+        try {
+            await oltService.deleteConfig(id);
+            const oltRes = await oltService.listConfigs();
+            setOltConfigs(oltRes.data?.configs || []);
+        } catch (e) {
+            alert('Error eliminando OLT: ' + (e.response?.data?.detail || e.message));
+        }
+    };
+
+    const handleOltToggle = async (olt) => {
+        try {
+            await oltService.updateConfig(olt.id, { active: !olt.active });
+            const oltRes = await oltService.listConfigs();
+            setOltConfigs(oltRes.data?.configs || []);
+        } catch (e) {
+            alert('Error: ' + (e.response?.data?.detail || e.message));
+        }
+    };
+
+    const handleOltEdit = (olt) => {
+        setIsEditingOlt(olt.id);
+        setNewOlt({
+            nombre: olt.nombre,
+            host: olt.host,
+            port: olt.port,
+            username: olt.username || 'root',
+            password: '',
+            nodo_asociado: olt.nodo_asociado || '',
+            device_type: olt.device_type || 'huawei',
+        });
+        setActiveTab('OLTs Huawei');
+    };
+    // ======================================
+
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'Finanzas Base', 'Eliminar Clientes'];
 
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
@@ -639,6 +723,103 @@ const Configuraciones = () => {
                         </div>
                     </div>
                 )}
+                {activeTab === 'OLTs Huawei' && (
+                    <div>
+                        <h3 style={{ marginBottom: 4 }}>🌐 OLTs Huawei Registradas</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 16 }}>
+                            Registra aquí las OLTs con sus credenciales SSH. El sistema usará estas credenciales para ejecutar <code>display ont autofind all</code> y activar terminales ópticas.
+                        </p>
+
+                        {/* Formulario */}
+                        <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+                            <h4 style={{ marginBottom: 12, color: '#38bdf8' }}>{isEditingOlt ? '✏️ Editar OLT' : '➕ Nueva OLT'}</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Nombre</label>
+                                    <input className="input" style={{ margin: 0 }} value={newOlt.nombre} onChange={e => setNewOlt({ ...newOlt, nombre: e.target.value.toUpperCase() })} placeholder="Ej. OLT-BAÑOS" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Host / IP</label>
+                                    <input className="input" style={{ margin: 0 }} value={newOlt.host} onChange={e => setNewOlt({ ...newOlt, host: e.target.value })} placeholder="172.25.0.2" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Puerto SSH</label>
+                                    <input type="number" className="input" style={{ margin: 0 }} value={newOlt.port} onChange={e => setNewOlt({ ...newOlt, port: e.target.value })} placeholder="22" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Usuario</label>
+                                    <input className="input" style={{ margin: 0 }} value={newOlt.username} onChange={e => setNewOlt({ ...newOlt, username: e.target.value })} placeholder="root" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Password</label>
+                                    <input type="password" className="input" style={{ margin: 0 }} value={newOlt.password} onChange={e => setNewOlt({ ...newOlt, password: e.target.value })} placeholder={isEditingOlt ? '(sin cambio)' : 'admin'} />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Nodo Asociado</label>
+                                    <select className="input" style={{ margin: 0 }} value={newOlt.nodo_asociado} onChange={e => setNewOlt({ ...newOlt, nodo_asociado: e.target.value })}>
+                                        <option value="">— Todas las zonas —</option>
+                                        {nodos.map(n => <option key={n.id} value={n.nombre}>{n.nombre}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+                                <button className="btn btn-primary" onClick={handleOltSave} disabled={oltSaving}>
+                                    {oltSaving ? 'Guardando...' : isEditingOlt ? 'Actualizar OLT' : 'Registrar OLT'}
+                                </button>
+                                {isEditingOlt && (
+                                    <button className="btn btn-secondary" onClick={() => { setIsEditingOlt(null); setNewOlt({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' }); }}>Cancelar</button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Tabla de OLTs */}
+                        <div className="table-container">
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                                        {['ID', 'Nombre', 'Host', 'Puerto', 'Usuario', 'Nodo', 'Estado', 'Acciones'].map(h => (
+                                            <th key={h} style={{ padding: '10px 12px', textAlign: 'left' }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {oltConfigs.length === 0 && (
+                                        <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#ef4444' }}>
+                                            ⚠️ No hay OLTs registradas. Registra la OLT para poder detectar terminales ópticas.
+                                        </td></tr>
+                                    )}
+                                    {oltConfigs.map(olt => (
+                                        <tr key={olt.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '10px 12px' }}>{olt.id}</td>
+                                            <td style={{ padding: '10px 12px', fontWeight: 600 }}>{olt.nombre}</td>
+                                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#38bdf8' }}>{olt.host}</td>
+                                            <td style={{ padding: '10px 12px' }}>{olt.port}</td>
+                                            <td style={{ padding: '10px 12px' }}>{olt.username}</td>
+                                            <td style={{ padding: '10px 12px', color: olt.nodo_asociado ? '#a78bfa' : '#6b7280' }}>{olt.nodo_asociado || 'Todas'}</td>
+                                            <td style={{ padding: '10px 12px' }}>
+                                                <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: '0.8rem', background: olt.active ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: olt.active ? '#4ade80' : '#f87171' }}>
+                                                    {olt.active ? '● Activa' : '○ Inactiva'}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '10px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                <button className="btn btn-secondary" onClick={() => handleOltEdit(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
+                                                <button className="btn btn-secondary" onClick={() => handleOltToggle(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: olt.active ? '#92400e55' : '#14532d55', color: olt.active ? '#fbbf24' : '#4ade80', border: 'none' }}>
+                                                    {olt.active ? 'Desactivar' : 'Activar'}
+                                                </button>
+                                                <button className="btn btn-secondary" onClick={() => handleOltDelete(olt.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#ef444455', color: '#fca5a5', border: 'none' }}>Eliminar</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, fontSize: '0.82rem', color: '#6b7280' }}>
+                            💡 <strong style={{ color: '#38bdf8' }}>Credenciales para tu OLT:</strong> Host <code style={{ color: '#f472b6' }}>172.25.0.2</code> · Puerto <code style={{ color: '#f472b6' }}>22</code> · Usuario <code style={{ color: '#f472b6' }}>root</code> · Password <code style={{ color: '#f472b6' }}>admin</code>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </motion.div>
     );
