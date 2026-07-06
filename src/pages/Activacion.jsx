@@ -61,9 +61,15 @@ const Activacion = () => {
         setMacSource(data.source || 'error');
         setMacList((data.candidates || []).map(c => ({
           mac: c.mac,
+          sn: c.sn,
+          sn_raw: c.sn_raw,
           gpon_port: c.gpon_port,
           ont_id: c.ont_id,
           status: c.status,
+          loid: c.loid,
+          vendor: c.vendor,
+          equip_id: c.equip_id,
+          autofind_time: c.autofind_time,
           raw: c.raw,
         })));
       } else {
@@ -211,9 +217,9 @@ const Activacion = () => {
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        padding: 10,
+                        padding: 12,
                         gap: 12,
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                         border: isSelected ? '1px solid #2ecc71' : '1px solid rgba(255, 255, 255, 0.1)',
                         borderRadius: 6,
@@ -221,16 +227,26 @@ const Activacion = () => {
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <strong style={{ fontSize: 15, color: isSelected ? '#2ecc71' : '#fff' }}>{m.mac || 'Sin identificador'}</strong>
-                        <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
-                          {m.gpon_port ? `Puerto GPON: ${m.gpon_port}` : ''}{m.ont_id ? ` · ONT ID: ${m.ont_id}` : ''}
-                          {m.status ? ` · ${m.status}` : ''}
+                        {/* SN legible como título principal */}
+                        <strong style={{ fontSize: 15, color: isSelected ? '#2ecc71' : '#38bdf8', fontFamily: 'monospace' }}>
+                          {m.sn || m.mac || 'Sin identificador'}
+                        </strong>
+                        {m.sn_raw && m.sn_raw !== m.sn && (
+                          <span style={{ fontSize: 11, color: '#6b7280', marginLeft: 8 }}>({m.sn_raw})</span>
+                        )}
+                        <div style={{ fontSize: 12, color: '#a3a3a3', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                          {m.gpon_port && <span>📡 Puerto: <strong style={{ color: '#e2e8f0' }}>{m.gpon_port}</strong></span>}
+                          {m.vendor && <span>🏭 Vendor: <strong style={{ color: '#e2e8f0' }}>{m.vendor}</strong></span>}
+                          {m.equip_id && <span>🔧 Equipo: <strong style={{ color: '#e2e8f0' }}>{m.equip_id}</strong></span>}
+                          {m.loid && <span>🪪 Loid: <strong style={{ color: '#e2e8f0' }}>{m.loid}</strong></span>}
                         </div>
-                        {m.raw && (
-                          <div style={{ fontSize: 10, color: '#555', fontFamily: 'monospace', marginTop: 2, wordBreak: 'break-all' }}>{m.raw}</div>
+                        {m.autofind_time && (
+                          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                            🕐 Detectado: {m.autofind_time}
+                          </div>
                         )}
                       </div>
-                      <div>
+                      <div style={{ flexShrink: 0 }}>
                         <button 
                           className="btn" 
                           onClick={() => setSelectedCandidate(m)}
@@ -247,6 +263,7 @@ const Activacion = () => {
                         </button>
                       </div>
                     </div>
+
                   );
                 })
               ) : (
