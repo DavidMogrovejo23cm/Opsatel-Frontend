@@ -221,6 +221,8 @@ export const oltService = {
   createConfig: (params) => api.post('/olt-tasks/config/', null, { params }),
   updateConfig: (id, params) => api.put(`/olt-tasks/config/${id}`, null, { params }),
   deleteConfig: (id) => api.delete(`/olt-tasks/config/${id}`),
+  testConfig: (id) => api.post(`/olt-tasks/config/${id}/test`),
+  testRawConfig: (data) => api.post('/olt-tasks/config/test-raw', data),
 };
 
 export default api;

@@ -10,6 +10,8 @@ const Configuraciones = () => {
     const [newOlt, setNewOlt] = useState({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' });
     const [isEditingOlt, setIsEditingOlt] = useState(null);
     const [oltSaving, setOltSaving] = useState(false);
+    const [oltTestingId, setOltTestingId] = useState(null);
+    const [oltTestingRaw, setOltTestingRaw] = useState(false);
 
     // States for data
     const [nodos, setNodos] = useState([]);
@@ -346,6 +348,45 @@ const Configuraciones = () => {
             device_type: olt.device_type || 'huawei',
         });
         setActiveTab('OLTs Huawei');
+    };
+
+    const handleOltTestRaw = async () => {
+        if (!newOlt.host?.trim()) return alert('El Host es obligatorio para probar la conexión');
+        setOltTestingRaw(true);
+        try {
+            const res = await oltService.testRawConfig({
+                host: newOlt.host,
+                port: parseInt(newOlt.port) || 22,
+                username: newOlt.username || 'root',
+                password: newOlt.password || 'admin',
+                device_type: newOlt.device_type || 'huawei'
+            });
+            if (res.data?.success) {
+                alert(res.data.message);
+            } else {
+                alert('Fallo de conexión: ' + res.data?.message);
+            }
+        } catch (e) {
+            alert('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setOltTestingRaw(false);
+        }
+    };
+
+    const handleOltTestExisting = async (id) => {
+        setOltTestingId(id);
+        try {
+            const res = await oltService.testConfig(id);
+            if (res.data?.success) {
+                alert(res.data.message);
+            } else {
+                alert('Fallo de conexión: ' + res.data?.message);
+            }
+        } catch (e) {
+            alert('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setOltTestingId(null);
+        }
     };
     // ======================================
 
@@ -766,6 +807,9 @@ const Configuraciones = () => {
                                 <button className="btn btn-primary" onClick={handleOltSave} disabled={oltSaving}>
                                     {oltSaving ? 'Guardando...' : isEditingOlt ? 'Actualizar OLT' : 'Registrar OLT'}
                                 </button>
+                                <button className="btn btn-secondary" onClick={handleOltTestRaw} disabled={oltTestingRaw} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                    {oltTestingRaw ? 'Probando...' : '⚡ Probar Conexión'}
+                                </button>
                                 {isEditingOlt && (
                                     <button className="btn btn-secondary" onClick={() => { setIsEditingOlt(null); setNewOlt({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' }); }}>Cancelar</button>
                                 )}
@@ -805,6 +849,9 @@ const Configuraciones = () => {
                                                 <button className="btn btn-secondary" onClick={() => handleOltEdit(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                                 <button className="btn btn-secondary" onClick={() => handleOltToggle(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: olt.active ? '#92400e55' : '#14532d55', color: olt.active ? '#fbbf24' : '#4ade80', border: 'none' }}>
                                                     {olt.active ? 'Desactivar' : 'Activar'}
+                                                </button>
+                                                <button className="btn btn-secondary" onClick={() => handleOltTestExisting(olt.id)} disabled={oltTestingId === olt.id} style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: 'none' }}>
+                                                    {oltTestingId === olt.id ? 'Probando...' : '⚡ Ping'}
                                                 </button>
                                                 <button className="btn btn-secondary" onClick={() => handleOltDelete(olt.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#ef444455', color: '#fca5a5', border: 'none' }}>Eliminar</button>
                                             </td>
