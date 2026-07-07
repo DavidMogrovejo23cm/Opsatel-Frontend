@@ -91,14 +91,18 @@ const Activacion = () => {
     if (!selectedCliente || !selectedCandidate) return;
     setCreatingTask(true);
     try {
+      const gponPort = selectedCandidate.gpon_port || `0/0/${selectedCliente.puerto || 1}`;
+      const puerto = Number(gponPort.split('/').pop()) || 0;
+      const profile = String(100 + puerto);
+
       // Construir payload mínimamente requerido para 'add_ont'
       const payload = {
         mac: selectedCandidate.mac.replace(/[:\-]/g, '').toUpperCase(),
-        gpon_port: selectedCandidate.gpon_port || `0/0/${selectedCliente.puerto || 1}`,
+        gpon_port: gponPort,
         ont_id: selectedCandidate.ont_id || selectedCliente.id_port || '1',
         description: `${selectedCliente.id} ${selectedCliente.nombre}`,
-        profile_id: selectedCliente.plan || '100',
-        srvprofile_id: selectedCliente.plan || '100'
+        profile_id: profile,
+        srvprofile_id: profile
       };
 
       const res = await oltService.createTask(selectedCliente.id, 'add_ont', payload);
