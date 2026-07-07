@@ -30,7 +30,7 @@ const Activacion = () => {
       // Mostrar sólo 'Pendiente' o 'En Activación'
       const items = (res.data || []).filter(c => ['Pendiente', 'En Activación'].includes(c.estado));
       // Ordenar por id desc (más reciente primero)
-      items.sort((a,b) => b.id - a.id);
+      items.sort((a, b) => b.id - a.id);
       setClientes(items);
     } catch (e) {
       console.error(e);
@@ -104,7 +104,10 @@ const Activacion = () => {
         profile_id: profile,
         srvprofile_id: profile
       };
-
+      console.log("Puerto:", selectedCliente.puerto);
+      console.log("Plan:", selectedCliente.plan);
+      console.log("Profile:", profile);
+      console.log("Payload:", payload);
       const res = await oltService.createTask(selectedCliente.id, 'add_ont', payload);
       const id = res.data.id;
       setTaskId(id);
@@ -127,7 +130,7 @@ const Activacion = () => {
       try {
         const res = await oltService.getTask(id);
         const t = res.data;
-        setTaskStatus({ status: t.status, message: t.error_message || '...' , response: t.response_json });
+        setTaskStatus({ status: t.status, message: t.error_message || '...', response: t.response_json });
         if (['completed', 'failed', 'cancelled'].includes(t.status)) {
           clearInterval(interval);
           setPolling(false);
@@ -179,7 +182,7 @@ const Activacion = () => {
         <div className="modal-overlay">
           <div className="modal" style={{ width: '500px', maxWidth: '90%' }}>
             <h3>Seleccionar MAC para cliente {selectedCliente?.nombre}</h3>
-            
+
             {/* Indicador de fuente — solo OLT, nunca BD */}
             <div style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 6, fontSize: 13, fontWeight: '500' }}>
               {loadingMacs ? (
@@ -251,8 +254,8 @@ const Activacion = () => {
                         )}
                       </div>
                       <div style={{ flexShrink: 0 }}>
-                        <button 
-                          className="btn" 
+                        <button
+                          className="btn"
                           onClick={() => setSelectedCandidate(m)}
                           style={{
                             backgroundColor: isSelected ? '#2ecc71' : '#34495e',
@@ -275,17 +278,17 @@ const Activacion = () => {
                   {macSource === 'olt'
                     ? 'La OLT no reporta terminales sin activar en este momento.'
                     : macSource === 'error'
-                    ? 'No se pudo obtener la lista. Verifica la conexión a la OLT.'
-                    : 'Sin resultados.'}
+                      ? 'No se pudo obtener la lista. Verifica la conexión a la OLT.'
+                      : 'Sin resultados.'}
                 </div>
               )}
             </div>
 
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button className="btn" onClick={() => setShowMacModal(false)}>Cancelar</button>
-              <button 
-                className="btn primary" 
-                onClick={confirmActivate} 
+              <button
+                className="btn primary"
+                onClick={confirmActivate}
                 disabled={!selectedCandidate || creatingTask}
                 style={{
                   backgroundColor: '#2ecc71',
