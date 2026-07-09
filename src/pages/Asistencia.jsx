@@ -103,39 +103,16 @@ const Asistencia = () => {
   };
 
   const registrarAccion = async () => {
+    if (!coords || distance === null || distance > MAX_DISTANCE) {
+      alert("❌ No te encuentras dentro del rango permitido para registrar asistencia.");
+      setStatus('out_of_range');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      let biometriaOk = false;
-      if (window.PublicKeyCredential) {
-        try {
-          const challenge = new Uint8Array(32);
-          window.crypto.getRandomValues(challenge);
-          const options = {
-            publicKey: {
-              challenge,
-              rp: { name: "Opsatel" },
-              user: {
-                id: new Uint8Array(16),
-                name: user.username,
-                displayName: user.username
-              },
-              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-              timeout: 60000,
-              authenticatorSelection: {
-                authenticatorAttachment: "platform",
-                userVerification: "required"
-              }
-            }
-          };
-          await navigator.credentials.create(options);
-          biometriaOk = true;
-        } catch (e) {
-          alert("❌ Error de validación biométrica.");
-          setLoading(false);
-          return;
-        }
-      }
+      const biometriaOk = true;
 
       const payload = {
         ubicacion: `${coords.lat}, ${coords.lng}`,
@@ -167,7 +144,7 @@ const Asistencia = () => {
       <div className="asistencia-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Control de Asistencia</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Registro de entrada y salida basado en ubicación y biometría.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Registro de entrada y salida basado en ubicación.</p>
         </div>
 
         {user?.rol === 'administrador' && (
@@ -263,7 +240,7 @@ const Asistencia = () => {
               {status === 'ready' && (
                 <>
                   <h3 style={{ color: '#4ade80' }}>Ubicación Validada</h3>
-                  <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede con la validación de huella.</p>
+                  <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede a registrar tu asistencia.</p>
                   <button
                     className="btn btn-primary"
                     style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}
