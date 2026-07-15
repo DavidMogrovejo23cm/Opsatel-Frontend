@@ -81,6 +81,7 @@ export const clienteService = {
   downloadDatabase: () => api.get('/clientes/descargar-completo', {
     responseType: 'blob'
   }),
+  parseSmart: (text) => api.post('/clientes/parse-smart', { text }),
 };
 
 export const extrasService = {
