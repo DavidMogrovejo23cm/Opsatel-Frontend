@@ -15,6 +15,12 @@ const Administrar = () => {
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
 
+  // Estado para confirmación de borrado OLT
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmDeleteNombre, setConfirmDeleteNombre] = useState('');
+  const [deletingOlt, setDeletingOlt] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState(null);
+
 
     // Estados para fotos en edición
   
@@ -64,6 +70,25 @@ const Administrar = () => {
     setEditData({});
     setFileFrontal(null);
     setFilePosterior(null);
+  };
+
+  const handleBorrarDeOlt = async () => {
+    if (!confirmDeleteId) return;
+    setDeletingOlt(true);
+    setDeleteMessage(null);
+    try {
+      const res = await clienteService.borrarDeOlt(confirmDeleteId);
+      setDeleteMessage({ type: 'success', text: res.data.message });
+      setConfirmDeleteId(null);
+      setConfirmDeleteNombre('');
+      // Refrescar lista
+      fetchData();
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setDeleteMessage({ type: 'error', text: typeof detail === 'string' ? detail : 'Error al borrar de la OLT.' });
+    } finally {
+      setDeletingOlt(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -255,7 +280,33 @@ const Administrar = () => {
                         </span>
                       </td>
                       <td style={cellStyle}>
-                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
+                          {(c.service_port || c.id_port) && (
+                            <button
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '0.75rem',
+                                background: 'rgba(239,68,68,0.12)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                color: '#f87171',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                transition: 'all 0.2s'
+                              }}
+                              title={`Borrar de OLT (SP: ${c.service_port || '-'}, ONT: ${c.id_port || '-'})`}
+                              onClick={() => {
+                                setConfirmDeleteId(c.id);
+                                setConfirmDeleteNombre(c.nombre);
+                                setDeleteMessage(null);
+                              }}
+                            >
+                              🗑️ Borrar OLT
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </>
                   )}
@@ -286,6 +337,100 @@ const Administrar = () => {
                 Cargar Archivos
               </button>
               <button className="btn btn-secondary" onClick={() => { setFileFrontal(null); setFilePosterior(null); setShowPhotoModal(false); }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Mensaje de resultado de borrado OLT */}
+      {deleteMessage && (
+        <div style={{
+          position: 'fixed', bottom: '32px', right: '32px', zIndex: 99998,
+          maxWidth: '480px', borderRadius: '16px', padding: '16px 22px',
+          background: deleteMessage.type === 'success' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+          border: `1px solid ${deleteMessage.type === 'success' ? '#10b981' : '#ef4444'}`,
+          color: deleteMessage.type === 'success' ? '#4ade80' : '#f87171',
+          fontSize: '0.85rem', lineHeight: '1.6', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          display: 'flex', gap: '12px', alignItems: 'flex-start'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>{deleteMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <div style={{ flex: 1 }}>{deleteMessage.text}</div>
+          <button onClick={() => setDeleteMessage(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, opacity: 0.6 }}>×</button>
+        </div>
+      )}
+
+      {/* MODAL: Confirmación de borrado de OLT */}
+      {confirmDeleteId && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(10px)',
+          zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box'
+        }}>
+          <div className="glass" style={{
+            width: '100%', maxWidth: '500px', padding: '36px', borderRadius: '24px',
+            border: '1px solid rgba(239,68,68,0.35)'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'
+              }}>🗑️</div>
+              <div>
+                <div style={{ fontSize: '0.65rem', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '4px' }}>Acción irreversible</div>
+                <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900 }}>Borrar Cliente de OLT</h2>
+              </div>
+            </div>
+
+            {/* Info cliente */}
+            <div style={{
+              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '14px', padding: '14px 18px', marginBottom: '20px'
+            }}>
+              <div style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: '6px' }}>{confirmDeleteNombre}</div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
+                Esta acción enviará a la OLT los siguientes comandos:<br />
+                <code style={{ color: '#f87171', fontSize: '0.72rem' }}>
+                  undo service-port [SP del cliente]<br />
+                  interface gpon 0/0<br />
+                  ont delete [puerto] [id_port]
+                </code>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.3)',
+              borderRadius: '12px', padding: '10px 14px', marginBottom: '24px',
+              fontSize: '0.78rem', color: '#fbbf24', lineHeight: 1.6
+            }}>
+              ⚠️ El cliente quedará en estado <strong>"En Activación"</strong> y sus datos OLT (service port, ONT, IP, MAC) serán borrados de la base de datos. Podrá ser re-activado normalmente desde Activación de Clientes.
+            </div>
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '10px 22px' }}
+                disabled={deletingOlt}
+                onClick={() => { setConfirmDeleteId(null); setConfirmDeleteNombre(''); }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingOlt}
+                onClick={handleBorrarDeOlt}
+                style={{
+                  padding: '10px 26px', borderRadius: '12px', border: '1px solid rgba(239,68,68,0.5)',
+                  background: 'rgba(239,68,68,0.15)', color: '#f87171',
+                  fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
+                  transition: 'all 0.2s', opacity: deletingOlt ? 0.6 : 1
+                }}
+              >
+                {deletingOlt ? '⏳ Borrando...' : '🗑️ Confirmar Borrado'}
+              </button>
             </div>
           </div>
         </div>

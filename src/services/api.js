@@ -82,6 +82,7 @@ export const clienteService = {
     responseType: 'blob'
   }),
   parseSmart: (text) => api.post('/clientes/parse-smart', { text }),
+  borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
 };
 
 export const extrasService = {
