@@ -18,6 +18,8 @@ const Activacion = () => {
   const [macSource, setMacSource] = useState(null);
   const [loadingMacs, setLoadingMacs] = useState(false);
   const [oltInfo, setOltInfo] = useState(null);   // { nombre, host, error }
+  const [showProvisionModal, setShowProvisionModal] = useState(false);
+  const [provisionType, setProvisionType] = useState(''); // 'ont' or 'bridge'
 
   useEffect(() => {
     fetchClientes();
@@ -87,8 +89,8 @@ const Activacion = () => {
     }
   };
 
-  const confirmActivate = async () => {
-    if (!selectedCliente || !selectedCandidate) return;
+  const confirmActivate = async (type) => {
+    if (!selectedCliente || !selectedCandidate || !type) return;
     setCreatingTask(true);
     try {
       const gponPort = selectedCandidate.gpon_port || `0/0/${selectedCliente.puerto || 1}`;
@@ -102,7 +104,8 @@ const Activacion = () => {
         ont_id: selectedCandidate.ont_id || selectedCliente.id_port || '1',
         description: `${selectedCliente.id} ${selectedCliente.nombre}`,
         profile_id: profile,
-        srvprofile_id: profile
+        srvprofile_id: profile,
+        provision_type: type
       };
       console.log("Puerto:", selectedCliente.puerto);
       console.log("Plan:", selectedCliente.plan);
@@ -112,7 +115,7 @@ const Activacion = () => {
       const id = res.data.id;
       setTaskId(id);
       setTaskStatus({ status: 'pending', message: 'Tarea encolada' });
-      setShowMacModal(false);
+      setShowProvisionModal(false);
       // Iniciar polling
       startPolling(id);
     } catch (e) {
@@ -288,7 +291,11 @@ const Activacion = () => {
               <button className="btn" onClick={() => setShowMacModal(false)}>Cancelar</button>
               <button
                 className="btn primary"
-                onClick={confirmActivate}
+                onClick={() => {
+                  setShowMacModal(false);
+                  setShowProvisionModal(true);
+                  setProvisionType(''); // Reset choice
+                }}
                 disabled={!selectedCandidate || creatingTask}
                 style={{
                   backgroundColor: '#2ecc71',
@@ -301,7 +308,97 @@ const Activacion = () => {
                   cursor: (!selectedCandidate || creatingTask) ? 'not-allowed' : 'pointer'
                 }}
               >
-                {creatingTask ? 'Encolando...' : 'Confirmar y Activar'}
+                Confirmar y Activar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Tipo de Aprovisionamiento */}
+      {showProvisionModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ width: '400px', maxWidth: '90%' }}>
+            <h3 style={{ marginBottom: 12 }}>Tipo de Aprovisionamiento</h3>
+            <p style={{ color: '#94a3b8', marginBottom: 20, fontSize: '14px', lineHeight: '1.5' }}>
+              Seleccione el tipo de activación que desea realizar.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: provisionType === 'ont' ? '1.5px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+                background: provisionType === 'ont' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.02)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}>
+                <input
+                  type="radio"
+                  name="provisionType"
+                  value="ont"
+                  checked={provisionType === 'ont'}
+                  onChange={(e) => setProvisionType(e.target.value)}
+                  style={{ accentColor: '#6366f1', width: 18, height: 18 }}
+                />
+                <div>
+                  <strong style={{ display: 'block', color: '#f8fafc', fontSize: '15px' }}>ONT</strong>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Router (2 comandos)</span>
+                </div>
+              </label>
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: provisionType === 'bridge' ? '1.5px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
+                background: provisionType === 'bridge' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.02)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}>
+                <input
+                  type="radio"
+                  name="provisionType"
+                  value="bridge"
+                  checked={provisionType === 'bridge'}
+                  onChange={(e) => setProvisionType(e.target.value)}
+                  style={{ accentColor: '#6366f1', width: 18, height: 18 }}
+                />
+                <div>
+                  <strong style={{ display: 'block', color: '#f8fafc', fontSize: '15px' }}>Bridge</strong>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Bridge (3 comandos)</span>
+                </div>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="btn" onClick={() => {
+                setShowProvisionModal(false);
+                setShowMacModal(true);
+              }}>
+                Cancelar
+              </button>
+              <button
+                className="btn primary"
+                onClick={() => confirmActivate(provisionType)}
+                disabled={!provisionType || creatingTask}
+                style={{
+                  backgroundColor: '#2ecc71',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  fontWeight: 'bold',
+                  opacity: (!provisionType || creatingTask) ? 0.5 : 1,
+                  cursor: (!provisionType || creatingTask) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {creatingTask ? 'Activando...' : 'Continuar'}
               </button>
             </div>
           </div>
