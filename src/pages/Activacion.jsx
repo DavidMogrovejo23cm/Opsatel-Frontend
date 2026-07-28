@@ -170,17 +170,15 @@ const Activacion = () => {
             onClick={async () => {
               const firstClient = clientes[0];
               const confirmClean = window.confirm(
-                `¿Desea iniciar la limpieza automática de bridges/ONTs huérfanas en el puerto GPON ${firstClient.puerto || '0/0/0'}?`
+                '¿Desea iniciar la limpieza automática de bridges/ONTs huérfanas en TODOS los puertos GPON? El sistema ejecutará display ont autofind all y eliminará todas las ONTs detectadas.'
               );
               if (!confirmClean) return;
               
               setCreatingTask(true);
-              setTaskStatus({ status: 'pending', message: 'Iniciando limpieza...' });
+              setTaskStatus({ status: 'pending', message: 'Iniciando limpieza de autofind...' });
               try {
-                const payload = {
-                  gpon_port: firstClient.puerto || '0/0/0'
-                };
-                const res = await oltService.createTask(firstClient.id, 'clean_unused_bridges', payload);
+                // Payload vacío — el backend opera sobre todos los puertos detectados por autofind
+                const res = await oltService.createTask(firstClient.id, 'clean_unused_bridges', {});
                 const id = res.data.id;
                 setTaskId(id);
                 startPolling(id);
@@ -192,7 +190,7 @@ const Activacion = () => {
               }
             }}
           >
-            🧹 Limpieza OLT ({clientes[0]?.puerto || '0/0/0'})
+            🧹 Limpieza OLT (todos los puertos)
           </button>
         )}
       </div>
