@@ -150,49 +150,6 @@ const Activacion = () => {
     <div style={{ padding: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2>Activación de Clientes</h2>
-        {clientes.length > 0 && (
-          <button
-            className="btn"
-            style={{
-              backgroundColor: '#e74c3c',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 6,
-              fontWeight: 'bold',
-              cursor: polling || creatingTask ? 'not-allowed' : 'pointer',
-              opacity: polling || creatingTask ? 0.6 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}
-            disabled={polling || creatingTask}
-            onClick={async () => {
-              const firstClient = clientes[0];
-              const confirmClean = window.confirm(
-                '¿Desea iniciar la limpieza automática de bridges/ONTs huérfanas en TODOS los puertos GPON? El sistema ejecutará display ont autofind all y eliminará todas las ONTs detectadas.'
-              );
-              if (!confirmClean) return;
-              
-              setCreatingTask(true);
-              setTaskStatus({ status: 'pending', message: 'Iniciando limpieza de autofind...' });
-              try {
-                // Payload vacío — el backend opera sobre todos los puertos detectados por autofind
-                const res = await oltService.createTask(firstClient.id, 'clean_unused_bridges', {});
-                const id = res.data.id;
-                setTaskId(id);
-                startPolling(id);
-              } catch (e) {
-                console.error(e);
-                setTaskStatus({ status: 'failed', message: 'Error al solicitar limpieza' });
-              } finally {
-                setCreatingTask(false);
-              }
-            }}
-          >
-            🧹 Limpieza OLT (todos los puertos)
-          </button>
-        )}
       </div>
       {loading ? <div>Cargando...</div> : (
         <div>
@@ -216,46 +173,7 @@ const Activacion = () => {
                   <td>{c.puerto}</td>
                   <td>{c.mac || '—'}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn" onClick={() => openMacModal(c)}>Activar</button>
-                      {c.puerto && (
-                        <button
-                          className="btn"
-                          style={{
-                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                            color: '#e74c3c',
-                            border: '1px solid rgba(231, 76, 60, 0.3)',
-                            padding: '4px 10px',
-                            fontSize: 12,
-                            borderRadius: 4
-                          }}
-                          disabled={polling || creatingTask}
-                          onClick={async () => {
-                            const confirmClean = window.confirm(
-                              `¿Desea limpiar ONTs y bridges no utilizadas en el puerto ${c.puerto} para este nodo?`
-                            );
-                            if (!confirmClean) return;
-
-                            setCreatingTask(true);
-                            setTaskStatus({ status: 'pending', message: 'Iniciando limpieza de puerto...' });
-                            try {
-                              const payload = { gpon_port: c.puerto };
-                              const res = await oltService.createTask(c.id, 'clean_unused_bridges', payload);
-                              const id = res.data.id;
-                              setTaskId(id);
-                              startPolling(id);
-                            } catch (e) {
-                              console.error(e);
-                              setTaskStatus({ status: 'failed', message: 'Error al iniciar limpieza' });
-                            } finally {
-                              setCreatingTask(false);
-                            }
-                          }}
-                        >
-                          Limpiar Puerto
-                        </button>
-                      )}
-                    </div>
+                    <button className="btn" onClick={() => openMacModal(c)}>Activar</button>
                   </td>
                 </tr>
               ))}
