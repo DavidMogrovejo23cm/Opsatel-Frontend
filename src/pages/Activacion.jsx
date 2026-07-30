@@ -20,6 +20,12 @@ const Activacion = () => {
   const [oltInfo, setOltInfo] = useState(null);   // { nombre, host, error }
   const [showProvisionModal, setShowProvisionModal] = useState(false);
   const [provisionType, setProvisionType] = useState(''); // 'ont' or 'bridge'
+  // -- Ver Potencia
+  const [showPotenciaModal, setShowPotenciaModal] = useState(false);
+  const [potenciaCliente, setPotenciaCliente] = useState(null);
+  const [potenciaData, setPotenciaData] = useState(null);
+  const [loadingPotencia, setLoadingPotencia] = useState(false);
+  const [potenciaError, setPotenciaError] = useState(null);
 
   useEffect(() => {
     fetchClientes();
@@ -146,6 +152,22 @@ const Activacion = () => {
     }, 2000);
   };
 
+  const handleVerPotencia = async (cliente) => {
+    setPotenciaCliente(cliente);
+    setPotenciaData(null);
+    setPotenciaError(null);
+    setLoadingPotencia(true);
+    setShowPotenciaModal(true);
+    try {
+      const res = await oltService.getOntPotencia(cliente.id);
+      setPotenciaData(res.data);
+    } catch (e) {
+      setPotenciaError(e.response?.data?.detail || e.message || 'Error al consultar potencia');
+    } finally {
+      setLoadingPotencia(false);
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -174,6 +196,15 @@ const Activacion = () => {
                   <td>{c.mac || '—'}</td>
                   <td>
                     <button className="btn" onClick={() => openMacModal(c)}>Activar</button>
+                    {' '}
+                    <button
+                      className="btn"
+                      title="Ver potencia óptica ONT"
+                      onClick={() => handleVerPotencia(c)}
+                      style={{ background: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '4px 10px', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}
+                    >
+                      📡 Potencia
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -412,6 +443,74 @@ const Activacion = () => {
         <div style={{ marginTop: 16 }}>
           <strong>Estado tarea:</strong> {taskStatus.status} — {taskStatus.message}
           {taskStatus.response && <pre style={{ background: '#111', color: '#0f0', padding: 8 }}>{JSON.stringify(taskStatus.response, null, 2)}</pre>}
+        </div>
+      )}
+      {/* Modal Ver Potencia ONT */}
+      {showPotenciaModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ width: 480, maxWidth: '94%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#38bdf8' }}>📡 Potencia ONT</h3>
+              <button onClick={() => setShowPotenciaModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 22, cursor: 'pointer' }}>✕</button>
+            </div>
+            {potenciaCliente && (
+              <p style={{ margin: '0 0 12px', color: '#94a3b8', fontSize: 13 }}>
+                Cliente: <strong style={{ color: '#f8fafc' }}>{potenciaCliente.nombre}</strong>
+                {' — '} Puerto: <code style={{ color: '#38bdf8' }}>{potenciaCliente.puerto}</code>
+                {' '} ONT ID: <code style={{ color: '#38bdf8' }}>{potenciaCliente.id_port}</code>
+              </p>
+            )}
+            {loadingPotencia && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', padding: '20px 0' }}>
+                <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #334155', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                Consultando OLT en tiempo real...
+              </div>
+            )}
+            {potenciaError && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', padding: '10px 14px', borderRadius: 6 }}>
+                ⚠️ {potenciaError}
+              </div>
+            )}
+            {potenciaData && potenciaData.potencia && (() => {
+              const p = potenciaData.potencia;
+              const rx = parseFloat(p.rx_power);
+              const rxOk = !isNaN(rx) && rx >= -27 && rx <= -10;
+              const rxWarn = !isNaN(rx) && rx < -27;
+              const rxColor = rxOk ? '#2ecc71' : rxWarn ? '#f59e0b' : '#94a3b8';
+              const rows = [
+                ['RX Power (ONT)', p.rx_power ? `${p.rx_power} dBm` : '—', rxColor],
+                ['TX Power (ONT)', p.tx_power ? `${p.tx_power} dBm` : '—', '#94a3b8'],
+                ['OLT RX', p.olt_rx_power ? `${p.olt_rx_power} dBm` : '—', '#94a3b8'],
+                ['OLT TX', p.olt_tx_power ? `${p.olt_tx_power} dBm` : '—', '#94a3b8'],
+                ['Temperatura', p.temperature ? `${p.temperature} °C` : '—', '#94a3b8'],
+                ['Voltaje', p.voltage ? `${p.voltage} V` : '—', '#94a3b8'],
+                ['Corriente Bias', p.bias_current ? `${p.bias_current} mA` : '—', '#94a3b8'],
+                ['Estado', p.status || '—', p.status === 'online' ? '#2ecc71' : '#f59e0b'],
+                ['Tiempo Online', p.uptime || '—', '#94a3b8'],
+              ];
+              return (
+                <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
+                  {rows.map(([label, val, color]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
+                      <span style={{ color: '#94a3b8' }}>{label}</span>
+                      <span style={{ color, fontWeight: 600, fontFamily: 'monospace' }}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
+              <button
+                className="btn"
+                onClick={() => handleVerPotencia(potenciaCliente)}
+                disabled={loadingPotencia}
+                style={{ fontSize: 13 }}
+              >
+                🔄 Refrescar
+              </button>
+              <button className="btn" onClick={() => setShowPotenciaModal(false)}>Cerrar</button>
+            </div>
+          </div>
         </div>
       )}
 

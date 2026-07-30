@@ -218,6 +218,8 @@ export const oltService = {
   getTask: (task_id) => api.get(`/olt-tasks/${task_id}`),
   listTasks: (params) => api.get('/olt-tasks/', { params }),
   getMacCandidates: (cliente_id, nodo = null, puerto = null, limit = 50) => api.get('/olt-tasks/mac-candidates', { params: { cliente_id, nodo, puerto, limit } }),
+  // Potencia ONT en tiempo real
+  getOntPotencia: (cliente_id) => api.get(`/olt-tasks/clientes/${cliente_id}/potencia`),
   // OLT Config CRUD
   listConfigs: () => api.get('/olt-tasks/config/'),
   createConfig: (params) => api.post('/olt-tasks/config/', null, { params }),
@@ -225,6 +227,9 @@ export const oltService = {
   deleteConfig: (id) => api.delete(`/olt-tasks/config/${id}`),
   testConfig: (id) => api.post(`/olt-tasks/config/${id}/test`),
   testRawConfig: (data) => api.post('/olt-tasks/config/test-raw', data),
+  // MikroTik config por OLT
+  updateMikrotikConfig: (id, data) => api.put(`/olt-tasks/config/${id}/mikrotik`, data),
+  testMikrotikConfig: (id) => api.post(`/olt-tasks/config/${id}/mikrotik/test`),
 };
 
 export default api;
