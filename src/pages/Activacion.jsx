@@ -284,40 +284,45 @@ const Activacion = () => {
     }
   };
 
-  // Iniciar Activación Masiva (todos los candidatos)
-  const handleBulkActivate = async () => {
-    if (!macList || macList.length === 0) return;
-    setShowMacModal(false);
-    setShowBulkModal(true);
-    setBulkStatus(null);
+  // Iniciar Activación Masiva consultando directamente la OLT (Autofind)
+  const handleBulkActivateOutside = async () => {
+    setBulkPolling(true);
     setBulkError(null);
+    setBulkStatus(null);
+    try {
+      // Intentar obtener candidatos autofind usando nodo BAÑOS por defecto
+      // Usamos un cliente id ficticio (0) para no asociar a ningún cliente real
+      const res = await oltService.getMacCandidates(0, 'BAÑOS', null, 50).catch(() => null);
+      if (res && res.data && res.data.candidates && res.data.candidates.length > 0) {
+        setMacList(res.data.candidates);
+        setShowBulkModal(true);
+      } else {
+        alert('No se detectaron ONTs pendientes en el Autofind de la OLT Baños en este momento.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al consultar ONTs en el Autofind de la OLT: ' + (e.message || e));
+    } finally {
+      setBulkPolling(false);
+    }
   };
 
   const confirmBulkActivate = async () => {
     setBulkPolling(true);
     setBulkError(null);
 
-    // Mapear clientes pendientes a las MACs descubiertas para formar el lote
-    const items = [];
-    clientes.forEach((cli) => {
-      // Intentar hacer match por el puerto GPON
-      const candidate = macList.find(m => {
-        const macPortNum = m.gpon_port?.split('/').pop();
-        return String(macPortNum) === String(cli.puerto);
-      });
-      if (candidate) {
-        items.push({
-          cliente_id: cli.id,
-          mac: candidate.mac,
-          gpon_port: candidate.gpon_port,
-          ont_id: candidate.ont_id,
-          provision_type: bulkProvisionType
-        });
-      }
-    });
+    // Mapear todas las ONTs descubiertas a items de activación masiva
+    // Pasamos cliente_id: null para que el backend cree clientes temporales con nombres random
+    const items = macList.map(candidate => ({
+      cliente_id: null,
+      mac: candidate.mac,
+      gpon_port: candidate.gpon_port,
+      ont_id: candidate.ont_id || '1',
+      provision_type: bulkProvisionType
+    }));
 
     if (items.length === 0) {
-      setBulkError('No se encontraron coincidencias automáticas de puerto entre clientes pendientes y ONTs descubiertas.');
+      setBulkError('No hay ONTs en la lista para activar.');
       setBulkPolling(false);
       return;
     }
@@ -447,6 +452,22 @@ const Activacion = () => {
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             className="btn"
+            onClick={handleBulkActivateOutside}
+            disabled={bulkPolling || polling}
+            style={{
+              backgroundColor: 'rgba(99,102,241,0.12)',
+              color: '#a5b4fc',
+              border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: 6,
+              padding: '8px 16px',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            {bulkPolling ? 'Procesando masivo...' : '⚡ Activar y Borrar Todas (Autofind)'}
+          </button>
+          <button
+            className="btn"
             onClick={handleDeshacerUltima}
             disabled={undoing || polling}
             style={{
@@ -525,15 +546,6 @@ const Activacion = () => {
           <div className="modal" style={{ width: '550px', maxWidth: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Seleccionar MAC para cliente {selectedCliente?.nombre}</h3>
-              {macList.length > 1 && (
-                <button
-                  className="btn"
-                  onClick={handleBulkActivate}
-                  style={{ backgroundColor: '#6366f1', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 12 }}
-                >
-                  ⚡ Activar Todas ({macList.length})
-                </button>
-              )}
             </div>
 
             <div style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 6, fontSize: 13, fontWeight: '500' }}>
