@@ -230,6 +230,13 @@ export const oltService = {
   // MikroTik config por OLT
   updateMikrotikConfig: (id, data) => api.put(`/olt-tasks/config/${id}/mikrotik`, data),
   testMikrotikConfig: (id) => api.post(`/olt-tasks/config/${id}/mikrotik/test`),
+  
+  // Bulk y Confirmaciones
+  bulkActivate: (items, provisionType) => api.post('/olt-tasks/bulk/activate', { items, provision_type: provisionType }),
+  getBulkStatus: (bulkId) => api.get(`/olt-tasks/bulk/${bulkId}/status`),
+  confirmTask: (taskId) => api.post(`/olt-tasks/bulk/${taskId}/confirm`),
+  retryActivation: (taskId) => api.post(`/olt-tasks/bulk/${taskId}/retry-activation`),
+  undoLastActivation: () => api.post('/olt-tasks/bulk/undo-last'),
 };
 
 export default api;
