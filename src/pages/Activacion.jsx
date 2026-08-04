@@ -326,17 +326,91 @@ const Activacion = () => {
       const res = await oltService.bulkActivate(items, bulkProvisionType);
       const bulkId = res.data.bulk_id;
       
-      // Iniciar polling del lote masivo
+      // Iniciar polling del lote masivo de activación
       const interval = setInterval(async () => {
         try {
           const sRes = await oltService.getBulkStatus(bulkId);
           const status = sRes.data;
-          setBulkStatus(status);
+          setBulkStatus({
+            ...status,
+            phase: 'Activating',
+            message: 'Activando ONTs secuencialmente...'
+          });
 
           if (status.pending === 0) {
             clearInterval(interval);
-            setBulkPolling(false);
-            fetchClientes();
+            
+            // FASE 2: Eliminación secuencial automática de las ONTs activadas
+            const completedTasks = status.tasks.filter(t => t.status === 'completed');
+            if (completedTasks.length === 0) {
+              setBulkStatus(prev => ({
+                ...prev,
+                phase: 'Finished',
+                message: 'No hubo activaciones exitosas para eliminar.'
+              }));
+              setBulkPolling(false);
+              fetchClientes();
+              return;
+            }
+
+            setBulkStatus(prev => ({
+              ...prev,
+              phase: 'Deleting',
+              message: `Activación masiva completada. Iniciando eliminación secuencial de ${completedTasks.length} equipos...`
+            }));
+
+            // Función recursiva secuencial para borrar uno a uno
+            const deleteSequentially = async (index) => {
+              if (index >= completedTasks.length) {
+                setBulkStatus(prev => ({
+                  ...prev,
+                  phase: 'Finished',
+                  message: '¡Ciclo completado! Se activaron y borraron correctamente todos los equipos.'
+                }));
+                setBulkPolling(false);
+                fetchClientes();
+                return;
+              }
+
+              const taskItem = completedTasks[index];
+              setBulkStatus(prev => ({
+                ...prev,
+                phase: 'Deleting',
+                message: `[${index + 1}/${completedTasks.length}] Eliminando configuración de Cliente ID: ${taskItem.cliente_id}...`
+              }));
+
+              try {
+                // Iniciar tarea de borrado
+                const delRes = await clienteService.borrarDeOlt(taskItem.cliente_id);
+                const removeTaskId = delRes.data.task_id || delRes.data.id;
+
+                if (removeTaskId) {
+                  // Polling para esperar a que termine el borrado de este equipo
+                  await new Promise((resolveDelete) => {
+                    const checkDelInterval = setInterval(async () => {
+                      try {
+                        const tRes = await oltService.getTask(removeTaskId);
+                        if (['completed', 'failed', 'cancelled'].includes(tRes.data.status)) {
+                          clearInterval(checkDelInterval);
+                          resolveDelete();
+                        }
+                      } catch (err) {
+                        clearInterval(checkDelInterval);
+                        resolveDelete();
+                      }
+                    }, 2000);
+                  });
+                }
+              } catch (delErr) {
+                console.error(`Error al borrar cliente ${taskItem.cliente_id}:`, delErr);
+              }
+
+              // Siguiente elemento del lote
+              deleteSequentially(index + 1);
+            };
+
+            // Iniciar ciclo de eliminación
+            deleteSequentially(0);
           }
         } catch (err) {
           console.error(err);
@@ -771,19 +845,27 @@ const Activacion = () => {
 
             {bulkStatus && (
               <div>
+                <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 6, fontSize: 13, background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)', color: '#a5b4fc', fontWeight: '500' }}>
+                  ℹ️ {bulkStatus.message || 'Procesando lote...'}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-                  <span>Progreso:</span>
-                  <strong>{bulkStatus.completed + bulkStatus.failed} de {bulkStatus.total}</strong>
+                  <span>Fase: <strong style={{ color: bulkStatus.phase === 'Deleting' ? '#ef4444' : bulkStatus.phase === 'Finished' ? '#2ecc71' : '#6366f1' }}>
+                    {bulkStatus.phase === 'Activating' ? 'Activando' : bulkStatus.phase === 'Deleting' ? 'Eliminando (Reset OLT)' : 'Terminado'}
+                  </strong></span>
+                  <strong>{bulkStatus.phase === 'Activating' ? `${bulkStatus.completed + bulkStatus.failed} de ${bulkStatus.total}` : 'Completado'}</strong>
                 </div>
                 
                 {/* Barra de progreso */}
                 <div style={{ width: '100%', height: 10, background: '#1e293b', borderRadius: 5, overflow: 'hidden', marginBottom: 20 }}>
                   <div
                     style={{
-                      width: `${((bulkStatus.completed + bulkStatus.failed) / bulkStatus.total) * 100}%`,
+                      width: bulkStatus.phase === 'Activating' 
+                        ? `${((bulkStatus.completed + bulkStatus.failed) / bulkStatus.total) * 100}%`
+                        : '100%',
                       height: '100%',
-                      background: '#6366f1',
-                      transition: 'width 0.4s ease'
+                      background: bulkStatus.phase === 'Deleting' ? '#ef4444' : '#6366f1',
+                      transition: 'width 0.4s ease, background 0.4s ease'
                     }}
                   />
                 </div>
@@ -793,7 +875,7 @@ const Activacion = () => {
                     <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
                       <span>Cliente ID: {t.cliente_id}</span>
                       <strong style={{ color: t.status === 'completed' ? '#2ecc71' : t.status === 'failed' ? '#ef4444' : '#38bdf8' }}>
-                        {t.status === 'completed' ? '✓ Completado' : t.status === 'failed' ? '✗ Fallido' : '⚡ En cola'}
+                        {t.status === 'completed' ? '✓ Activado' : t.status === 'failed' ? '✗ Fallido' : '⚡ En cola'}
                       </strong>
                     </div>
                   ))}
@@ -801,8 +883,8 @@ const Activacion = () => {
 
                 {!bulkPolling && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: '#2ecc71' }}>¡Proceso terminado!</span>
-                    <button className="btn primary" onClick={() => { setShowBulkModal(false); fetchClientes(); }}>Finalizar</button>
+                    <span style={{ fontSize: 13, color: '#2ecc71', fontWeight: 'bold' }}>✓ ¡Ciclo de Activación y Borrado terminado!</span>
+                    <button className="btn primary" onClick={() => { setShowBulkModal(false); fetchClientes(); }} style={{ padding: '8px 20px', borderRadius: 6 }}>Finalizar</button>
                   </div>
                 )}
               </div>
