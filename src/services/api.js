@@ -240,6 +240,7 @@ export const oltService = {
   confirmTask: (taskId) => api.post(`/olt-tasks/bulk/${taskId}/confirm`),
   retryActivation: (taskId) => api.post(`/olt-tasks/bulk/${taskId}/retry-activation`),
   undoLastActivation: () => api.post('/olt-tasks/bulk/undo-last'),
+  refreshIp: (clienteId) => api.post(`/olt-tasks/bulk/clientes/${clienteId}/refresh-ip`),
 };
 
 export default api;

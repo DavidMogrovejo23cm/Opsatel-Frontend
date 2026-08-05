@@ -191,6 +191,25 @@ const Activacion = () => {
     }, 2000);
   };
 
+  // Refrescar IP del Cliente en caliente
+  const handleRefreshIp = async () => {
+    if (!confirmTaskData) return;
+    setConfirming(true);
+    try {
+      const res = await oltService.refreshIp(confirmTaskData.cliente_id);
+      setConfirmTaskData(prev => ({
+        ...prev,
+        ip: res.data.ip
+      }));
+      alert(`IP refrescada correctamente: ${res.data.ip}`);
+    } catch (e) {
+      console.error(e);
+      alert('Error al refrescar IP: ' + (e.response?.data?.detail || e.message));
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   // Confirmar Activación (Aceptar)
   const handleConfirmAceptar = async () => {
     if (!confirmTaskData) return;
@@ -821,23 +840,33 @@ const Activacion = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
               <button
                 className="btn"
-                onClick={handleConfirmReactivar}
+                onClick={handleRefreshIp}
                 disabled={confirming}
-                style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '10px 20px', borderRadius: 6 }}
+                style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6 }}
               >
-                🔄 REACTIVAR
+                🔄 REFRESCAR IP
               </button>
-              <button
-                className="btn primary"
-                onClick={handleConfirmAceptar}
-                disabled={confirming}
-                style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 'bold' }}
-              >
-                ✅ ACEPTAR
-              </button>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  className="btn"
+                  onClick={handleConfirmReactivar}
+                  disabled={confirming}
+                  style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '10px 20px', borderRadius: 6 }}
+                >
+                  🔴 REACTIVAR
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={handleConfirmAceptar}
+                  disabled={confirming}
+                  style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 'bold' }}
+                >
+                  ✅ ACEPTAR
+                </button>
+              </div>
             </div>
           </div>
         </div>
