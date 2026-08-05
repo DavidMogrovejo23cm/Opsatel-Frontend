@@ -136,6 +136,9 @@ export const configuracionService = {
   eliminarCajaNap: (id) => api.delete(`/configuraciones/cajas-nap/${id}`),
   // Eliminar todos los clientes
   deleteAllClientes: () => api.delete('/clientes/all'),
+  // Dias de permanencia en Administrar
+  getDiasPermanencia: () => api.get('/configuraciones/dias-permanencia'),
+  setDiasPermanencia: (dias) => api.put('/configuraciones/dias-permanencia', { dias }),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

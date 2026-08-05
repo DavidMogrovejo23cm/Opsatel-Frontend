@@ -40,21 +40,25 @@ const Configuraciones = () => {
     const [newCajaNap, setNewCajaNap] = useState({ nombre: '' });
     const [isEditingCajaNap, setIsEditingCajaNap] = useState(null);
     const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
+    const [diasPermanencia, setDiasPermanencia] = useState(7);
+    const [diasSaving, setDiasSaving] = useState(false);
 
     const fetchData = async () => {
         const user = configuracionService.getCurrentUser();
         const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
 
         try {
-            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes, diasRes] = await Promise.all([
                 configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
                 configuracionService.getPuertos().catch(e => ({ data: [] })),
                 configuracionService.getParroquias().catch(e => ({ data: [] })),
                 configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } })),
-                configuracionService.getCajasNap().catch(e => ({ data: [] }))
+                configuracionService.getCajasNap().catch(e => ({ data: [] })),
+                configuracionService.getDiasPermanencia().catch(e => ({ data: { dias: 7 } }))
             ]);
+            if (diasRes.data?.dias) setDiasPermanencia(diasRes.data.dias);
             
             setNodos(paRes.data);
             setPlanes(plRes.data);
@@ -390,7 +394,19 @@ const Configuraciones = () => {
     };
     // ======================================
 
-    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'Finanzas Base', 'Eliminar Clientes'];
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
+
+    const handleSaveDiasPermanencia = async () => {
+        setDiasSaving(true);
+        try {
+            await configuracionService.setDiasPermanencia(diasPermanencia);
+            alert('✅ Configuración guardada correctamente');
+        } catch (error) {
+            alert('Error al guardar: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setDiasSaving(false);
+        }
+    };
 
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
@@ -694,6 +710,53 @@ const Configuraciones = () => {
                                 <input type="number" step="0.01" className="input" style={{ margin: 0 }} value={finanzasBase.jep} onChange={e => setFinanzasBase({ ...finanzasBase, jep: e.target.value })} placeholder="Ej. 50.00" />
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Finanzas Base')}>Guardar Valores Base</button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'Administrar' && (
+                    <div>
+                        <h3 style={{ marginBottom: '8px' }}>⚙️ Configuración de Administrar Recientes</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '20px' }}>
+                            Define cuántos días atrás se consideran "recientes" para mostrar clientes en el módulo <strong>Administrar</strong>.
+                        </p>
+                        <div style={{
+                            background: 'rgba(56,189,248,0.06)',
+                            border: '1px solid rgba(56,189,248,0.2)',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            maxWidth: '420px'
+                        }}>
+                            <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
+                                <label className="label" style={{ fontSize: '0.9rem', marginBottom: '10px', display: 'block' }}>
+                                    🗓️ Días de permanencia de clientes
+                                </label>
+                                <select
+                                    id="select-dias-permanencia"
+                                    className="input"
+                                    style={{ margin: 0, maxWidth: '200px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600 }}
+                                    value={diasPermanencia}
+                                    onChange={e => setDiasPermanencia(parseInt(e.target.value))}
+                                >
+                                    {[1,2,3,4,5,6,7,8,9,10].map(d => (
+                                        <option key={d} value={d} style={{ background: '#1e1b4b' }}>
+                                            {d} {d === 1 ? 'día' : 'días'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                                Actualmente se muestran clientes activos creados en los últimos <strong style={{ color: '#38bdf8' }}>{diasPermanencia} {diasPermanencia === 1 ? 'día' : 'días'}</strong>.
+                            </p>
+                            <button
+                                id="btn-guardar-dias-permanencia"
+                                className="btn btn-primary"
+                                onClick={handleSaveDiasPermanencia}
+                                disabled={diasSaving}
+                                style={{ padding: '10px 24px' }}
+                            >
+                                {diasSaving ? '⏳ Guardando...' : '💾 Guardar'}
+                            </button>
                         </div>
                     </div>
                 )}

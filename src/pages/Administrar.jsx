@@ -14,6 +14,7 @@ const Administrar = () => {
   const [nodosList, setNodosList] = useState([]);
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
+  const [diasPermanencia, setDiasPermanencia] = useState(7);
 
   // Estado para confirmación de borrado OLT
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -43,14 +44,16 @@ const Administrar = () => {
     
     const fetchSelects = async () => {
       try {
-        const [paRes, ppRes, plRes] = await Promise.all([
+        const [paRes, ppRes, plRes, diasRes] = await Promise.all([
           configuracionService.getNodos(),
           configuracionService.getParroquias(),
-          configuracionService.getPlanes()
+          configuracionService.getPlanes(),
+          configuracionService.getDiasPermanencia().catch(() => ({ data: { dias: 7 } }))
         ]);
         setNodosList(paRes.data);
         setParroquiasList(ppRes.data);
         setPlanesList(plRes.data);
+        if (diasRes.data?.dias) setDiasPermanencia(diasRes.data.dias);
       } catch (error) {
         console.error("Error fetching configuraciones", error);
       }
@@ -134,9 +137,9 @@ const Administrar = () => {
 
     if (!c.fecha_firma) return false;
     const fechaFirma = new Date(c.fecha_firma);
-    const hace7Dias = new Date();
-    hace7Dias.setDate(hace7Dias.getDate() - 7);
-    if (fechaFirma < hace7Dias) return false;
+    const haceNDias = new Date();
+    haceNDias.setDate(haceNDias.getDate() - diasPermanencia);
+    if (fechaFirma < haceNDias) return false;
 
     return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            c.id?.toString().includes(searchTerm) ||
@@ -151,7 +154,7 @@ const Administrar = () => {
       <div className="page-header">
         <div className="page-header-info">
           <h1>Administrar Recientes</h1>
-          <p>Clientes creados en los últimos 7 días.</p>
+          <p>Clientes creados en los últimos {diasPermanencia} {diasPermanencia === 1 ? 'día' : 'días'}.</p>
         </div>
         <div className="page-actions">
           <input
