@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService, oltService } from '../services/api';
+import { clienteService, oltService, authService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Página para flujo de activación: individual, masiva, verificación técnica y deshacer.
@@ -43,6 +43,21 @@ const Activacion = () => {
   const [potenciaData, setPotenciaData] = useState(null);
   const [loadingPotencia, setLoadingPotencia] = useState(false);
   const [potenciaError, setPotenciaError] = useState(null);
+
+  const currentUser = authService.getCurrentUser() || {};
+  const isAdmin = currentUser.rol === 'administrador';
+
+  const handleEliminarCliente = async (id, nombre) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar al cliente "${nombre}" por completo y liberar su ID e IP?`)) return;
+    try {
+      await clienteService.eliminar(id);
+      alert('Cliente eliminado correctamente.');
+      fetchClientes();
+    } catch (e) {
+      console.error(e);
+      alert('Error al eliminar cliente: ' + (e.response?.data?.detail || e.message));
+    }
+  };
 
   useEffect(() => {
     fetchClientes();
@@ -517,6 +532,19 @@ const Activacion = () => {
                     >
                       📡 Potencia
                     </button>
+                    {isAdmin && (
+                      <>
+                        {' '}
+                        <button
+                          className="btn"
+                          title="Eliminar cliente por completo"
+                          onClick={() => handleEliminarCliente(c.id, c.nombre)}
+                          style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 10px', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
