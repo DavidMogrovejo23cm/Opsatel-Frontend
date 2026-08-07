@@ -176,8 +176,8 @@ const Activacion = () => {
               gpon_port: t.payload_json?.gpon_port || t.response_json?.gpon_port || '—',
               ont_id: t.payload_json?.ont_id || t.response_json?.ont_id || '—',
               service_port: t.response_json?.service_port || '—',
-              ip: t.response_json?.ip || t.response_json?.target_ip || '—',
-              ip_dhcp: t.response_json?.dhcp_ip || t.response_json?.lease_ip || '—',
+              ip: t.cliente_ip || t.response_json?.ip || t.response_json?.target_ip || '—',
+              ip_dhcp: t.response_json?.dhcp_ip || t.response_json?.lease_ip || t.response_json?.lease_found?.address || '—',
               comentario: `${String(t.cliente_id).padStart(6, '0')} - ${t.cliente_nombre || 'Cliente'}`,
               potencia: t.response_json?.rx_power || '—',
               log: t.response_json?.mikrotik_log || '—'
