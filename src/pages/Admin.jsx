@@ -72,8 +72,10 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    // El internet sugerido es el total_pago del backend (saldo + plan + plus) menos el plus
-    const internetSugerido = (parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)).toFixed(2);
+    // El internet sugerido es el total_pago del backend (saldo + plan + plus) menos el plus, o el internet_payment guardado
+    const internetSugerido = (cliente.internet_payment && parseFloat(cliente.internet_payment) > 0)
+      ? parseFloat(cliente.internet_payment).toFixed(2)
+      : (parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)).toFixed(2);
 
     // El monto total consolidado para el campo "Monto" (lo que se va a pagar hoy)
     // Incluye el adicional que el backend mantiene separado del total_pago
