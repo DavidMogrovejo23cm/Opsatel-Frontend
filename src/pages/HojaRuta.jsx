@@ -386,6 +386,25 @@ const HojaRuta = () => {
                                             ) : (
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</div>
                                             )}
+                                            {(() => {
+                                                const clientObj = clientes.find(c => c.id === r.cliente_id);
+                                                if (clientObj) {
+                                                    if (clientObj.tv_tipo === 'IPTV' && clientObj.iptv_user) {
+                                                        return (
+                                                            <div style={{ marginTop: '4px', padding: '4px 8px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.2)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', display: 'inline-block' }}>
+                                                                📺 <strong>IPTV:</strong> {clientObj.iptv_user} / {clientObj.iptv_pass}
+                                                            </div>
+                                                        );
+                                                    } else if (clientObj.tv_tipo === 'CATV') {
+                                                        return (
+                                                            <div style={{ marginTop: '4px', padding: '4px 8px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '6px', fontSize: '0.7rem', color: '#fcd34d', display: 'inline-block' }}>
+                                                                🔌 <strong>Televisión:</strong> CATV (Coaxial)
+                                                            </div>
+                                                        );
+                                                    }
+                                                }
+                                                return null;
+                                            })()}
                                         </td>
                                         <td>
                                             <div style={{ fontSize: '0.75rem' }}>{r.parroquia}</div>

@@ -35,7 +35,8 @@ const Ventas = () => {
     parroquia: '',
     plan: '',
     plus: '0',
-    iptv_max_conn: 1,
+    iptv_max_conn: 0,
+    tv_tipo: 'Ninguno', // "Ninguno", "IPTV", "CATV"
     tiempo: '24',
     cedula_tipo: '',
     ubicacion: '',
@@ -109,7 +110,7 @@ const Ventas = () => {
       });
     } else if (name === 'plan') {
       const selectedPlan = planesList.find(p => p.nombre === value);
-      const baseScreens = selectedPlan?.pantallas || 1;
+      const baseScreens = formData.tv_tipo === 'IPTV' ? (selectedPlan?.pantallas || 1) : 0;
       setFormData({
         ...formData,
         plan: value,
@@ -285,7 +286,7 @@ const Ventas = () => {
       setShowInstModal(true);
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
-        direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', iptv_max_conn: 0, tiempo: '12',
+        direccion: '', nodo: '', parroquia: '', plan: '', plus: '0', iptv_max_conn: 0, tv_tipo: 'Ninguno', tiempo: '12',
         cedula_tipo: '', ubicacion: '',
         tercera_edad: false,
         plan_corporativo: false,
@@ -527,28 +528,58 @@ const Ventas = () => {
               <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
             </div>
             <div className="input-group">
-              <label className="label">Pantallas IPTV (Pantallas adicionales)</label>
-              <input
-                className="input"
-                type="number"
-                name="iptv_max_conn"
-                value={(() => {
-                  const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
-                  return Math.max(0, formData.iptv_max_conn - baseScreens);
-                })()}
+              <label className="label">Televisión Contratada</label>
+              <select 
+                className="input" 
+                name="tv_tipo" 
+                value={formData.tv_tipo} 
                 onChange={(e) => {
-                  const additional = parseInt(e.target.value) || 0;
-                  const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                  const val = e.target.value;
+                  const selectedPlan = planesList.find(p => p.nombre === formData.plan);
+                  const baseScreens = val === 'IPTV' ? (selectedPlan?.pantallas || 1) : 0;
                   setFormData({
                     ...formData,
-                    iptv_max_conn: baseScreens + additional,
-                    plus: (additional * 2).toString()
+                    tv_tipo: val,
+                    iptv_max_conn: baseScreens,
+                    plus: '0'
                   });
-                }}
-                min="0"
-                required
-              />
+                }} 
+                required 
+                style={{ appearance: 'none' }}
+              >
+                <option value="Ninguno">Ninguno</option>
+                <option value="IPTV">IPTV (Televisión por Internet)</option>
+                <option value="CATV">CATV (Televisión por Cable Coaxial)</option>
+              </select>
             </div>
+            {formData.tv_tipo === 'IPTV' && (
+              <div className="input-group">
+                <label className="label">Pantallas IPTV (Adicionales)</label>
+                <input
+                  className="input"
+                  type="number"
+                  name="iptv_max_conn"
+                  value={(() => {
+                    const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                    return Math.max(0, formData.iptv_max_conn - baseScreens);
+                  })()}
+                  onChange={(e) => {
+                    const additional = parseInt(e.target.value) || 0;
+                    const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                    setFormData({
+                      ...formData,
+                      iptv_max_conn: baseScreens + additional,
+                      plus: (additional * 2).toString()
+                    });
+                  }}
+                  min="0"
+                  required
+                />
+                <small style={{ color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Total de pantallas: {formData.iptv_max_conn} (Base plan + Adicionales)
+                </small>
+              </div>
+            )}
             <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
               <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
                 <input
