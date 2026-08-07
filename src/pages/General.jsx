@@ -127,8 +127,8 @@ const General = () => {
 
   const allColumns = [
     "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
-    "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
-    "ip", "dispositivo", "potencia", "nap", "ubicacion", "tecnico", "activador", "red", "clave", "mac",
+    "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
+    "ip", "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
     "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
   ];
@@ -178,7 +178,7 @@ const General = () => {
                     whiteSpace: 'nowrap',
                     textAlign: 'left'
                   }}>
-                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col.replace('_', ' ')}
+                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
                   </th>
                 ))}
               </tr>
@@ -311,6 +311,37 @@ const General = () => {
                                   <div style={{ fontStyle: 'italic', opacity: 0.8, color: '#a78bfa', whiteSpace: 'pre-line' }}>
                                     {c.observaciones ? c.observaciones.split('/').join('\n') : '-'}
                                   </div>
+                                );
+                              }
+                              if (col === 'iptv_cuenta') {
+                                // Mostrar credenciales IPTV si el cliente tiene IPTV activo
+                                if (c.tv_tipo === 'IPTV' && c.iptv_user) {
+                                  return (
+                                    <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap' }}>
+                                      <div><strong>👤</strong> {c.iptv_user}</div>
+                                      <div><strong>🔑</strong> {c.iptv_pass}</div>
+                                      {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
+                                    </div>
+                                  );
+                                } else if (c.tv_tipo === 'CATV') {
+                                  return <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>;
+                                }
+                                return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                              }
+                              if (col === 'ubicacion_cliente') {
+                                // Mostrar ubicacion: primero del contrato, sino la dirección
+                                const ubicacion = c.ubicacion || c.direccion || null;
+                                if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                return (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                    title={ubicacion}
+                                  >
+                                    📍 {ubicacion.length > 30 ? ubicacion.substring(0, 30) + '...' : ubicacion}
+                                  </a>
                                 );
                               }
                               if (col === 'comentarios') {

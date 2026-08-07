@@ -176,7 +176,11 @@ const Admin = () => {
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
-        internet_payment: pagoData.internet_payment
+        internet_payment: pagoData.internet_payment,
+        // Si se modifica internet_payment, dejar el total_pago en cero
+        // para evitar que quede el saldo pendiente del mes anterior
+        saldo: 0,
+        total_pago: 0
       });
       alert("Valores guardados correctamente");
       fetchData();
