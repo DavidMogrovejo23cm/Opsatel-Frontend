@@ -58,6 +58,7 @@ const Ventas = () => {
   const [showInstModal, setShowInstModal] = useState(false);
   const [instForm, setInstForm] = useState(null);
   const [instSubmitting, setInstSubmitting] = useState(false);
+  const [backupFormData, setBackupFormData] = useState(null);
 
   useEffect(() => {
     if (fileFrontal) {
@@ -280,6 +281,7 @@ const Ventas = () => {
         ubicacion_caja: '',
         estado: 'Pendiente'
       });
+      setBackupFormData({ ...formData });
       setShowInstModal(true);
       setFormData({
         nombre: '', cedula: '', celular: '', correo: '',
@@ -313,6 +315,22 @@ const Ventas = () => {
       setMessage({ type: 'error', text: errText });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelarInstalacion = async () => {
+    if (!instForm || !instForm.cliente_id) return;
+    if (confirm("¿Desea cancelar y seguir detallando el contrato? El cliente recién registrado se eliminará para que pueda continuar editando.")) {
+      try {
+        await clienteService.eliminar(instForm.cliente_id);
+        if (backupFormData) {
+          setFormData(backupFormData);
+        }
+        setShowInstModal(false);
+        setMessage({ type: 'info', text: 'Se ha restaurado el formulario del contrato para que continúe trabajando.' });
+      } catch (err) {
+        alert("Error al eliminar el cliente temporal: " + (err.response?.data?.detail || err.message));
+      }
     }
   };
 
@@ -774,7 +792,6 @@ const Ventas = () => {
                     Los datos del cliente han sido pre-cargados automáticamente.
                   </p>
                 </div>
-                <button onClick={() => setShowInstModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
               </div>
 
               {/* Chip cliente */}
@@ -811,6 +828,14 @@ const Ventas = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCancelarInstalacion}
+                  style={{ padding: '10px 22px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+                >
+                  Cancelar (Editar Contrato)
+                </button>
                 <button
                   type="button"
                   className="btn btn-secondary"

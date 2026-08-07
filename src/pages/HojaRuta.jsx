@@ -125,18 +125,18 @@ const HojaRuta = () => {
             return true;
         });
 
-        // Ordenamiento: 1. F. Pedido (created_at) descendente, 2. Fecha Programada descendente, 3. Hora descendente
+        // Ordenamiento: 1. Fecha Programada ascendente, 2. Hora ascendente, 3. F. Pedido (created_at) descendente como desempate
         return filtered.sort((a, b) => {
-            // Primero por fecha de pedido — el más reciente arriba
+            // Primero por fecha programada ascendente (cronológico)
+            if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+
+            // Luego por hora ascendente (08:00 → 11:15 → 14:00)
+            if (a.hora !== b.hora) return (a.hora || '').localeCompare(b.hora || '');
+
+            // Como desempate, por fecha de creación descendente (el más reciente arriba)
             const dateA = new Date(a.created_at || 0).getTime();
             const dateB = new Date(b.created_at || 0).getTime();
-            if (dateA !== dateB) return dateB - dateA;
-
-            // Luego por fecha programada descendente
-            if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-
-            // Luego por hora ascendente — la más temprana arriba (08:00 → 10:00 → 18:00)
-            return (a.hora || '').localeCompare(b.hora || '');
+            return dateB - dateA;
         });
     }, [registros, searchTerm, dateFilter]);
 
