@@ -13,6 +13,13 @@ const Configuraciones = () => {
     const [oltTestingId, setOltTestingId] = useState(null);
     const [oltTestingRaw, setOltTestingRaw] = useState(false);
 
+    // MikroTik Configuration Modal States
+    const [selectedOltForMt, setSelectedOltForMt] = useState(null);
+    const [showMtModal, setShowMtModal] = useState(false);
+    const [mtConfig, setMtConfig] = useState({ host: '', port: 8728, username: '', password: '' });
+    const [mtSaving, setMtSaving] = useState(false);
+    const [mtTesting, setMtTesting] = useState(false);
+
     // States for data
     const [nodos, setNodos] = useState([]);
     const [planes, setPlanes] = useState([]);
@@ -390,6 +397,64 @@ const Configuraciones = () => {
             alert('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
         } finally {
             setOltTestingId(null);
+        }
+    };
+
+    // Funciones para configurar MikroTik
+    const handleOpenMtModal = (olt) => {
+        setSelectedOltForMt(olt);
+        setMtConfig({
+            host: olt.mikrotik_host || '',
+            port: olt.mikrotik_port || 8728,
+            username: olt.mikrotik_username || '',
+            password: olt.mikrotik_password || ''
+        });
+        setShowMtModal(true);
+    };
+
+    const handleSaveMtConfig = async () => {
+        if (!selectedOltForMt) return;
+        setMtSaving(true);
+        try {
+            await oltService.updateMikrotikConfig(selectedOltForMt.id, {
+                mikrotik_host: mtConfig.host || null,
+                mikrotik_port: parseInt(mtConfig.port) || 8728,
+                mikrotik_username: mtConfig.username || null,
+                mikrotik_password: mtConfig.password || null
+            });
+            alert('Configuración de MikroTik guardada correctamente');
+            setShowMtModal(false);
+            // Volver a listar las OLTs para ver los cambios reflejados
+            const oltRes = await oltService.listConfigs();
+            setOltConfigs(oltRes.data?.configs || []);
+        } catch (e) {
+            alert('Error al guardar configuración de MikroTik: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setMtSaving(false);
+        }
+    };
+
+    const handleTestMtConnection = async () => {
+        if (!selectedOltForMt) return;
+        setMtTesting(true);
+        try {
+            // Guardar cambios primero temporalmente en base de datos para que el backend use las credenciales correctas
+            await oltService.updateMikrotikConfig(selectedOltForMt.id, {
+                mikrotik_host: mtConfig.host || null,
+                mikrotik_port: parseInt(mtConfig.port) || 8728,
+                mikrotik_username: mtConfig.username || null,
+                mikrotik_password: mtConfig.password || null
+            });
+            const res = await oltService.testMikrotikConfig(selectedOltForMt.id);
+            if (res.data?.success) {
+                alert(res.data.message || '¡Conexión a MikroTik Exitosa!');
+            } else {
+                alert('Fallo de conexión a MikroTik: ' + res.data?.message);
+            }
+        } catch (e) {
+            alert('Error al conectar a MikroTik: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setMtTesting(false);
         }
     };
     // ======================================
@@ -913,6 +978,7 @@ const Configuraciones = () => {
                                                 <button className="btn btn-secondary" onClick={() => handleOltToggle(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: olt.active ? '#92400e55' : '#14532d55', color: olt.active ? '#fbbf24' : '#4ade80', border: 'none' }}>
                                                     {olt.active ? 'Desactivar' : 'Activar'}
                                                 </button>
+                                                <button className="btn btn-secondary" onClick={() => handleOpenMtModal(olt)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#8b5cf655', color: '#c084fc', border: 'none' }}>⚙️ MikroTik</button>
                                                 <button className="btn btn-secondary" onClick={() => handleOltTestExisting(olt.id)} disabled={oltTestingId === olt.id} style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: 'none' }}>
                                                     {oltTestingId === olt.id ? 'Probando...' : '⚡ Ping'}
                                                 </button>
@@ -923,6 +989,87 @@ const Configuraciones = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Modal emergente para configurar MikroTik */}
+                        {showMtModal && selectedOltForMt && (
+                            <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                                <div className="modal" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', padding: 24, borderRadius: 12, width: '450px', maxWidth: '90%' }}>
+                                    <h3 style={{ color: '#fff', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ Configurar MikroTik para: {selectedOltForMt.nombre}</h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: 20 }}>Configure las credenciales de la API de RouterOS de su MikroTik asociado a esta OLT.</p>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label className="label" style={{ color: '#cbd5e1' }}>Host / IP MikroTik</label>
+                                            <input 
+                                                className="input" 
+                                                style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} 
+                                                value={mtConfig.host} 
+                                                onChange={e => setMtConfig({ ...mtConfig, host: e.target.value })} 
+                                                placeholder="Ej. 172.25.0.2" 
+                                            />
+                                        </div>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label className="label" style={{ color: '#cbd5e1' }}>Puerto API MikroTik</label>
+                                            <input 
+                                                type="number" 
+                                                className="input" 
+                                                style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} 
+                                                value={mtConfig.port} 
+                                                onChange={e => setMtConfig({ ...mtConfig, port: e.target.value })} 
+                                                placeholder="8728" 
+                                            />
+                                        </div>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label className="label" style={{ color: '#cbd5e1' }}>Usuario API</label>
+                                            <input 
+                                                className="input" 
+                                                style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} 
+                                                value={mtConfig.username} 
+                                                onChange={e => setMtConfig({ ...mtConfig, username: e.target.value })} 
+                                                placeholder="admin" 
+                                            />
+                                        </div>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label className="label" style={{ color: '#cbd5e1' }}>Password API</label>
+                                            <input 
+                                                type="password" 
+                                                className="input" 
+                                                style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} 
+                                                value={mtConfig.password} 
+                                                onChange={e => setMtConfig({ ...mtConfig, password: e.target.value })} 
+                                                placeholder="Dejar vacío si no usa password" 
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                                        <button 
+                                            className="btn btn-secondary" 
+                                            onClick={handleTestMtConnection} 
+                                            disabled={mtTesting}
+                                            style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                                        >
+                                            {mtTesting ? 'Probando...' : '⚡ Probar Conexión'}
+                                        </button>
+                                        <button 
+                                            className="btn btn-secondary" 
+                                            onClick={() => setShowMtModal(false)}
+                                            style={{ color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button 
+                                            className="btn btn-primary" 
+                                            onClick={handleSaveMtConfig} 
+                                            disabled={mtSaving}
+                                            style={{ background: '#3b82f6', color: '#fff', border: 'none' }}
+                                        >
+                                            {mtSaving ? 'Guardando...' : 'Guardar'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, fontSize: '0.82rem', color: '#6b7280' }}>
                             💡 <strong style={{ color: '#38bdf8' }}>Credenciales para tu OLT:</strong> Host <code style={{ color: '#f472b6' }}>172.25.0.2</code> · Puerto <code style={{ color: '#f472b6' }}>22</code> · Usuario <code style={{ color: '#f472b6' }}>root</code> · Password <code style={{ color: '#f472b6' }}>admin</code>
