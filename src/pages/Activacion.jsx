@@ -824,19 +824,13 @@ const Activacion = () => {
               </div>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <span style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 6 }}>Log de Aprovisionamiento MikroTik</span>
-              <pre style={{ background: '#111', color: '#0f0', padding: 12, borderRadius: 6, fontSize: 12, overflowX: 'auto', maxHeight: 150, margin: 0 }}>
-                {confirmTaskData.log}
-              </pre>
-            </div>
-
             <div style={{ padding: '12px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, marginBottom: 24 }}>
               <strong style={{ color: '#f59e0b', display: 'block', marginBottom: 4 }}>⚠️ Verifique en la WAN del equipo o en el MikroTik:</strong>
               <div style={{ fontSize: 13, color: '#d1d5db', lineHeight: 1.5 }}>
                 1. La IP del lease ha quedado estática.<br />
                 2. El comentario coincide con el código de cliente.<br />
-                3. La IP del equipo es la IP asignada por Opsatel ({confirmTaskData.ip}).
+                3. La IP del equipo es la IP asignada por Opsatel ({confirmTaskData.ip}).<br />
+                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe la IP o sale en blanco, haga clic en el botón de abajo "REFRESCAR IP" para forzar la reasignación.</strong>
               </div>
             </div>
 
