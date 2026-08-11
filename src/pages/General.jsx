@@ -18,6 +18,50 @@ const General = () => {
 
   const [planesList, setPlanesList] = useState([]);
 
+  // Definición de las columnas del sistema
+  const allColumns = [
+    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
+    "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
+    "ip", "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
+    "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
+    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
+  ];
+
+  // Estado para los anchos ajustables de cada columna
+  const [colWidths, setColWidths] = useState(() => {
+    const widths = {};
+    allColumns.forEach(col => {
+      if (col === 'id') widths[col] = 60;
+      else if (col === 'nombre') widths[col] = 220;
+      else if (col === 'celular') widths[col] = 130;
+      else if (col === 'cedula') widths[col] = 110;
+      else widths[col] = 150;
+    });
+    return widths;
+  });
+
+  const handleMouseDown = (e, colName) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = colWidths[colName] || 150;
+    
+    const handleMouseMove = (moveEvent) => {
+      const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX));
+      setColWidths(prev => ({
+        ...prev,
+        [colName]: newWidth
+      }));
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   const fetchData = async () => {
     try {
       const response = await clienteService.listar();
@@ -58,6 +102,20 @@ const General = () => {
       return;
     }
 
+    // Permitir modificar facturas y cod directamente sin ingresar el PIN
+    if (col === 'facturas' || col === 'cod') {
+      try {
+        await clienteService.actualizar(id, { [col]: tempValue });
+        setEditingCell(null);
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        alert("Error al guardar cambio");
+        setEditingCell(null);
+      }
+      return;
+    }
+
     setPendingAction({ type: 'edit', id, col, value: tempValue });
     setShowPinModal(true);
     setPinInput('');
@@ -66,6 +124,20 @@ const General = () => {
   const handleSaveDropdown = async (id, col, newValue) => {
     if (newValue === clientes.find(c => c.id === id)[col]) {
       setEditingCell(null);
+      return;
+    }
+
+    // Permitir modificar facturas y cod directamente sin ingresar el PIN (en caso de que usaran dropdowns)
+    if (col === 'facturas' || col === 'cod') {
+      try {
+        await clienteService.actualizar(id, { [col]: newValue });
+        setEditingCell(null);
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        alert("Error al guardar cambio");
+        setEditingCell(null);
+      }
       return;
     }
 
@@ -125,16 +197,8 @@ const General = () => {
     })
     .sort((a, b) => a.id - b.id);
 
-  const allColumns = [
-    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
-    "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
-    "ip", "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
-    "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
-    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
-  ];
-
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', maxWidth: 'none' }}>
       <div className="page-header">
         <div className="page-header-info">
           <h1>Vista General de Clientes</h1>
@@ -165,22 +229,69 @@ const General = () => {
       </div>
 
       {loading ? <p>Cargando datos...</p> : (
-        <div className="table-container" style={{ maxHeight: '72vh' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+        <div className="table-container" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
+          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 20 }}>
               <tr>
-                {allColumns.map(col => (
-                  <th key={col} style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--glass-border)',
-                    borderRight: '1px solid var(--glass-border)',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'left'
-                  }}>
-                    {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
-                  </th>
-                ))}
+                {allColumns.map(col => {
+                  const isId = col === 'id';
+                  const isNombre = col === 'nombre';
+                  
+                  // Posiciones sticky para ID y Nombre
+                  let stickyStyle = {};
+                  if (isId) {
+                    stickyStyle = {
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 22,
+                      background: '#131526'
+                    };
+                  } else if (isNombre) {
+                    stickyStyle = {
+                      position: 'sticky',
+                      left: colWidths['id'] || 60,
+                      zIndex: 22,
+                      background: '#131526',
+                      borderRight: '2px solid rgba(255, 255, 255, 0.15)'
+                    };
+                  }
+
+                  return (
+                    <th key={col} style={{
+                      padding: '12px',
+                      borderBottom: '1px solid var(--glass-border)',
+                      borderRight: '1px solid var(--glass-border)',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'left',
+                      width: colWidths[col] || 150,
+                      minWidth: colWidths[col] || 150,
+                      maxWidth: colWidths[col] || 150,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      ...stickyStyle
+                    }}>
+                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
+                      
+                      {/* Control para redimensionar la columna */}
+                      <div
+                        onMouseDown={(e) => handleMouseDown(e, col)}
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '6px',
+                          cursor: 'col-resize',
+                          background: 'rgba(255,255,255,0.05)',
+                          zIndex: 25
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(99, 102, 241, 0.4)'}
+                        onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                      />
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -188,6 +299,27 @@ const General = () => {
                 <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   {allColumns.map(col => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
+                    const isId = col === 'id';
+                    const isNombre = col === 'nombre';
+                    
+                    // Posiciones sticky para ID y Nombre
+                    let stickyStyle = {};
+                    if (isId) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 12,
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526'
+                      };
+                    } else if (isNombre) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: colWidths['id'] || 60,
+                        zIndex: 12,
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526',
+                        borderRight: '2px solid rgba(255, 255, 255, 0.15)'
+                      };
+                    }
 
                     return (
                       <td
@@ -201,11 +333,16 @@ const General = () => {
                         style={{
                           padding: '6px 12px',
                           whiteSpace: 'nowrap',
-                          minWidth: '100px',
+                          width: colWidths[col] || 150,
+                          minWidth: colWidths[col] || 150,
+                          maxWidth: colWidths[col] || 150,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                           background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                           cursor: col === 'id' ? 'default' : 'pointer',
                           borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                          ...stickyStyle
                         }}
                       >
                         {isEditing ? (
@@ -214,6 +351,7 @@ const General = () => {
                               autoFocus
                               className="input"
                               style={{
+                                width: '100%',
                                 padding: '4px 8px',
                                 height: '28px',
                                 fontSize: '0.8rem',
@@ -238,7 +376,7 @@ const General = () => {
                             col === 'plan' ? (
                               <select
                                 className="input"
-                                style={{ padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
+                                style={{ width: '100%', padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
                                 value={tempValue}
                                 onChange={(e) => {
                                   setTempValue(e.target.value);
@@ -257,6 +395,7 @@ const General = () => {
                                 autoFocus
                                 className="input"
                                 style={{
+                                  width: '100%',
                                   padding: '4px 8px',
                                   height: '28px',
                                   fontSize: '0.8rem',
