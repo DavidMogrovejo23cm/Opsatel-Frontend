@@ -82,7 +82,7 @@ const Admin = () => {
     const montoTotalConsolidado = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0)).toFixed(2);
 
     setPagoData({
-      monto: montoTotalConsolidado,
+      monto: '',
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: cliente.facturas || '',
       internet_payment: internetSugerido,
