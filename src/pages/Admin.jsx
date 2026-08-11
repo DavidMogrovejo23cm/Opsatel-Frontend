@@ -82,7 +82,7 @@ const Admin = () => {
     const montoTotalConsolidado = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0)).toFixed(2);
 
     setPagoData({
-      monto: '',
+      monto: montoTotalConsolidado,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: cliente.facturas || '',
       internet_payment: internetSugerido,
@@ -644,13 +644,14 @@ const Admin = () => {
                             iptvDescuentoValue: pagoData.original_plus
                           });
                         } else {
+                          const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.original_plus) + parseFloat(pagoData.original_adicional)).toFixed(2);
                           setPagoData({
                             ...pagoData,
                             cortesiaMode: mode,
                             internet_payment: pagoData.original_internet,
                             plus: pagoData.original_plus,
                             adicional: pagoData.original_adicional,
-                            monto: '',
+                            monto: originalTotal,
                             descuentoValue: 0,
                             iptvDescuentoValue: 0
                           });
@@ -802,7 +803,8 @@ const Admin = () => {
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Internet Pay.</label>
                   <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.internet_payment} onChange={(e) => {
                     const val = e.target.value;
-                    setPagoData({ ...pagoData, internet_payment: val });
+                    const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
                   }} autoFocus />
                 </div>
 
@@ -810,8 +812,9 @@ const Admin = () => {
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Adicional ($)</label>
                   <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
-                    const val = e.target.value;
-                    setPagoData({ ...pagoData, adicional: val });
+                    const val = (e.target.value);
+                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, adicional: val, monto: newTotal });
                   }} />
                 </div>
 
@@ -843,7 +846,8 @@ const Admin = () => {
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Plus ($)</label>
                   <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
                     const val = e.target.value;
-                    setPagoData({ ...pagoData, plus: val });
+                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
+                    setPagoData({ ...pagoData, plus: val, monto: newTotal });
                   }} />
                 </div>
 
