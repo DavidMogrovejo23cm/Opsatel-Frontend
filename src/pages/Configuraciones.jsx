@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { configuracionService, oltService } from '../services/api';
+import { configuracionService, oltService, libreqosService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Configuraciones = () => {
-    const [activeTab, setActiveTab] = useState('Nodos');
 
     // OLT States
     const [oltConfigs, setOltConfigs] = useState([]);
@@ -12,6 +11,24 @@ const Configuraciones = () => {
     const [oltSaving, setOltSaving] = useState(false);
     const [oltTestingId, setOltTestingId] = useState(null);
     const [oltTestingRaw, setOltTestingRaw] = useState(false);
+
+    // LibreQoS States
+    const [lqServers, setLqServers] = useState([]);
+    const [lqJobs, setLqJobs] = useState([]);
+    const [lqJobsTab, setLqJobsTab] = useState('pending');
+    const [lqSaving, setLqSaving] = useState(false);
+    const [lqTesting, setLqTesting] = useState(null);
+    const [lqSyncing, setLqSyncing] = useState(null);
+    const [lqEditing, setLqEditing] = useState(null);
+    const [lqForm, setLqForm] = useState({
+        name: '', host: '', ssh_port: 22, username: 'root',
+        auth_method: 'password', password: '', private_key_path: '', passphrase: '',
+        enabled: true, ssh_timeout: 30, ssh_retries: 3, max_concurrent_jobs: 5,
+        libreqos_path: '/opt/libreqos',
+        libreqos_apply_cmd: 'cd /opt/libreqos && sudo python3 src/rust_integration/generate_and_apply.sh',
+        libreqos_list_cmd: 'sudo python3 /opt/libreqos/src/rust_integration/ispConfig.py --list-shaped-json',
+        suspension_download_mbps: 1, suspension_upload_mbps: 1
+    });
 
     // MikroTik Configuration Modal States
     const [selectedOltForMt, setSelectedOltForMt] = useState(null);
@@ -113,6 +130,12 @@ const Configuraciones = () => {
         const interval = setInterval(fetchData, 30000); // Auto-refresh cada 30 segundos
         return () => clearInterval(interval);
     }, []);
+
+    // Cargar datos de LibreQoS cuando se entra a esa pestaña
+    const [activeTab, setActiveTab] = useState('Nodos');
+    useEffect(() => {
+        if (activeTab === 'LibreQoS') fetchLqData();
+    }, [activeTab]);
 
     const handleCreate = async (type) => {
         try {
@@ -459,7 +482,98 @@ const Configuraciones = () => {
     };
     // ======================================
 
-    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'LibreQoS', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
+
+    const fetchLqData = async () => {
+        const user = configuracionService.getCurrentUser();
+        if (!user || !['administrador', 'admin', 'tecnico'].includes(user.rol)) return;
+        try {
+            const [sRes, jRes] = await Promise.all([
+                libreqosService.listServers().catch(() => ({ data: [] })),
+                libreqosService.listJobs().catch(() => ({ data: [] })),
+            ]);
+            setLqServers(Array.isArray(sRes.data) ? sRes.data : []);
+            setLqJobs(Array.isArray(jRes.data) ? jRes.data : []);
+        } catch (e) { console.warn('LibreQoS load error', e); }
+    };
+
+    const lqReset = () => {
+        setLqEditing(null);
+        setLqForm({
+            name: '', host: '', ssh_port: 22, username: 'root',
+            auth_method: 'password', password: '', private_key_path: '', passphrase: '',
+            enabled: true, ssh_timeout: 30, ssh_retries: 3, max_concurrent_jobs: 5,
+            libreqos_path: '/opt/libreqos',
+            libreqos_apply_cmd: 'cd /opt/libreqos && sudo python3 src/rust_integration/generate_and_apply.sh',
+            libreqos_list_cmd: 'sudo python3 /opt/libreqos/src/rust_integration/ispConfig.py --list-shaped-json',
+            suspension_download_mbps: 1, suspension_upload_mbps: 1
+        });
+    };
+
+    const handleLqSave = async () => {
+        if (!lqForm.name.trim() || !lqForm.host.trim()) return alert('Nombre y Host son obligatorios.');
+        setLqSaving(true);
+        try {
+            const payload = { ...lqForm, ssh_port: parseInt(lqForm.ssh_port) || 22 };
+            if (lqEditing) {
+                await libreqosService.updateServer(lqEditing.id, payload);
+                alert('✅ Servidor LibreQoS actualizado.');
+            } else {
+                await libreqosService.createServer(payload);
+                alert('✅ Servidor LibreQoS registrado.');
+            }
+            lqReset();
+            fetchLqData();
+        } catch (e) {
+            alert('Error: ' + (e.response?.data?.detail || e.message));
+        } finally { setLqSaving(false); }
+    };
+
+    const handleLqEdit = (srv) => {
+        setLqEditing(srv);
+        setLqForm({
+            name: srv.name, host: srv.host, ssh_port: srv.ssh_port, username: srv.username,
+            auth_method: srv.auth_method || 'password', password: '', private_key_path: srv.private_key_path || '',
+            passphrase: '', enabled: srv.enabled, ssh_timeout: srv.ssh_timeout, ssh_retries: srv.ssh_retries,
+            max_concurrent_jobs: srv.max_concurrent_jobs, libreqos_path: srv.libreqos_path,
+            libreqos_apply_cmd: srv.libreqos_apply_cmd, libreqos_list_cmd: srv.libreqos_list_cmd,
+            suspension_download_mbps: srv.suspension_download_mbps, suspension_upload_mbps: srv.suspension_upload_mbps
+        });
+    };
+
+    const handleLqDelete = async (id) => {
+        if (!window.confirm('¿Eliminar este servidor LibreQoS?')) return;
+        try {
+            await libreqosService.deleteServer(id);
+            fetchLqData();
+        } catch (e) { alert('Error: ' + (e.response?.data?.detail || e.message)); }
+    };
+
+    const handleLqTest = async (id) => {
+        setLqTesting(id);
+        try {
+            const res = await libreqosService.testServer(id);
+            alert(res.data?.success ? '✅ ' + res.data.message : '❌ ' + res.data?.message);
+            fetchLqData();
+        } catch (e) { alert('Error: ' + (e.response?.data?.detail || e.message)); }
+        finally { setLqTesting(null); }
+    };
+
+    const handleLqSync = async (id) => {
+        setLqSyncing(id);
+        try {
+            await libreqosService.syncServer(id);
+            alert('🔄 Reconciliación iniciada en segundo plano.');
+        } catch (e) { alert('Error: ' + (e.response?.data?.detail || e.message)); }
+        finally { setLqSyncing(null); }
+    };
+
+    const handleLqRetryJob = async (jobId) => {
+        try {
+            await libreqosService.retryJob(jobId);
+            fetchLqData();
+        } catch (e) { alert('Error: ' + (e.response?.data?.detail || e.message)); }
+    };
 
     const handleSaveDiasPermanencia = async () => {
         setDiasSaving(true);
@@ -1073,6 +1187,231 @@ const Configuraciones = () => {
 
                         <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, fontSize: '0.82rem', color: '#6b7280' }}>
                             💡 <strong style={{ color: '#38bdf8' }}>Credenciales para tu OLT:</strong> Host <code style={{ color: '#f472b6' }}>172.25.0.2</code> · Puerto <code style={{ color: '#f472b6' }}>22</code> · Usuario <code style={{ color: '#f472b6' }}>root</code> · Password <code style={{ color: '#f472b6' }}>admin</code>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'LibreQoS' && (
+                    <div onClick={() => { if (!lqServers.length && !lqJobs.length) fetchLqData(); }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
+                            <div>
+                                <h3 style={{ margin: 0 }}>🚀 Servidores LibreQoS</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
+                                    Registra los servidores LibreQoS remotos accedidos por SSH. Opsatel los usa para provisionar y controlar el QoS de cada cliente automáticamente.
+                                </p>
+                            </div>
+                            <button className="btn btn-secondary" onClick={fetchLqData} style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.2)', padding: '6px 14px', fontSize: '0.85rem' }}>🔄 Recargar</button>
+                        </div>
+
+                        {/* Formulario */}
+                        <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, padding: 16, marginBottom: 20, marginTop: 16 }}>
+                            <h4 style={{ marginBottom: 14, color: '#38bdf8' }}>{lqEditing ? '✏️ Editar Servidor LibreQoS' : '➕ Nuevo Servidor LibreQoS'}</h4>
+
+                            {/* Fila 1: Básicos */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, marginBottom: 12 }}>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Nombre</label>
+                                    <input className="input" style={{ margin: 0 }} value={lqForm.name} onChange={e => setLqForm({ ...lqForm, name: e.target.value })} placeholder="LibreQoS-Norte" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Host / IP</label>
+                                    <input className="input" style={{ margin: 0 }} value={lqForm.host} onChange={e => setLqForm({ ...lqForm, host: e.target.value })} placeholder="192.168.1.10" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Puerto SSH</label>
+                                    <input type="number" className="input" style={{ margin: 0 }} value={lqForm.ssh_port} onChange={e => setLqForm({ ...lqForm, ssh_port: e.target.value })} placeholder="22" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Usuario SSH</label>
+                                    <input className="input" style={{ margin: 0 }} value={lqForm.username} onChange={e => setLqForm({ ...lqForm, username: e.target.value })} placeholder="root" />
+                                </div>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label">Método Auth</label>
+                                    <select className="input" style={{ margin: 0 }} value={lqForm.auth_method} onChange={e => setLqForm({ ...lqForm, auth_method: e.target.value })}>
+                                        <option value="password">Contraseña</option>
+                                        <option value="key">Clave Privada</option>
+                                    </select>
+                                </div>
+                                {lqForm.auth_method === 'password' ? (
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Password SSH</label>
+                                        <input type="password" className="input" style={{ margin: 0 }} value={lqForm.password} onChange={e => setLqForm({ ...lqForm, password: e.target.value })} placeholder={lqEditing ? '(sin cambio)' : 'contraseña'} />
+                                    </div>
+                                ) : (
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Ruta Clave Privada</label>
+                                        <input className="input" style={{ margin: 0 }} value={lqForm.private_key_path} onChange={e => setLqForm({ ...lqForm, private_key_path: e.target.value })} placeholder="/root/.ssh/id_rsa" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Fila 2: Avanzado */}
+                            <details style={{ marginTop: 4 }}>
+                                <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.85rem', marginBottom: 10 }}>⚙️ Configuración avanzada</summary>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Ruta LibreQoS</label>
+                                        <input className="input" style={{ margin: 0 }} value={lqForm.libreqos_path} onChange={e => setLqForm({ ...lqForm, libreqos_path: e.target.value })} />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Jobs concurrentes máx.</label>
+                                        <input type="number" className="input" style={{ margin: 0 }} value={lqForm.max_concurrent_jobs} onChange={e => setLqForm({ ...lqForm, max_concurrent_jobs: e.target.value })} min={1} max={20} />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Velocidad suspensión ↓ (Mbps)</label>
+                                        <input type="number" className="input" style={{ margin: 0 }} value={lqForm.suspension_download_mbps} onChange={e => setLqForm({ ...lqForm, suspension_download_mbps: e.target.value })} min={0} />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label">Velocidad suspensión ↑ (Mbps)</label>
+                                        <input type="number" className="input" style={{ margin: 0 }} value={lqForm.suspension_upload_mbps} onChange={e => setLqForm({ ...lqForm, suspension_upload_mbps: e.target.value })} min={0} />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0, gridColumn: 'span 2' }}>
+                                        <label className="label">Comando APPLY</label>
+                                        <input className="input" style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.8rem' }} value={lqForm.libreqos_apply_cmd} onChange={e => setLqForm({ ...lqForm, libreqos_apply_cmd: e.target.value })} />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0, gridColumn: 'span 2' }}>
+                                        <label className="label">Comando LIST (JSON)</label>
+                                        <input className="input" style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.8rem' }} value={lqForm.libreqos_list_cmd} onChange={e => setLqForm({ ...lqForm, libreqos_list_cmd: e.target.value })} />
+                                    </div>
+                                </div>
+                            </details>
+
+                            <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <button className="btn btn-primary" onClick={handleLqSave} disabled={lqSaving}>
+                                    {lqSaving ? 'Guardando...' : lqEditing ? 'Actualizar Servidor' : 'Registrar Servidor'}
+                                </button>
+                                {lqEditing && (
+                                    <button className="btn btn-secondary" onClick={lqReset}>Cancelar</button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Tabla de Servidores */}
+                        <div className="table-container">
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                                        {['ID', 'Nombre', 'Host', 'Puerto', 'Usuario', 'Estado', 'Jobs Máx', 'Último chequeo', 'Acciones'].map(h => (
+                                            <th key={h} style={{ padding: '10px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lqServers.length === 0 && (
+                                        <tr><td colSpan={9} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
+                                            ⚡ No hay servidores LibreQoS registrados. Agrega uno arriba para comenzar.
+                                        </td></tr>
+                                    )}
+                                    {lqServers.map(srv => (
+                                        <tr key={srv.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '10px 12px', color: '#6b7280' }}>{srv.id}</td>
+                                            <td style={{ padding: '10px 12px', fontWeight: 600 }}>{srv.name}</td>
+                                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#38bdf8' }}>{srv.host}</td>
+                                            <td style={{ padding: '10px 12px' }}>{srv.ssh_port}</td>
+                                            <td style={{ padding: '10px 12px' }}>{srv.username}</td>
+                                            <td style={{ padding: '10px 12px' }}>
+                                                <span style={{
+                                                    padding: '3px 8px', borderRadius: 4, fontSize: '0.8rem',
+                                                    background: srv.status === 'ONLINE' ? 'rgba(34,197,94,0.15)' : srv.status === 'OFFLINE' ? 'rgba(239,68,68,0.15)' : 'rgba(107,114,128,0.2)',
+                                                    color: srv.status === 'ONLINE' ? '#4ade80' : srv.status === 'OFFLINE' ? '#f87171' : '#9ca3af'
+                                                }}>
+                                                    {srv.status === 'ONLINE' ? '● ONLINE' : srv.status === 'OFFLINE' ? '○ OFFLINE' : '◌ DESCONOCIDO'}
+                                                </span>
+                                                {!srv.enabled && <span style={{ marginLeft: 6, fontSize: '0.75rem', color: '#f59e0b' }}>⚠️ Deshabilitado</span>}
+                                            </td>
+                                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{srv.max_concurrent_jobs}</td>
+                                            <td style={{ padding: '10px 12px', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                {srv.last_check ? new Date(srv.last_check).toLocaleString('es-EC') : '—'}
+                                            </td>
+                                            <td style={{ padding: '10px 12px' }}>
+                                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                                                    <button onClick={() => handleLqEdit(srv)} style={{ padding: '4px 8px', fontSize: '0.78rem', background: '#3b82f655', color: '#93c5fd', border: 'none', borderRadius: 4, cursor: 'pointer' }}>✏️ Editar</button>
+                                                    <button onClick={() => handleLqTest(srv.id)} disabled={lqTesting === srv.id} style={{ padding: '4px 8px', fontSize: '0.78rem', background: 'rgba(16,185,129,0.15)', color: '#34d399', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+                                                        {lqTesting === srv.id ? '...' : '⚡ Ping SSH'}
+                                                    </button>
+                                                    <button onClick={() => handleLqSync(srv.id)} disabled={lqSyncing === srv.id} style={{ padding: '4px 8px', fontSize: '0.78rem', background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+                                                        {lqSyncing === srv.id ? '...' : '🔄 Sync'}
+                                                    </button>
+                                                    <button onClick={() => handleLqDelete(srv.id)} style={{ padding: '4px 8px', fontSize: '0.78rem', background: '#ef444455', color: '#fca5a5', border: 'none', borderRadius: 4, cursor: 'pointer' }}>🗑️</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Cola de trabajos */}
+                        <div style={{ marginTop: 28 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                                <h4 style={{ margin: 0 }}>📋 Cola de Trabajos LibreQoS</h4>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    {['all', 'pending', 'processing', 'completed', 'failed', 'retry'].map(s => (
+                                        <button key={s} onClick={() => setLqJobsTab(s)} style={{
+                                            padding: '4px 10px', fontSize: '0.78rem', borderRadius: 4, border: 'none', cursor: 'pointer',
+                                            background: lqJobsTab === s ? '#3b82f6' : 'rgba(255,255,255,0.06)',
+                                            color: lqJobsTab === s ? '#fff' : '#9ca3af'
+                                        }}>{s}</button>
+                                    ))}
+                                    <button onClick={fetchLqData} style={{ padding: '4px 10px', fontSize: '0.78rem', background: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 4, cursor: 'pointer' }}>🔄</button>
+                                </div>
+                            </div>
+                            <div className="table-container">
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                                            {['Job ID', 'Cliente ID', 'Servidor', 'Operación', 'Estado', 'Intentos', 'Error', 'Creado', 'Acc'].map(h => (
+                                                <th key={h} style={{ padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(() => {
+                                            const filtered = lqJobsTab === 'all' ? lqJobs : lqJobs.filter(j => j.status === lqJobsTab);
+                                            if (filtered.length === 0) return (
+                                                <tr><td colSpan={9} style={{ padding: 16, textAlign: 'center', color: '#6b7280', fontSize: '0.85rem' }}>Sin trabajos en esta categoría</td></tr>
+                                            );
+                                            return filtered.slice(0, 50).map(j => (
+                                                <tr key={j.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                    <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: '#6b7280' }}>{j.id}</td>
+                                                    <td style={{ padding: '8px 10px' }}>{j.cliente_id}</td>
+                                                    <td style={{ padding: '8px 10px', color: '#94a3b8' }}>
+                                                        {lqServers.find(s => s.id === j.libreqos_server_id)?.name || j.libreqos_server_id || '—'}
+                                                    </td>
+                                                    <td style={{ padding: '8px 10px' }}>
+                                                        <span style={{
+                                                            padding: '2px 6px', borderRadius: 3, fontSize: '0.75rem',
+                                                            background: j.operation === 'SUSPEND' ? 'rgba(245,158,11,0.15)' : j.operation === 'REMOVE' ? 'rgba(239,68,68,0.15)' : 'rgba(56,189,248,0.15)',
+                                                            color: j.operation === 'SUSPEND' ? '#fbbf24' : j.operation === 'REMOVE' ? '#f87171' : '#38bdf8'
+                                                        }}>{j.operation}</span>
+                                                    </td>
+                                                    <td style={{ padding: '8px 10px' }}>
+                                                        <span style={{
+                                                            padding: '2px 6px', borderRadius: 3, fontSize: '0.75rem',
+                                                            background: j.status === 'completed' ? 'rgba(34,197,94,0.15)' : j.status === 'failed' ? 'rgba(239,68,68,0.15)' : j.status === 'processing' ? 'rgba(139,92,246,0.15)' : 'rgba(107,114,128,0.15)',
+                                                            color: j.status === 'completed' ? '#4ade80' : j.status === 'failed' ? '#f87171' : j.status === 'processing' ? '#a78bfa' : '#9ca3af'
+                                                        }}>{j.status}</span>
+                                                    </td>
+                                                    <td style={{ padding: '8px 10px', textAlign: 'center' }}>{j.retry_count}/{j.max_retries}</td>
+                                                    <td style={{ padding: '8px 10px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', color: '#f87171' }} title={j.error || ''}>{j.error || '—'}</td>
+                                                    <td style={{ padding: '8px 10px', fontSize: '0.78rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                                                        {new Date(j.created_at).toLocaleString('es-EC')}
+                                                    </td>
+                                                    <td style={{ padding: '8px 10px' }}>
+                                                        {(j.status === 'failed' || j.status === 'retry') && (
+                                                            <button onClick={() => handleLqRetryJob(j.id)} style={{ padding: '3px 7px', fontSize: '0.75rem', background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: 'none', borderRadius: 3, cursor: 'pointer' }}>↩ Retry</button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ));
+                                        })()}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, fontSize: '0.82rem', color: '#6b7280' }}>
+                            💡 <strong style={{ color: '#a78bfa' }}>LibreQoS:</strong> Cada servidor debe estar accesible por SSH desde este backend. Asegúrate de que el usuario tenga permisos sudo. El worker de fondo procesará las tareas automáticamente cada 10 segundos.
                         </div>
                     </div>
                 )}

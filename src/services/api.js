@@ -243,4 +243,19 @@ export const oltService = {
   refreshIp: (clienteId) => api.post(`/olt-tasks/bulk/clientes/${clienteId}/refresh-ip`),
 };
 
+export const libreqosService = {
+  // Servidores LibreQoS
+  listServers:   ()         => api.get('/libreqos/servers'),
+  createServer:  (data)     => api.post('/libreqos/servers', data),
+  updateServer:  (id, data) => api.put(`/libreqos/servers/${id}`, data),
+  deleteServer:  (id)       => api.delete(`/libreqos/servers/${id}`),
+  testServer:    (id)       => api.post(`/libreqos/servers/${id}/test`),
+  syncServer:    (id)       => api.post(`/libreqos/servers/${id}/sync`),
+  // Cola de trabajos
+  listJobs:      (status)   => api.get('/libreqos/jobs', { params: status ? { status } : {} }),
+  retryJob:      (id)       => api.post(`/libreqos/jobs/${id}/retry`),
+  // Estado QoS del cliente
+  getClientQoS:  (id)       => api.get(`/libreqos/clients/${id}/qos`),
+};
+
 export default api;
