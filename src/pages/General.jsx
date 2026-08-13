@@ -23,8 +23,7 @@ const General = () => {
     "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
     "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "ip", "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
-    "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date",
-    "client_payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
+    "tiempo", "arrienda", "cuenta", "facturas", "app", "payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
   ];
 
   // Estado para los anchos ajustables de cada columna
@@ -44,7 +43,7 @@ const General = () => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = colWidths[colName] || 150;
-    
+
     const handleMouseMove = (moveEvent) => {
       const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX));
       setColWidths(prev => ({
@@ -52,12 +51,12 @@ const General = () => {
         [colName]: newWidth
       }));
     };
-    
+
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
@@ -236,7 +235,7 @@ const General = () => {
                 {allColumns.map(col => {
                   const isId = col === 'id';
                   const isNombre = col === 'nombre';
-                  
+
                   // Posiciones sticky para ID y Nombre
                   let stickyStyle = {};
                   if (isId) {
@@ -272,7 +271,7 @@ const General = () => {
                       ...stickyStyle
                     }}>
                       {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
-                      
+
                       {/* Control para redimensionar la columna */}
                       <div
                         onMouseDown={(e) => handleMouseDown(e, col)}
@@ -301,7 +300,7 @@ const General = () => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
                     const isId = col === 'id';
                     const isNombre = col === 'nombre';
-                    
+
                     // Posiciones sticky para ID y Nombre
                     let stickyStyle = {};
                     if (isId) {
