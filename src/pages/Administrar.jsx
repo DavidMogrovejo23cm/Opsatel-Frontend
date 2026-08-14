@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, libreqosService } from '../services/api';
 import { motion } from 'framer-motion';
 
 const Administrar = () => {
@@ -91,6 +91,16 @@ const Administrar = () => {
       setDeleteMessage({ type: 'error', text: typeof detail === 'string' ? detail : 'Error al borrar de la OLT.' });
     } finally {
       setDeletingOlt(false);
+    }
+  };
+
+  const handleForceSyncLibreQoS = async (clienteId) => {
+    try {
+      const res = await libreqosService.syncClientNow(clienteId);
+      setDeleteMessage({ type: 'success', text: `🚀 LibreQoS: ${res.data.detail || 'Tarea de aprovisionamiento encolada.'} (Job ID: ${res.data.job_id || '?'})` });
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setDeleteMessage({ type: 'error', text: `❌ LibreQoS: ${typeof detail === 'string' ? detail : 'Error al encolar la sincronización manual.'}` });
     }
   };
 
@@ -309,6 +319,26 @@ const Administrar = () => {
                               🗑️ Borrar OLT
                             </button>
                           )}
+                          {c.ip && (
+                             <button
+                               className="btn btn-secondary"
+                               style={{
+                                 padding: '6px 10px',
+                                 fontSize: '0.75rem',
+                                 background: 'rgba(59,130,246,0.12)',
+                                 border: '1px solid rgba(59,130,246,0.4)',
+                                 color: '#60a5fa',
+                                 cursor: 'pointer',
+                                 borderRadius: '8px',
+                                 fontWeight: 700,
+                                 transition: 'all 0.2s'
+                               }}
+                               title="Forzar aprovisionamiento inmediato en LibreQoS"
+                               onClick={() => handleForceSyncLibreQoS(c.id)}
+                             >
+                               🚀 LibreQoS
+                             </button>
+                           )}
                         </div>
                       </td>
                     </>

@@ -256,6 +256,7 @@ export const libreqosService = {
   retryJob:      (id)       => api.post(`/libreqos/jobs/${id}/retry`),
   // Estado QoS del cliente
   getClientQoS:  (id)       => api.get(`/libreqos/clients/${id}/qos`),
+  syncClientNow: (id)       => api.post(`/libreqos/clients/${id}/sync-now`),
 };
 
 export default api;
