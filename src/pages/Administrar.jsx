@@ -98,6 +98,7 @@ const Administrar = () => {
     try {
       const res = await libreqosService.syncClientNow(clienteId);
       setDeleteMessage({ type: 'success', text: `🚀 LibreQoS: ${res.data.detail || 'Tarea de aprovisionamiento encolada.'} (Job ID: ${res.data.job_id || '?'})` });
+      fetchData(); // Refrescar los datos para actualizar el estado de LibreQoS en la tabla
     } catch (err) {
       const detail = err.response?.data?.detail;
       setDeleteMessage({ type: 'error', text: `❌ LibreQoS: ${typeof detail === 'string' ? detail : 'Error al encolar la sincronización manual.'}` });
@@ -319,7 +320,7 @@ const Administrar = () => {
                               🗑️ Borrar OLT
                             </button>
                           )}
-                          {c.ip && (
+                          {c.ip && c.qos_status !== 'APPLIED' && (
                              <button
                                className="btn btn-secondary"
                                style={{
