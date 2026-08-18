@@ -60,6 +60,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
     { path: '/asistencia', label: 'Asistencia', icon: '⏰', roles: ['administrador', 'secretario', 'tecnico', 'instalador'] },
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
     { path: '/upload-db', label: 'Base de Datos', icon: '📂', roles: ['administrador'] },
+    { path: '/eliminados', label: 'Eliminados', icon: '🗑️', roles: ['administrador'] },
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
   ];
 

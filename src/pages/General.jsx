@@ -16,6 +16,11 @@ const General = () => {
   const [pinInput, setPinInput] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
 
+  // Estados para el progreso de eliminación completa
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState(null);
+
+
   const [planesList, setPlanesList] = useState([]);
 
   // Definición de las columnas del sistema
@@ -145,15 +150,74 @@ const General = () => {
     setPinInput('');
   };
 
+  const handleDeleteClick = (cliente) => {
+    setPendingAction({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
+    setShowPinModal(true);
+    setPinInput('');
+  };
+
   const executePendingAction = async () => {
+    const originalPin = pinInput; // Keep the PIN for backend confirmation
+
     if (pinInput !== "1234566") {
       alert("PIN Incorrecto");
       setPinInput('');
       return;
     }
 
+    const { type, id, col, value } = pendingAction;
+
+    if (type === 'delete') {
+      setShowPinModal(false);
+      setShowProgressModal(true);
+      setDeletionProgress({
+        status: 'processing',
+        olt: 'PENDIENTE',
+        xui: 'PENDIENTE',
+        libreqos: 'PENDIENTE',
+        database: 'PENDIENTE',
+        message: 'Iniciando proceso de eliminación completa...'
+      });
+
+      try {
+        // Enviar borrado total al backend con validación del PIN
+        const response = await clienteService.eliminarCompletamente(id, { pin: originalPin });
+        
+        setDeletionProgress({
+          status: 'success',
+          olt: response.data.olt,
+          xui: response.data.xui,
+          libreqos: response.data.libreqos,
+          database: response.data.database,
+          message: '¡El cliente ha sido eliminado exitosamente de todos los sistemas!'
+        });
+        
+        setPendingAction(null);
+        setPinInput('');
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        const errDetail = error.response?.data?.detail || {};
+        const failedStage = errDetail.stage || 'database';
+        const errMsg = errDetail.message || 'Error inesperado durante la eliminación';
+
+        // Mapear qué etapas fallaron en el progress display
+        setDeletionProgress(prev => ({
+          status: 'error',
+          olt: failedStage === 'olt' ? 'ERROR' : (prev?.olt || 'PENDIENTE'),
+          xui: failedStage === 'xui' ? 'ERROR' : (prev?.xui || 'PENDIENTE'),
+          libreqos: failedStage === 'libreqos' ? 'ERROR' : (prev?.libreqos || 'PENDIENTE'),
+          database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
+          message: `Fallo en etapa [${failedStage.toUpperCase()}]: ${errMsg}`
+        }));
+        
+        setPendingAction(null);
+        setPinInput('');
+      }
+      return;
+    }
+
     try {
-      const { type, id, col, value } = pendingAction;
       await clienteService.actualizar(id, { [col]: value });
       setEditingCell(null);
       setShowPinModal(false);
@@ -166,6 +230,7 @@ const General = () => {
       setEditingCell(null);
     }
   };
+
 
   const handleKeyDown = (e, id, col) => {
     if (e.key === 'Enter') {
@@ -291,6 +356,24 @@ const General = () => {
                     </th>
                   );
                 })}
+                <th key="acciones" style={{
+                  padding: '12px',
+                  borderBottom: '1px solid var(--glass-border)',
+                  borderRight: '1px solid var(--glass-border)',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  width: 100,
+                  minWidth: 100,
+                  maxWidth: 100,
+                  position: 'sticky',
+                  right: 0,
+                  background: '#131526',
+                  zIndex: 22,
+                  borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
+                }}>
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -504,6 +587,45 @@ const General = () => {
                       </td>
                     );
                   })}
+                  <td key="acciones" style={{
+                    padding: '6px 12px',
+                    whiteSpace: 'nowrap',
+                    width: 100,
+                    minWidth: 100,
+                    maxWidth: 100,
+                    textAlign: 'center',
+                    position: 'sticky',
+                    right: 0,
+                    background: '#131526',
+                    zIndex: 12,
+                    borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}>
+                    <button
+                      onClick={() => handleDeleteClick(c)}
+                      style={{
+                        padding: '4px 10px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#f87171',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#ef4444';
+                        e.target.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'rgba(239, 68, 68, 0.15)';
+                        e.target.style.color = '#f87171';
+                      }}
+                    >
+                      Borrar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -562,6 +684,82 @@ const General = () => {
                 Confirmar
               </button>
             </div>
+          </motion.div>
+        </div>
+      )}
+      {showProgressModal && deletionProgress && (
+        <div className="modal-overlay" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001
+        }}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="glass"
+            style={{ width: '100%', maxWidth: '420px', padding: '32px', borderRadius: '24px', textAlign: 'left' }}
+          >
+            <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span>🗑️</span> Eliminando Cliente
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>1. Creación de Respaldo</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.database === 'PENDIENTE' ? '#fbbf24' : '#4ade80' }}>
+                  {deletionProgress.database === 'PENDIENTE' ? '⏳ Procesando' : '✅ OK'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>2. Configuración OLT</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.olt === 'PENDIENTE' ? '#fbbf24' : deletionProgress.olt === 'ERROR' ? '#f87171' : deletionProgress.olt === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
+                  {deletionProgress.olt === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.olt === 'ERROR' ? '❌ Falló' : deletionProgress.olt === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>3. Configuración IPTV (XUI)</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.xui === 'PENDIENTE' ? '#fbbf24' : deletionProgress.xui === 'ERROR' ? '#f87171' : deletionProgress.xui === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
+                  {deletionProgress.xui === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.xui === 'ERROR' ? '❌ Falló' : deletionProgress.xui === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>4. Cola de QoS (LibreQoS)</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.libreqos === 'PENDIENTE' ? '#fbbf24' : deletionProgress.libreqos === 'ERROR' ? '#f87171' : deletionProgress.libreqos === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
+                  {deletionProgress.libreqos === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.libreqos === 'ERROR' ? '❌ Falló' : deletionProgress.libreqos === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>5. Base de Datos Local</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.database === 'PENDIENTE' ? '#94a3b8' : deletionProgress.database === 'ERROR' ? '#f87171' : '#4ade80' }}>
+                  {deletionProgress.database === 'PENDIENTE' ? '⏳ Esperando' : deletionProgress.database === 'ERROR' ? '❌ Falló' : '✅ Eliminado'}
+                </span>
+              </div>
+            </div>
+
+            <p style={{
+              fontSize: '0.85rem',
+              padding: '12px',
+              borderRadius: '8px',
+              background: deletionProgress.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+              border: deletionProgress.status === 'error' ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
+              color: deletionProgress.status === 'error' ? '#f87171' : '#e2e8f0',
+              marginBottom: '20px',
+              wordBreak: 'break-word'
+            }}>
+              {deletionProgress.message}
+            </p>
+
+            {deletionProgress.status !== 'processing' && (
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '10px' }}
+                onClick={() => {
+                  setShowProgressModal(false);
+                  setDeletionProgress(null);
+                }}
+              >
+                Entendido
+              </button>
+            )}
           </motion.div>
         </div>
       )}

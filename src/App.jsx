@@ -23,6 +23,7 @@ import CallCenter from './pages/CallCenter';
 import Balance from './pages/Balance';
 import Asistencia from './pages/Asistencia';
 import WhatsApp from './pages/WhatsApp';
+import Eliminados from './pages/Eliminados';
 
 function HomeRedirect() {
   const { user } = useAuth();
@@ -142,6 +143,11 @@ function App() {
             <Route path="asistencia" element={
               <ProtectedRoute>
                 <Asistencia />
+              </ProtectedRoute>
+            } />
+            <Route path="eliminados" element={
+              <ProtectedRoute roles={['administrador']}>
+                <Eliminados />
               </ProtectedRoute>
             } />
           </Route>

@@ -83,7 +83,10 @@ export const clienteService = {
   }),
   parseSmart: (text) => api.post('/clientes/parse-smart', { text }),
   borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
+  eliminarCompletamente: (id, data) => api.post(`/clientes/${id}/eliminar-completamente`, data),
+  listarEliminados: () => api.get('/clientes/eliminados'),
 };
+
 
 export const extrasService = {
   listar: () => api.get('/extras/'),
