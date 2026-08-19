@@ -241,6 +241,7 @@ const General = () => {
   };
 
   const [statusFilter, setStatusFilter] = useState('TODOS');
+  const [selectedAction, setSelectedAction] = useState('VER'); // 'VER' o 'BORRAR'
 
   const filteredClientes = clientes
     .filter(c => {
@@ -271,6 +272,15 @@ const General = () => {
           </p>
         </div>
         <div className="page-actions">
+          <select
+            className="input"
+            style={{ marginBottom: 0, background: '#1e1b4b' }}
+            value={selectedAction}
+            onChange={(e) => setSelectedAction(e.target.value)}
+          >
+            <option value="VER">Acción (Ver/Ninguna)</option>
+            <option value="BORRAR">Habilitar Borrado</option>
+          </select>
           <select
             className="input"
             style={{ marginBottom: 0, background: '#1e1b4b' }}
@@ -356,24 +366,26 @@ const General = () => {
                     </th>
                   );
                 })}
-                <th key="acciones" style={{
-                  padding: '12px',
-                  borderBottom: '1px solid var(--glass-border)',
-                  borderRight: '1px solid var(--glass-border)',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                  width: 100,
-                  minWidth: 100,
-                  maxWidth: 100,
-                  position: 'sticky',
-                  right: 0,
-                  background: '#131526',
-                  zIndex: 22,
-                  borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
-                }}>
-                  Acción
-                </th>
+                {selectedAction === 'BORRAR' && (
+                  <th key="acciones" style={{
+                    padding: '12px',
+                    borderBottom: '1px solid var(--glass-border)',
+                    borderRight: '1px solid var(--glass-border)',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    width: 100,
+                    minWidth: 100,
+                    maxWidth: 100,
+                    position: 'sticky',
+                    right: 0,
+                    background: '#131526',
+                    zIndex: 22,
+                    borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
+                  }}>
+                    Acción
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -587,45 +599,47 @@ const General = () => {
                       </td>
                     );
                   })}
-                  <td key="acciones" style={{
-                    padding: '6px 12px',
-                    whiteSpace: 'nowrap',
-                    width: 100,
-                    minWidth: 100,
-                    maxWidth: 100,
-                    textAlign: 'center',
-                    position: 'sticky',
-                    right: 0,
-                    background: '#131526',
-                    zIndex: 12,
-                    borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                  }}>
-                    <button
-                      onClick={() => handleDeleteClick(c)}
-                      style={{
-                        padding: '4px 10px',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                        color: '#f87171',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#ef4444';
-                        e.target.style.color = '#fff';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.15)';
-                        e.target.style.color = '#f87171';
-                      }}
-                    >
-                      Borrar
-                    </button>
-                  </td>
+                  {selectedAction === 'BORRAR' && (
+                    <td key="acciones" style={{
+                      padding: '6px 12px',
+                      whiteSpace: 'nowrap',
+                      width: 100,
+                      minWidth: 100,
+                      maxWidth: 100,
+                      textAlign: 'center',
+                      position: 'sticky',
+                      right: 0,
+                      background: '#131526',
+                      zIndex: 12,
+                      borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                    }}>
+                      <button
+                        onClick={() => handleDeleteClick(c)}
+                        style={{
+                          padding: '4px 10px',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          color: '#f87171',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = '#ef4444';
+                          e.target.style.color = '#fff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'rgba(239, 68, 68, 0.15)';
+                          e.target.style.color = '#f87171';
+                        }}
+                      >
+                        Borrar
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
