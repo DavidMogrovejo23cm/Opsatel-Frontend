@@ -376,12 +376,12 @@ const Admin = () => {
                       const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
                       const instRecord = clientHR.find(h => h.actividad?.toUpperCase() === 'INSTALACION');
                       const fInstalacion = instRecord ? instRecord.fecha : (c.instalation_date || '-');
-                      
+
                       const visitRecords = clientHR
                         .filter(h => h.actividad?.toUpperCase() === 'VISITA TECNICA' && h.fecha)
                         .sort((a, b) => b.fecha.localeCompare(a.fecha));
                       const fVisita = visitRecords.length > 0 ? visitRecords[0].fecha : '-';
-                      
+
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <div><span style={{ color: 'var(--text-muted)' }}>Inst:</span> {fInstalacion}</div>
@@ -893,7 +893,7 @@ const Admin = () => {
                   💾 Guardar Valores
                 </button>
                 <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '12px 24px' }}>
-                  De acuerdo
+                  De acuerdo (PAGAR)
                 </button>
               </div>
             </motion.div>

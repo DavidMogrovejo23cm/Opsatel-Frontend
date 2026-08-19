@@ -77,6 +77,7 @@ const Eliminados = () => {
                 <th style={{ padding: '12px', textAlign: 'left' }}>Plan</th>
                 <th style={{ padding: '12px', textAlign: 'left' }}>IP</th>
                 <th style={{ padding: '12px', textAlign: 'center' }}>OLT</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>MikroTik</th>
                 <th style={{ padding: '12px', textAlign: 'center' }}>IPTV</th>
                 <th style={{ padding: '12px', textAlign: 'center' }}>QoS</th>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Fecha Eliminación</th>
@@ -87,7 +88,7 @@ const Eliminados = () => {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="11" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan="12" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                     No se encontraron registros de clientes eliminados.
                   </td>
                 </tr>
@@ -100,6 +101,7 @@ const Eliminados = () => {
                     <td style={{ padding: '12px' }}>{item.plan || '-'}</td>
                     <td style={{ padding: '12px', fontFamily: 'monospace' }}>{item.ip || '-'}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>{getStatusBadge(item.estado_olt)}</td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>{getStatusBadge(item.estado_mikrotik)}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>{getStatusBadge(item.estado_xui)}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>{getStatusBadge(item.estado_libreqos)}</td>
                     <td style={{ padding: '12px' }}>{new Date(item.deleted_at).toLocaleString()}</td>
@@ -153,6 +155,7 @@ const Eliminados = () => {
                 <p><strong>Fecha Borrado:</strong> {new Date(selectedRecord.deleted_at).toLocaleString()}</p>
                 <p><strong>Eliminado por:</strong> {selectedRecord.deleted_by}</p>
                 <p><strong>Estado OLT:</strong> {selectedRecord.estado_olt}</p>
+                <p><strong>Estado MikroTik:</strong> {selectedRecord.estado_mikrotik}</p>
                 <p><strong>Estado XUI:</strong> {selectedRecord.estado_xui}</p>
                 <p><strong>Estado LibreQoS:</strong> {selectedRecord.estado_libreqos}</p>
               </div>
