@@ -81,27 +81,29 @@ const Admin = () => {
     // Incluye el adicional que el backend mantiene separado del total_pago
     const montoTotalConsolidado = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0)).toFixed(2);
 
+    const isCortesiaTotal = !!cliente.cortesia_total;
+
     setPagoData({
-      monto: montoTotalConsolidado,
+      monto: isCortesiaTotal ? "0" : montoTotalConsolidado,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: cliente.facturas || '',
-      internet_payment: internetSugerido,
+      internet_payment: isCortesiaTotal ? "0" : internetSugerido,
       app: cliente.app || '',
       payment_date: new Date().toISOString().split('T')[0],
       client_payment_date: cliente.client_payment_date || '',
       cod: cliente.cod || '',
-      plus: cliente.plus || '',
+      plus: isCortesiaTotal ? "0" : (cliente.plus || ''),
       bank_plus: cliente.bank_plus || '',
-      adicional: cliente.adicional || '',
+      adicional: isCortesiaTotal ? "0" : (cliente.adicional || ''),
       notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
-      cortesiaMode: 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
+      cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
       cortesiaPct: '',
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
       original_adicional: cliente.adicional || '0',
-      descuentoValue: 0,
-      iptvDescuentoValue: 0
+      descuentoValue: isCortesiaTotal ? internetSugerido : 0,
+      iptvDescuentoValue: isCortesiaTotal ? (cliente.plus || '0') : 0
     });
     setEfectivoRecibido('');
     setShowPagoModal(true);
@@ -152,12 +154,11 @@ const Admin = () => {
         })()
       });
 
-      // Guardar comentarios del contrato si fueron modificados
-      if (pagoData.comentarios_edit !== undefined) {
-        await clienteService.updateAdmin(selectedCliente.id, {
-          comentarios: pagoData.comentarios_edit
-        });
-      }
+      // Guardar comentarios del contrato y el estado de cortesía total
+      await clienteService.updateAdmin(selectedCliente.id, {
+        comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
+        cortesia_total: pagoData.cortesiaMode === 'TOTAL'
+      });
 
       setShowPagoModal(false);
       fetchData();
@@ -177,6 +178,7 @@ const Admin = () => {
         cod: pagoData.cod,
         facturas: pagoData.facturas,
         internet_payment: pagoData.internet_payment,
+        cortesia_total: pagoData.cortesiaMode === 'TOTAL',
         // Si se modifica internet_payment, dejar el total_pago en cero
         // para evitar que quede el saldo pendiente del mes anterior
         saldo: 0,
