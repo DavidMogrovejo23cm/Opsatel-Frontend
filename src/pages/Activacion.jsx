@@ -22,6 +22,17 @@ const Activacion = () => {
   const [showProvisionModal, setShowProvisionModal] = useState(false);
   const [provisionType, setProvisionType] = useState(''); 
 
+  // Referencia para limpiar todos los intervalos activos en desmontaje o cambios de estado
+  const activeIntervals = React.useRef([]);
+  const registerInterval = (id) => {
+    activeIntervals.current.push(id);
+  };
+  const clearRegisteredInterval = (id) => {
+    clearInterval(id);
+    activeIntervals.current = activeIntervals.current.filter(i => i !== id);
+  };
+
+
   // Verificación Técnica (Modal Post-Activación)
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmTaskData, setConfirmTaskData] = useState(null);
@@ -61,6 +72,9 @@ const Activacion = () => {
 
   useEffect(() => {
     fetchClientes();
+    return () => {
+      activeIntervals.current.forEach(clearInterval);
+    };
   }, []);
 
   const fetchClientes = async () => {
@@ -158,13 +172,15 @@ const Activacion = () => {
   const startPolling = (id) => {
     setPolling(true);
     setTaskStatus({ status: 'processing', message: 'Procesando...' });
+    let errorCount = 0;
     const interval = setInterval(async () => {
       try {
         const res = await oltService.getTask(id);
+        errorCount = 0; // Reset on success
         const t = res.data;
         setTaskStatus({ status: t.status, message: t.error_message || '...', response: t.response_json });
         if (['completed', 'failed', 'cancelled'].includes(t.status)) {
-          clearInterval(interval);
+          clearRegisteredInterval(interval);
           setPolling(false);
           fetchClientes();
           
@@ -187,8 +203,15 @@ const Activacion = () => {
         }
       } catch (e) {
         console.error(e);
+        errorCount++;
+        if (errorCount >= 5) {
+          clearRegisteredInterval(interval);
+          setPolling(false);
+          setTaskStatus({ status: 'failed', message: 'Error de red persistente consultando la tarea.' });
+        }
       }
     }, 2000);
+    registerInterval(interval);
   };
 
   // Refrescar IP del Cliente en caliente
@@ -238,12 +261,14 @@ const Activacion = () => {
       
       // Polling de la tarea de borrado
       setTaskStatus({ status: 'processing', message: 'Reactivando: Eliminando configuración previa...' });
+      let errorCount = 0;
       const interval = setInterval(async () => {
         try {
           const rRes = await oltService.getTask(removeTaskId);
+          errorCount = 0;
           const t = rRes.data;
           if (t.status === 'completed') {
-            clearInterval(interval);
+            clearRegisteredInterval(interval);
             // El borrado terminó con éxito, ahora relanzar add_ont automáticamente
             alert('Configuración anterior borrada con éxito. Iniciando nueva activación...');
             
@@ -265,14 +290,20 @@ const Activacion = () => {
             const aRes = await oltService.createTask(confirmTaskData.cliente_id, 'add_ont', payload);
             startPolling(aRes.data.id);
           } else if (t.status === 'failed') {
-            clearInterval(interval);
+            clearRegisteredInterval(interval);
             setTaskStatus({ status: 'failed', message: 'Reactivación falló en la eliminación previa.' });
             alert('Error al eliminar la ONT/MikroTik antigua.');
           }
         } catch (err) {
           console.error(err);
+          errorCount++;
+          if (errorCount >= 5) {
+            clearRegisteredInterval(interval);
+            setTaskStatus({ status: 'failed', message: 'Error de red persistente reactivando.' });
+          }
         }
       }, 2000);
+      registerInterval(interval);
 
     } catch (e) {
       console.error(e);
@@ -291,24 +322,32 @@ const Activacion = () => {
       const removeTaskId = res.data.remove_task_id;
       
       setTaskStatus({ status: 'processing', message: 'Deshaciendo última activación...' });
+      let errorCount = 0;
       const interval = setInterval(async () => {
         try {
           const tRes = await oltService.getTask(removeTaskId);
+          errorCount = 0;
           const t = tRes.data;
           if (t.status === 'completed') {
-            clearInterval(interval);
+            clearRegisteredInterval(interval);
             setTaskStatus(null);
             fetchClientes();
             alert('Última activación deshecha correctamente.');
           } else if (t.status === 'failed') {
-            clearInterval(interval);
+            clearRegisteredInterval(interval);
             setTaskStatus({ status: 'failed', message: 'Falló al deshacer la última activación.' });
             alert('Error al deshacer la activación en la OLT.');
           }
         } catch (err) {
           console.error(err);
+          errorCount++;
+          if (errorCount >= 5) {
+            clearRegisteredInterval(interval);
+            setTaskStatus({ status: 'failed', message: 'Error de red persistente al deshacer.' });
+          }
         }
       }, 2000);
+      registerInterval(interval);
 
     } catch (e) {
       console.error(e);
@@ -366,9 +405,11 @@ const Activacion = () => {
       const bulkId = res.data.bulk_id;
       
       // Iniciar polling del lote masivo de activación
+      let errorCount = 0;
       const interval = setInterval(async () => {
         try {
           const sRes = await oltService.getBulkStatus(bulkId);
+          errorCount = 0;
           const status = sRes.data;
           setBulkStatus({
             ...status,
@@ -377,7 +418,7 @@ const Activacion = () => {
           });
 
           if (status.pending === 0) {
-            clearInterval(interval);
+            clearRegisteredInterval(interval);
             
             // FASE 2: Eliminación secuencial automática de las ONTs activadas
             const completedTasks = status.tasks.filter(t => t.status === 'completed');
@@ -426,18 +467,25 @@ const Activacion = () => {
                 if (removeTaskId) {
                   // Polling para esperar a que termine el borrado de este equipo
                   await new Promise((resolveDelete) => {
+                    let delErrorCount = 0;
                     const checkDelInterval = setInterval(async () => {
                       try {
                         const tRes = await oltService.getTask(removeTaskId);
+                        delErrorCount = 0;
                         if (['completed', 'failed', 'cancelled'].includes(tRes.data.status)) {
-                          clearInterval(checkDelInterval);
+                          clearRegisteredInterval(checkDelInterval);
                           resolveDelete();
                         }
                       } catch (err) {
-                        clearInterval(checkDelInterval);
-                        resolveDelete();
+                        console.error(err);
+                        delErrorCount++;
+                        if (delErrorCount >= 5) {
+                          clearRegisteredInterval(checkDelInterval);
+                          resolveDelete();
+                        }
                       }
                     }, 2000);
+                    registerInterval(checkDelInterval);
                   });
                 }
               } catch (delErr) {
@@ -453,8 +501,15 @@ const Activacion = () => {
           }
         } catch (err) {
           console.error(err);
+          errorCount++;
+          if (errorCount >= 5) {
+            clearRegisteredInterval(interval);
+            setBulkPolling(false);
+            setBulkError('Error de red persistente en la activación masiva.');
+          }
         }
       }, 3000);
+      registerInterval(interval);
 
     } catch (e) {
       console.error(e);
