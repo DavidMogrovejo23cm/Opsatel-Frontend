@@ -189,8 +189,8 @@ const Activacion = () => {
             setConfirmTaskData({
               id: t.id,
               cliente_id: t.cliente_id,
-              gpon_port: t.payload_json?.gpon_port || t.response_json?.gpon_port || '—',
-              ont_id: t.payload_json?.ont_id || t.response_json?.ont_id || '—',
+              gpon_port: t.payload?.gpon_port || t.response_json?.gpon_port || '—',
+              ont_id: t.payload?.ont_id || t.response_json?.ont_id || '—',
               service_port: t.response_json?.service_port || '—',
               ip: t.cliente_ip || t.response_json?.ip || t.response_json?.target_ip || '—',
               ip_dhcp: t.response_json?.dhcp_ip || t.response_json?.lease_ip || t.response_json?.lease_found?.address || '—',
