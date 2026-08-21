@@ -195,7 +195,7 @@ const Activacion = () => {
               ip: t.cliente_ip || t.response_json?.ip || t.response_json?.target_ip || '—',
               ip_dhcp: t.response_json?.dhcp_ip || t.response_json?.lease_ip || t.response_json?.lease_found?.address || '—',
               comentario: `${String(t.cliente_id).padStart(6, '0')} - ${t.cliente_nombre || 'Cliente'}`,
-              potencia: t.response_json?.rx_power || '—',
+              potencia: t.response_json?.rx_power ?? t.response_json?.potencia ?? '—',
               log: t.response_json?.mikrotik_log || '—'
             });
             setShowConfirmModal(true);
@@ -250,75 +250,22 @@ const Activacion = () => {
     }
   };
 
-  // Reactivar (Borrar y re-activar)
-  const handleConfirmReactivar = async () => {
-    if (!confirmTaskData) return;
-    setConfirming(true);
-    try {
-      const res = await oltService.retryActivation(confirmTaskData.id);
-      setShowConfirmModal(false);
-      const removeTaskId = res.data.remove_task_id;
-      
-      // Polling de la tarea de borrado
-      setTaskStatus({ status: 'processing', message: 'Reactivando: Eliminando configuración previa...' });
-      let errorCount = 0;
-      const interval = setInterval(async () => {
-        try {
-          const rRes = await oltService.getTask(removeTaskId);
-          errorCount = 0;
-          const t = rRes.data;
-          if (t.status === 'completed') {
-            clearRegisteredInterval(interval);
-            // El borrado terminó con éxito, ahora relanzar add_ont automáticamente
-            alert('Configuración anterior borrada con éxito. Iniciando nueva activación...');
-            
-            // Recrear la tarea de activación (add_ont) con la MAC y parámetros previos
-            const gponPort = confirmTaskData.gpon_port;
-            const puerto = Number(gponPort.split('/').pop()) || 0;
-            const profile = String(100 + puerto);
-
-            const payload = {
-              mac: confirmTaskData.log.match(/MAC ([A-F0-9:]{17})/i)?.[1]?.replace(/[:\-]/g, '') || '',
-              gpon_port: gponPort,
-              ont_id: confirmTaskData.ont_id,
-              description: confirmTaskData.comentario,
-              profile_id: profile,
-              srvprofile_id: profile,
-              provision_type: 'ont'
-            };
-
-            const aRes = await oltService.createTask(confirmTaskData.cliente_id, 'add_ont', payload);
-            startPolling(aRes.data.id);
-          } else if (t.status === 'failed') {
-            clearRegisteredInterval(interval);
-            setTaskStatus({ status: 'failed', message: 'Reactivación falló en la eliminación previa.' });
-            alert('Error al eliminar la ONT/MikroTik antigua.');
-          }
-        } catch (err) {
-          console.error(err);
-          errorCount++;
-          if (errorCount >= 5) {
-            clearRegisteredInterval(interval);
-            setTaskStatus({ status: 'failed', message: 'Error de red persistente reactivando.' });
-          }
-        }
-      }, 2000);
-      registerInterval(interval);
-
-    } catch (e) {
-      console.error(e);
-      alert('Error al iniciar reactivación.');
-    } finally {
-      setConfirming(false);
-    }
-  };
+  const hasStaticIp = Boolean(
+    confirmTaskData?.ip &&
+    confirmTaskData.ip !== '—' &&
+    /^(?:\d{1,3}\.){3}\d{1,3}$/.test(String(confirmTaskData.ip))
+  );
+  const hasOpticalPower = Number.isFinite(Number(confirmTaskData?.potencia));
+  const canAcceptActivation = hasStaticIp && hasOpticalPower && !confirming;
 
   // Deshacer última activación
-  const handleDeshacerUltima = async () => {
+  const handleDeshacerUltima = async (activationToUndo = null) => {
     if (!window.confirm('¿Está seguro de que desea deshacer la última activación exitosa? Esto eliminará la ONT de la OLT y la IP del MikroTik.')) return;
     setUndoing(true);
     try {
-      const res = await oltService.undoLastActivation();
+      const res = activationToUndo
+        ? await oltService.retryActivation(activationToUndo.id)
+        : await oltService.undoLastActivation();
       const removeTaskId = res.data.remove_task_id;
       
       setTaskStatus({ status: 'processing', message: 'Deshaciendo última activación...' });
@@ -332,6 +279,10 @@ const Activacion = () => {
             clearRegisteredInterval(interval);
             setTaskStatus(null);
             fetchClientes();
+            if (activationToUndo) {
+              setShowConfirmModal(false);
+              setConfirmTaskData(null);
+            }
             alert('Última activación deshecha correctamente.');
           } else if (t.status === 'failed') {
             clearRegisteredInterval(interval);
@@ -873,10 +824,6 @@ const Activacion = () => {
                 <span style={{ fontSize: 12, color: '#94a3b8' }}>IP Estática Asignada</span>
                 <div style={{ fontWeight: 600, color: '#38bdf8' }}>{confirmTaskData.ip}</div>
               </div>
-              <div style={{ padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: 12, color: '#94a3b8' }}>IP DHCP Inicial</span>
-                <div style={{ fontWeight: 600, color: '#f59e0b' }}>{confirmTaskData.ip_dhcp}</div>
-              </div>
             </div>
 
             <div style={{ padding: '12px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, marginBottom: 24 }}>
@@ -901,17 +848,18 @@ const Activacion = () => {
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   className="btn"
-                  onClick={handleConfirmReactivar}
-                  disabled={confirming}
+                  onClick={() => handleDeshacerUltima(confirmTaskData)}
+                  disabled={confirming || undoing}
                   style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '10px 20px', borderRadius: 6 }}
                 >
-                  🔴 REACTIVAR
+                  🔴 CANCELAR
                 </button>
                 <button
                   className="btn primary"
                   onClick={handleConfirmAceptar}
-                  disabled={confirming}
-                  style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 'bold' }}
+                  disabled={!canAcceptActivation}
+                  title={!canAcceptActivation ? 'Debe tener IP estática y potencia óptica válida' : 'Confirmar activación'}
+                  style={{ backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 'bold', opacity: canAcceptActivation ? 1 : 0.45, cursor: canAcceptActivation ? 'pointer' : 'not-allowed' }}
                 >
                   ✅ ACEPTAR
                 </button>
