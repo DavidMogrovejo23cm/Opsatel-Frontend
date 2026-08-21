@@ -11,7 +11,12 @@ const General = () => {
   const [editingCell, setEditingCell] = useState(null);
   const [tempValue, setTempValue] = useState('');
 
-  // Estados para el PIN de seguridad
+  // Autenticación de entrada: se pide PIN una sola vez al entrar
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showEntryPinModal, setShowEntryPinModal] = useState(true);
+  const [entryPinInput, setEntryPinInput] = useState('');
+
+  // Estados para el PIN de seguridad (legacy, solo para delete si no autenticado)
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
@@ -106,8 +111,8 @@ const General = () => {
       return;
     }
 
-    // Permitir modificar facturas y cod directamente sin ingresar el PIN
-    if (col === 'facturas' || col === 'cod') {
+    // Si ya está autenticado, guardar directamente sin PIN
+    if (isAuthenticated || col === 'facturas' || col === 'cod') {
       try {
         await clienteService.actualizar(id, { [col]: tempValue });
         setEditingCell(null);
@@ -131,8 +136,8 @@ const General = () => {
       return;
     }
 
-    // Permitir modificar facturas y cod directamente sin ingresar el PIN (en caso de que usaran dropdowns)
-    if (col === 'facturas' || col === 'cod') {
+    // Si ya está autenticado, guardar directamente sin PIN
+    if (isAuthenticated || col === 'facturas' || col === 'cod') {
       try {
         await clienteService.actualizar(id, { [col]: newValue });
         setEditingCell(null);
@@ -152,8 +157,73 @@ const General = () => {
 
   const handleDeleteClick = (cliente) => {
     setPendingAction({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
-    setShowPinModal(true);
-    setPinInput('');
+    if (isAuthenticated) {
+      // Ya autenticado, ejecutar directamente
+      executePendingActionDirect({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
+    } else {
+      setShowPinModal(true);
+      setPinInput('');
+    }
+  };
+
+  // Ejecutar acción directamente (sin PIN, ya autenticado)
+  const executePendingActionDirect = async (action) => {
+    const { type, id, col, value } = action;
+
+    if (type === 'delete') {
+      setShowProgressModal(true);
+      setDeletionProgress({
+        status: 'processing',
+        olt: 'PENDIENTE',
+        xui: 'PENDIENTE',
+        libreqos: 'PENDIENTE',
+        database: 'PENDIENTE',
+        message: 'Iniciando proceso de eliminación completa...'
+      });
+
+      try {
+        const response = await clienteService.eliminarCompletamente(id, { pin: '1234566' });
+        
+        setDeletionProgress({
+          status: 'success',
+          olt: response.data.olt,
+          xui: response.data.xui,
+          libreqos: response.data.libreqos,
+          database: response.data.database,
+          message: '¡El cliente ha sido eliminado exitosamente de todos los sistemas!'
+        });
+        
+        setPendingAction(null);
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        const errDetail = error.response?.data?.detail || {};
+        const failedStage = errDetail.stage || 'database';
+        const errMsg = errDetail.message || 'Error inesperado durante la eliminación';
+
+        setDeletionProgress(prev => ({
+          status: 'error',
+          olt: failedStage === 'olt' ? 'ERROR' : (prev?.olt || 'PENDIENTE'),
+          xui: failedStage === 'xui' ? 'ERROR' : (prev?.xui || 'PENDIENTE'),
+          libreqos: failedStage === 'libreqos' ? 'ERROR' : (prev?.libreqos || 'PENDIENTE'),
+          database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
+          message: `Fallo en etapa [${failedStage.toUpperCase()}]: ${errMsg}`
+        }));
+        
+        setPendingAction(null);
+      }
+      return;
+    }
+
+    try {
+      await clienteService.actualizar(id, { [col]: value });
+      setEditingCell(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      alert("Error al guardar cambio");
+      setEditingCell(null);
+    }
   };
 
   const executePendingAction = async () => {
@@ -261,6 +331,61 @@ const General = () => {
       return true;
     })
     .sort((a, b) => a.id - b.id);
+
+  // Handler para el PIN de entrada
+  const handleEntryPinSubmit = () => {
+    if (entryPinInput === '1234566') {
+      setIsAuthenticated(true);
+      setShowEntryPinModal(false);
+    } else {
+      alert('PIN Incorrecto');
+      setEntryPinInput('');
+    }
+  };
+
+  // Si no está autenticado, mostrar modal de PIN de entrada
+  if (showEntryPinModal && !isAuthenticated) {
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+      }}>
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="glass"
+          style={{ width: '100%', maxWidth: '360px', padding: '40px', borderRadius: '24px', textAlign: 'center' }}
+        >
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔐</div>
+          <h2 style={{ marginBottom: '8px' }}>Acceso a Vista General</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Ingrese el PIN para acceder y modificar datos.
+          </p>
+
+          <input
+            autoFocus
+            type="password"
+            className="input"
+            placeholder="••••••"
+            style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', marginBottom: '24px' }}
+            value={entryPinInput}
+            onChange={(e) => setEntryPinInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleEntryPinSubmit();
+            }}
+          />
+
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '12px', fontSize: '1rem' }}
+            onClick={handleEntryPinSubmit}
+          >
+            Ingresar
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', maxWidth: 'none' }}>
