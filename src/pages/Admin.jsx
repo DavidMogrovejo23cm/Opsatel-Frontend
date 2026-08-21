@@ -79,14 +79,14 @@ const Admin = () => {
       parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)
     ).toFixed(2);
 
-    // El monto total consolidado para el campo "Monto" (lo que se va a pagar hoy)
-    // Incluye el adicional que el backend mantiene separado del total_pago
-    const montoTotalConsolidado = (parseFloat(cliente.total_pago || 0) + parseFloat(cliente.adicional || 0)).toFixed(2);
+    // Los campos de Plus y Adicional son abonos, no la deuda mostrada.
+    // Iniciarlos en cero evita descontar extras cuando el cliente paga solo internet.
+    const montoInicial = internetSugerido;
 
     const isCortesiaTotal = !!cliente.cortesia_total;
 
     setPagoData({
-      monto: isCortesiaTotal ? "0" : montoTotalConsolidado,
+      monto: isCortesiaTotal ? "0" : montoInicial,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: cliente.facturas || '',
       internet_payment: isCortesiaTotal ? "0" : internetSugerido,
@@ -94,9 +94,9 @@ const Admin = () => {
       payment_date: new Date().toISOString().split('T')[0],
       client_payment_date: cliente.client_payment_date || '',
       cod: cliente.cod || '',
-      plus: isCortesiaTotal ? "0" : (cliente.plus || ''),
+      plus: "0",
       bank_plus: cliente.bank_plus || '',
-      adicional: isCortesiaTotal ? "0" : (cliente.adicional || ''),
+      adicional: "0",
       notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
@@ -607,22 +607,22 @@ const Admin = () => {
                     return base + parseFloat(pagoData.plus || 0) / 2;
                   })()} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                    ${(parseFloat(pagoData.plus || 0)).toFixed(2)}
+                    ${parseFloat(selectedCliente.plus || 0).toFixed(2)}
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Monto Adicional:</span>
                   <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-                    ${(parseFloat(pagoData.adicional || 0)).toFixed(2)}
+                    ${parseFloat(selectedCliente.adicional || 0).toFixed(2)}
                   </span>
                 </div>
 
                 <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
                     <span>Total Pendiente (Consolidado):</span>
-                    <span style={{ color: (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)) > 0 ? '#f87171' : '#4ade80' }}>
-                      ${(parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2)}
+                    <span style={{ color: (parseFloat(selectedCliente.total_pago || 0) + parseFloat(selectedCliente.adicional || 0)) > 0 ? '#f87171' : '#4ade80' }}>
+                      ${(parseFloat(selectedCliente.total_pago || 0) + parseFloat(selectedCliente.adicional || 0)).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -654,9 +654,9 @@ const Admin = () => {
                             ...pagoData,
                             cortesiaMode: mode,
                             internet_payment: pagoData.original_internet,
-                            plus: pagoData.original_plus,
-                            adicional: pagoData.original_adicional,
-                            monto: originalTotal,
+                            plus: "0",
+                            adicional: "0",
+                            monto: pagoData.original_internet,
                             descuentoValue: 0,
                             iptvDescuentoValue: 0
                           });
