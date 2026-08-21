@@ -114,15 +114,6 @@ const Admin = () => {
   const handleRegistrarPago = async () => {
     if (!pagoData.monto || isNaN(pagoData.monto)) return alert("Ingrese un monto válido");
 
-    const montoTotal = parseFloat(pagoData.monto || 0);
-    const montoInternet = parseFloat(pagoData.internet_payment || 0);
-    const montoPlus = parseFloat(pagoData.plus || 0);
-    const montoAdicional = parseFloat(pagoData.adicional || 0);
-    const componentes = montoInternet + montoPlus + montoAdicional;
-    if (Math.abs(montoTotal - componentes) > 0.01) {
-      return alert('El monto total debe coincidir con Internet + Plus + Adicional.');
-    }
-
 
     // Helper para marcar campos vacíos como "NONE"
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
@@ -140,7 +131,7 @@ const Admin = () => {
       const descAdicional = pagoData.cortesiaMode === 'TOTAL' ? parseFloat(pagoData.original_adicional || 0) : 0;
 
       await clienteService.pagar(selectedCliente.id, {
-        monto: montoTotal,
+        monto: parseFloat(pagoData.monto),
         metodo_pago: pagoData.metodo,
         mes_correspondiente: new Date().toISOString().slice(0, 7),
         referencia: `Pago vía Admin - ${pagoData.metodo}${pagoData.cortesiaMode !== 'NONE' ? ' (CORTESÍA)' : ''}`,
@@ -897,12 +888,7 @@ const Admin = () => {
                 {/* 10. MONTO TOTAL (AZUL) */}
                 <div className="form-group">
                   <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>Monto total ($)</label>
-                  <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => {
-                    const val = e.target.value;
-                    // Al escribir el total manualmente se interpreta como pago
-                    // de internet y se limpian abonos de extras ambiguos.
-                    setPagoData({ ...pagoData, monto: val, internet_payment: val, plus: '0', adicional: '0' });
-                  }} />
+                  <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
                 </div>
               </div>
 
