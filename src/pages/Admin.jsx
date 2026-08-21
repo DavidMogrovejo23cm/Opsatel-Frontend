@@ -375,21 +375,7 @@ const Admin = () => {
                       </span>
                     )}
                   </td>
-                  <td style={{ fontSize: '0.78rem', minWidth: '130px' }}>
-                    {(() => {
-                      const plusDebt = parseFloat(c.plus || 0);
-                      const adicionalDebt = parseFloat(c.adicional || 0);
-                      const extrasDebt = plusDebt + adicionalDebt;
-                      if (extrasDebt <= 0) return <span style={{ color: '#4ade80' }}>Sin deuda</span>;
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {plusDebt > 0 && <span style={{ color: '#c4b5fd' }}>Plus: ${plusDebt.toFixed(2)}</span>}
-                          {adicionalDebt > 0 && <span style={{ color: '#93c5fd' }}>Adicional: ${adicionalDebt.toFixed(2)}</span>}
-                          <strong style={{ color: '#f87171' }}>Total: ${extrasDebt.toFixed(2)}</strong>
-                        </div>
-                      );
-                    })()}
-                  </td>
+                  
                   <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                     {(() => {
                       const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
