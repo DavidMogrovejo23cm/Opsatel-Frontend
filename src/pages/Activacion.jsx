@@ -54,19 +54,35 @@ const Activacion = () => {
   const [potenciaData, setPotenciaData] = useState(null);
   const [loadingPotencia, setLoadingPotencia] = useState(false);
   const [potenciaError, setPotenciaError] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const currentUser = authService.getCurrentUser() || {};
   const isAdmin = currentUser.rol === 'administrador';
 
+  const notify = (message, type = 'info') => {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), 4200);
+  };
+
+  const askConfirmation = (message) => new Promise(resolve => {
+    setConfirmDialog({ message, resolve });
+  });
+
+  const closeConfirmation = (accepted) => {
+    if (confirmDialog?.resolve) confirmDialog.resolve(accepted);
+    setConfirmDialog(null);
+  };
+
   const handleEliminarCliente = async (id, nombre) => {
-    if (!window.confirm(`¿Está seguro de que desea eliminar al cliente "${nombre}" por completo y liberar su ID e IP?`)) return;
+    if (!await askConfirmation(`¿Está seguro de que desea eliminar al cliente "${nombre}" por completo y liberar su ID e IP?`)) return;
     try {
       await clienteService.eliminar(id);
-      alert('Cliente eliminado correctamente.');
+      notify('Cliente eliminado correctamente.', 'success');
       fetchClientes();
     } catch (e) {
       console.error(e);
-      alert('Error al eliminar cliente: ' + (e.response?.data?.detail || e.message));
+      notify('Error al eliminar cliente: ' + (e.response?.data?.detail || e.message), 'error');
     }
   };
 
@@ -248,10 +264,10 @@ const Activacion = () => {
       }
 
       setConfirmTaskData(prev => ({ ...prev, ...nextData }));
-      alert(`Datos actualizados: ${messages.join(' | ')}`);
+      notify(`Datos actualizados: ${messages.join(' | ')}`, 'success');
     } catch (e) {
       console.error(e);
-      alert('Error al actualizar IP y potencia: ' + (e.response?.data?.detail || e.message));
+      notify('Error al actualizar IP y potencia: ' + (e.response?.data?.detail || e.message), 'error');
     } finally {
       setConfirming(false);
     }
@@ -265,10 +281,10 @@ const Activacion = () => {
       await oltService.confirmTask(confirmTaskData.id);
       setShowConfirmModal(false);
       setConfirmTaskData(null);
-      alert('Activación completada y confirmada con éxito.');
+      notify('Activación completada y confirmada con éxito.', 'success');
     } catch (e) {
       console.error(e);
-      alert('Error al confirmar activación.');
+      notify('Error al confirmar activación.', 'error');
     } finally {
       setConfirming(false);
     }
@@ -284,7 +300,7 @@ const Activacion = () => {
 
   // Deshacer última activación
   const handleDeshacerUltima = async (activationToUndo = null) => {
-    if (!window.confirm('¿Está seguro de que desea deshacer la última activación exitosa? Esto eliminará la ONT de la OLT y la IP del MikroTik.')) return;
+    if (!await askConfirmation('¿Está seguro de que desea deshacer la última activación exitosa? Esto eliminará la ONT de la OLT y la IP del MikroTik?')) return;
     setUndoing(true);
     try {
       const res = activationToUndo
@@ -307,11 +323,11 @@ const Activacion = () => {
               setShowConfirmModal(false);
               setConfirmTaskData(null);
             }
-            alert('Última activación deshecha correctamente.');
+            notify('Última activación deshecha correctamente.', 'success');
           } else if (t.status === 'failed') {
             clearRegisteredInterval(interval);
             setTaskStatus({ status: 'failed', message: 'Falló al deshacer la última activación.' });
-            alert('Error al deshacer la activación en la OLT.');
+            notify('Error al deshacer la activación en la OLT.', 'error');
           }
         } catch (err) {
           console.error(err);
@@ -326,7 +342,7 @@ const Activacion = () => {
 
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.detail || 'No se encontró activación completada reciente para deshacer.');
+      notify(e.response?.data?.detail || 'No se encontró activación completada reciente para deshacer.', 'error');
     } finally {
       setUndoing(false);
     }
@@ -345,11 +361,11 @@ const Activacion = () => {
         setMacList(res.data.candidates);
         setShowBulkModal(true);
       } else {
-        alert('No se detectaron ONTs pendientes en el Autofind de la OLT Baños en este momento.');
+        notify('No se detectaron ONTs pendientes en el Autofind de la OLT Baños en este momento.', 'warning');
       }
     } catch (e) {
       console.error(e);
-      alert('Error al consultar ONTs en el Autofind de la OLT: ' + (e.message || e));
+      notify('Error al consultar ONTs en el Autofind de la OLT: ' + (e.message || e), 'error');
     } finally {
       setBulkPolling(false);
     }
@@ -511,6 +527,32 @@ const Activacion = () => {
 
   return (
     <div style={{ padding: 20 }}>
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 3000,
+          minWidth: 280, maxWidth: 420, padding: '13px 16px',
+          borderRadius: 10, color: '#fff', fontWeight: 600,
+          background: toast.type === 'error' ? 'rgba(127,29,29,0.96)' : toast.type === 'warning' ? 'rgba(120,53,15,0.96)' : 'rgba(15,81,72,0.96)',
+          border: `1px solid ${toast.type === 'error' ? '#ef4444' : toast.type === 'warning' ? '#f59e0b' : '#2dd4bf'}`,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'
+        }}>
+          {toast.type === 'error' ? '✕ ' : toast.type === 'warning' ? '⚠ ' : '✓ '}{toast.message}
+        </div>
+      )}
+
+      {confirmDialog && (
+        <div className="modal-overlay" style={{ zIndex: 3100 }}>
+          <div className="modal" style={{ width: 420, maxWidth: '92%', padding: 22 }}>
+            <h3 style={{ marginTop: 0 }}>Confirmar acción</h3>
+            <p style={{ color: '#cbd5e1', lineHeight: 1.5 }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button className="btn" onClick={() => closeConfirmation(false)}>Cancelar</button>
+              <button className="btn primary" onClick={() => closeConfirmation(true)}>Continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2>Activación de Clientes</h2>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -528,7 +570,7 @@ const Activacion = () => {
               fontWeight: '500'
             }}
           >
-            {bulkPolling ? 'Procesando masivo...' : '⚡ LIMPIAR PUETOS'}
+            {bulkPolling ? 'Procesando masivo...' : '⚡ LIMPIAR PUERTOS'}
           </button>
         
         </div>
@@ -583,15 +625,20 @@ const Activacion = () => {
       {/* Estado de la tarea en curso */}
       {taskStatus && (
         <div style={{ marginTop: 20, padding: 16, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <strong>Estado tarea:</strong> <span style={{ color: taskStatus.status === 'completed' ? '#2ecc71' : taskStatus.status === 'failed' ? '#ef4444' : '#38bdf8' }}>{taskStatus.status}</span> — {taskStatus.message}
-          {taskStatus.response && (
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ cursor: 'pointer', fontSize: 13, color: '#aaa' }}>Ver detalles técnicos</summary>
-              <pre style={{ background: '#111', color: '#0f0', padding: 12, borderRadius: 6, marginTop: 8, overflowX: 'auto', maxHeight: 200 }}>
-                {JSON.stringify(taskStatus.response, null, 2)}
-              </pre>
-            </details>
-          )}
+          {(() => {
+            const progress = taskStatus.status === 'completed' || taskStatus.status === 'failed' ? 100 : taskStatus.status === 'processing' ? 65 : 20;
+            const color = taskStatus.status === 'failed' ? '#ef4444' : taskStatus.status === 'completed' ? '#2dd4bf' : '#38bdf8';
+            return <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 9 }}>
+                <strong>Estado tarea: <span style={{ color }}>{taskStatus.status}</span></strong>
+                <span style={{ color: '#94a3b8', fontSize: 13 }}>{progress}%</span>
+              </div>
+              <div style={{ height: 8, background: '#1e293b', borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: color, borderRadius: 8, transition: 'width 0.5s ease' }} />
+              </div>
+              <div style={{ marginTop: 8, color: '#cbd5e1', fontSize: 13 }}>{taskStatus.message}</div>
+            </>;
+          })()}
         </div>
       )}
 
@@ -718,7 +765,7 @@ const Activacion = () => {
       {showProvisionModal && (
         <div className="modal-overlay">
           <div className="modal" style={{ width: '400px', maxWidth: '90%' }}>
-            <h3 style={{ marginBottom: 12 }}>Tipo de Aprovisionamiento</h3>
+            <h3 style={{ marginBottom: 12 }}>🛑 ELEGIR EQUIPO 🛑</h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               <label style={{
@@ -741,7 +788,7 @@ const Activacion = () => {
                 />
                 <div>
                   <strong style={{ display: 'block', color: '#f8fafc', fontSize: '15px' }}>ONT</strong>
-                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Router (2 comandos)</span>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Router (Verificar Vlan)</span>
                 </div>
               </label>
 
@@ -765,7 +812,7 @@ const Activacion = () => {
                 />
                 <div>
                   <strong style={{ display: 'block', color: '#f8fafc', fontSize: '15px' }}>Bridge</strong>
-                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Bridge (3 comandos)</span>
+                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>Activación Bridge</span>
                 </div>
               </label>
             </div>
