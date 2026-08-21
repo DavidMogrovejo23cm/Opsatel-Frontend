@@ -278,8 +278,8 @@ const Admin = () => {
                 <th>Estado</th>
                 <th>Plan Base</th>
                 <th>Pantallas IPTV</th>
-                <th>Plan</th>
-                <th>Extras</th>
+                <th>Pendientes</th>
+         
                 <th>Instalación / Últ. Visita</th>
                 <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
