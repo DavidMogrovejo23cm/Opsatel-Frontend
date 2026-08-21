@@ -612,7 +612,7 @@ const Admin = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto Adicional:</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Deuda Adicional:</span>
                   <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
                     ${parseFloat(selectedCliente.adicional || 0).toFixed(2)}
                   </span>
@@ -815,7 +815,7 @@ const Admin = () => {
 
                 {/* 2. ADICIONAL (AZUL) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Adicional ($)</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Adicional ($)</label>
                   <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
                     const val = (e.target.value);
                     const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0)).toFixed(2);
@@ -848,7 +848,7 @@ const Admin = () => {
 
                 {/* 5. PLUS (MORADO) */}
                 <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Plus ($)</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Abono Plus ($)</label>
                   <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
                     const val = e.target.value;
                     const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
