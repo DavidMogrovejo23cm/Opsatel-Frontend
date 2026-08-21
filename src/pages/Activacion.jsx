@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { clienteService, oltService, authService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -540,8 +541,8 @@ const Activacion = () => {
         </div>
       )}
 
-      {confirmDialog && (
-        <div className="modal-overlay" style={{ zIndex: 3100 }}>
+      {confirmDialog && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 20000 }}>
           <div className="modal" style={{ width: 420, maxWidth: '92%', padding: 22 }}>
             <h3 style={{ marginTop: 0 }}>Confirmar acción</h3>
             <p style={{ color: '#cbd5e1', lineHeight: 1.5 }}>{confirmDialog.message}</p>
@@ -550,7 +551,8 @@ const Activacion = () => {
               <button className="btn primary" onClick={() => closeConfirmation(true)}>Continuar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
