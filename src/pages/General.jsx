@@ -356,6 +356,14 @@ const General = () => {
           className="glass"
           style={{ width: '100%', maxWidth: '360px', padding: '40px', borderRadius: '24px', textAlign: 'center' }}
         >
+          <button
+            type="button"
+            onClick={() => setShowEntryPinModal(false)}
+            aria-label="Cerrar acceso a Vista General"
+            style={{ position: 'absolute', top: 18, right: 20, background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}
+          >
+            &times;
+          </button>
           <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔐</div>
           <h2 style={{ marginBottom: '8px' }}>Acceso a Vista General</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>

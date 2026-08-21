@@ -72,10 +72,12 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    // El internet sugerido es el total_pago del backend (saldo + plan + plus) menos el plus, o el internet_payment guardado
-    const internetSugerido = (cliente.internet_payment && parseFloat(cliente.internet_payment) > 0)
-      ? parseFloat(cliente.internet_payment).toFixed(2)
-      : (parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)).toFixed(2);
+    // Siempre usar la deuda actual. internet_payment es histórico del último
+    // abono y no debe volver a cobrarse en el siguiente pago.
+    const internetSugerido = Math.max(
+      0,
+      parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)
+    ).toFixed(2);
 
     // El monto total consolidado para el campo "Monto" (lo que se va a pagar hoy)
     // Incluye el adicional que el backend mantiene separado del total_pago
@@ -148,7 +150,6 @@ const Admin = () => {
         descuento_adicional: descAdicional,
         notas_pago: (() => {
           let nota = (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : '';
-          if (pagoData.cortesiaMode === 'TOTAL') nota += ' [CORTESÍA TOTAL]';
           if (pagoData.cortesiaMode === 'PARCIAL') nota += ` [DESCUENTO ${pagoData.cortesiaPct || 0}% PLAN]`;
           return nota.trim() || null;
         })()
@@ -277,7 +278,8 @@ const Admin = () => {
                 <th>Estado</th>
                 <th>Plan Base</th>
                 <th>Pantallas IPTV</th>
-                <th>Pendiente</th>
+                <th>Plan</th>
+                <th>Extras</th>
                 <th>Instalación / Últ. Visita</th>
                 <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
@@ -372,6 +374,21 @@ const Admin = () => {
                         ${parseFloat(c.total_pago).toFixed(2)}
                       </span>
                     )}
+                  </td>
+                  <td style={{ fontSize: '0.78rem', minWidth: '130px' }}>
+                    {(() => {
+                      const plusDebt = parseFloat(c.plus || 0);
+                      const adicionalDebt = parseFloat(c.adicional || 0);
+                      const extrasDebt = plusDebt + adicionalDebt;
+                      if (extrasDebt <= 0) return <span style={{ color: '#4ade80' }}>Sin deuda</span>;
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {plusDebt > 0 && <span style={{ color: '#c4b5fd' }}>Plus: ${plusDebt.toFixed(2)}</span>}
+                          {adicionalDebt > 0 && <span style={{ color: '#93c5fd' }}>Adicional: ${adicionalDebt.toFixed(2)}</span>}
+                          <strong style={{ color: '#f87171' }}>Total: ${extrasDebt.toFixed(2)}</strong>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                     {(() => {

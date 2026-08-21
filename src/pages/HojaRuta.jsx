@@ -108,6 +108,7 @@ const HojaRuta = () => {
     }, [clientes, clientSearchTerm, modalSource, registros, editingId]);
 
     const [dateFilter, setDateFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('TODOS');
 
     const sortedRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
@@ -121,6 +122,8 @@ const HojaRuta = () => {
             if (!matchSearch) return false;
 
             if (dateFilter && r.fecha !== dateFilter) return false;
+
+            if (statusFilter !== 'TODOS' && (r.estado || '').toUpperCase() !== statusFilter) return false;
 
             return true;
         });
@@ -138,7 +141,7 @@ const HojaRuta = () => {
             const dateB = new Date(b.created_at || 0).getTime();
             return dateB - dateA;
         });
-    }, [registros, searchTerm, dateFilter]);
+    }, [registros, searchTerm, dateFilter, statusFilter]);
 
     const handleSelectClient = (client) => {
         setSelectedClient(client);
@@ -300,6 +303,17 @@ const HojaRuta = () => {
                                 <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>&times;</button>
                             )}
                         </div>
+                        <select
+                            className="input"
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                            style={{ width: 'auto', marginBottom: 0, background: '#1e293b', color: 'white' }}
+                        >
+                            <option value="TODOS">Todos los estados</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN PROCESO">En proceso</option>
+                            <option value="REALIZADO">Realizado</option>
+                        </select>
                         <input
                             className="input hr-search"
                             placeholder="Buscar técnico, cliente o zona..."
