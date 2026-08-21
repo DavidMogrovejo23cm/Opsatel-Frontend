@@ -219,15 +219,39 @@ const Activacion = () => {
     if (!confirmTaskData) return;
     setConfirming(true);
     try {
-      const res = await oltService.refreshIp(confirmTaskData.cliente_id);
-      setConfirmTaskData(prev => ({
-        ...prev,
-        ip: res.data.ip
-      }));
-      alert(`IP refrescada correctamente: ${res.data.ip}`);
+      const [ipResult, powerResult] = await Promise.allSettled([
+        oltService.refreshIp(confirmTaskData.cliente_id),
+        oltService.getOntPotencia(confirmTaskData.cliente_id)
+      ]);
+
+      const nextData = {};
+      const messages = [];
+
+      if (ipResult.status === 'fulfilled') {
+        nextData.ip = ipResult.value.data.ip;
+        messages.push(`IP: ${ipResult.value.data.ip}`);
+      } else {
+        messages.push('IP no disponible');
+      }
+
+      if (powerResult.status === 'fulfilled') {
+        const power = powerResult.value.data?.potencia || {};
+        const rxPower = power.rx_power ?? power.power;
+        if (rxPower !== null && rxPower !== undefined) {
+          nextData.potencia = rxPower;
+          messages.push(`RX: ${rxPower} dBm`);
+        } else {
+          messages.push('potencia aún no disponible');
+        }
+      } else {
+        messages.push('potencia no disponible');
+      }
+
+      setConfirmTaskData(prev => ({ ...prev, ...nextData }));
+      alert(`Datos actualizados: ${messages.join(' | ')}`);
     } catch (e) {
       console.error(e);
-      alert('Error al refrescar IP: ' + (e.response?.data?.detail || e.message));
+      alert('Error al actualizar IP y potencia: ' + (e.response?.data?.detail || e.message));
     } finally {
       setConfirming(false);
     }
@@ -504,24 +528,9 @@ const Activacion = () => {
               fontWeight: '500'
             }}
           >
-            {bulkPolling ? 'Procesando masivo...' : '⚡ Activar y Borrar Todas (Autofind)'}
+            {bulkPolling ? 'Procesando masivo...' : '⚡ LIMPIAR PUETOS'}
           </button>
-          <button
-            className="btn"
-            onClick={handleDeshacerUltima}
-            disabled={undoing || polling}
-            style={{
-              backgroundColor: 'rgba(239,68,68,0.12)',
-              color: '#ef4444',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 6,
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            {undoing ? 'Deshaciendo...' : '↩️ Deshacer Última Activación'}
-          </button>
+        
         </div>
       </div>
 
@@ -534,7 +543,7 @@ const Activacion = () => {
                 <th>Nombre</th>
                 <th>Estado</th>
                 <th>Puerto</th>
-                <th>MAC</th>
+            
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -545,18 +554,11 @@ const Activacion = () => {
                   <td>{c.nombre}</td>
                   <td>{c.estado}</td>
                   <td>{c.puerto}</td>
-                  <td>{c.mac || '—'}</td>
+                
                   <td>
                     <button className="btn" onClick={() => openMacModal(c)}>Activar</button>
                     {' '}
-                    <button
-                      className="btn"
-                      title="Ver potencia óptica ONT"
-                      onClick={() => handleVerPotencia(c)}
-                      style={{ background: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '4px 10px', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}
-                    >
-                      📡 Potencia
-                    </button>
+                    
                     {isAdmin && (
                       <>
                         {' '}
@@ -827,12 +829,17 @@ const Activacion = () => {
             </div>
 
             <div style={{ padding: '12px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, marginBottom: 24 }}>
-              <strong style={{ color: '#f59e0b', display: 'block', marginBottom: 4 }}>⚠️ Verifique en la WAN del equipo o en el MikroTik:</strong>
+              <strong style={{ color: '#f59e0b', display: 'block', marginBottom: 4 }}>⚠️ VERIFICAR</strong>
               <div style={{ fontSize: 13, color: '#d1d5db', lineHeight: 1.5 }}>
-                1. La IP del lease ha quedado estática.<br />
+                1. La IP del lease ha quedado estática y coincide con la ip que aparezca en el equipo.<br />
                 2. El comentario coincide con el código de cliente.<br />
-                3. La IP del equipo es la IP asignada por Opsatel ({confirmTaskData.ip}).<br />
-                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe la IP o sale en blanco, haga clic en el botón de abajo "REFRESCAR IP" para forzar la reasignación.</strong>
+                3. La IP del equipo es la IP asignada por el sistema. ({confirmTaskData.ip}).<br />
+                4. La potencia óptica es válida y está dentro del rango aceptable (-28 dBm a -8 dBm).<br />
+                5. 🛑Si no se le permite dar a activar, verificar que el equipo este bien configurado.
+                6. 🛑Cancelar y volver a activar si se selecciono mal entre bridge y ont.
+                7. 🛑Cancelar y volver a activar si la potencia óptica es inválida o no se detecta.
+                8. 🛑Reiniciar router y volver a conectarlo en caso de no obtener ip en caso de ont verificar la Vlan en el equipo.
+                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe la IP / Potencia óptica o sale en blanco, haga clic en el botón de abajo "REFRESCAR" para forzar la reasignación.</strong>
               </div>
             </div>
 
@@ -843,7 +850,7 @@ const Activacion = () => {
                 disabled={confirming}
                 style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6 }}
               >
-                🔄 REFRESCAR IP
+                🔄 REFRESCAR 
               </button>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
