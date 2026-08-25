@@ -459,19 +459,20 @@ const Admin = () => {
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           zIndex: 9999, overflowY: 'auto', padding: '40px 20px'
         }}>
-          <div className="tecnica-layout has-selected" style={{
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(300px, 360px) 1fr',
             alignItems: 'flex-start',
             justifyContent: 'center',
-            gap: '20px',
-            maxWidth: '1600px',
-            width: '95%',
+            gap: '24px',
+            maxWidth: '1550px',
+            width: '98%',
             margin: 'auto'
           }}>
-            {/* Panel de Observaciones Lateral */}
+            {/* Panel de Observaciones Lateral (IZQUIERDA) */}
             <motion.div
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              className="glass tecnica-list"
               style={{
                 width: '100%',
                 padding: '24px',
@@ -480,7 +481,9 @@ const Admin = () => {
                 boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
                 display: 'flex',
                 flexDirection: 'column',
-                background: '#151030'
+                background: '#151030',
+                maxHeight: '92vh',
+                overflowY: 'auto'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
@@ -583,14 +586,14 @@ const Admin = () => {
                 })()}
               </div>
             </motion.div>
-            {/* Modal de Pago Principal */}
+            {/* Modal de Pago Principal (DERECHA) */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               className="glass glass-card"
               style={{
-                width: '95%',
-                maxWidth: '1050px',
+                width: '100%',
+                maxWidth: '100%',
                 padding: '24px',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
                 position: 'relative',
