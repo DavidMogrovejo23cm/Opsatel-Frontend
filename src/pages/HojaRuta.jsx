@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { hojaRutaService, clienteService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 
 const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
@@ -121,7 +122,7 @@ const HojaRuta = () => {
 
             if (!matchSearch) return false;
 
-            if (dateFilter && r.fecha !== dateFilter) return false;
+            if (dateFilter && toISODate(r.fecha) !== dateFilter) return false;
 
             if (statusFilter !== 'TODOS' && (r.estado || '').toUpperCase() !== statusFilter) return false;
 
@@ -131,7 +132,7 @@ const HojaRuta = () => {
         // Ordenamiento: 1. Fecha Programada ascendente, 2. Hora ascendente, 3. F. Pedido (created_at) descendente como desempate
         return filtered.sort((a, b) => {
             // Primero por fecha programada ascendente (cronológico)
-            if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+            if (a.fecha !== b.fecha) return toISODate(a.fecha).localeCompare(toISODate(b.fecha));
 
             // Luego por hora ascendente (08:00 → 11:15 → 14:00)
             if (a.hora !== b.hora) return (a.hora || '').localeCompare(b.hora || '');
@@ -191,7 +192,8 @@ const HojaRuta = () => {
         // Limpiar cliente_id si es string vacío para evitar error de validación en backend
         const cleanData = { 
             ...formData,
-            cliente_id: formData.cliente_id === '' ? null : formData.cliente_id 
+            cliente_id: formData.cliente_id === '' ? null : formData.cliente_id,
+            fecha: normalizeDateInput(formData.fecha)
         };
 
         try {
@@ -367,11 +369,11 @@ const HojaRuta = () => {
                                         </td>
                                         <td style={{ padding: '15px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#a78bfa', fontSize: '0.8rem' }}>
-                                                {r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}
+                                                {r.created_at ? formatToDMY(r.created_at) : '-'}
                                             </div>
                                         </td>
                                         <td>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{r.fecha}</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{formatToDMY(r.fecha)}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.hora}</div>
                                         </td>
                                         <td>
@@ -602,7 +604,7 @@ const HojaRuta = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div className="input-group">
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programación</label>
-                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
+                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={toISODate(formData.fecha)} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
                                         </div>
                                         <div className="input-group">
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora Programación</label>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { normalizeDateInput, toISODate } from '../services/dateUtils';
 
 const Ventas = () => {
   const [nodosList, setNodosList] = useState([]);
@@ -239,9 +240,12 @@ const Ventas = () => {
     setLoading(true);
     setMessage(null);
     console.log("Enviando contrato con parroquia:", formData.parroquia);
-    let clienteId = null;
+    const payload = {
+      ...formData,
+      fecha_firma: normalizeDateInput(formData.fecha_firma)
+    };
     try {
-      const response = await clienteService.crear(formData);
+      const response = await clienteService.crear(payload);
       clienteId = response.data.id;
 
       // Subir fotos si existen
@@ -840,7 +844,7 @@ const Ventas = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>Fecha Instalación</label>
-                  <input type="date" className="input" value={instForm.fecha} onChange={e => setInstForm({ ...instForm, fecha: e.target.value })} style={{ width: '100%', boxSizing: 'border-box' }} required />
+                  <input type="date" className="input" value={toISODate(instForm.fecha)} onChange={e => setInstForm({ ...instForm, fecha: e.target.value })} style={{ width: '100%', boxSizing: 'border-box' }} required />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>Hora</label>
@@ -885,7 +889,8 @@ const Ventas = () => {
                     try {
                       await hojaRutaService.crear({
                         ...instForm,
-                        cliente_id: instForm.cliente_id
+                        cliente_id: instForm.cliente_id,
+                        fecha: normalizeDateInput(instForm.fecha)
                       });
                       setShowInstModal(false);
                       setMessage({ type: 'success', text: `✅ Instalación programada exitosamente para ${instForm.nombre_cliente}. Ya aparece en la Hoja de Ruta.` });

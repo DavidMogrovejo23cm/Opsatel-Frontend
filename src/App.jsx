@@ -10,7 +10,6 @@ import Ventas from './pages/Ventas';
 import Tecnica from './pages/Tecnica';
 import Admin from './pages/Admin';
 import Administrar from './pages/Administrar';
-import Reportes from './pages/Reportes';
 import Configuraciones from './pages/Configuraciones';
 import ExtrasGeneral from './pages/ExtrasGeneral';
 import ExtraPagos from './pages/ExtraPagos';
@@ -86,11 +85,7 @@ function App() {
               </ProtectedRoute>
             } />
             
-            <Route path="reportes" element={
-              <ProtectedRoute roles={['administrador', 'secretario']}>
-                <Reportes />
-              </ProtectedRoute>
-            } />
+            
             
             <Route path="config" element={
               <ProtectedRoute roles={['administrador']}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { callCenterService, clienteService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatToDMY } from '../services/dateUtils';
 
 /* ────────────────────────────────────────────
    ESTADO CONFIG
@@ -331,7 +332,7 @@ const CallCenter = () => {
                   >
                     <td style={{ padding: '14px 16px', minWidth: '130px' }}>
                       <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#ec4899' }}>
-                        {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '-'}
+                        {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
                       </div>
                       <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}

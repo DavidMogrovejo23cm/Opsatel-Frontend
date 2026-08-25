@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
+import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
+
 
 const General = () => {
   const [clientes, setClientes] = useState([]);
@@ -106,7 +108,12 @@ const General = () => {
     if (!editingCell) return;
 
     const original = clientes.find(c => c.id === id)[col];
-    if (tempValue === original) {
+    let valToSave = tempValue;
+    if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
+      valToSave = normalizeDateInput(tempValue);
+    }
+
+    if (valToSave === original) {
       setEditingCell(null);
       return;
     }
@@ -114,7 +121,7 @@ const General = () => {
     // Si ya está autenticado, guardar directamente sin PIN
     if (isAuthenticated || col === 'facturas' || col === 'cod') {
       try {
-        await clienteService.actualizar(id, { [col]: tempValue });
+        await clienteService.actualizar(id, { [col]: valToSave });
         setEditingCell(null);
         fetchData();
       } catch (error) {
@@ -125,7 +132,7 @@ const General = () => {
       return;
     }
 
-    setPendingAction({ type: 'edit', id, col, value: tempValue });
+    setPendingAction({ type: 'edit', id, col, value: valToSave });
     setShowPinModal(true);
     setPinInput('');
   };
@@ -725,6 +732,9 @@ const General = () => {
                                 );
                               }
 
+                              if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
+                                return formatToDMY(c[col]);
+                              }
                               return c[col] !== undefined ? String(c[col] || '-') : '-';
                             })()}
                           </span>

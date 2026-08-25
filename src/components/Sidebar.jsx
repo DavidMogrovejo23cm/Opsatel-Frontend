@@ -49,7 +49,6 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
     { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador'] },
     { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador'] },
     { path: '/call-center', label: 'Call Center', icon: '📞', roles: ['administrador'] },
-    { path: '/reportes', label: 'Reportes', icon: '📑', roles: ['administrador'] },
     { path: '/balance', label: 'Balance', icon: '📒', roles: ['administrador'] },
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },
     { path: '/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['administrador'] },

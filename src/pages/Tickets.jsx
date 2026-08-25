@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ticketsService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatToDMY } from '../services/dateUtils';
 
 const Tickets = () => {
     const [tickets, setTickets] = useState([]);
@@ -139,7 +140,7 @@ const Tickets = () => {
 
                             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>✍️ {t.autor}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(t.fecha_creacion).toLocaleDateString()}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatToDMY(t.fecha_creacion)}</span>
                             </div>
                         </motion.div>
                     ))}

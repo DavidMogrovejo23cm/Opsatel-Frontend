@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { extrasService } from '../services/api';
+import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 
 const ExtrasGeneral = () => {
     const [extras, setExtras] = useState([]);
@@ -183,13 +184,17 @@ const ExtrasGeneral = () => {
         try {
             const data = {
                 ...formData,
-                valor: parseFloat(formData.valor) || 0
+                valor: parseFloat(formData.valor) || 0,
+                fecha_ingreso: normalizeDateInput(formData.fecha_ingreso)
             };
             
             // Asegurar que los pagos y saldos mensuales sean números
             ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"].forEach(m => {
                 data[`${m}_pago`] = parseFloat(data[`${m}_pago`] || 0);
                 data[`${m}_saldo`] = parseFloat(data[`${m}_saldo`] || 0);
+                if (data[`${m}_fecha_pago`]) {
+                    data[`${m}_fecha_pago`] = normalizeDateInput(data[`${m}_fecha_pago`]);
+                }
             });
 
             if (isEditing) {
@@ -382,7 +387,7 @@ const ExtrasGeneral = () => {
                                         return (
                                             <React.Fragment key={m}>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_factura'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8 }}>{e[l + '_fecha_pago'] || '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8 }}>{e[l + '_fecha_pago'] ? formatToDMY(e[l + '_fecha_pago']) : '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center' }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_banco'] || '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem' }}>{e[l + '_cod'] || '-'}</td>
@@ -487,7 +492,7 @@ const ExtrasGeneral = () => {
                                     </div>
                                     <div className="form-group">
                                         <label className="label">FECHA DE INGRESO</label>
-                                        <input className="input" type="date" name="fecha_ingreso" value={formData.fecha_ingreso} onChange={e => setFormData({ ...formData, fecha_ingreso: e.target.value })} />
+                                        <input className="input" type="date" name="fecha_ingreso" value={toISODate(formData.fecha_ingreso)} onChange={e => setFormData({ ...formData, fecha_ingreso: e.target.value })} />
                                     </div>
                                     <div className="form-group grid-span-2">
                                         <label className="label">OBSERVACIONES</label>
