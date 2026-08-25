@@ -306,8 +306,8 @@ const Admin = () => {
                 <th>Pantallas IPTV</th>
                 <th>IPTV (TV)</th>
                 <th>Adicionales</th>
-                <th>Pendientes</th>
-         
+                <th>Plan</th>
+
                 <th>Instalación / Últ. Visita</th>
                 <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
@@ -421,7 +421,7 @@ const Admin = () => {
                       </span>
                     )}
                   </td>
-                  
+
                   <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                     {(() => {
                       const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
@@ -647,7 +647,7 @@ const Admin = () => {
                   {/* Resumen de saldos */}
                   <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldos Actuales en Sistema</h4>
-                    
+
                     {(parseFloat(selectedCliente.saldo || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
