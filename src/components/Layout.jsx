@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const location = useLocation();
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
+
+  const isWidePage = location.pathname === '/admin';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -29,7 +32,7 @@ const Layout = () => {
         background: 'transparent',
         transition: 'all 0.3s ease'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ maxWidth: isWidePage ? '100%' : '1200px', margin: '0 auto' }}>
           <Outlet key={refreshKey} />
         </div>
       </main>

@@ -304,6 +304,8 @@ const Admin = () => {
                 <th>Estado</th>
                 <th>Plan Base</th>
                 <th>Pantallas IPTV</th>
+                <th>IPTV (TV)</th>
+                <th>Adicionales</th>
                 <th>Pendientes</th>
          
                 <th>Instalación / Últ. Visita</th>
@@ -389,6 +391,24 @@ const Admin = () => {
                         outline: 'none'
                       }}
                     />
+                  </td>
+                  <td>
+                    {parseFloat(c.plus || 0) > 0 ? (
+                      <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                        ${parseFloat(c.plus).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>$0.00</span>
+                    )}
+                  </td>
+                  <td>
+                    {parseFloat(c.adicional || 0) > 0 ? (
+                      <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                        ${parseFloat(c.adicional).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>$0.00</span>
+                    )}
                   </td>
                   <td style={{ fontWeight: 'bold' }}>
                     {parseFloat(c.total_pago) < 0 ? (
