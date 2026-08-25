@@ -229,7 +229,7 @@ const Admin = () => {
   };
 
   const ejecutarFacturacion = async () => {
-    if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?\n(Asegúrese de haber generado el Reporte Mensual primero desde la sección de Reportes)")) return;
+    if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?")) return;
     try {
       const resp = await clienteService.facturacionGlobal();
       alert(resp.data.message);
