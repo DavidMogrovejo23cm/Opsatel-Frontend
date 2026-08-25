@@ -97,6 +97,8 @@ const Admin = () => {
       plus: "0",
       bank_plus: cliente.bank_plus || '',
       adicional: "0",
+      deuda_plus: cliente.plus || '0',
+      deuda_adicional: cliente.adicional || '0',
       notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
@@ -171,8 +173,8 @@ const Admin = () => {
   const handleGuardarCambios = async () => {
     try {
       await clienteService.updateAdmin(selectedCliente.id, {
-        plus: pagoData.plus,
-        adicional: pagoData.adicional,
+        plus: pagoData.deuda_plus,
+        adicional: pagoData.deuda_adicional,
         notas_pago: pagoData.notas_pago,
         comentarios: pagoData.comentarios_edit,
         app: pagoData.app,
@@ -600,7 +602,7 @@ const Admin = () => {
                   <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(() => {
                     const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
                     const base = planData ? (planData.pantallas ?? 0) : 0;
-                    return base + parseFloat(pagoData.plus || 0) / 2;
+                    return base + parseFloat(pagoData.deuda_plus || 0) / 2;
                   })()} Pantallas):</span>
                   <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                     ${parseFloat(selectedCliente.plus || 0).toFixed(2)}
@@ -798,93 +800,149 @@ const Admin = () => {
                 </div>
               </div>
 
-              <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
-                {/* 1. INTERNET PAY (AZUL) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Internet Pay.</label>
-                  <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.internet_payment} onChange={(e) => {
-                    const val = e.target.value;
-                    const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
-                    setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
-                  }} autoFocus />
-                </div>
+              {/* 💸 SECCIÓN 1: REGISTRAR COBRO ACTUAL (ABONOS) */}
+              <div style={{
+                padding: '16px',
+                background: 'rgba(59, 130, 246, 0.05)',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '1px dashed rgba(59, 130, 246, 0.2)'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  💰 Registrar Cobro Actual (Abonos)
+                </h4>
+                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
+                  {/* Abono Internet */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Internet ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.internet_payment} onChange={(e) => {
+                      const val = e.target.value;
+                      const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
+                      setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
+                    }} autoFocus />
+                  </div>
 
-                {/* 2. ADICIONAL (AZUL) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Adicional ($)</label>
-                  <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
-                    const val = (e.target.value);
-                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0)).toFixed(2);
-                    setPagoData({ ...pagoData, adicional: val, monto: newTotal });
-                  }} />
-                </div>
+                  {/* Abono Plus */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono IPTV Plus ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
+                      const val = e.target.value;
+                      const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
+                      setPagoData({ ...pagoData, plus: val, monto: newTotal });
+                    }} />
+                  </div>
 
-                {/* 3. COMENTARIOS DE PAGO / REPARACIÓN (MORADO) - Se guarda en 'observaciones' */}
-                <div className="form-group grid-span-2">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
-                  <textarea
-                    className="input"
-                    style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }}
-                    value={pagoData.notas_pago}
-                    onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
-                    placeholder="Escriba aquí si hay reparaciones..."
-                  />
+                  {/* Abono Adicional */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Adicional ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
+                      const val = e.target.value;
+                      const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0)).toFixed(2);
+                      setPagoData({ ...pagoData, adicional: val, monto: newTotal });
+                    }} />
+                  </div>
                 </div>
+              </div>
 
-                {/* 4. MÉTODO (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Método</label>
-                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
-                    {bancosList.length === 0 && <option value="EFECTIVO" style={{ background: '#1e1b4b', color: 'white' }}>EFECTIVO</option>}
-                    {bancosList.map(b => (
-                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
-                    ))}
-                  </select>
+              {/* ⚙️ SECCIÓN 2: MODIFICAR DEUDAS EN CUENTA (GUARDAR VALORES) */}
+              <div style={{
+                padding: '16px',
+                background: 'rgba(167, 139, 250, 0.05)',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '1px dashed rgba(167, 139, 250, 0.2)'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ⚙️ Modificar Deudas en Cuenta (Guardar Valores)
+                </h4>
+                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
+                  {/* Deuda Plus */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda IPTV Plus ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.4)', borderRadius: '12px' }} value={pagoData.deuda_plus} onChange={(e) => {
+                      setPagoData({ ...pagoData, deuda_plus: e.target.value });
+                    }} />
+                  </div>
+
+                  {/* Deuda Adicional */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda Adicional ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.4)', borderRadius: '12px' }} value={pagoData.deuda_adicional} onChange={(e) => {
+                      setPagoData({ ...pagoData, deuda_adicional: e.target.value });
+                    }} />
+                  </div>
                 </div>
+              </div>
 
-                {/* 5. PLUS (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Abono Plus ($)</label>
-                  <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
-                    const val = e.target.value;
-                    const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
-                    setPagoData({ ...pagoData, plus: val, monto: newTotal });
-                  }} />
-                </div>
+              {/* 📝 SECCIÓN 3: DETALLES DE LA TRANSACCIÓN */}
+              <div style={{
+                padding: '16px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📝 Detalles del Pago / Transacción
+                </h4>
+                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
+                  {/* Método */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Método de Pago</label>
+                    <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
+                      {bancosList.length === 0 && <option value="EFECTIVO" style={{ background: '#1e1b4b', color: 'white' }}>EFECTIVO</option>}
+                      {bancosList.map(b => (
+                        <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* 6. BANK PLUS (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Bank Plus</label>
-                  <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
-                    <option value="" style={{ background: '#1e1b4b', color: 'white' }}>Ninguno</option>
-                    {bancosList.map(b => (
-                      <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Bank Plus */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Banco IPTV (Bank Plus)</label>
+                    <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
+                      <option value="" style={{ background: '#1e1b4b', color: 'white' }}>Ninguno</option>
+                      {bancosList.map(b => (
+                        <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* 7. COD (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod</label>
-                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
-                </div>
+                  {/* Cod */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Código de Referencia (Cod)</label>
+                    <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
+                  </div>
 
-                {/* 8. FACTURA (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
-                  <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
-                </div>
+                  {/* Facturas */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
+                    <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+                  </div>
 
-                {/* 9. FECHA PAGO (MORADO) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
-                  <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-                </div>
+                  {/* Fecha Pago */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
+                    <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
+                  </div>
 
-                {/* 10. MONTO TOTAL (AZUL) */}
-                <div className="form-group">
-                  <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>Monto total ($)</label>
-                  <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
+                  {/* Monto Total */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>Monto total ($)</label>
+                    <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
+                  </div>
+
+                  {/* Nota de Pago / Reparación */}
+                  <div className="form-group grid-span-2">
+                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
+                    <textarea
+                      className="input"
+                      style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }}
+                      value={pagoData.notas_pago}
+                      onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
+                      placeholder="Escriba aquí si hay reparaciones..."
+                    />
+                  </div>
                 </div>
               </div>
 
