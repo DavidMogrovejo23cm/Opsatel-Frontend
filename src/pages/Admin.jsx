@@ -15,7 +15,6 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
-  const [efectivoRecibido, setEfectivoRecibido] = useState('');
 
   // Controlan la transaccionabilidad y UI del modal sobrepuesto de pagos
   const [pagoData, setPagoData] = useState({
@@ -72,21 +71,19 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    // Siempre usar la deuda actual. internet_payment es histórico del último
-    // abono y no debe volver a cobrarse en el siguiente pago.
     const internetSugerido = Math.max(
       0,
       parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)
     ).toFixed(2);
 
-    // Los campos de Plus y Adicional son abonos, no la deuda mostrada.
-    // Iniciarlos en cero evita descontar extras cuando el cliente paga solo internet.
-    const montoInicial = internetSugerido;
+    const deudaPlus = parseFloat(cliente.plus || 0);
+    const deudaAdicional = parseFloat(cliente.adicional || 0);
+    const totalPendiente = (parseFloat(internetSugerido) + deudaPlus + deudaAdicional).toFixed(2);
 
     const isCortesiaTotal = !!cliente.cortesia_total;
 
     setPagoData({
-      monto: isCortesiaTotal ? "0" : montoInicial,
+      monto: isCortesiaTotal ? "0" : totalPendiente,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: cliente.facturas || '',
       internet_payment: isCortesiaTotal ? "0" : internetSugerido,
@@ -101,7 +98,7 @@ const Admin = () => {
       deuda_adicional: cliente.adicional || '0',
       notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
-      cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE', // 'NONE', 'TOTAL', 'PARCIAL'
+      cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE',
       cortesiaPct: '',
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
@@ -109,58 +106,88 @@ const Admin = () => {
       descuentoValue: isCortesiaTotal ? internetSugerido : 0,
       iptvDescuentoValue: isCortesiaTotal ? (cliente.plus || '0') : 0
     });
-    setEfectivoRecibido('');
     setShowPagoModal(true);
   };
 
   const handleRegistrarPago = async () => {
     if (!pagoData.monto || isNaN(pagoData.monto)) return alert("Ingrese un monto válido");
 
-
-    // Helper para marcar campos vacíos como "NONE"
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
 
+    const montoTotal = parseFloat(pagoData.monto || 0);
+    let resto = montoTotal;
+
+    const deudaInternet = Math.max(0, parseFloat(selectedCliente.saldo || 0));
+    const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
+    const deudaAdicional = parseFloat(pagoData.deuda_adicional || 0);
+
+    let abonoInternet = 0;
+    let abonoPlus = 0;
+    let abonoAdicional = 0;
+
+    if (pagoData.cortesiaMode === 'TOTAL') {
+      abonoInternet = 0;
+      abonoPlus = 0;
+      abonoAdicional = 0;
+    } else {
+      // 1. Pagar Internet
+      abonoInternet = Math.min(resto, deudaInternet);
+      resto = parseFloat((resto - abonoInternet).toFixed(2));
+
+      // 2. Pagar IPTV Plus
+      abonoPlus = Math.min(resto, deudaPlus);
+      resto = parseFloat((resto - abonoPlus).toFixed(2));
+
+      // 3. Pagar Adicional
+      abonoAdicional = Math.min(resto, deudaAdicional);
+      resto = parseFloat((resto - abonoAdicional).toFixed(2));
+
+      // 4. Si sobra saldo (excedente), se suma a abonoInternet
+      if (resto > 0) {
+        abonoInternet = parseFloat((abonoInternet + resto).toFixed(2));
+      }
+    }
+
+    const descInternet = pagoData.cortesiaMode === 'TOTAL' ? deudaInternet : 0;
+    const descPlus = pagoData.cortesiaMode === 'TOTAL' ? deudaPlus : 0;
+    const descAdicional = pagoData.cortesiaMode === 'TOTAL' ? deudaAdicional : 0;
+
     try {
-      // Según v1.2, pagoData.monto es el efectivo total recibido. 
-      // El backend desglosará el adicional independientemente.
-      if (parseFloat(pagoData.plus || 0) > 0 && !pagoData.bank_plus) {
+      if (abonoPlus > 0 && !pagoData.bank_plus) {
         return alert('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
-      // LÓGICA DE LIQUIDACIÓN: Calculamos los descuentos (Cortesías) por separado del efectivo
-      const descInternet = pagoData.cortesiaMode !== 'NONE' ? parseFloat(pagoData.descuentoValue || 0) : 0;
-      const descPlus = pagoData.cortesiaMode === 'TOTAL' ? parseFloat(pagoData.iptvDescuentoValue || 0) : 0;
-      const descAdicional = pagoData.cortesiaMode === 'TOTAL' ? parseFloat(pagoData.original_adicional || 0) : 0;
+      // Sincronizar deudas modificadas, comentarios y cortesía PRIMERO en el backend
+      await clienteService.updateAdmin(selectedCliente.id, {
+        plus: pagoData.deuda_plus,
+        adicional: pagoData.deuda_adicional,
+        comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
+        cortesia_total: pagoData.cortesiaMode === 'TOTAL'
+      });
 
+      // Luego registrar el pago que descontará del saldo actualizado
       await clienteService.pagar(selectedCliente.id, {
-        monto: parseFloat(pagoData.monto),
+        monto: montoTotal,
         metodo_pago: pagoData.metodo,
         mes_correspondiente: new Date().toISOString().slice(0, 7),
         referencia: `Pago vía Admin - ${pagoData.metodo}${pagoData.cortesiaMode !== 'NONE' ? ' (CORTESÍA)' : ''}`,
         facturas: noneIfEmpty(pagoData.facturas),
-        internet_payment: noneIfEmpty(pagoData.internet_payment),
+        internet_payment: abonoInternet.toFixed(2),
         app: noneIfEmpty(pagoData.app),
         payment_date: pagoData.payment_date || new Date().toISOString().split('T')[0],
         client_payment_date: noneIfEmpty(pagoData.client_payment_date),
         bank: pagoData.metodo,
         cod: noneIfEmpty(pagoData.cod),
-        plus: noneIfEmpty(pagoData.plus),
+        plus: abonoPlus.toFixed(2),
         bank_plus: noneIfEmpty(pagoData.bank_plus),
-        adicional: noneIfEmpty(pagoData.adicional),
+        adicional: abonoAdicional.toFixed(2),
         descuento_internet: descInternet,
         descuento_plus: descPlus,
         descuento_adicional: descAdicional,
         notas_pago: (() => {
           let nota = (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : '';
-          if (pagoData.cortesiaMode === 'PARCIAL') nota += ` [DESCUENTO ${pagoData.cortesiaPct || 0}% PLAN]`;
           return nota.trim() || null;
         })()
-      });
-
-      // Guardar comentarios del contrato y el estado de cortesía total
-      await clienteService.updateAdmin(selectedCliente.id, {
-        comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
-        cortesia_total: pagoData.cortesiaMode === 'TOTAL'
       });
 
       setShowPagoModal(false);
@@ -180,7 +207,6 @@ const Admin = () => {
         app: pagoData.app,
         cod: pagoData.cod,
         facturas: pagoData.facturas,
-        internet_payment: pagoData.internet_payment,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL'
       });
       alert("Valores guardados correctamente");
@@ -557,401 +583,266 @@ const Admin = () => {
                 })()}
               </div>
             </motion.div>
-
             {/* Modal de Pago Principal */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               className="glass glass-card"
               style={{
-                width: '100%',
-                padding: '32px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                width: '95%',
+                maxWidth: '1050px',
+                padding: '24px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
                 position: 'relative',
-                background: '#151030'
+                background: '#130f26',
+                borderRadius: '24px',
+                maxHeight: '92vh',
+                overflowY: 'auto'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ margin: 0 }}>Registrar Pago</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Registrar Pago / Administrar Cuenta</h2>
                 <button onClick={() => setShowPagoModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
               </div>
 
-              <div style={{ padding: '4px 16px 16px 16px', marginTop: '-12px' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Cliente: </span>
-                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>{selectedCliente?.nombre}</span>
+              <div style={{ padding: '0 0 12px 0', marginTop: '-8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cliente: </span>
+                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{selectedCliente?.nombre}</span>
               </div>
 
-              <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--glass-border)' }}>
-                {(parseFloat(selectedCliente.saldo || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
-                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                      ${parseFloat(selectedCliente.saldo).toFixed(2)}
-                    </span>
-                  </div>
-                )}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                gap: '20px',
+                alignItems: 'start',
+                marginTop: '16px'
+              }}>
+                {/* 📊 COLUMNA IZQUIERDA: RESUMEN DE SALDOS Y MODIFICACIONES */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Resumen de saldos */}
+                  <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldos Actuales en Sistema</h4>
+                    
+                    {(parseFloat(selectedCliente.saldo || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
+                        <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                          ${parseFloat(selectedCliente.saldo).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
-                  <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                    ${(parseFloat(pagoData.internet_payment || 0)).toFixed(2)}
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
+                      <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                        ${(parseFloat(pagoData.original_internet || 0)).toFixed(2)}
+                      </span>
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(() => {
-                    const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
-                    const base = planData ? (planData.pantallas ?? 0) : 0;
-                    return base + parseFloat(pagoData.deuda_plus || 0) / 2;
-                  })()} Pantallas):</span>
-                  <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                    ${parseFloat(selectedCliente.plus || 0).toFixed(2)}
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '6px', paddingTop: '6px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(() => {
+                        const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
+                        const base = planData ? (planData.pantallas ?? 0) : 0;
+                        return base + parseFloat(pagoData.deuda_plus || 0) / 2;
+                      })()} Pantallas):</span>
+                      <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                        ${parseFloat(pagoData.deuda_plus || 0).toFixed(2)}
+                      </span>
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '8px', paddingTop: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Deuda Adicional:</span>
-                  <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-                    ${parseFloat(selectedCliente.adicional || 0).toFixed(2)}
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '6px', paddingTop: '6px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Deuda Adicional:</span>
+                      <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                        ${parseFloat(pagoData.deuda_adicional || 0).toFixed(2)}
+                      </span>
+                    </div>
 
-                <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold' }}>
-                    <span>Total Pendiente (Consolidado):</span>
-                    <span style={{ color: (parseFloat(selectedCliente.total_pago || 0) + parseFloat(selectedCliente.adicional || 0)) > 0 ? '#f87171' : '#4ade80' }}>
-                      ${(parseFloat(selectedCliente.total_pago || 0) + parseFloat(selectedCliente.adicional || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* SECCIÓN DE CORTESÍA */}
-                <div className="grid-responsive" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="checkbox"
-                      id="cortesia_total"
-                      checked={pagoData.cortesiaMode === 'TOTAL'}
-                      onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        const mode = isChecked ? 'TOTAL' : 'NONE';
-                        if (isChecked) {
-                          setPagoData({
-                            ...pagoData,
-                            cortesiaMode: mode,
-                            internet_payment: "0",
-                            plus: "0",
-                            adicional: "0",
-                            monto: "0",
-                            descuentoValue: pagoData.original_internet,
-                            iptvDescuentoValue: pagoData.original_plus
-                          });
-                        } else {
-                          const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.original_plus) + parseFloat(pagoData.original_adicional)).toFixed(2);
-                          setPagoData({
-                            ...pagoData,
-                            cortesiaMode: mode,
-                            internet_payment: pagoData.original_internet,
-                            plus: "0",
-                            adicional: "0",
-                            monto: pagoData.original_internet,
-                            descuentoValue: 0,
-                            iptvDescuentoValue: 0
-                          });
-                        }
-                      }}
-                      style={{ width: '18px', height: '18px', accentColor: '#var(--primary)' }}
-                    />
-                    <label htmlFor="cortesia_total" style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total</label>
+                    <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                        <span>Total Pendiente:</span>
+                        <span style={{ color: (parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0) + parseFloat(selectedCliente.saldo || 0)) > 0 ? '#f87171' : '#4ade80' }}>
+                          ${(parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0) + parseFloat(selectedCliente.saldo || 0)).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Se oculta visualmente la cortesía parcial pero se mantiene la lógica en el código */}
-                  {/* 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* ⚙️ SECCIÓN 2: MODIFICAR DEUDAS EN CUENTA (GUARDAR VALORES) */}
+                  <div style={{
+                    padding: '14px',
+                    background: 'rgba(167, 139, 250, 0.04)',
+                    borderRadius: '12px',
+                    border: '1px dashed rgba(167, 139, 250, 0.2)'
+                  }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ⚙️ Modificar Deudas en Cuenta (Guardar Valores)
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda IPTV Plus ($)</label>
+                        <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.deuda_plus} onChange={(e) => {
+                          const val = e.target.value;
+                          const originalInternetVal = parseFloat(pagoData.original_internet || 0);
+                          const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
+                          const debtPlusVal = parseFloat(val || 0);
+                          const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
+                          setPagoData({ ...pagoData, deuda_plus: val, monto: newTotal });
+                        }} />
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda Adicional ($)</label>
+                        <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.deuda_adicional} onChange={(e) => {
+                          const val = e.target.value;
+                          const originalInternetVal = parseFloat(pagoData.original_internet || 0);
+                          const debtPlusVal = parseFloat(pagoData.deuda_plus || 0);
+                          const debtAdicionalVal = parseFloat(val || 0);
+                          const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
+                          setPagoData({ ...pagoData, deuda_adicional: val, monto: newTotal });
+                        }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sección de cortesía */}
+                  <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '12px', border: '1px dashed rgba(99, 102, 241, 0.2)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <input
                         type="checkbox"
-                        id="cortesia_parcial"
-                        checked={pagoData.cortesiaMode === 'PARCIAL'}
+                        id="cortesia_total"
+                        checked={pagoData.cortesiaMode === 'TOTAL'}
                         onChange={(e) => {
                           const isChecked = e.target.checked;
-                          const mode = isChecked ? 'PARCIAL' : 'NONE';
-                          if (isChecked) {
-                            setPagoData({ ...pagoData, cortesiaMode: mode });
-                          } else {
-                            const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.original_plus) + parseFloat(pagoData.original_adicional)).toFixed(2);
+                          const mode = isChecked ? 'TOTAL' : 'NONE';
+                          if (mode === 'TOTAL') {
                             setPagoData({
                               ...pagoData,
                               cortesiaMode: mode,
-                              internet_payment: pagoData.original_internet,
-                              plus: pagoData.original_plus,
+                              monto: "0",
+                              descuentoValue: pagoData.original_internet,
+                              iptvDescuentoValue: pagoData.original_plus
+                            });
+                          } else {
+                            const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.deuda_plus) + parseFloat(pagoData.deuda_adicional)).toFixed(2);
+                            setPagoData({
+                              ...pagoData,
+                              cortesiaMode: mode,
                               monto: originalTotal,
-                              cortesiaPct: '',
                               descuentoValue: 0,
                               iptvDescuentoValue: 0
                             });
                           }
                         }}
-                        style={{ width: '18px', height: '18px', accentColor: '#var(--primary)' }}
+                        style={{ width: '18px', height: '18px', accentColor: '#818cf8', cursor: 'pointer' }}
                       />
-                      <label htmlFor="cortesia_parcial" style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Parcial</label>
+                      <label htmlFor="cortesia_total" style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total (Cobro $0.00)</label>
                     </div>
-                    {pagoData.cortesiaMode === 'PARCIAL' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '28px' }}>
-                        <input
-                          type="number"
-                          placeholder="%"
-                          className="input"
-                          style={{ width: '80px', marginBottom: 0, padding: '6px 10px', textAlign: 'center', fontSize: '1rem', fontWeight: 'bold', color: '#818cf8', border: '1px solid #818cf8' }}
-                          min="0" max="100"
-                          value={pagoData.cortesiaPct}
-                          onChange={(e) => {
-                            const valStr = e.target.value;
-                            if (valStr === "") {
-                              setPagoData({
-                                ...pagoData,
-                                cortesiaPct: "",
-                                internet_payment: pagoData.original_internet,
-                                monto: (parseFloat(pagoData.original_internet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2),
-                                descuentoValue: 0
-                              });
-                              return;
-                            }
-                            const pct = Math.min(100, Math.max(0, parseFloat(valStr) || 0));
-                            const planPrice = parseFloat(planesList.find(p => p.nombre.toLowerCase() === selectedCliente?.plan?.toLowerCase())?.precio || 0);
-                            const internetSugerido = parseFloat(pagoData.original_internet || 0);
+                  </div>
+                </div>
 
-                            const baseDescuento = (internetSugerido > 0 && planPrice > 0) ? Math.min(planPrice, internetSugerido) : (internetSugerido || 0);
+                {/* 💰 COLUMNA DERECHA: REGISTRO DE COBRO Y DETALLES DE TRANSACCIÓN */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* 💸 SECCIÓN 1: REGISTRAR COBRO */}
+                  <div style={{
+                    padding: '14px',
+                    background: 'rgba(59, 130, 246, 0.04)',
+                    borderRadius: '12px',
+                    border: '1px dashed rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      💰 Registrar Cobro (Monto Total Recibido)
+                    </h4>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Monto total entregado por cliente ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input"
+                        style={{ borderColor: '#3b82f6', borderRadius: '10px', height: '42px', fontSize: '1.1rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(59, 130, 246, 0.15)', padding: '8px' }}
+                        value={pagoData.monto}
+                        onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })}
+                        disabled={pagoData.cortesiaMode === 'TOTAL'}
+                        autoFocus
+                      />
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                        * Ingrese el total de dinero entregado. El sistema liquidará automáticamente deudas prioritarias.
+                      </span>
+                    </div>
+                  </div>
 
-                            const descuento = (baseDescuento * pct / 100);
-                            const nuevoInternet = (internetSugerido - descuento).toFixed(2);
-
-                            const total = (parseFloat(nuevoInternet) + parseFloat(pagoData.plus) + parseFloat(pagoData.adicional)).toFixed(2);
-
-                            setPagoData({
-                              ...pagoData,
-                              cortesiaPct: pct,
-                              internet_payment: nuevoInternet,
-                              monto: total,
-                              descuentoValue: descuento
-                            });
-                          }}
-                        />
-                        <span style={{ fontSize: '0.9rem', color: '#818cf8', fontWeight: 'bold' }}>% Descuento</span>
+                  {/* 📝 SECCIÓN 3: DETALLES DE LA TRANSACCIÓN */}
+                  <div style={{
+                    padding: '14px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      📝 Detalles del Pago / Transacción
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      {/* Método */}
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Método de Pago</label>
+                        <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', background: '#130f26', color: 'white', height: '36px', padding: '6px' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
+                          {bancosList.length === 0 && <option value="EFECTIVO" style={{ background: '#130f26', color: 'white' }}>EFECTIVO</option>}
+                          {bancosList.map(b => (
+                            <option key={b.id} value={b.nombre} style={{ background: '#130f26', color: 'white' }}>{b.nombre}</option>
+                          ))}
+                        </select>
                       </div>
-                    )}
-                  </div>
-                  */}
-                </div>
-              </div>
 
-              <div style={{
-                marginTop: '-10px',
-                marginBottom: '20px',
-                padding: '16px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                borderRadius: '16px',
-                border: '1px dashed rgba(99, 102, 241, 0.3)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '1.1rem' }}>🧮</span> Calculadora de Vuelto
-                  </span>
-                  {efectivoRecibido && (
-                    <button
-                      onClick={() => setEfectivoRecibido('')}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="grid-responsive">
-                  <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Efectivo Recibido</label>
-                    <input
-                      type="number"
-                      className="input"
-                      value={efectivoRecibido}
-                      onChange={(e) => setEfectivoRecibido(e.target.value)}
-                      placeholder="0.00"
-                      style={{ marginBottom: 0, fontSize: '1rem', height: '42px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vuelto a entregar</label>
-                    <div style={{
-                      height: '42px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0 12px',
-                      background: 'rgba(15, 23, 42, 0.5)',
-                      borderRadius: '8px',
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      color: (parseFloat(efectivoRecibido || 0) - (parseFloat(pagoData.monto) || 0)) >= 0 ? '#4ade80' : '#f87171',
-                      border: '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                      <span>$</span>
-                      <span>{(parseFloat(efectivoRecibido || 0) - (parseFloat(pagoData.monto) || 0)).toFixed(2)}</span>
+                      {/* Bank Plus */}
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Banco IPTV</label>
+                        <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', background: '#130f26', color: 'white', height: '36px', padding: '6px' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
+                          <option value="" style={{ background: '#130f26', color: 'white' }}>Ninguno</option>
+                          {bancosList.map(b => (
+                            <option key={b.id} value={b.nombre} style={{ background: '#130f26', color: 'white' }}>{b.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Cod */}
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod Referencia</label>
+                        <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
+                      </div>
+
+                      {/* Facturas */}
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
+                        <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+                      </div>
+
+                      {/* Fecha Pago */}
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
+                        <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
+                      </div>
+
+                      {/* Nota de Pago / Reparación */}
+                      <div className="form-group grid-span-2" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
+                        <textarea
+                          className="input"
+                          style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', minHeight: '36px', resize: 'vertical', paddingTop: '6px', paddingBottom: '6px', fontSize: '0.8rem' }}
+                          value={pagoData.notas_pago}
+                          onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
+                          placeholder="Escriba aquí si hay reparaciones..."
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 💸 SECCIÓN 1: REGISTRAR COBRO ACTUAL (ABONOS) */}
-              <div style={{
-                padding: '16px',
-                background: 'rgba(59, 130, 246, 0.05)',
-                borderRadius: '16px',
-                marginBottom: '20px',
-                border: '1px dashed rgba(59, 130, 246, 0.2)'
-              }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  💰 Registrar Cobro Actual (Abonos)
-                </h4>
-                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
-                  {/* Abono Internet */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Internet ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.internet_payment} onChange={(e) => {
-                      const val = e.target.value;
-                      const newTotal = (parseFloat(val || 0) + parseFloat(pagoData.plus || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
-                      setPagoData({ ...pagoData, internet_payment: val, monto: newTotal });
-                    }} autoFocus />
-                  </div>
-
-                  {/* Abono Plus */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono IPTV Plus ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.plus} onChange={(e) => {
-                      const val = e.target.value;
-                      const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(val || 0) + parseFloat(pagoData.adicional || 0)).toFixed(2);
-                      setPagoData({ ...pagoData, plus: val, monto: newTotal });
-                    }} />
-                  </div>
-
-                  {/* Abono Adicional */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#60a5fa' }}>Abono Adicional ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', borderRadius: '12px' }} value={pagoData.adicional} onChange={(e) => {
-                      const val = e.target.value;
-                      const newTotal = (parseFloat(pagoData.internet_payment || 0) + parseFloat(pagoData.plus || 0) + parseFloat(val || 0)).toFixed(2);
-                      setPagoData({ ...pagoData, adicional: val, monto: newTotal });
-                    }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* ⚙️ SECCIÓN 2: MODIFICAR DEUDAS EN CUENTA (GUARDAR VALORES) */}
-              <div style={{
-                padding: '16px',
-                background: 'rgba(167, 139, 250, 0.05)',
-                borderRadius: '16px',
-                marginBottom: '20px',
-                border: '1px dashed rgba(167, 139, 250, 0.2)'
-              }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  ⚙️ Modificar Deudas en Cuenta (Guardar Valores)
-                </h4>
-                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
-                  {/* Deuda Plus */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda IPTV Plus ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.4)', borderRadius: '12px' }} value={pagoData.deuda_plus} onChange={(e) => {
-                      setPagoData({ ...pagoData, deuda_plus: e.target.value });
-                    }} />
-                  </div>
-
-                  {/* Deuda Adicional */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda Adicional ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.4)', borderRadius: '12px' }} value={pagoData.deuda_adicional} onChange={(e) => {
-                      setPagoData({ ...pagoData, deuda_adicional: e.target.value });
-                    }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* 📝 SECCIÓN 3: DETALLES DE LA TRANSACCIÓN */}
-              <div style={{
-                padding: '16px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                borderRadius: '16px',
-                marginBottom: '20px',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
-              }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📝 Detalles del Pago / Transacción
-                </h4>
-                <div className="grid-responsive" style={{ paddingRight: '10px', margin: '0 -8px' }}>
-                  {/* Método */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Método de Pago</label>
-                    <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.metodo} onChange={(e) => setPagoData({ ...pagoData, metodo: e.target.value })}>
-                      {bancosList.length === 0 && <option value="EFECTIVO" style={{ background: '#1e1b4b', color: 'white' }}>EFECTIVO</option>}
-                      {bancosList.map(b => (
-                        <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Bank Plus */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Banco IPTV (Bank Plus)</label>
-                    <select className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', background: '#1e1b4b', color: 'white' }} value={pagoData.bank_plus} onChange={(e) => setPagoData({ ...pagoData, bank_plus: e.target.value })}>
-                      <option value="" style={{ background: '#1e1b4b', color: 'white' }}>Ninguno</option>
-                      {bancosList.map(b => (
-                        <option key={b.id} value={b.nombre} style={{ background: '#1e1b4b', color: 'white' }}>{b.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Cod */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Código de Referencia (Cod)</label>
-                    <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
-                  </div>
-
-                  {/* Facturas */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
-                    <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
-                  </div>
-
-                  {/* Fecha Pago */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
-                    <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-                  </div>
-
-                  {/* Monto Total */}
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>Monto total ($)</label>
-                    <input type="number" step="0.01" className="input" style={{ borderColor: '#3b82f6', borderRadius: '12px', boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)' }} value={pagoData.monto} onChange={(e) => setPagoData({ ...pagoData, monto: e.target.value })} />
-                  </div>
-
-                  {/* Nota de Pago / Reparación */}
-                  <div className="form-group grid-span-2">
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
-                    <textarea
-                      className="input"
-                      style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '12px', minHeight: '40px', resize: 'vertical', paddingTop: '8px' }}
-                      value={pagoData.notas_pago}
-                      onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
-                      placeholder="Escriba aquí si hay reparaciones..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
-                <button className="btn btn-secondary" onClick={handleGuardarCambios} style={{ backgroundColor: '#4b5563', color: 'white' }}>
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={() => setShowPagoModal(false)}>Cancelar</button>
+                <button className="btn btn-secondary" onClick={handleGuardarCambios} style={{ backgroundColor: '#4b5563', color: 'white', padding: '8px 16px', fontSize: '0.85rem' }}>
                   💾 Guardar Valores
                 </button>
-                <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '12px 24px' }}>
+                <button className="btn btn-primary" onClick={handleRegistrarPago} style={{ padding: '10px 24px', fontSize: '0.85rem' }}>
                   De acuerdo (PAGAR)
                 </button>
               </div>
