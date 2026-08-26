@@ -228,14 +228,32 @@ const Admin = () => {
     }
   };
 
+  const [facturando, setFacturando] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   const ejecutarFacturacion = async () => {
+    if (cooldown > 0) return;
     if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?")) return;
+    setFacturando(true);
     try {
       const resp = await clienteService.facturacionGlobal();
       alert(resp.data.message);
+      setCooldown(60);
       fetchData();
     } catch (error) {
       alert(error.response?.data?.detail || "Error en facturación");
+    } finally {
+      setFacturando(false);
     }
   };
 
@@ -288,7 +306,14 @@ const Admin = () => {
 
           {isAdmin && (
             <>
-              <button className="btn btn-secondary" onClick={ejecutarFacturacion}>⚙️ Facturación Mensual</button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={ejecutarFacturacion}
+                disabled={facturando || cooldown > 0}
+                style={{ opacity: (facturando || cooldown > 0) ? 0.7 : 1, cursor: (facturando || cooldown > 0) ? 'not-allowed' : 'pointer' }}
+              >
+                {facturando ? "⏳ Facturando..." : cooldown > 0 ? `⚙️ Facturación (${cooldown}s)` : "⚙️ Facturación Mensual"}
+              </button>
             </>
           )}
         </div>
