@@ -309,8 +309,9 @@ const Admin = () => {
                 <th>Plan</th>
 
                 <th>Instalación / Últ. Visita</th>
-                <th>Nota de Pago/Reparación</th>
                 <th>Acciones</th>
+                <th>Nota de Pago/Reparación</th>
+
               </tr>
             </thead>
             <tbody>
