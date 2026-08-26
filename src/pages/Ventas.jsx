@@ -959,7 +959,7 @@ const Ventas = () => {
               fontSize: '0.9rem',
               lineHeight: '1.6'
             }}>
-              {message.type === 'error' ? '⚠️ ' : '✅ '}{message.text}
+              {message.type === 'error' ? '⚠️ ' : '✅ '}{typeof message.text === 'string' ? message.text.replace(/^(✅|⚠️)\s*/, '') : message.text}
             </div>
           )}
 
@@ -980,7 +980,7 @@ const Ventas = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="glass"
-              style={{ width: '100%', maxWidth: '620px', padding: '36px', borderRadius: '24px', border: '1px solid rgba(167,139,250,0.3)' }}
+              style={{ width: '100%', maxWidth: '700px', padding: '32px 36px', borderRadius: '24px', border: '1px solid rgba(167,139,250,0.3)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', boxSizing: 'border-box' }}
             >
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
@@ -1026,12 +1026,12 @@ const Ventas = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center', marginTop: '28px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={handleCancelarInstalacion}
-                  style={{ padding: '10px 22px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+                  style={{ padding: '10px 16px', fontSize: '0.85rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#f87171', borderRadius: '10px', whiteSpace: 'nowrap' }}
                 >
                   Cancelar (Editar Contrato)
                 </button>
@@ -1039,7 +1039,7 @@ const Ventas = () => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowInstModal(false)}
-                  style={{ padding: '10px 22px' }}
+                  style={{ padding: '10px 16px', fontSize: '0.85rem', borderRadius: '10px', whiteSpace: 'nowrap' }}
                 >
                   Omitir por ahora
                 </button>
@@ -1047,7 +1047,7 @@ const Ventas = () => {
                   type="button"
                   className="btn btn-primary"
                   disabled={instSubmitting || !instForm.fecha || !instForm.hora || !instForm.tecnico}
-                  style={{ padding: '10px 28px' }}
+                  style={{ padding: '10px 22px', fontSize: '0.85rem', borderRadius: '10px', whiteSpace: 'nowrap' }}
                   onClick={async () => {
                     setInstSubmitting(true);
                     try {
@@ -1057,7 +1057,7 @@ const Ventas = () => {
                         fecha: normalizeDateInput(instForm.fecha)
                       });
                       setShowInstModal(false);
-                      setMessage({ type: 'success', text: `✅ Instalación programada exitosamente para ${instForm.nombre_cliente}. Ya aparece en la Hoja de Ruta.` });
+                      showSuccess(`Instalación programada exitosamente para ${instForm.nombre_cliente}. Ya aparece en la Hoja de Ruta.`);
                     } catch (err) {
                       const detail = err.response?.data?.detail;
                       const msg = typeof detail === 'string' ? detail : 'Error al programar la instalación.';
