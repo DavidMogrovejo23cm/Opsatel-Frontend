@@ -2,11 +2,10 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json tsconfig.json vite.config.ts ./
-COPY public ./public
-COPY src ./src
-
+COPY package.json package-lock.json ./
 RUN npm ci
+
+COPY . .
 RUN npm run build
 
 FROM nginx:stable-alpine
