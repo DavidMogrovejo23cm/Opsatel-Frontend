@@ -23,13 +23,13 @@ const Layout = () => {
       
       <main style={{ 
         marginLeft: 'var(--sidebar-width)', 
-        padding: '32px', 
+        padding: '36px 48px', 
         width: 'calc(100% - var(--sidebar-width))',
         minHeight: '100vh',
         background: 'transparent',
         transition: 'all 0.3s ease'
       }}>
-        <div style={{ maxWidth: '100%', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
           <Outlet key={refreshKey} />
         </div>
       </main>
@@ -39,14 +39,14 @@ const Layout = () => {
           main {
             margin-left: 0 !important;
             width: 100% !important;
-            padding: 20px !important;
-            padding-top: 70px !important;
+            padding: 24px 20px !important;
+            padding-top: 76px !important;
           }
         }
         @media (max-width: 480px) {
           main {
-            padding: 12px !important;
-            padding-top: 60px !important;
+            padding: 16px 12px !important;
+            padding-top: 70px !important;
           }
         }
       `}</style>
