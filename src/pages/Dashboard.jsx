@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService, extrasService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showAlert, showSuccess, showError } from '../utils/alerts';
+
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, LabelList } from 'recharts';
 const Dashboard = () => {
@@ -253,7 +255,7 @@ const Dashboard = () => {
       setShowEditBaseModal(true);
     } catch (err) {
       console.error(err);
-      alert('Error al cargar finanzas base');
+      showError('Error al cargar finanzas base');
     }
   };
 
@@ -266,12 +268,13 @@ const Dashboard = () => {
         jep: parseFloat(editBaseData.jep) || 0
       });
       setShowEditBaseModal(false);
+      showSuccess('Finanzas base guardadas correctamente');
       // Recargar stats de finanzas
       const financeRes = await clienteService.getDashboardStats();
       setFinanceStats(financeRes.data);
     } catch (err) {
       console.error(err);
-      alert('Error al guardar');
+      showError('Error al guardar');
     } finally {
       setSavingBase(false);
     }

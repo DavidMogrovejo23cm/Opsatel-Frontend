@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { asistenciaService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+
 
 const TARGET_LAT = -2.922000;
 const TARGET_LNG = -79.066444;
@@ -75,7 +77,7 @@ const Asistencia = () => {
 
   const checkLocation = () => {
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta geolocalización");
+      showError("Tu navegador no soporta geolocalización");
       return;
     }
 
@@ -96,7 +98,7 @@ const Asistencia = () => {
       (err) => {
         console.error(err);
         setStatus('error');
-        alert("Error al obtener ubicación. Asegúrate de dar permisos de GPS.");
+        showError("Error al obtener ubicación. Asegúrate de dar permisos de GPS.");
       },
       { enableHighAccuracy: true }
     );
@@ -104,7 +106,7 @@ const Asistencia = () => {
 
   const registrarAccion = async () => {
     if (!coords || distance === null || distance > MAX_DISTANCE) {
-      alert("❌ No te encuentras dentro del rango permitido para registrar asistencia.");
+      showWarning("No te encuentras dentro del rango permitido para registrar asistencia.");
       setStatus('out_of_range');
       return;
     }
@@ -124,15 +126,15 @@ const Asistencia = () => {
 
       if (!dailyStatus.ha_entrado) {
         await asistenciaService.registrar(payload);
-        alert("✅ Entrada registrada correctamente");
+        showSuccess("Entrada registrada correctamente");
       } else {
         await asistenciaService.registrarSalida(payload);
-        alert("✅ Salida registrada correctamente");
+        showSuccess("Salida registrada correctamente");
       }
 
       fetchStatus(); // Actualizar estado después de registrar
     } catch (err) {
-      alert("❌ Error: " + (err.response?.data?.detail || "No se pudo procesar"));
+      showError("Error: " + (err.response?.data?.detail || "No se pudo procesar"));
       setStatus('error');
     } finally {
       setLoading(false);

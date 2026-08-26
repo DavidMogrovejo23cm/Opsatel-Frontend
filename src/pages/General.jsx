@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+
 
 
 const General = () => {
@@ -126,7 +128,7 @@ const General = () => {
         fetchData();
       } catch (error) {
         console.error(error);
-        alert("Error al guardar cambio");
+        showError("Error al guardar cambio");
         setEditingCell(null);
       }
       return;
@@ -151,7 +153,7 @@ const General = () => {
         fetchData();
       } catch (error) {
         console.error(error);
-        alert("Error al guardar cambio");
+        showError("Error al guardar cambio");
         setEditingCell(null);
       }
       return;
@@ -228,7 +230,7 @@ const General = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-      alert("Error al guardar cambio");
+      showError("Error al guardar cambio");
       setEditingCell(null);
     }
   };
@@ -237,7 +239,7 @@ const General = () => {
     const originalPin = pinInput; // Keep the PIN for backend confirmation
 
     if (pinInput !== "1234566") {
-      alert("PIN Incorrecto");
+      showError("PIN Incorrecto");
       setPinInput('');
       return;
     }
@@ -302,7 +304,7 @@ const General = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-      alert("Error al guardar cambio");
+      showError("Error al guardar cambio");
       setShowPinModal(false);
       setEditingCell(null);
     }
@@ -345,7 +347,7 @@ const General = () => {
       setIsAuthenticated(true);
       setShowEntryPinModal(false);
     } else {
-      alert('PIN Incorrecto');
+      showError('PIN Incorrecto');
       setEntryPinInput('');
     }
   };

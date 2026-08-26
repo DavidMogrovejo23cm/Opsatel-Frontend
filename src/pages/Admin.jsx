@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 const Admin = () => {
   const { user } = useAuth();
@@ -110,7 +112,7 @@ const Admin = () => {
   };
 
   const handleRegistrarPago = async () => {
-    if (!pagoData.monto || isNaN(pagoData.monto)) return alert("Ingrese un monto válido");
+    if (!pagoData.monto || isNaN(pagoData.monto)) return showWarning("Ingrese un monto válido");
 
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
 
@@ -154,7 +156,7 @@ const Admin = () => {
 
     try {
       if (abonoPlus > 0 && !pagoData.bank_plus) {
-        return alert('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
+        return showWarning('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
       // Sincronizar deudas modificadas, comentarios y cortesía PRIMERO en el backend
@@ -192,9 +194,10 @@ const Admin = () => {
       });
 
       setShowPagoModal(false);
+      showSuccess("Pago registrado correctamente");
       fetchData();
     } catch (error) {
-      alert("Error al registrar pago: " + (error.response?.data?.detail || error.message));
+      showError("Error al registrar pago: " + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -211,20 +214,21 @@ const Admin = () => {
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
         saldo: parseFloat(pagoData.original_internet || 0)
       });
-      alert("Valores guardados correctamente");
+      showSuccess("Valores guardados correctamente");
       fetchData();
       setShowPagoModal(false);
     } catch (error) {
-      alert("Error al guardar valores: " + (error.response?.data?.detail || error.message));
+      showError("Error al guardar valores: " + (error.response?.data?.detail || error.message));
     }
   };
 
   const handlePlanChange = async (clienteId, nuevoPlan) => {
     try {
       await clienteService.updateAdmin(clienteId, { plan: nuevoPlan });
+      showSuccess("Plan actualizado correctamente");
       fetchData();
     } catch (error) {
-      alert("Error al actualizar plan");
+      showError("Error al actualizar plan");
     }
   };
 
@@ -243,15 +247,16 @@ const Admin = () => {
 
   const ejecutarFacturacion = async () => {
     if (cooldown > 0) return;
-    if (!confirm("¿Desea ejecutar el cobro mensual para TODOS los clientes activos?")) return;
+    const confirmado = await showConfirm("¿Ejecutar facturación?", "¿Desea ejecutar el cobro mensual para TODOS los clientes activos?", "Sí, ejecutar", "Cancelar");
+    if (!confirmado) return;
     setFacturando(true);
     try {
       const resp = await clienteService.facturacionGlobal();
-      alert(resp.data.message);
+      showSuccess(resp.data.message);
       setCooldown(60);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.detail || "Error en facturación");
+      showError(error.response?.data?.detail || "Error en facturación");
     } finally {
       setFacturando(false);
     }
@@ -573,10 +578,10 @@ const Admin = () => {
                       await clienteService.updateAdmin(selectedCliente.id, {
                         comentarios: pagoData.comentarios_edit ?? selectedCliente?.comentarios ?? ''
                       });
-                      alert('Comentarios del contrato guardados correctamente.');
+                      showSuccess('Comentarios del contrato guardados correctamente.');
                       fetchData();
                     } catch (err) {
-                      alert('Error al guardar comentarios.');
+                      showError('Error al guardar comentarios.');
                     }
                   }}
                 >

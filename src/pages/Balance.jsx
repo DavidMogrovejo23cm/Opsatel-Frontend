@@ -6,6 +6,8 @@ import {
   PieChart, Pie
 } from 'recharts';
 import { balanceService } from '../services/api';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PALETA
@@ -126,7 +128,7 @@ function EgresoForm({ initial, onSave, onClose }) {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.descripcion || !form.monto) return alert('Completa descripción y monto.');
+    if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
     const mes = form.fecha?.slice(0, 7) || DEFAULT_MES;
     await onSave({ ...form, monto: parseFloat(form.monto), mes });
     onClose();
@@ -198,7 +200,7 @@ function ProyectoForm({ initial, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.nombre || !form.monto_total) return alert('Completa nombre y monto total.');
+    if (!form.nombre || !form.monto_total) return showWarning('Completa nombre y monto total.');
     await onSave({ ...form, monto_total: parseFloat(form.monto_total), monto_invertido: parseFloat(form.monto_invertido || 0) });
     onClose();
   };
@@ -254,7 +256,7 @@ function PagoProyectoForm({ initial, proyId, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.descripcion || !form.valor) return alert('Completa descripción y valor.');
+    if (!form.descripcion || !form.valor) return showWarning('Completa descripción y valor.');
     await onSave({ ...form, valor: parseFloat(form.valor), item: parseInt(form.item) });
     onClose();
   };
@@ -302,7 +304,7 @@ function GastoProyectoForm({ initial, proyId, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.descripcion || !form.valor) return alert('Completa descripción y valor.');
+    if (!form.descripcion || !form.valor) return showWarning('Completa descripción y valor.');
     await onSave({ ...form, valor: parseFloat(form.valor), item: parseInt(form.item) });
     onClose();
   };
@@ -363,7 +365,7 @@ function ColchonForm({ initial, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.descripcion || !form.monto) return alert('Completa descripción y monto.');
+    if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
     await onSave({ ...form, monto: parseFloat(form.monto) });
     onClose();
   };
@@ -401,7 +403,7 @@ function GastoFijoForm({ initial, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.descripcion || !form.monto) return alert('Completa descripción y monto.');
+    if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
     await onSave({ ...form, monto: parseFloat(form.monto) });
     onClose();
   };
@@ -527,7 +529,8 @@ function ProyectoDetalle({ proyecto, onClose }) {
     fetchPagos();
   };
   const deletePago = async id => {
-    if (!window.confirm('¿Eliminar este pago?')) return;
+    const confirmado = await showConfirm('¿Eliminar pago?', '¿Eliminar este pago?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarPagoProyecto(proyecto.id, id);
     fetchPagos();
   };
@@ -538,7 +541,8 @@ function ProyectoDetalle({ proyecto, onClose }) {
     fetchGastos();
   };
   const deleteGasto = async id => {
-    if (!window.confirm('¿Eliminar este gasto?')) return;
+    const confirmado = await showConfirm('¿Eliminar gasto?', '¿Eliminar este gasto?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarGastoProyecto(proyecto.id, id);
     fetchGastos();
   };
@@ -1119,7 +1123,8 @@ const Balance = () => {
     fetchEgresos(); if (vista === 'mensual') fetchMensual();
   };
   const handleDeleteEgreso = async id => {
-    if (!window.confirm('¿Eliminar este egreso?')) return;
+    const confirmado = await showConfirm('¿Eliminar egreso?', '¿Eliminar este egreso?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarEgreso(id);
     fetchEgresos(); if (vista === 'mensual') fetchMensual();
   };
@@ -1129,7 +1134,8 @@ const Balance = () => {
     fetchProyectos();
   };
   const handleDeleteProy = async id => {
-    if (!window.confirm('¿Eliminar este proyecto y todos sus datos?')) return;
+    const confirmado = await showConfirm('¿Eliminar proyecto?', '¿Eliminar este proyecto y todos sus datos?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarProyecto(id);
     fetchProyectos();
   };
@@ -1140,7 +1146,8 @@ const Balance = () => {
     if (vista === 'mensual') fetchMensual();
   };
   const handleDeleteColchon = async id => {
-    if (!window.confirm('¿Eliminar este registro del colchón?')) return;
+    const confirmado = await showConfirm('¿Eliminar colchón?', '¿Eliminar este registro del colchón?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarColchon(id);
     if (vista === 'mensual') fetchMensual();
   };
@@ -1152,7 +1159,8 @@ const Balance = () => {
     if (vista === 'mensual') fetchMensual();
   };
   const handleDeleteGastoFijo = async id => {
-    if (!window.confirm('¿Eliminar este gasto fijo?')) return;
+    const confirmado = await showConfirm('¿Eliminar gasto fijo?', '¿Eliminar este gasto fijo?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
     await balanceService.eliminarGastoFijo(id);
     fetchGastosFijos();
     if (vista === 'mensual') fetchMensual();
@@ -1175,7 +1183,7 @@ const Balance = () => {
       document.body.removeChild(link);
     } catch (error) {
       console.error(error);
-      alert("Error al exportar el reporte Excel");
+      showError("Error al exportar el reporte Excel");
     } finally {
       setLoading(false);
     }

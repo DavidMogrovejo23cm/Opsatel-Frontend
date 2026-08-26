@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showSuccess, showWarning, showConfirm } from '../utils/alerts';
 
 const API_BASE_URL = ''; // Use same origin and nginx proxy in production
 
@@ -26,11 +27,13 @@ const Reportes = () => {
   }, []);
 
   const handleGenerarReporte = async () => {
-    const confirmacion = window.confirm(
-      "⚠ ATENCIÓN: Esta acción generará un archivo Excel con el estado actual de los clientes " +
-      "y dejará EN BLANCO los campos de recibos (app, banco, fechas, etc.).\n" +
+    const confirmacion = await showConfirm(
+      "⚠ CIERRE DE MES",
+      "Esta acción generará un archivo Excel con el estado actual de los clientes y dejará EN BLANCO los campos de recibos (app, banco, fechas, etc.).\n\n" +
       "NOTA: El 'Saldo' actual permanecerá INTACTO para arrastrar deudas pendientes o saldos a favor al próximo mes.\n\n" +
-      "¿Estás seguro de que quieres realizar el CIERRE DE MES?"
+      "¿Estás seguro de que quieres realizar el CIERRE DE MES?",
+      "Sí, realizar Cierre",
+      "Cancelar"
     );
 
     if (!confirmacion) return;
@@ -38,11 +41,11 @@ const Reportes = () => {
     try {
       setIsGenerating(true);
       const response = await clienteService.generarReporte();
-      alert(`✅ ¡Éxito! ${response.data.message}`);
+      showSuccess(response.data.message);
       fetchData(); // Recargar la lista
     } catch (error) {
       console.error("Error al generar el reporte:", error);
-      alert("Ya se hizo el reporte este mes, no se puede hacer de nuevo");
+      showWarning("Ya se hizo el reporte este mes, no se puede hacer de nuevo");
     } finally {
       setIsGenerating(false);
     }

@@ -765,3 +765,108 @@ body:has(.modal-overlay) {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ─────────────────────────────────────────────
+   SWEETALERT2 DARK GLASSMORPHISM STYLING
+───────────────────────────────────────────── */
+.swal2-container.opsatel-swal-container {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(3, 7, 18, 0.65) !important;
+  z-index: 99999 !important;
+}
+
+.swal2-popup.opsatel-swal-popup {
+  background: rgba(15, 23, 42, 0.94) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.25) !important;
+  color: #f8fafc !important;
+  font-family: 'Outfit', sans-serif !important;
+  padding: 28px 24px !important;
+  max-width: 480px !important;
+  width: 90% !important;
+}
+
+.opsatel-swal-title {
+  color: #f8fafc !important;
+  font-size: 1.45rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 8px !important;
+}
+
+.opsatel-swal-html {
+  color: #cbd5e1 !important;
+  font-size: 0.96rem !important;
+  line-height: 1.6 !important;
+  margin-top: 10px !important;
+}
+
+.opsatel-swal-actions {
+  gap: 12px !important;
+  margin-top: 24px !important;
+  width: 100% !important;
+}
+
+.opsatel-swal-confirm-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 10px 22px !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+}
+
+.opsatel-swal-confirm-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6) !important;
+  filter: brightness(1.1) !important;
+}
+
+.opsatel-swal-cancel-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #94a3b8 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 10px 22px !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.opsatel-swal-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.opsatel-swal-icon.swal2-icon {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  margin: 0 auto 16px auto !important;
+}
+
+/* Toast styling */
+.swal2-popup.opsatel-toast-popup {
+  background: rgba(15, 23, 42, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  padding: 12px 18px !important;
+}
+
+.opsatel-toast-title {
+  color: #f8fafc !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+

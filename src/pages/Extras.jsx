@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { extrasService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showAlert, showSuccess, showError, showConfirm } from '../utils/alerts';
+
 
 const Extras = () => {
   const [extras, setExtras] = useState([]);
@@ -76,19 +78,22 @@ const Extras = () => {
       setShowAddModal(false);
       setIsEditing(false);
       setFormData({ cod: '', nombre_cliente: '', contacto: '', proveedor: 'OPSATEL', usuario: '', contrasena: '', cuentas: '1', mac_smart_one: '', observaciones: '', estado: 'FIJO', valor: 0, activo: 'SI' });
+      showSuccess("Cliente extra guardado exitosamente");
       fetchData();
     } catch (err) {
-      alert("Error al guardar cliente extra");
+      showError("Error al guardar cliente extra");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("¿Desea eliminar este registro?")) return;
+    const confirmado = await showConfirm("¿Eliminar registro?", "¿Desea eliminar este registro?", "Sí, eliminar", "Cancelar");
+    if (!confirmado) return;
     try {
       await extrasService.eliminar(id);
+      showSuccess("Registro eliminado correctamente");
       fetchData();
     } catch (err) {
-      alert("Error al eliminar");
+      showError("Error al eliminar");
     }
   };
 

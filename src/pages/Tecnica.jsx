@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
+
 
 const Tecnica = () => {
   const [clientes, setClientes] = useState([]);
@@ -293,7 +295,7 @@ const Tecnica = () => {
     const hayCamposVacios = requiredKeys.some(key => !formData[key]?.toString().trim());
 
     if (hayCamposVacios) {
-      alert('¡Error! Todos los campos técnicos del formulario deben estar llenos para completar la activación.');
+      showWarning('Todos los campos técnicos del formulario deben estar llenos para completar la activación.');
       return;
     }
 
@@ -301,7 +303,7 @@ const Tecnica = () => {
       console.log("Activando cliente con ID:", selectedCliente.id);
       console.log("Datos enviados (formData):", formData);
       await clienteService.activar(selectedCliente.id, formData);
-      alert('Configuración exitosa. Cliente activado.');
+      showSuccess('Configuración exitosa. Cliente activado.');
       setSelectedCliente(null);
       fetchData();
     } catch (error) {
@@ -311,10 +313,10 @@ const Tecnica = () => {
       if (Array.isArray(detail)) {
         // Errores de validación Pydantic (422)
         const msg = detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join('\n');
-        alert(`Error de validación:\n${msg}`);
+        showError(`Error de validación:\n${msg}`);
       } else {
         // Errores controlados por el backend (400, 404, etc)
-        alert(detail || 'Error en la activación. Verifique los datos duplicados (MAC, IP, etc).');
+        showError(detail || 'Error en la activación. Verifique los datos duplicados (MAC, IP, etc).');
       }
     }
   };
@@ -638,7 +640,7 @@ const Tecnica = () => {
                           type="button"
                           onClick={() => {
                             navigator.clipboard.writeText(getIptvScript(formData));
-                            alert('Script copiado al portapapeles');
+                            showToast('Script copiado al portapapeles');
                           }}
                           style={{ background: 'rgba(129, 140, 248, 0.2)', border: '1px solid #818cf8', color: '#818cf8', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
                         >
@@ -704,14 +706,20 @@ const Tecnica = () => {
                   className="btn"
                   style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#f87171' }}
                   onClick={async () => {
-                    if (window.confirm(`¿Está seguro de eliminar a ${selectedCliente.nombre}? Esta acción liberará su ID.`)) {
+                    const confirmado = await showConfirm(
+                      "¿Eliminar cliente?",
+                      `¿Está seguro de eliminar a ${selectedCliente.nombre}? Esta acción liberará su ID.`,
+                      "Sí, eliminar",
+                      "Cancelar"
+                    );
+                    if (confirmado) {
                       try {
                         await clienteService.eliminar(selectedCliente.id);
-                        alert('Cliente eliminado y ID liberado.');
+                        showSuccess('Cliente eliminado y ID liberado.');
                         setSelectedCliente(null);
                         fetchData();
                       } catch (error) {
-                        alert('Error al eliminar: ' + (error.response?.data?.detail || error.message));
+                        showError('Error al eliminar: ' + (error.response?.data?.detail || error.message));
                       }
                     }
                   }}

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { hojaRutaService, clienteService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
@@ -218,7 +220,7 @@ const HojaRuta = () => {
                 errorMsg = JSON.stringify(detail);
             }
             
-            alert(errorMsg);
+            showError(errorMsg);
         } finally {
             setSubmitting(false);
         }
@@ -226,7 +228,7 @@ const HojaRuta = () => {
 
     const toggleEstado = async (id, currentEstado) => {
         if (user.rol?.toLowerCase() !== 'administrador') {
-            alert("Solo el administrador puede cambiar el estado de la hoja de ruta");
+            showWarning("Solo el administrador puede cambiar el estado de la hoja de ruta");
             return;
         }
         
@@ -241,7 +243,7 @@ const HojaRuta = () => {
         } catch (err) {
             console.error(err);
             const msg = err.response?.data?.detail || err.message;
-            alert("No se pudo cambiar el estado: " + msg);
+            showError("No se pudo cambiar el estado: " + msg);
         }
     };
 
@@ -255,11 +257,11 @@ const HojaRuta = () => {
             });
             setShowObsModal(false);
             fetchData(true);
-            alert("Observación técnica guardada correctamente");
+            showSuccess("Observación técnica guardada correctamente");
         } catch (err) {
             console.error(err);
             const msg = err.response?.data?.detail || err.message;
-            alert("Error al guardar observación: " + msg);
+            showError("Error al guardar observación: " + msg);
         } finally {
             setSubmitting(false);
         }
@@ -267,15 +269,17 @@ const HojaRuta = () => {
 
     const handleDelete = async (id) => {
         if (user.rol?.toLowerCase() !== 'administrador') {
-            alert("Solo el administrador puede eliminar registros");
+            showWarning("Solo el administrador puede eliminar registros");
             return;
         }
-        if (!confirm("¿Eliminar este registro?")) return;
+        const confirmado = await showConfirm("¿Eliminar registro?", "¿Eliminar este registro?", "Sí, eliminar", "Cancelar");
+        if (!confirmado) return;
         try {
             await hojaRutaService.eliminar(id);
+            showSuccess("Registro eliminado correctamente");
             fetchData();
         } catch (err) {
-            alert("Error al eliminar");
+            showError("Error al eliminar");
         }
     };
 

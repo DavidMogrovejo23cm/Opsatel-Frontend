@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { extrasService } from '../services/api';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showConfirm, showToast } from '../utils/alerts';
+
 
 const ExtrasGeneral = () => {
     const [extras, setExtras] = useState([]);
@@ -204,21 +206,24 @@ const ExtrasGeneral = () => {
             }
 
             setShowModal(false);
+            showSuccess("Procesado correctamente");
             fetchData();
         } catch (err) {
-            alert("Error al procesar: " + (err.response?.data?.detail || "Error desconocido"));
+            showError("Error al procesar: " + (err.response?.data?.detail || "Error desconocido"));
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("¿Deseas eliminar definitivamente este servicio?")) return;
+        const confirmado = await showConfirm("¿Eliminar servicio?", "¿Deseas eliminar definitivamente este servicio?", "Sí, eliminar", "Cancelar");
+        if (!confirmado) return;
         try {
             await extrasService.eliminar(id);
+            showSuccess("Servicio eliminado correctamente");
             fetchData();
         } catch (err) {
-            alert("Error al eliminar el registro.");
+            showError("Error al eliminar el registro.");
         }
     };
 
@@ -250,9 +255,10 @@ const ExtrasGeneral = () => {
                 factura: pagoData.factura
             });
             setShowPagoModal(false);
+            showSuccess("Pago registrado correctamente");
             fetchData();
         } catch (err) {
-            alert("Error al registrar pago: " + (err.response?.data?.detail || "Error desconocido"));
+            showError("Error al registrar pago: " + (err.response?.data?.detail || "Error desconocido"));
         }
     };
 
@@ -545,7 +551,7 @@ const ExtrasGeneral = () => {
                                                     className="btn btn-primary"
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(getIptvScript());
-                                                        alert("Script copiado!");
+                                                        showToast("Script copiado!");
                                                     }}
                                                     style={{ padding: '2px 8px', fontSize: '0.6rem', minWidth: 'auto' }}
                                                 >

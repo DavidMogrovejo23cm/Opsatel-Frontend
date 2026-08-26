@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { callCenterService, clienteService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 /* ────────────────────────────────────────────
    ESTADO CONFIG
@@ -174,7 +176,7 @@ const CallCenter = () => {
       setShowModal(false);
       fetchData(true);
     } catch (err) {
-      alert(err.response?.data?.detail || "Error al procesar el registro");
+      showError(err.response?.data?.detail || "Error al procesar el registro");
     } finally {
       setSubmitting(false);
     }
@@ -183,14 +185,16 @@ const CallCenter = () => {
   /* Delete */
   const handleDelete = async (id) => {
     if (user.rol?.toLowerCase() !== 'administrador') {
-      alert("Solo el administrador puede eliminar registros.");
+      showWarning("Solo el administrador puede eliminar registros.");
       return;
     }
-    if (!window.confirm("¿Eliminar este ticket de Call Center?")) return;
+    const confirmado = await showConfirm("¿Eliminar ticket?", "¿Eliminar este ticket de Call Center?", "Sí, eliminar", "Cancelar");
+    if (!confirmado) return;
     try {
       await callCenterService.eliminar(id);
+      showSuccess("Ticket eliminado correctamente");
       fetchData(true);
-    } catch { alert("Error al eliminar"); }
+    } catch { showError("Error al eliminar"); }
   };
 
   /* Counters para filtros */

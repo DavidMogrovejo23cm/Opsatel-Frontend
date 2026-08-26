@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { configuracionService, oltService, libreqosService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 const Configuraciones = () => {
 
@@ -142,19 +144,19 @@ const Configuraciones = () => {
     const handleCreate = async (type) => {
         try {
             if (type === 'Nodos') {
-                if (!newNodo.nombre?.trim() || !newNodo.base_ip?.trim()) return alert('Todos los campos son obligatorios');
+                if (!newNodo.nombre?.trim() || !newNodo.base_ip?.trim()) return showWarning('Todos los campos son obligatorios');
                 if (isEditingNodo) {
                     await configuracionService.actualizarNodo(isEditingNodo, newNodo);
-                    alert('Nodo actualizado');
+                    showSuccess('Nodo actualizado');
                 } else {
                     await configuracionService.crearNodo(newNodo);
-                    alert('Nodo creado');
+                    showSuccess('Nodo creado');
                 }
                 setNewNodo({ nombre: '', base_ip: '' });
                 setIsEditingNodo(null);
                 fetchData();
             } else if (type === 'Planes') {
-                if (!newPlan.nombre?.trim() || !newPlan.megas || !newPlan.precio) return alert('Todos los campos son obligatorios');
+                if (!newPlan.nombre?.trim() || !newPlan.megas || !newPlan.precio) return showWarning('Todos los campos son obligatorios');
                 const planData = { 
                     nombre: newPlan.nombre, 
                     megas: parseInt(newPlan.megas) || 0,
@@ -163,56 +165,56 @@ const Configuraciones = () => {
                 };
                 if (isEditingPlan) {
                     await configuracionService.actualizarPlan(isEditingPlan, planData);
-                    alert('Plan actualizado');
+                    showSuccess('Plan actualizado');
                 } else {
                     await configuracionService.crearPlan(planData);
-                    alert('Plan creado');
+                    showSuccess('Plan creado');
                 }
                 setNewPlan({ nombre: '', megas: '', precio: '', pantallas: 1 });
                 setIsEditingPlan(null);
                 fetchData();
             } else if (type === 'Bancos') {
-                if (!newBanco.nombre?.trim()) return alert('El nombre es obligatorio');
+                if (!newBanco.nombre?.trim()) return showWarning('El nombre es obligatorio');
                 if (isEditingBanco) {
                     await configuracionService.actualizarBanco(isEditingBanco, newBanco);
-                    alert('Banco actualizado');
+                    showSuccess('Banco actualizado');
                 } else {
                     await configuracionService.crearBanco(newBanco);
-                    alert('Banco creado');
+                    showSuccess('Banco creado');
                 }
                 setNewBanco({ nombre: '' });
                 setIsEditingBanco(null);
                 fetchData();
             } else if (type === 'Puertos') {
-                if (!newPuerto.numero || !newPuerto.nodo_id) return alert('Llene todos los campos');
+                if (!newPuerto.numero || !newPuerto.nodo_id) return showWarning('Llene todos los campos');
 
                 const nombreEsperado = 'Puerto ' + newPuerto.numero;
                 const nodoId = parseInt(newPuerto.nodo_id);
 
                 if (isEditingPuerto) {
                     await configuracionService.actualizarPuerto(isEditingPuerto, { nombre: nombreEsperado, nodo_id: nodoId, limite_ip: newPuerto.limite_ip, limite_device: newPuerto.limite_device, limite_service_port: newPuerto.limite_service_port });
-                    alert('Puerto actualizado');
+                    showSuccess('Puerto actualizado');
                 } else {
                     // Verificar si ya existe un puerto con ese número en esa zona
                     const existePuerto = puertos.some(p => p.nombre.toLowerCase() === nombreEsperado.toLowerCase() && p.nodo_id === nodoId);
                     if (existePuerto) {
-                        return alert(`¡Error! El ${nombreEsperado} ya se encuentra registrado en esa zona.`);
+                        return showError(`El ${nombreEsperado} ya se encuentra registrado en esa zona.`);
                     }
                     await configuracionService.crearPuerto({ nombre: nombreEsperado, nodo_id: nodoId, limite_ip: newPuerto.limite_ip, limite_device: newPuerto.limite_device, limite_service_port: newPuerto.limite_service_port });
-                    alert('Puerto creado');
+                    showSuccess('Puerto creado');
                 }
                 setNewPuerto({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
                 setIsEditingPuerto(null);
                 fetchData();
             } else if (type === 'Usuarios') {
-                if (!newUsuario.username || (!isEditingUser && !newUsuario.password)) return alert('Llene todos los campos');
+                if (!newUsuario.username || (!isEditingUser && !newUsuario.password)) return showWarning('Llene todos los campos');
                 
                 if (isEditingUser) {
                     await configuracionService.actualizarUsuario(isEditingUser, newUsuario);
-                    alert('Usuario actualizado');
+                    showSuccess('Usuario actualizado');
                 } else {
                     await configuracionService.crearUsuario(newUsuario);
-                    alert('Usuario creado');
+                    showSuccess('Usuario creado');
                 }
                 setNewUsuario({ username: '', password: '', rol: 'tecnico' });
                 setIsEditingUser(null);
@@ -224,38 +226,39 @@ const Configuraciones = () => {
                     jep: parseFloat(finanzasBase.jep) || 0,
                 };
                 await configuracionService.actualizarFinanzasBase(fData);
-                alert('Finanzas base actualizadas correctamente');
+                showSuccess('Finanzas base actualizadas correctamente');
             } else if (type === 'Parroquias') {
-                if (!newParroquia.nombre?.trim()) return alert('El nombre es obligatorio');
+                if (!newParroquia.nombre?.trim()) return showWarning('El nombre es obligatorio');
                 if (isEditingParroquia) {
                     await configuracionService.actualizarParroquia(isEditingParroquia, newParroquia);
-                    alert('Parroquia actualizada');
+                    showSuccess('Parroquia actualizada');
                 } else {
                     await configuracionService.crearParroquia(newParroquia);
-                    alert('Parroquia creada');
+                    showSuccess('Parroquia creada');
                 }
                 setNewParroquia({ nombre: '' });
                 setIsEditingParroquia(null);
             } else if (type === 'Cajas NAP') {
-                if (!newCajaNap.nombre?.trim()) return alert('El nombre es obligatorio');
+                if (!newCajaNap.nombre?.trim()) return showWarning('El nombre es obligatorio');
                 if (isEditingCajaNap) {
                     await configuracionService.actualizarCajaNap(isEditingCajaNap, newCajaNap);
-                    alert('Caja NAP actualizada');
+                    showSuccess('Caja NAP actualizada');
                 } else {
                     await configuracionService.crearCajaNap(newCajaNap);
-                    alert('Caja NAP creada');
+                    showSuccess('Caja NAP creada');
                 }
                 setNewCajaNap({ nombre: '' });
                 setIsEditingCajaNap(null);
             }
             fetchData();
         } catch (error) {
-            alert('Error al procesar: ' + (error.response?.data?.detail || error.message));
+            showError('Error al procesar: ' + (error.response?.data?.detail || error.message));
         }
     };
 
     const handleDelete = async (type, id) => {
-        if (!window.confirm('¿Seguro que deseas eliminar este registro?')) return;
+        const confirmado = await showConfirm('¿Eliminar registro?', '¿Seguro que deseas eliminar este registro?', 'Sí, eliminar', 'Cancelar');
+        if (!confirmado) return;
         try {
             if (type === 'Nodos') await configuracionService.eliminarNodo(id);
             if (type === 'Planes') await configuracionService.eliminarPlan(id);
@@ -264,9 +267,10 @@ const Configuraciones = () => {
             if (type === 'Usuarios') await configuracionService.eliminarUsuario(id);
             if (type === 'Parroquias') await configuracionService.eliminarParroquia(id);
             if (type === 'Cajas NAP') await configuracionService.eliminarCajaNap(id);
+            showSuccess('Registro eliminado correctamente');
             fetchData();
         } catch (error) {
-            alert('Error al eliminar');
+            showError('Error al eliminar');
         }
     };
 
@@ -321,7 +325,7 @@ const Configuraciones = () => {
 
     // =========== OLT HANDLERS ===========
     const handleOltSave = async () => {
-        if (!newOlt.nombre?.trim() || !newOlt.host?.trim()) return alert('Nombre y Host son obligatorios');
+        if (!newOlt.nombre?.trim() || !newOlt.host?.trim()) return showWarning('Nombre y Host son obligatorios');
         setOltSaving(true);
         try {
             const params = {
@@ -335,30 +339,32 @@ const Configuraciones = () => {
             };
             if (isEditingOlt) {
                 await oltService.updateConfig(isEditingOlt, params);
-                alert('OLT actualizada correctamente');
+                showSuccess('OLT actualizada correctamente');
             } else {
                 await oltService.createConfig(params);
-                alert('OLT registrada correctamente');
+                showSuccess('OLT registrada correctamente');
             }
             setNewOlt({ nombre: '', host: '', port: 22, username: 'root', password: 'admin', nodo_asociado: '', device_type: 'huawei' });
             setIsEditingOlt(null);
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
-            alert('Error: ' + (e.response?.data?.detail || e.message));
+            showError('Error: ' + (e.response?.data?.detail || e.message));
         } finally {
             setOltSaving(false);
         }
     };
 
     const handleOltDelete = async (id) => {
-        if (!window.confirm('¿Eliminar esta OLT? Las tareas asociadas quedarán sin OLT.')) return;
+        const confirmado = await showConfirm('¿Eliminar OLT?', '¿Eliminar esta OLT? Las tareas asociadas quedarán sin OLT.', 'Sí, eliminar', 'Cancelar');
+        if (!confirmado) return;
         try {
             await oltService.deleteConfig(id);
+            showSuccess('OLT eliminada correctamente');
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
-            alert('Error eliminando OLT: ' + (e.response?.data?.detail || e.message));
+            showError('Error eliminando OLT: ' + (e.response?.data?.detail || e.message));
         }
     };
 
@@ -368,7 +374,7 @@ const Configuraciones = () => {
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
-            alert('Error: ' + (e.response?.data?.detail || e.message));
+            showError('Error: ' + (e.response?.data?.detail || e.message));
         }
     };
 
@@ -387,7 +393,7 @@ const Configuraciones = () => {
     };
 
     const handleOltTestRaw = async () => {
-        if (!newOlt.host?.trim()) return alert('El Host es obligatorio para probar la conexión');
+        if (!newOlt.host?.trim()) return showWarning('El Host es obligatorio para probar la conexión');
         setOltTestingRaw(true);
         try {
             const res = await oltService.testRawConfig({
@@ -398,12 +404,12 @@ const Configuraciones = () => {
                 device_type: newOlt.device_type || 'huawei'
             });
             if (res.data?.success) {
-                alert(res.data.message);
+                showSuccess(res.data.message);
             } else {
-                alert('Fallo de conexión: ' + res.data?.message);
+                showError('Fallo de conexión: ' + res.data?.message);
             }
         } catch (e) {
-            alert('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
+            showError('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
         } finally {
             setOltTestingRaw(false);
         }
@@ -414,12 +420,12 @@ const Configuraciones = () => {
         try {
             const res = await oltService.testConfig(id);
             if (res.data?.success) {
-                alert(res.data.message);
+                showSuccess(res.data.message);
             } else {
-                alert('Fallo de conexión: ' + res.data?.message);
+                showError('Fallo de conexión: ' + res.data?.message);
             }
         } catch (e) {
-            alert('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
+            showError('Error al probar conexión: ' + (e.response?.data?.detail || e.message));
         } finally {
             setOltTestingId(null);
         }
@@ -447,13 +453,13 @@ const Configuraciones = () => {
                 mikrotik_username: mtConfig.username || null,
                 mikrotik_password: mtConfig.password || null
             });
-            alert('Configuración de MikroTik guardada correctamente');
+            showSuccess('Configuración de MikroTik guardada correctamente');
             setShowMtModal(false);
             // Volver a listar las OLTs para ver los cambios reflejados
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
-            alert('Error al guardar configuración de MikroTik: ' + (e.response?.data?.detail || e.message));
+            showError('Error al guardar configuración de MikroTik: ' + (e.response?.data?.detail || e.message));
         } finally {
             setMtSaving(false);
         }
@@ -472,12 +478,12 @@ const Configuraciones = () => {
             });
             const res = await oltService.testMikrotikConfig(selectedOltForMt.id);
             if (res.data?.success) {
-                alert(res.data.message || '¡Conexión a MikroTik Exitosa!');
+                showSuccess(res.data.message || '¡Conexión a MikroTik Exitosa!');
             } else {
-                alert('Fallo de conexión a MikroTik: ' + res.data?.message);
+                showError('Fallo de conexión a MikroTik: ' + res.data?.message);
             }
         } catch (e) {
-            alert('Error al conectar a MikroTik: ' + (e.response?.data?.detail || e.message));
+            showError('Error al conectar a MikroTik: ' + (e.response?.data?.detail || e.message));
         } finally {
             setMtTesting(false);
         }
@@ -564,7 +570,7 @@ const Configuraciones = () => {
     const handleSaveLqConfig = async () => {
         if (!selectedOltForLq) return;
         if (!lqForm.name.trim() || !lqForm.host.trim()) {
-            return alert('El nombre y el host de LibreQoS son obligatorios.');
+            return showWarning('El nombre y el host de LibreQoS son obligatorios.');
         }
         setLqSaving(true);
         try {
@@ -579,12 +585,12 @@ const Configuraciones = () => {
                 await oltService.updateConfig(selectedOltForLq.id, { libreqos_server_id: serverId });
             }
 
-            alert('✅ Configuración de LibreQoS guardada y vinculada a la OLT.');
+            showSuccess('Configuración de LibreQoS guardada y vinculada a la OLT.');
             setShowLqModal(false);
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
-            alert('Error al guardar configuración de LibreQoS: ' + (e.response?.data?.detail || e.message));
+            showError('Error al guardar configuración de LibreQoS: ' + (e.response?.data?.detail || e.message));
         } finally {
             setLqSaving(false);
         }
@@ -594,15 +600,19 @@ const Configuraciones = () => {
         if (!selectedOltForLq) return;
         let serverId = selectedOltForLq.libreqos_server_id;
         if (!serverId) {
-            return alert('Por favor, guarde la configuración primero para poder probar la conexión.');
+            return showWarning('Por favor, guarde la configuración primero para poder probar la conexión.');
         }
 
         setLqTesting(serverId);
         try {
             const res = await libreqosService.testServer(serverId);
-            alert(res.data?.success ? '✅ ' + res.data.message : '❌ ' + res.data?.message);
+            if (res.data?.success) {
+                showSuccess(res.data.message);
+            } else {
+                showError('Fallo de conexión: ' + res.data?.message);
+            }
         } catch (e) {
-            alert('Error de conexión: ' + (e.response?.data?.detail || e.message));
+            showError('Error de conexión: ' + (e.response?.data?.detail || e.message));
         } finally {
             setLqTesting(null);
         }
@@ -613,9 +623,9 @@ const Configuraciones = () => {
         setLqSyncing(selectedOltForLq.libreqos_server_id);
         try {
             await libreqosService.syncServer(selectedOltForLq.libreqos_server_id);
-            alert('🔄 Reconciliación manual de LibreQoS iniciada en segundo plano.');
+            showSuccess('Reconciliación manual de LibreQoS iniciada en segundo plano.');
         } catch (e) {
-            alert('Error al iniciar sincronización: ' + (e.response?.data?.detail || e.message));
+            showError('Error al iniciar sincronización: ' + (e.response?.data?.detail || e.message));
         } finally {
             setLqSyncing(null);
         }
@@ -625,16 +635,16 @@ const Configuraciones = () => {
         try {
             await libreqosService.retryJob(jobId);
             fetchLqData();
-        } catch (e) { alert('Error: ' + (e.response?.data?.detail || e.message)); }
+        } catch (e) { showError('Error: ' + (e.response?.data?.detail || e.message)); }
     };
 
     const handleSaveDiasPermanencia = async () => {
         setDiasSaving(true);
         try {
             await configuracionService.setDiasPermanencia(diasPermanencia);
-            alert('✅ Configuración guardada correctamente');
+            showSuccess('Configuración guardada correctamente');
         } catch (error) {
-            alert('Error al guardar: ' + (error.response?.data?.detail || error.message));
+            showError('Error al guardar: ' + (error.response?.data?.detail || error.message));
         } finally {
             setDiasSaving(false);
         }
@@ -1022,22 +1032,32 @@ const Configuraciones = () => {
                                 className="btn" 
                                 onClick={async () => {
                                     if (passwordDeleteClientes !== 'admin1.@') {
-                                        alert('❌ Contraseña incorrecta');
+                                        showError('Contraseña incorrecta');
                                         return;
                                     }
-                                    if (!window.confirm('⚠️ ¿ESTÁS SEGURO? Esta acción eliminará TODOS los clientes del sistema.\n\nEsta acción NO se puede deshacer.')) {
-                                        return;
-                                    }
-                                    if (!window.confirm('CONFIRMACIÓN FINAL: ¿Eliminar TODOS los clientes?')) {
-                                        return;
-                                    }
+                                    const confirm1 = await showConfirm(
+                                        '⚠️ ¿ESTÁS SEGURO?',
+                                        'Esta acción eliminará TODOS los clientes del sistema.\n\nEsta acción NO se puede deshacer.',
+                                        'Continuar',
+                                        'Cancelar'
+                                    );
+                                    if (!confirm1) return;
+
+                                    const confirm2 = await showConfirm(
+                                        '🚨 CONFIRMACIÓN FINAL',
+                                        '¿Eliminar TODOS los clientes definitivamente?',
+                                        'Sí, eliminar todo',
+                                        'Cancelar'
+                                    );
+                                    if (!confirm2) return;
+
                                     try {
                                         await configuracionService.deleteAllClientes();
-                                        alert('✅ Todos los clientes han sido eliminados exitosamente.');
+                                        showSuccess('Todos los clientes han sido eliminados exitosamente.');
                                         setPasswordDeleteClientes('');
                                         fetchData();
                                     } catch (error) {
-                                        alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+                                        showError('Error: ' + (error.response?.data?.detail || error.message));
                                     }
                                 }}
                                 style={{

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { clienteService } from '../services/api';
+import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
 
 const SubirBD = () => {
   const [file, setFile] = useState(null);
@@ -15,7 +16,7 @@ const SubirBD = () => {
 
   const handleUpload = async () => {
     if (!file) {
-      alert('Por favor selecciona un archivo Excel (.xlsx o .xls)');
+      showWarning('Por favor selecciona un archivo Excel (.xlsx o .xls)');
       return;
     }
 
@@ -25,7 +26,7 @@ const SubirBD = () => {
 
     try {
       const resp = await clienteService.uploadDatabase(formData);
-      alert(resp.data?.message || 'Base de datos subida exitosamente');
+      showSuccess(resp.data?.message || 'Base de datos subida exitosamente');
       setFile(null);
       // Reset input
       const fileInput = document.getElementById('bd-file-input');
@@ -33,7 +34,7 @@ const SubirBD = () => {
     } catch (error) {
       console.error(error);
       const errMsg = error.response?.data?.detail || 'Error al subir la base de datos';
-      alert(errMsg);
+      showError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ const SubirBD = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      alert('Error al descargar la base de datos. Asegúrese de que el backend local esté activo.');
+      showError('Error al descargar la base de datos. Asegúrese de que el backend local esté activo.');
     } finally {
       setDownloading(false);
     }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { extrasService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showSuccess, showError } from '../utils/alerts';
 
 const ExtraPagos = () => {
   const [extras, setExtras] = useState([]);
@@ -106,9 +107,10 @@ const ExtraPagos = () => {
         factura: pagoData.factura
       });
       setShowPagoModal(false);
+      showSuccess("Pago extra registrado correctamente");
       fetchData();
     } catch (err) {
-      alert("Error al registrar pago extra");
+      showError("Error al registrar pago extra");
     }
   };
 

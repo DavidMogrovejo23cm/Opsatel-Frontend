@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { whatsappService } from '../services/whatsappService';
 import { motion } from 'framer-motion';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 const WhatsApp = () => {
     const [activeTab, setActiveTab] = useState('Envío Manual');
@@ -109,7 +111,7 @@ const WhatsApp = () => {
 
     const manejarEnvioManual = async () => {
         if (!numeroManual.trim() || !mensajeManual.trim()) {
-            alert('⚠️ Ingresa número y mensaje');
+            showWarning('Ingresa número y mensaje');
             return;
         }
 
@@ -117,12 +119,12 @@ const WhatsApp = () => {
         try {
             // Enviar a través de la pasarela silenciosa del backend
             await whatsappService.enviarManual(numeroManual, mensajeManual);
-            alert('✅ Mensaje enviado exitosamente desde el servidor');
+            showSuccess('Mensaje enviado exitosamente desde el servidor');
             setNumeroManual('');
             setMensajeManual('');
             cargarHistorial();
         } catch (error) {
-            alert('❌ Error al enviar mensaje: ' + (error.response?.data?.detail || error.message));
+            showError('Error al enviar mensaje: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviando(false);
         }
@@ -130,7 +132,7 @@ const WhatsApp = () => {
 
     const manejarProgramacion = async () => {
         if (!hora || !mensajeProgramado.trim()) {
-            alert('⚠️ Ingresa hora y mensaje');
+            showWarning('Ingresa hora y mensaje');
             return;
         }
 
@@ -138,18 +140,18 @@ const WhatsApp = () => {
             const fechaParaEnviar = (recurrencia === 'unico' || recurrencia === 'mensual') ? fecha : (editandoConfig ? 'vaciar' : null);
             if (editandoConfig && configuracion?.id) {
                 await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado, fechaParaEnviar, recurrencia);
-                alert('✅ Configuración actualizada');
+                showSuccess('Configuración actualizada');
             } else {
                 await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar, recurrencia);
-                let msg = '✅ Envío programado para las ' + hora;
+                let msg = 'Envío programado para las ' + hora;
                 if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
                 if (recurrencia === 'mensual' && fecha) msg += ' el día ' + new Date(fecha + 'T00:00:00').getDate() + ' de cada mes';
-                alert(msg);
+                showSuccess(msg);
             }
             setEditandoConfig(false);
             cargarConfiguracion();
         } catch (error) {
-            alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+            showError('Error: ' + (error.response?.data?.detail || error.message));
         }
     };
 
@@ -158,60 +160,62 @@ const WhatsApp = () => {
             // Enviar mensaje pendiente directamente usando la pasarela
             await whatsappService.enviarManual(msg.numero, msg.mensaje);
             await whatsappService.marcarEnviado(msg.id);
-            alert('✅ Mensaje enviado y marcado en el historial');
+            showSuccess('Mensaje enviado y marcado en el historial');
             cargarHistorial();
         } catch (error) {
-            alert('❌ Error al enviar mensaje pendiente: ' + (error.response?.data?.detail || error.message));
+            showError('Error al enviar mensaje pendiente: ' + (error.response?.data?.detail || error.message));
         }
     };
 
     const manejarEliminarConfiguracion = async () => {
-        if (!window.confirm('¿Estás seguro de eliminar la programación?')) return;
+        const confirmado = await showConfirm('¿Eliminar programación?', '¿Estás seguro de eliminar la programación?', 'Sí, eliminar', 'Cancelar');
+        if (!confirmado) return;
 
         try {
             if (configuracion?.id) {
                 await whatsappService.eliminarConfiguracion(configuracion.id);
-                alert('✅ Programación eliminada');
+                showSuccess('Programación eliminada');
                 setConfiguracion(null);
                 setHora('');
                 setFecha('');
                 setMensajeProgramado('');
             }
         } catch (error) {
-            alert('❌ Error: ' + (error.response?.data?.detail || error.message));
+            showError('Error: ' + (error.response?.data?.detail || error.message));
         }
     };
 
     const manejarEnvioGlobal = async () => {
         if (!mensajeGlobal.trim()) {
-            alert('⚠️ Por favor ingresa el mensaje para la difusión masiva.');
+            showWarning('Por favor ingresa el mensaje para la difusión masiva.');
             return;
         }
 
-        const confirmacion1 = window.confirm(
-            '⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\n' +
-            'Estás a punto de enviar un mensaje masivo a TODOS los clientes con estado "Activo" en Opsatel.\n' +
-            'Esto enviará mensajes uno tras otro de forma asíncrona.\n\n' +
-            '¿Estás seguro de continuar con el envío?'
+        const confirmacion1 = await showConfirm(
+            '⚠️ ADVERTENCIA DE SEGURIDAD',
+            'Estás a punto de enviar un mensaje masivo a TODOS los clientes con estado "Activo" en Opsatel.\n\nEsto enviará mensajes uno tras otro de forma asíncrona.\n\n¿Estás seguro de continuar con el envío?',
+            'Continuar',
+            'Cancelar'
         );
         if (!confirmacion1) return;
 
-        const confirmacion2 = window.confirm(
-            '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD 🚨\n\n' +
-            '¿Realmente deseas ejecutar la difusión masiva ahora?\n' +
-            'Este proceso NO se puede cancelar una vez iniciado.'
+        const confirmacion2 = await showConfirm(
+            '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
+            '¿Realmente deseas ejecutar la difusión masiva ahora?\nEste proceso NO se puede cancelar una vez iniciado.',
+            'Sí, ejecutar difusión',
+            'Cancelar'
         );
         if (!confirmacion2) return;
 
         setEnviandoGlobal(true);
         try {
             await whatsappService.enviarGlobal(mensajeGlobal);
-            alert('🚀 Difusión masiva iniciada en segundo plano con éxito. Puedes revisar el avance en la pestaña de Historial.');
+            showSuccess('Difusión masiva iniciada en segundo plano con éxito. Puedes revisar el avance en la pestaña de Historial.');
             setMensajeGlobal('');
             setActiveTab('Historial');
             cargarHistorial();
         } catch (error) {
-            alert('❌ Error al iniciar difusión: ' + (error.response?.data?.detail || error.message));
+            showError('Error al iniciar difusión: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviandoGlobal(false);
         }

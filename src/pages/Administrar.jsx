@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService, libreqosService } from '../services/api';
 import { motion } from 'framer-motion';
+import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+
 
 const Administrar = () => {
   const [clientes, setClientes] = useState([]);
@@ -107,7 +109,7 @@ const Administrar = () => {
 
   const saveEdit = async () => {
     if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
-      return alert('Los campos Nombre, Cédula y Celular son obligatorios.');
+      return showWarning('Los campos Nombre, Cédula y Celular son obligatorios.');
     }
 
     try {
@@ -124,9 +126,10 @@ const Administrar = () => {
       setEditingId(null);
       setFileFrontal(null);
       setFilePosterior(null);
+      showSuccess('Cambios guardados correctamente');
       fetchData();
     } catch (error) {
-      alert('Error al guardar: ' + (error.response?.data?.detail || error.message));
+      showError('Error al guardar: ' + (error.response?.data?.detail || error.message));
     }
   };
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeDateInput, toISODate } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+
 
 const Ventas = () => {
   const [nodosList, setNodosList] = useState([]);
@@ -148,10 +150,10 @@ const Ventas = () => {
         // Formato solicitado: 2°55'51.44"S, 79° 2'43.37"W
         setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
       }, (error) => {
-        alert("Error al obtener ubicación. Asegúrate de dar permisos.");
+        showError("Error al obtener ubicación. Asegúrate de dar permisos.");
       });
     } else {
-      alert("Geolocalización no disponible en este navegador.");
+      showWarning("Geolocalización no disponible en este navegador.");
     }
   };
 
@@ -167,7 +169,7 @@ const Ventas = () => {
       const lngDMS = convertToDMS(lng, "lng");
       setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
     } else {
-      alert("Formato inválido. Asegúrate de usar: latitud, longitud (Ej: -2.93, -79.04)");
+      showWarning("Formato inválido. Asegúrate de usar: latitud, longitud (Ej: -2.93, -79.04)");
     }
   };
 
@@ -325,7 +327,13 @@ const Ventas = () => {
 
   const handleCancelarInstalacion = async () => {
     if (!instForm || !instForm.cliente_id) return;
-    if (confirm("¿Desea cancelar y seguir detallando el contrato? El cliente recién registrado se eliminará para que pueda continuar editando.")) {
+    const confirmado = await showConfirm(
+      "¿Cancelar y seguir editando?",
+      "El cliente recién registrado se eliminará para que pueda continuar editando el contrato.",
+      "Sí, cancelar y editar",
+      "No, mantener"
+    );
+    if (confirmado) {
       try {
         await clienteService.eliminar(instForm.cliente_id);
         if (backupFormData) {
@@ -334,7 +342,7 @@ const Ventas = () => {
         setShowInstModal(false);
         setMessage({ type: 'info', text: 'Se ha restaurado el formulario del contrato para que continúe trabajando.' });
       } catch (err) {
-        alert("Error al eliminar el cliente temporal: " + (err.response?.data?.detail || err.message));
+        showError("Error al eliminar el cliente temporal: " + (err.response?.data?.detail || err.message));
       }
     }
   };
@@ -897,7 +905,7 @@ const Ventas = () => {
                     } catch (err) {
                       const detail = err.response?.data?.detail;
                       const msg = typeof detail === 'string' ? detail : 'Error al programar la instalación.';
-                      alert('Error: ' + msg);
+                      showError(msg);
                     } finally {
                       setInstSubmitting(false);
                     }

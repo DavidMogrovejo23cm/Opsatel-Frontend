@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ticketsService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 const Tickets = () => {
     const [tickets, setTickets] = useState([]);
@@ -29,7 +30,7 @@ const Tickets = () => {
 
     const handleSave = async () => {
         if (!titulo || !contentRef.current.innerHTML) {
-            alert("Por favor ingrese título y contenido");
+            showWarning("Por favor ingrese título y contenido");
             return;
         }
         setSubmitting(true);
@@ -41,9 +42,10 @@ const Tickets = () => {
             setShowModal(false);
             setTitulo('');
             if (contentRef.current) contentRef.current.innerHTML = '';
+            showSuccess("Ticket guardado exitosamente");
             fetchTickets();
         } catch (err) {
-            alert("Error al guardar ticket");
+            showError("Error al guardar ticket");
         } finally {
             setSubmitting(false);
         }
@@ -55,17 +57,19 @@ const Tickets = () => {
             await ticketsService.actualizar(id, { estado: nextEstado });
             fetchTickets();
         } catch (err) {
-            alert("Error al actualizar estado");
+            showError("Error al actualizar estado");
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("¿Eliminar este ticket permanentemente?")) return;
+        const confirmado = await showConfirm("¿Eliminar ticket?", "¿Eliminar este ticket permanentemente?", "Sí, eliminar", "Cancelar");
+        if (!confirmado) return;
         try {
             await ticketsService.eliminar(id);
+            showSuccess("Ticket eliminado correctamente");
             fetchTickets();
         } catch (err) {
-            alert("Error al eliminar ticket");
+            showError("Error al eliminar ticket");
         }
     };
 
