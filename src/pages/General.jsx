@@ -591,7 +591,7 @@ const General = () => {
                       <td
                         key={col}
                         onClick={() => {
-                          if (col === 'estado' || col === 'cedula_tipo') handleStartEdit(c.id, col, c[col]);
+                          if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') handleStartEdit(c.id, col, c[col]);
                         }}
                         onDoubleClick={() => {
                           if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
@@ -637,6 +637,26 @@ const General = () => {
                               <option value="Inactivo">Inactivo</option>
                               <option value="En Proceso">En Proceso</option>
                               <option value="Juridico">Juridico</option>
+                            </select>
+                          ) : col === 'facturas' ? (
+                            <select
+                              autoFocus
+                              className="input"
+                              style={{
+                                width: '100%',
+                                padding: '4px 8px',
+                                height: '28px',
+                                fontSize: '0.8rem',
+                                background: '#1e1b4b',
+                                border: '1px solid var(--primary)',
+                                outline: 'none'
+                              }}
+                              value={tempValue || 'NONE'}
+                              onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                              onBlur={() => setEditingCell(null)}
+                            >
+                              <option value="NONE">NONE</option>
+                              <option value="SI">SI</option>
                             </select>
                           ) : (
                             col === 'plan' ? (

@@ -87,7 +87,7 @@ const Admin = () => {
     setPagoData({
       monto: isCortesiaTotal ? "0" : totalPendiente,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
-      facturas: cliente.facturas || '',
+      facturas: (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI') ? 'SI' : 'NONE',
       internet_payment: isCortesiaTotal ? "0" : internetSugerido,
       app: cliente.app || '',
       payment_date: new Date().toISOString().split('T')[0],
@@ -868,7 +868,15 @@ const Admin = () => {
                       {/* Facturas */}
                       <div className="form-group" style={{ marginBottom: '8px' }}>
                         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Facturas</label>
-                        <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.facturas} onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })} />
+                        <select
+                          className="input"
+                          style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', background: '#130f26', color: 'white', height: '36px', padding: '6px' }}
+                          value={pagoData.facturas}
+                          onChange={(e) => setPagoData({ ...pagoData, facturas: e.target.value })}
+                        >
+                          <option value="NONE" style={{ background: '#130f26', color: 'white' }}>NONE</option>
+                          <option value="SI" style={{ background: '#130f26', color: 'white' }}>SI</option>
+                        </select>
                       </div>
 
                       {/* Fecha Pago */}
