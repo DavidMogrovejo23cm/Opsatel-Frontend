@@ -248,7 +248,7 @@ const Ventas = () => {
     };
     try {
       const response = await clienteService.crear(payload);
-      clienteId = response.data.id;
+      const clienteId = response.data.id;
 
       // Subir fotos si existen
       if (fileFrontal || filePosterior) {
