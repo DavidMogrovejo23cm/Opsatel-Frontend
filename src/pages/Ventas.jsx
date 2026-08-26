@@ -84,13 +84,149 @@ const Ventas = () => {
     }
   }, [filePosterior]);
 
-  const handlePaste = (e, setFile) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const file = items[i].getAsFile();
-        setFile(file);
-        break;
+  const processImageFile = async (itemOrFile, defaultName = 'cedula.png') => {
+    if (!itemOrFile) return null;
+    let file = null;
+    let mimeType = 'image/png';
+    let fileName = defaultName;
+
+    if (itemOrFile instanceof File) {
+      file = itemOrFile;
+      fileName = file.name || defaultName;
+      mimeType = file.type || 'image/png';
+    } else if (itemOrFile instanceof Blob) {
+      file = itemOrFile;
+      mimeType = file.type || 'image/png';
+    } else if (typeof itemOrFile === 'string') {
+      const str = itemOrFile.trim();
+      if (str.startsWith('data:image/')) {
+        try {
+          const arr = str.split(',');
+          const mimeMatch = arr[0].match(/:(.*?);/);
+          mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          file = new Blob([u8arr], { type: mimeType });
+        } catch (err) {
+          console.error("Error al procesar data URL:", err);
+          return null;
+        }
+      } else if (str.startsWith('http://') || str.startsWith('https://')) {
+        try {
+          const res = await fetch(str);
+          const blob = await res.blob();
+          file = blob;
+          mimeType = blob.type || 'image/png';
+        } catch (err) {
+          console.error("Error al descargar imagen desde URL:", err);
+          return null;
+        }
+      }
+    }
+
+    if (!file) return null;
+
+    let ext = 'png';
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
+    else if (mimeType.includes('webp')) ext = 'webp';
+    else if (mimeType.includes('gif')) ext = 'gif';
+
+    if (!fileName.includes('.')) {
+      fileName = `${fileName}.${ext}`;
+    }
+
+    return new File([file], fileName, { type: mimeType });
+  };
+
+  const handlePaste = async (e, setFile, defaultName = 'cedula_pegada.png') => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    // 1. Archivos directos en el portapapeles (ej. copiado desde Explorador de Archivos de Windows)
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) {
+          const processed = await processImageFile(file, defaultName);
+          if (processed) {
+            setFile(processed);
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Elementos del portapapeles (Recortes, captura de pantalla, copiar imagen de la web)
+    const items = clipboardData.items;
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf("image") !== -1 || item.kind === 'file') {
+          const blob = item.getAsFile();
+          if (blob) {
+            const processed = await processImageFile(blob, defaultName);
+            if (processed) {
+              setFile(processed);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Texto plano o URL (Copiar dirección de imagen o URL de datos)
+    const pastedText = clipboardData.getData('text');
+    if (pastedText) {
+      const processed = await processImageFile(pastedText, defaultName);
+      if (processed) {
+        setFile(processed);
+        return;
+      }
+    }
+
+    // 4. HTML recortado de la web (etiqueta <img> de una página web)
+    const htmlText = clipboardData.getData('text/html');
+    if (htmlText) {
+      const match = htmlText.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (match && match[1]) {
+        const processed = await processImageFile(match[1], defaultName);
+        if (processed) {
+          setFile(processed);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleDrop = async (e, setFile, defaultName = 'cedula_arrastrada.png') => {
+    e.preventDefault();
+    const dataTransfer = e.dataTransfer;
+    if (!dataTransfer) return;
+
+    if (dataTransfer.files && dataTransfer.files.length > 0) {
+      for (let i = 0; i < dataTransfer.files.length; i++) {
+        const file = dataTransfer.files[i];
+        if (file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) {
+          const processed = await processImageFile(file, defaultName);
+          if (processed) {
+            setFile(processed);
+            return;
+          }
+        }
+      }
+    }
+
+    const urlText = dataTransfer.getData('text/uri-list') || dataTransfer.getData('text');
+    if (urlText) {
+      const processed = await processImageFile(urlText, defaultName);
+      if (processed) {
+        setFile(processed);
+        return;
       }
     }
   };
@@ -254,8 +390,14 @@ const Ventas = () => {
       if (fileFrontal || filePosterior) {
         try {
           const uploadData = new FormData();
-          if (fileFrontal) uploadData.append('frontal', fileFrontal);
-          if (filePosterior) uploadData.append('posterior', filePosterior);
+          if (fileFrontal) {
+            const name = fileFrontal.name && fileFrontal.name.includes('.') ? fileFrontal.name : 'frontal.png';
+            uploadData.append('frontal', fileFrontal, name);
+          }
+          if (filePosterior) {
+            const name = filePosterior.name && filePosterior.name.includes('.') ? filePosterior.name : 'posterior.png';
+            uploadData.append('posterior', filePosterior, name);
+          }
           await clienteService.uploadCedula(clienteId, uploadData);
         } catch (uploadError) {
           // Si falla la subida de fotos, eliminar el cliente para no dejar registros huérfanos
@@ -646,9 +788,11 @@ const Ventas = () => {
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <input
                   className="input"
-                  placeholder="Pegar imagen (Ctrl+V)"
+                  placeholder="Pegar o arrastrar imagen (Ctrl+V)"
                   style={{ flex: 1, marginBottom: 0 }}
-                  onPaste={(e) => handlePaste(e, setFileFrontal)}
+                  onPaste={(e) => handlePaste(e, setFileFrontal, 'cedula_frontal.png')}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, setFileFrontal, 'cedula_frontal.png')}
                   readOnly
                 />
                 <button
@@ -664,7 +808,12 @@ const Ventas = () => {
                 id="file-frontal"
                 type="file"
                 style={{ display: 'none' }}
-                onChange={(e) => setFileFrontal(e.target.files[0])}
+                onChange={async (e) => {
+                  if (e.target.files[0]) {
+                    const f = await processImageFile(e.target.files[0], 'cedula_frontal.png');
+                    setFileFrontal(f);
+                  }
+                }}
                 accept="image/*"
               />
               {fileFrontal && previewFrontal && (
@@ -687,9 +836,11 @@ const Ventas = () => {
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <input
                   className="input"
-                  placeholder="Pegar imagen (Ctrl+V)"
+                  placeholder="Pegar o arrastrar imagen (Ctrl+V)"
                   style={{ flex: 1, marginBottom: 0 }}
-                  onPaste={(e) => handlePaste(e, setFilePosterior)}
+                  onPaste={(e) => handlePaste(e, setFilePosterior, 'cedula_posterior.png')}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, setFilePosterior, 'cedula_posterior.png')}
                   readOnly
                 />
                 <button
@@ -705,7 +856,12 @@ const Ventas = () => {
                 id="file-posterior"
                 type="file"
                 style={{ display: 'none' }}
-                onChange={(e) => setFilePosterior(e.target.files[0])}
+                onChange={async (e) => {
+                  if (e.target.files[0]) {
+                    const f = await processImageFile(e.target.files[0], 'cedula_posterior.png');
+                    setFilePosterior(f);
+                  }
+                }}
                 accept="image/*"
               />
               {filePosterior && previewPosterior && (
