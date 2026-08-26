@@ -311,7 +311,6 @@ const Admin = () => {
                 <th>Instalación / Últ. Visita</th>
                 <th>Acciones</th>
                 <th>Nota de Pago/Reparación</th>
-
               </tr>
             </thead>
             <tbody>
@@ -442,9 +441,6 @@ const Admin = () => {
                       );
                     })()}
                   </td>
-                  <td style={{ fontSize: '0.75rem', color: '#a78bfa', whiteSpace: 'pre-wrap', maxWidth: '180px' }}>
-                    {c.notas_pago || '-'}
-                  </td>
 
                   <td>
                     <button
@@ -463,6 +459,10 @@ const Admin = () => {
                     >
                       Pagar
                     </button>
+                  </td>
+
+                  <td style={{ fontSize: '0.75rem', color: '#a78bfa', whiteSpace: 'pre-wrap', maxWidth: '180px' }}>
+                    {c.notas_pago || '-'}
                   </td>
                 </tr>
               ))}
