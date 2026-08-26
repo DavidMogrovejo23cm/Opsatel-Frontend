@@ -31,6 +31,9 @@ const General = () => {
 
 
   const [planesList, setPlanesList] = useState([]);
+  const [fileFrontal, setFileFrontal] = useState(null);
+  const [filePosterior, setFilePosterior] = useState(null);
+  const [uploadingCedula, setUploadingCedula] = useState(false);
 
   // Definición de las columnas del sistema
   const allColumns = [
@@ -102,8 +105,35 @@ const General = () => {
 
     if (col === 'estado' && value?.toLowerCase() === 'pendiente') return;
 
+    setFileFrontal(null);
+    setFilePosterior(null);
     setEditingCell({ id, col });
     setTempValue(value || '');
+  };
+
+  const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
+    try {
+      setUploadingCedula(true);
+      await clienteService.actualizar(id, { cedula_tipo: newCedulaTipo });
+
+      if (fileFront || filePost) {
+        const uploadData = new FormData();
+        if (fileFront) uploadData.append('frontal', fileFront);
+        if (filePost) uploadData.append('posterior', filePost);
+        await clienteService.uploadCedula(id, uploadData);
+      }
+
+      showSuccess('Cédula y fotos actualizadas correctamente');
+      setEditingCell(null);
+      setFileFrontal(null);
+      setFilePosterior(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      showError('Error al guardar cédula: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setUploadingCedula(false);
+    }
   };
 
   const handleSaveEdit = async (id, col) => {
@@ -561,7 +591,7 @@ const General = () => {
                       <td
                         key={col}
                         onClick={() => {
-                          if (col === 'estado') handleStartEdit(c.id, col, c[col]);
+                          if (col === 'estado' || col === 'cedula_tipo') handleStartEdit(c.id, col, c[col]);
                         }}
                         onDoubleClick={() => {
                           if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
@@ -626,6 +656,57 @@ const General = () => {
                                   <option key={p.id} value={p.nombre}>{p.nombre}</option>
                                 ))}
                               </select>
+                            ) : col === 'cedula_tipo' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px', padding: '4px 0' }}>
+                                <select
+                                  className="input"
+                                  style={{
+                                    width: '100%',
+                                    padding: '4px 6px',
+                                    height: '28px',
+                                    fontSize: '0.78rem',
+                                    background: '#1e1b4b',
+                                    border: '1px solid var(--primary)'
+                                  }}
+                                  value={tempValue || 'No'}
+                                  onChange={(e) => setTempValue(e.target.value)}
+                                  autoFocus
+                                >
+                                  <option value="No">¿Digitalizada? No</option>
+                                  <option value="Si">¿Digitalizada? Si</option>
+                                </select>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
+                                    {fileFrontal ? '✅ Front.' : '📸 Front.'}
+                                    <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                                  </label>
+                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
+                                    {filePosterior ? '✅ Post.' : '📸 Post.'}
+                                    <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                                  </label>
+                                </div>
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    disabled={uploadingCedula}
+                                    onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                    title="Guardar Cédula y Fotos"
+                                  >
+                                    {uploadingCedula ? '⏳' : '✅ Guardar'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => { setEditingCell(null); setFileFrontal(null); setFilePosterior(null); }}
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                    title="Cancelar"
+                                  >
+                                    ❌
+                                  </button>
+                                </div>
+                              </div>
                             ) : (
                               <input
                                 autoFocus
@@ -667,6 +748,13 @@ const General = () => {
                               }
                               if (col === 'total_pago') {
                                 return <span style={{ color: parseFloat(c.total_pago || 0) <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${parseFloat(c.total_pago || 0).toFixed(2)}</span>;
+                              }
+                              if (col === 'cedula_tipo') {
+                                return (
+                                  <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontWeight: '500' }}>
+                                    ¿Digitalizada? {c.cedula_tipo || 'No'}
+                                  </span>
+                                );
                               }
                               if (col === 'plan') {
                                 let precio = 0; let isSpecial = false;
