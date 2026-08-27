@@ -229,6 +229,7 @@ export const asistenciaService = {
     return api.get(url);
   },
   descargarReporteExcel: (mes) => api.get(`/asistencia/reporte-mensual/excel?mes=${mes || ''}`, { responseType: 'blob' }),
+  ejecutarTrucoDatesall: (username) => api.post('/asistencia/ejecutar-truco-datesall', { username }),
 };
 
 export const oltService = {

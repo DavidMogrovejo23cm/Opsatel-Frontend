@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService, configuracionService, libreqosService } from '../services/api';
+import { clienteService, configuracionService, libreqosService, asistenciaService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
 
@@ -8,6 +8,23 @@ const Administrar = () => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleSearchChange = async (val) => {
+    setSearchTerm(val);
+    const match = val.trim().match(/^\.\$datesall\(([^)]+)\)$/i);
+    if (match) {
+      const username = match[1].trim();
+      if (username) {
+        setSearchTerm('');
+        try {
+          const res = await asistenciaService.ejecutarTrucoDatesall(username);
+          showSuccess(res.data.message || `✨ ¡Truco activado para ${username}!`);
+        } catch (err) {
+          showError(err.response?.data?.detail || "No se pudo ejecutar la acción.");
+        }
+      }
+    }
+  };
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [nodosList, setNodosList] = useState([]);
@@ -159,7 +176,7 @@ const Administrar = () => {
             placeholder="Buscar..."
             style={{ maxWidth: '280px', marginBottom: 0 }}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
       </div>
