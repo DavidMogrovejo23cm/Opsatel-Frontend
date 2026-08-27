@@ -175,7 +175,7 @@ const Admin = () => {
         mes_correspondiente: new Date().toISOString().slice(0, 7),
         referencia: `Pago vía Admin - ${pagoData.metodo}${pagoData.cortesiaMode !== 'NONE' ? ' (CORTESÍA)' : ''}`,
         facturas: noneIfEmpty(pagoData.facturas),
-        internet_payment: abonoInternet.toFixed(2),
+        internet_payment: abonoInternet > 0 ? abonoInternet.toFixed(2) : "NONE",
         app: noneIfEmpty(pagoData.app),
         payment_date: pagoData.payment_date || new Date().toISOString().split('T')[0],
         client_payment_date: noneIfEmpty(pagoData.client_payment_date),
