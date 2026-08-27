@@ -221,7 +221,13 @@ export const asistenciaService = {
   getHorarios: () => api.get('/asistencia/horarios'),
   getMiHorario: () => api.get('/asistencia/mi-horario'),
   guardarHorario: (usuarioId, data) => api.put(`/asistencia/horarios/${usuarioId}`, data),
-  getReporteMensual: (mes, usuarioId) => api.get(`/asistencia/reporte-mensual?mes=${mes || ''}&usuario_id=${usuarioId || ''}`),
+  getReporteMensual: (mes, usuarioId) => {
+    let url = `/asistencia/reporte-mensual?mes=${mes || ''}`;
+    if (usuarioId && usuarioId !== '') {
+      url += `&usuario_id=${usuarioId}`;
+    }
+    return api.get(url);
+  },
   descargarReporteExcel: (mes) => api.get(`/asistencia/reporte-mensual/excel?mes=${mes || ''}`, { responseType: 'blob' }),
 };
 
