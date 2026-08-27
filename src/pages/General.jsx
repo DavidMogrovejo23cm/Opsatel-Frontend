@@ -98,6 +98,17 @@ const General = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleKeyClose = (e) => {
+      if (e.key === 'Escape') {
+        if (showEntryPinModal) setShowEntryPinModal(false);
+        if (showPinModal) setShowPinModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyClose);
+    return () => window.removeEventListener('keydown', handleKeyClose);
+  }, [showEntryPinModal, showPinModal]);
+
   const handleStartEdit = (id, col, value) => {
     // Reglas maestras de bloqueo: No permite editar campos que el sistema genera automáticamente.
     const lockedCols = ['id', 'id_port', 'service_port', 'ip', 'mac'];
@@ -419,6 +430,7 @@ const General = () => {
             onChange={(e) => setEntryPinInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleEntryPinSubmit();
+              if (e.key === 'Escape') setShowEntryPinModal(false);
             }}
           />
 

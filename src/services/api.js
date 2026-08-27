@@ -218,6 +218,11 @@ export const asistenciaService = {
   registrarSalida: (data) => api.post('/asistencia/registrar-salida', data),
   getEstadoHoy: () => api.get('/asistencia/estado-hoy'),
   listar: (inicio, fin) => api.get(`/asistencia/?fecha_inicio=${inicio || ''}&fecha_fin=${fin || ''}`),
+  getHorarios: () => api.get('/asistencia/horarios'),
+  getMiHorario: () => api.get('/asistencia/mi-horario'),
+  guardarHorario: (usuarioId, data) => api.put(`/asistencia/horarios/${usuarioId}`, data),
+  getReporteMensual: (mes, usuarioId) => api.get(`/asistencia/reporte-mensual?mes=${mes || ''}&usuario_id=${usuarioId || ''}`),
+  descargarReporteExcel: (mes) => api.get(`/asistencia/reporte-mensual/excel?mes=${mes || ''}`, { responseType: 'blob' }),
 };
 
 export const oltService = {

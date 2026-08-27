@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { asistenciaService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
-
+import { showSuccess, showError, showWarning } from '../utils/alerts';
 
 const TARGET_LAT = -2.922000;
 const TARGET_LNG = -79.066444;
@@ -22,54 +21,89 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 const Asistencia = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('registrar');
+  const [activeTab, setActiveTab] = useState('registrar'); // 'registrar', 'reporte', 'horarios'
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error, success_exit
+  
+  // Estado Marcación
+  const [status, setStatus] = useState('idle'); // idle, checking, out_of_range, ready, success, error
   const [distance, setDistance] = useState(null);
   const [coords, setCoords] = useState(null);
 
   const [dailyStatus, setDailyStatus] = useState({
     ha_entrado: false,
     ha_salido: false,
-    puede_salir: false,
-    mensaje_restriccion: null
+    puede_salir: true,
+    mensaje_restriccion: null,
+    horario: null,
+    punches_today: []
   });
 
-  // Estados para Admin
-  const [asistencias, setAsistencias] = useState([]);
-  const [filtroFecha, setFiltroFecha] = useState(new Date().toISOString().split('T')[0]);
+  // Estado Reporte Mensual
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [filtroMes, setFiltroMes] = useState(currentMonthStr);
+  const [filtroUsuario, setFiltroUsuario] = useState('');
+  const [reporteMensual, setReporteMensual] = useState(null);
+  const [empleadoSeleccionadoModal, setEmpleadoSeleccionadoModal] = useState(null);
+
+  // Estado Horarios (Admin)
+  const [horariosList, setHorariosList] = useState([]);
+  const [modalHorarioOpen, setModalHorarioOpen] = useState(false);
+  const [horarioEdit, setHorarioEdit] = useState({
+    usuario_id: null,
+    nombre_usuario: '',
+    hora_entrada_1: '08:00',
+    hora_salida_1: '13:00',
+    hora_entrada_2: '14:00',
+    hora_salida_2: '18:00',
+    horas_diarias_esperadas: 8.0,
+    dias_laborables: '1,2,3,4,5',
+    tolerancia_minutos: 15
+  });
 
   useEffect(() => {
     fetchStatus();
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'admin' && user?.rol === 'administrador') {
-      fetchAsistencias();
+    if (activeTab === 'reporte') {
+      fetchReporteMensual();
+    } else if (activeTab === 'horarios' && user?.rol === 'administrador') {
+      fetchHorarios();
     }
-  }, [activeTab, filtroFecha]);
+  }, [activeTab, filtroMes, filtroUsuario]);
 
   const fetchStatus = async () => {
     try {
       const res = await asistenciaService.getEstadoHoy();
       setDailyStatus(res.data);
-      if (res.data.ha_salido) {
-        setStatus('success_exit');
-      } else if (res.data.ha_entrado) {
-        setStatus('idle'); // Reutilizamos idle pero el texto cambiará según dailyStatus
-      }
+      setStatus('idle');
     } catch (err) {
       console.error("Error al obtener estado:", err);
     }
   };
 
-  const fetchAsistencias = async () => {
+  const fetchReporteMensual = async () => {
     try {
       setLoading(true);
-      const res = await asistenciaService.listar(filtroFecha, filtroFecha);
-      setAsistencias(res.data);
+      const res = await asistenciaService.getReporteMensual(filtroMes, filtroUsuario);
+      setReporteMensual(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Error al obtener reporte mensual:", err);
+      showError("No se pudo cargar el reporte mensual.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHorarios = async () => {
+    try {
+      setLoading(true);
+      const res = await asistenciaService.getHorarios();
+      setHorariosList(res.data);
+    } catch (err) {
+      console.error("Error al cargar horarios:", err);
+      showError("No se pudieron cargar los horarios.");
     } finally {
       setLoading(false);
     }
@@ -113,14 +147,11 @@ const Asistencia = () => {
 
     try {
       setLoading(true);
-
-      const biometriaOk = true;
-
       const payload = {
         ubicacion: `${coords.lat}, ${coords.lng}`,
         distancia_metros: distance,
         dispositivo_info: navigator.userAgent,
-        biometria_validada: biometriaOk,
+        biometria_validada: true,
         hora_dispositivo: new Date().toLocaleTimeString('es-EC', { hour12: false })
       };
 
@@ -132,61 +163,147 @@ const Asistencia = () => {
         showSuccess("Salida registrada correctamente");
       }
 
-      fetchStatus(); // Actualizar estado después de registrar
+      await fetchStatus();
     } catch (err) {
-      showError("Error: " + (err.response?.data?.detail || "No se pudo procesar"));
+      showError("Error: " + (err.response?.data?.detail || "No se pudo procesar la marcación"));
       setStatus('error');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDescargarExcel = async () => {
+    try {
+      setLoading(true);
+      const response = await asistenciaService.descargarReporteExcel(filtroMes);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Reporte_Asistencia_${filtroMes}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showSuccess("Reporte de Excel descargado correctamente");
+    } catch (err) {
+      console.error(err);
+      showError("Error al descargar reporte de Excel");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenEditHorario = (h) => {
+    setHorarioEdit({
+      usuario_id: h.usuario_id,
+      nombre_usuario: h.nombre_usuario,
+      hora_entrada_1: h.hora_entrada_1 || '08:00',
+      hora_salida_1: h.hora_salida_1 || '13:00',
+      hora_entrada_2: h.hora_entrada_2 || '14:00',
+      hora_salida_2: h.hora_salida_2 || '18:00',
+      horas_diarias_esperadas: h.horas_diarias_esperadas || 8.0,
+      dias_laborables: h.dias_laborables || '1,2,3,4,5',
+      tolerancia_minutos: h.tolerancia_minutos || 15
+    });
+    setModalHorarioOpen(true);
+  };
+
+  const handleSaveHorario = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      await asistenciaService.guardarHorario(horarioEdit.usuario_id, horarioEdit);
+      showSuccess(`Horario de ${horarioEdit.nombre_usuario} actualizado correctamente`);
+      setModalHorarioOpen(false);
+      fetchHorarios();
+    } catch (err) {
+      showError("Error al guardar horario: " + (err.response?.data?.detail || "Error desconocido"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper para días laborables checkboxes
+  const isDiaLaborable = (dayNum) => {
+    return (horarioEdit.dias_laborables || '').split(',').map(d => d.strip ? d.strip() : d.trim()).includes(String(dayNum));
+  };
+
+  const toggleDiaLaborable = (dayNum) => {
+    let list = (horarioEdit.dias_laborables || '').split(',').map(d => d.trim()).filter(Boolean);
+    const dayStr = String(dayNum);
+    if (list.includes(dayStr)) {
+      list = list.filter(d => d !== dayStr);
+    } else {
+      list.push(dayStr);
+    }
+    list.sort();
+    setHorarioEdit({ ...horarioEdit, dias_laborables: list.join(',') });
+  };
+
   return (
     <div className="glass-card glass asistencia-container" style={{ minHeight: '80vh', padding: '24px' }}>
-      <div className="asistencia-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
+      {/* HEADER */}
+      <div className="asistencia-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Control de Asistencia</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Registro de entrada y salida basado en ubicación.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Registro de jornada laboral, horarios y reporte de horas extras.</p>
         </div>
 
-        {user?.rol === 'administrador' && (
-          <div className="glass asistencia-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px' }}>
+        {/* TABS DE NAVEGACIÓN */}
+        <div className="glass asistencia-tabs" style={{ display: 'flex', gap: '6px', padding: '4px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}>
+          <button
+            onClick={() => setActiveTab('registrar')}
+            className={`btn ${activeTab === 'registrar' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+          >
+            ⏰ Marcación
+          </button>
+          <button
+            onClick={() => setActiveTab('reporte')}
+            className={`btn ${activeTab === 'reporte' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+          >
+            📊 Reporte Mensual
+          </button>
+          {user?.rol === 'administrador' && (
             <button
-              onClick={() => setActiveTab('registrar')}
-              className={`btn ${activeTab === 'registrar' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
+              onClick={() => setActiveTab('horarios')}
+              className={`btn ${activeTab === 'horarios' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px', fontSize: '0.85rem' }}
             >
-              Registrar
+              ⚙️ Config. Horarios
             </button>
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 16px', fontSize: '0.85rem', flex: 1 }}
-            >
-              Reportes
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'registrar' ? (
+        {/* ========================================================================= */}
+        {/* TAB 1: MARCACIÓN */}
+        {/* ========================================================================= */}
+        {activeTab === 'registrar' && (
           <motion.div
             key="registrar"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             className="asistencia-card-wrapper"
-            style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}
+            style={{ maxWidth: '650px', margin: '0 auto' }}
           >
-            <div className="glass asistencia-main-card" style={{ padding: '40px 20px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: '4rem', marginBottom: '20px' }}>
-                {status === 'idle' && (dailyStatus.ha_entrado ? '🏠' : '📍')}
+            {/* HORARIO ASIGNADO BADGE */}
+            {dailyStatus.horario && (
+              <div className="glass" style={{ padding: '12px 20px', borderRadius: '14px', marginBottom: '20px', textAlign: 'center', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                <span style={{ fontSize: '0.85rem', color: '#93c5fd' }}>
+                  🕒 <b>Tu Horario Asignado:</b> {dailyStatus.horario.hora_entrada_1} - {dailyStatus.horario.hora_salida_1} | {dailyStatus.horario.hora_entrada_2} - {dailyStatus.horario.hora_salida_2} ({dailyStatus.horario.horas_diarias_esperadas}h esperadas)
+                </span>
+              </div>
+            )}
+
+            <div className="glass asistencia-main-card" style={{ padding: '40px 24px', borderRadius: '24px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '16px' }}>
+                {status === 'idle' && (dailyStatus.ha_entrado ? '🟢' : '📍')}
                 {status === 'checking' && '⏳'}
                 {status === 'ready' && '🔓'}
                 {status === 'out_of_range' && '🚫'}
-                {status === 'success' && '✅'}
-                {status === 'success_exit' && '👋'}
                 {status === 'error' && '❌'}
               </div>
 
@@ -194,156 +311,412 @@ const Asistencia = () => {
                 <>
                   {!dailyStatus.ha_entrado ? (
                     <>
-                      <h3>Listo para registrar Entrada</h3>
-                      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Debes estar en la oficina para activar tu asistencia.</p>
-                      <button className="btn btn-primary" style={{ width: '100%', padding: '16px' }} onClick={checkLocation}>
-                        Verificar Ubicación
+                      <h3 style={{ fontSize: '1.4rem', fontWeight: '600', marginBottom: '8px' }}>Listo para registrar Entrada</h3>
+                      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Debes encontrarte en la oficina para habilitar el registro.</p>
+                      <button className="btn btn-primary" style={{ width: '100%', padding: '16px', fontSize: '1rem', fontWeight: 'bold' }} onClick={checkLocation}>
+                        📍 Verificar Ubicación GPS
                       </button>
                     </>
-                  ) : !dailyStatus.ha_salido ? (
+                  ) : (
                     <>
-                      <h3>Listo para registrar Salida</h3>
-                      <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>Entrada registrada a las: <b>{dailyStatus.hora_entrada}</b></p>
-
-                      {!dailyStatus.puede_salir ? (
-                        <div className="glass" style={{ padding: '15px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '24px' }}>
-                          <p style={{ color: '#f87171', margin: 0, fontSize: '0.9rem' }}>{dailyStatus.mensaje_restriccion}</p>
-                        </div>
-                      ) : (
-                        <p style={{ color: '#4ade80', marginBottom: '24px' }}>Ya puedes registrar tu salida.</p>
-                      )}
-
+                      <h3 style={{ fontSize: '1.4rem', fontWeight: '600', color: '#60a5fa', marginBottom: '8px' }}>Jornada Activa</h3>
+                      <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>
+                        Última entrada registrada a las: <b>{dailyStatus.hora_entrada}</b>
+                      </p>
                       <button
                         className="btn btn-primary"
-                        style={{ width: '100%', padding: '16px' }}
+                        style={{ width: '100%', padding: '16px', fontSize: '1rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
                         onClick={checkLocation}
-                        disabled={!dailyStatus.puede_salir}
                       >
-                        {dailyStatus.puede_salir ? 'Verificar Ubicación' : 'Esperar Tiempo Mínimo'}
+                        👋 Verificar Ubicación para Registrar Salida
                       </button>
                     </>
-                  ) : null}
+                  )}
                 </>
               )}
 
               {status === 'checking' && (
-                <p>Obteniendo ubicación precisa...</p>
+                <div>
+                  <h3 style={{ marginBottom: '8px' }}>Verificando Coordenadas GPS...</h3>
+                  <p style={{ color: 'var(--text-muted)' }}>Por favor espera un momento.</p>
+                </div>
               )}
 
               {status === 'out_of_range' && (
                 <>
-                  <h3 style={{ color: '#f87171' }}>Fuera de Rango</h3>
-                  <p style={{ marginBottom: '8px' }}>Te encuentras a <b>{Math.round(distance)} metros</b> de la oficina.</p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '24px' }}>El rango máximo es de {MAX_DISTANCE} metros.</p>
-                  <button className="btn btn-secondary" style={{ width: '100%' }} onClick={checkLocation}>Reintentar</button>
+                  <h3 style={{ color: '#f87171', marginBottom: '8px' }}>Fuera de Rango de la Oficina</h3>
+                  <p style={{ marginBottom: '8px' }}>Distancia detectada: <b>{Math.round(distance)} metros</b>.</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '24px' }}>El rango permitido es de hasta {MAX_DISTANCE} metros.</p>
+                  <button className="btn btn-secondary" style={{ width: '100%', padding: '12px' }} onClick={checkLocation}>Reintentar Verificación</button>
                 </>
               )}
 
               {status === 'ready' && (
                 <>
-                  <h3 style={{ color: '#4ade80' }}>Ubicación Validada</h3>
-                  <p style={{ marginBottom: '24px' }}>Estás a {Math.round(distance)}m. Procede a registrar tu asistencia.</p>
+                  <h3 style={{ color: '#4ade80', marginBottom: '8px' }}>Ubicación Validada Correctamente</h3>
+                  <p style={{ marginBottom: '24px' }}>Te encuentras a {Math.round(distance)}m de la oficina.</p>
                   <button
                     className="btn btn-primary"
-                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}
+                    style={{ width: '100%', padding: '16px', fontSize: '1.05rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #10b981, #059669)' }}
                     onClick={registrarAccion}
                     disabled={loading}
                   >
-                    {loading ? 'Procesando...' : (dailyStatus.ha_entrado ? 'Registrar Salida' : 'Registrar Entrada')}
+                    {loading ? 'Procesando...' : (dailyStatus.ha_entrado ? '✅ Confirmar Registro de Salida' : '✅ Confirmar Registro de Entrada')}
                   </button>
                 </>
               )}
-
-              {status === 'success' && (
-                <>
-                  <h3 style={{ color: '#4ade80' }}>Entrada Completada</h3>
-                  <p>Has registrado tu entrada correctamente hoy.</p>
-                </>
-              )}
-
-              {status === 'success_exit' && (
-                <>
-                  <h3 style={{ color: '#4ade80' }}>Salida Completada</h3>
-                  <p>Has registrado tu jornada de hoy. ¡Hasta pronto!</p>
-                </>
-              )}
             </div>
 
-            <div style={{ marginTop: '24px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Ubicación requerida: 2°55'19.2"S 79°03'59.2"W (Oficina Central)
-            </div>
+            {/* RESUMEN DE MARCACIONES DEL DÍA */}
+            {dailyStatus.punches_today && dailyStatus.punches_today.length > 0 && (
+              <div className="glass" style={{ marginTop: '20px', padding: '16px 20px', borderRadius: '16px' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 'bold', marginBottom: '12px', color: 'var(--text-muted)' }}>Marcaciones de Hoy:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {dailyStatus.punches_today.map((p, idx) => (
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Turno #{idx + 1}</span>
+                      <span style={{ fontSize: '0.85rem' }}>
+                        Entrada: <b>{p.hora_entrada}</b> | Salida: <b>{p.hora_salida || 'En progreso...'}</b>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
-        ) : (
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2: REPORTE MENSUAL */}
+        {/* ========================================================================= */}
+        {activeTab === 'reporte' && (
           <motion.div
-            key="admin"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            key="reporte"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
           >
-            <div className="asistencia-filters" style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                type="date"
-                className="input"
-                value={filtroFecha}
-                onChange={(e) => setFiltroFecha(e.target.value)}
-                style={{ flex: '1', minWidth: '150px', maxWidth: '300px', marginBottom: 0 }}
-              />
-              <button className="btn btn-secondary" onClick={fetchAsistencias} style={{ flex: '1', maxWidth: '120px' }}>Actualizar</button>
+            {/* FILTROS Y BOTÓN EXCEL */}
+            <div className="glass" style={{ padding: '16px 20px', borderRadius: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Seleccionar Mes:</label>
+                  <input
+                    type="month"
+                    className="input"
+                    value={filtroMes}
+                    onChange={(e) => setFiltroMes(e.target.value)}
+                    style={{ marginBottom: 0, width: '180px' }}
+                  />
+                </div>
+
+                {user?.rol === 'administrador' && reporteMensual?.resumen_empleados && (
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Filtrar Empleado:</label>
+                    <select
+                      className="input"
+                      value={filtroUsuario}
+                      onChange={(e) => setFiltroUsuario(e.target.value)}
+                      style={{ marginBottom: 0, minWidth: '180px' }}
+                    >
+                      <option value="">Todos los Empleados</option>
+                      {reporteMensual.resumen_empleados.map(e => (
+                        <option key={e.usuario_id} value={e.usuario_id}>{e.nombre_usuario}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {user?.rol === 'administrador' && (
+                <button className="btn btn-primary" onClick={handleDescargarExcel} disabled={loading} style={{ background: 'linear-gradient(135deg, #059669, #10b981)', padding: '10px 20px' }}>
+                  📥 Exportar Reporte a Excel (.xlsx)
+                </button>
+              )}
             </div>
 
+            {/* MÉTRICAS GENERALES */}
+            {reporteMensual && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                <div className="glass" style={{ padding: '18px', borderRadius: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Horas Trabajadas</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#60a5fa' }}>{reporteMensual.total_horas_trabajadas}h</div>
+                </div>
+
+                <div className="glass" style={{ padding: '18px', borderRadius: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Horas Extras</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#34d399' }}>{reporteMensual.total_horas_extras}h</div>
+                </div>
+
+                <div className="glass" style={{ padding: '18px', borderRadius: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Empleados Evaluados</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#c084fc' }}>{reporteMensual.total_empleados}</div>
+                </div>
+              </div>
+            )}
+
+            {/* TABLA RESUMEN */}
             <div className="table-container" style={{ overflowX: 'auto' }}>
-              <table style={{ minWidth: '600px' }}>
+              <table style={{ width: '100%', minWidth: '700px' }}>
                 <thead>
                   <tr>
-                    <th>Usuario</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Distancia</th>
-                    <th>Biometría</th>
+                    <th>Empleado</th>
+                    <th>Rol</th>
+                    <th style={{ textAlign: 'center' }}>Días Trabajados</th>
+                    <th style={{ textAlign: 'center' }}>Horas Esperadas</th>
+                    <th style={{ textAlign: 'center' }}>Horas Trabajadas</th>
+                    <th style={{ textAlign: 'center' }}>Horas Extras</th>
+                    <th style={{ textAlign: 'center' }}>Atrasos (min)</th>
+                    <th style={{ textAlign: 'center' }}>Acción</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {asistencias.length === 0 ? (
-                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No hay registros para este día.</td></tr>
-                  ) : asistencias.map(a => (
-                    <tr key={a.id}>
-                      <td><div style={{ fontWeight: 'bold' }}>{a.nombre_usuario}</div></td>
-                      <td>{a.hora_entrada}</td>
-                      <td>{a.hora_salida || '--:--'}</td>
-                      <td>{Math.round(a.distance_meters || a.distancia_metros)}m</td>
-                      <td>{a.biometria_validada && (a.hora_salida ? a.biometria_salida_validada : true) ? '✅' : '❌'}</td>
-                      <td style={{ fontSize: '0.7rem', opacity: 0.6, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.dispositivo_info}</td>
+                  {!reporteMensual || reporteMensual.resumen_empleados.length === 0 ? (
+                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>No hay información para el mes seleccionado.</td></tr>
+                  ) : (
+                    reporteMensual.resumen_empleados.map(emp => (
+                      <tr key={emp.usuario_id}>
+                        <td><b style={{ color: '#f3f4f6' }}>{emp.nombre_usuario}</b></td>
+                        <td><span className="badge" style={{ textTransform: 'capitalize' }}>{emp.rol}</span></td>
+                        <td style={{ textAlign: 'center' }}>{emp.dias_trabajados}</td>
+                        <td style={{ textAlign: 'center' }}>{emp.horas_esperadas}h</td>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#93c5fd' }}>{emp.horas_trabajadas}h</td>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: emp.horas_extras > 0 ? '#4ade80' : 'var(--text-muted)' }}>
+                          {emp.horas_extras > 0 ? `+${emp.horas_extras}h` : '0h'}
+                        </td>
+                        <td style={{ textAlign: 'center', color: emp.atraso_minutos > 0 ? '#f87171' : 'var(--text-muted)' }}>
+                          {emp.atraso_minutos > 0 ? `${emp.atraso_minutos} min` : '0 min'}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => setEmpleadoSeleccionadoModal(emp)}>
+                            📋 Ver Días
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MODAL DETALLE DE DÍAS POR EMPLEADO */}
+            {empleadoSeleccionadoModal && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                <div className="glass" style={{ background: '#111827', width: '100%', maxWidth: '900px', maxHeight: '90vh', borderRadius: '20px', padding: '24px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>Detalle Diario: {empleadoSeleccionadoModal.nombre_usuario}</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Mes: {filtroMes}</p>
+                    </div>
+                    <button className="btn btn-secondary" onClick={() => setEmpleadoSeleccionadoModal(null)}>✖ Cerrar</button>
+                  </div>
+
+                  <div className="table-container" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Día</th>
+                          <th>Entrada</th>
+                          <th>Salida</th>
+                          <th style={{ textAlign: 'center' }}>Trabajado</th>
+                          <th style={{ textAlign: 'center' }}>Extras</th>
+                          <th style={{ textAlign: 'center' }}>Atraso</th>
+                          <th style={{ textAlign: 'center' }}>Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {empleadoSeleccionadoModal.detalles_dias.map((d, i) => (
+                          <tr key={i} style={{ background: d.estado === 'Ausente' ? 'rgba(239,68,68,0.05)' : d.estado === 'Descanso' ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                            <td>{d.fecha}</td>
+                            <td>{d.dia_nombre}</td>
+                            <td>{d.hora_entrada || '--:--'}</td>
+                            <td>{d.hora_salida || '--:--'}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{d.horas_trabajadas}h</td>
+                            <td style={{ textAlign: 'center', color: d.horas_extras > 0 ? '#4ade80' : 'inherit' }}>{d.horas_extras > 0 ? `+${d.horas_extras}h` : '0h'}</td>
+                            <td style={{ textAlign: 'center', color: d.atraso_minutos > 0 ? '#f87171' : 'inherit' }}>{d.atraso_minutos > 0 ? `${d.atraso_minutos}m` : '0m'}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                background: d.estado === 'Presente' ? 'rgba(74, 222, 128, 0.15)' : d.estado === 'Atraso' ? 'rgba(248, 113, 113, 0.15)' : 'rgba(156, 163, 175, 0.15)',
+                                color: d.estado === 'Presente' ? '#4ade80' : d.estado === 'Atraso' ? '#f87171' : '#9ca3af'
+                              }}>
+                                {d.estado}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 3: CONFIGURACIÓN DE HORARIOS (ADMIN) */}
+        {/* ========================================================================= */}
+        {activeTab === 'horarios' && user?.rol === 'administrador' && (
+          <motion.div
+            key="horarios"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="table-container" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', minWidth: '800px' }}>
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Entrada 1 (Mañana)</th>
+                    <th>Salida 1 (Almuerzo)</th>
+                    <th>Entrada 2 (Tarde)</th>
+                    <th>Salida 2 (Jornada)</th>
+                    <th style={{ textAlign: 'center' }}>Horas/Día</th>
+                    <th style={{ textAlign: 'center' }}>Tolerancia</th>
+                    <th style={{ textAlign: 'center' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {horariosList.map(h => (
+                    <tr key={h.usuario_id}>
+                      <td><b style={{ color: '#f3f4f6' }}>{h.nombre_usuario}</b></td>
+                      <td><span className="badge">{h.hora_entrada_1}</span></td>
+                      <td><span className="badge">{h.hora_salida_1}</span></td>
+                      <td><span className="badge">{h.hora_entrada_2}</span></td>
+                      <td><span className="badge">{h.hora_salida_2}</span></td>
+                      <td style={{ textAlign: 'center' }}>{h.horas_diarias_esperadas}h</td>
+                      <td style={{ textAlign: 'center' }}>{h.tolerancia_minutos} min</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => handleOpenEditHorario(h)}>
+                          ✏️ Configurar Horario
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* MODAL EDITAR HORARIO */}
+            {modalHorarioOpen && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                <div className="glass" style={{ background: '#111827', width: '100%', maxWidth: '550px', borderRadius: '20px', padding: '28px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px' }}>
+                    Configurar Horario de: <span style={{ color: '#60a5fa' }}>{horarioEdit.nombre_usuario}</span>
+                  </h3>
+
+                  <form onSubmit={handleSaveHorario}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Entrada Mañana:</label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={horarioEdit.hora_entrada_1}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, hora_entrada_1: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Salida Almuerzo:</label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={horarioEdit.hora_salida_1}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, hora_salida_1: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Entrada Tarde:</label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={horarioEdit.hora_entrada_2}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, hora_entrada_2: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Salida Jornada:</label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={horarioEdit.hora_salida_2}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, hora_salida_2: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Horas Esperadas/Día:</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="input"
+                          value={horarioEdit.horas_diarias_esperadas}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, horas_diarias_esperadas: parseFloat(e.target.value) || 8 })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tolerancia Atraso (min):</label>
+                        <input
+                          type="number"
+                          className="input"
+                          value={horarioEdit.tolerancia_minutos}
+                          onChange={(e) => setHorarioEdit({ ...horarioEdit, tolerancia_minutos: parseInt(e.target.value) || 0 })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>Días Laborables:</label>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {[
+                          { num: 1, label: 'Lun' },
+                          { num: 2, label: 'Mar' },
+                          { num: 3, label: 'Mié' },
+                          { num: 4, label: 'Jue' },
+                          { num: 5, label: 'Vie' },
+                          { num: 6, label: 'Sáb' },
+                          { num: 7, label: 'Dom' },
+                        ].map(d => (
+                          <button
+                            key={d.num}
+                            type="button"
+                            onClick={() => toggleDiaLaborable(d.num)}
+                            className={`btn ${isDiaLaborable(d.num) ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setModalHorarioOpen(false)}>Cancelar</button>
+                      <button type="submit" className="btn btn-primary" disabled={loading}>Guardar Horario</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-
-      <style>{`
-        @media (max-width: 600px) {
-          .asistencia-header {
-            flex-direction: column;
-            text-align: center;
-            align-items: center !important;
-          }
-          .asistencia-tabs {
-            width: 100%;
-          }
-          .asistencia-main-card {
-            padding: 30px 15px !important;
-          }
-          .asistencia-filters {
-            flex-direction: column;
-          }
-          .asistencia-filters input, .asistencia-filters button {
-            max-width: 100% !important;
-            width: 100% !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };
