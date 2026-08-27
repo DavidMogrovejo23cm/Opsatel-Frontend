@@ -91,9 +91,7 @@ const Ventas = () => {
     let fileName = defaultName;
 
     if (itemOrFile instanceof File) {
-      file = itemOrFile;
-      fileName = file.name || defaultName;
-      mimeType = file.type || 'image/png';
+      return itemOrFile;
     } else if (itemOrFile instanceof Blob) {
       file = itemOrFile;
       mimeType = file.type || 'image/png';
@@ -380,6 +378,9 @@ const Ventas = () => {
     console.log("Enviando contrato con parroquia:", formData.parroquia);
     const payload = {
       ...formData,
+      correo: (formData.correo && String(formData.correo).trim()) ? String(formData.correo).trim() : null,
+      precio_plan_especial: parseFloat(formData.precio_plan_especial) || 0.0,
+      plan: formData.tercera_edad ? 'TERCERA EDAD' : (formData.plan_corporativo ? 'CORPORATIVO' : formData.plan),
       fecha_firma: normalizeDateInput(formData.fecha_firma)
     };
     try {
