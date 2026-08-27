@@ -325,22 +325,21 @@ const Admin = () => {
       </div>
 
       {loading ? <p>Cargando clientes...</p> : (
-        <div className="table-container">
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '12px' }}>ID</th>
-                <th>Nombre</th>
-                <th>Estado</th>
-                <th>Plan Base</th>
-                <th>Pantallas IPTV</th>
-                <th>IPTV (TV)</th>
-                <th>Adicionales</th>
-                <th>Plan</th>
-
-                <th>Instalación / Últ. Visita</th>
-                <th>Acciones</th>
-                <th>Nota de Pago/Reparación</th>
+        <div className="table-container" style={{ maxHeight: 'calc(100vh - 210px)', overflowY: 'auto', overflowX: 'auto', borderRadius: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left' }}>
+            <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
+              <tr style={{ background: '#15122e' }}>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>ID</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Nombre</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Estado</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan Base</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Pantallas IPTV</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>IPTV (TV)</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Adicionales</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Instalación / Últ. Visita</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Acciones</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Nota de Pago/Reparación</th>
               </tr>
             </thead>
             <tbody>

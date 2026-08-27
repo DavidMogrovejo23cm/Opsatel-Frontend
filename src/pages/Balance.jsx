@@ -1189,40 +1189,25 @@ const Balance = () => {
     }
   };
 
-  const handleExportarAnual = () => {
-    if (!reportAnual) return;
-    const { meses, totales, proyectos } = reportAnual;
-    
-    let csv = `REPORTE FINANCIERO ANUAL - ${anio}\n\n`;
-    
-    csv += "RESUMEN ANUAL\n";
-    csv += `Ingresos Total,${totales.ingresos}\n`;
-    csv += `Egresos Total,${totales.egresos}\n`;
-    csv += `Balance Neto Anual,${totales.balance}\n\n`;
-    
-    csv += "EVOLUCION MENSUAL\n";
-    csv += "Mes,Internet,IPTV,Extras/Adic,Total Ingresos,Egresos,Balance\n";
-    meses.forEach(m => {
-      csv += `${m.label},${m.internet},${m.iptv},${m.extras+m.adicional},${m.ingresos},${m.egresos},${m.balance}\n`;
-    });
-    
-    if (proyectos?.length > 0) {
-      csv += "\nPROYECTOS DEL AÑO\n";
-      csv += "Nombre,Monto Total,Invertido,Estado\n";
-      proyectos.forEach(p => {
-        csv += `"${p.nombre}",${p.monto_total},${p.monto_invertido},"${p.estado}"\n`;
-      });
+  const handleExportarAnual = async () => {
+    setLoading(true);
+    try {
+      const response = await balanceService.exportarReporteAnualExcel(anio);
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Balance_Anual_Opsatel_${anio}.xlsx`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error(error);
+      showError("Error al exportar el reporte anual Excel");
+    } finally {
+      setLoading(false);
     }
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Balance_Anual_Opsatel_${anio}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const Tab = ({ id, label, icon }) => (
