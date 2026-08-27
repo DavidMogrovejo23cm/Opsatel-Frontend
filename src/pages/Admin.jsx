@@ -164,8 +164,7 @@ const Admin = () => {
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
-        cortesia_total: pagoData.cortesiaMode === 'TOTAL',
-        saldo: parseFloat(pagoData.original_internet || 0)
+        cortesia_total: pagoData.cortesiaMode === 'TOTAL'
       });
 
       // Luego registrar el pago que descontará del saldo actualizado
