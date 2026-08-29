@@ -158,15 +158,19 @@ const Activacion = () => {
     if (!selectedCliente || !selectedCandidate || !type) return;
     setCreatingTask(true);
     try {
-      const gponPort = selectedCandidate.gpon_port || `0/0/${selectedCliente.puerto || 1}`;
+      const isSayausi = (selectedCandidate?.gpon_port && selectedCandidate.gpon_port.startsWith('0/1/')) ||
+                        (selectedCliente?.nodo && selectedCliente.nodo.toUpperCase().includes('SAYAUS'));
+      const defaultFrame = isSayausi ? '0/1/' : '0/0/';
+      const gponPort = selectedCandidate.gpon_port || `${defaultFrame}${selectedCliente.puerto || 1}`;
       const puerto = Number(gponPort.split('/').pop()) || 0;
-      const profile = String(100 + puerto);
+      const profile = String((isSayausi ? 400 : 100) + puerto);
 
       const payload = {
         mac: selectedCandidate.mac.replace(/[:\-]/g, '').toUpperCase(),
         gpon_port: gponPort,
         ont_id: selectedCandidate.ont_id || selectedCliente.id_port || '1',
         description: `${selectedCliente.id} ${selectedCliente.nombre}`,
+        nodo: selectedCliente.nodo,
         profile_id: profile,
         srvprofile_id: profile,
         provision_type: type
