@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { extrasService } from '../services/api';
+import { extrasService, configuracionService } from '../services/api';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showConfirm, showToast } from '../utils/alerts';
 
 
 const ExtrasGeneral = () => {
     const [extras, setExtras] = useState([]);
+    const [bancosList, setBancosList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -102,7 +103,9 @@ const ExtrasGeneral = () => {
         try {
             setLoading(true);
             const res = await extrasService.listar();
+            const banksResp = await configuracionService.getBancos();
             setExtras(res.data || []);
+            setBancosList(banksResp.data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -663,12 +666,21 @@ const ExtrasGeneral = () => {
                                 <input className="input" type="number" step="0.01" value={pagoData.monto} onChange={e => setPagoData({...pagoData, monto: e.target.value})} />
                             </div>
                             <div className="form-group">
-                                <label className="label">Baco / Método</label>
-                                <input className="input" value={pagoData.metodo} onChange={e => setPagoData({...pagoData, metodo: e.target.value})} />
+                                <label className="label">Banco / Método</label>
+                                <select className="input" value={pagoData.metodo} onChange={e => setPagoData({...pagoData, metodo: e.target.value})} style={{ background: '#1e293b' }}>
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                    {bancosList.map(b => (
+                                        <option key={b.id} value={b.nombre}>{b.nombre}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="form-group">
                                 <label className="label">Factura #</label>
-                                <input className="input" value={pagoData.factura} onChange={e => setPagoData({...pagoData, factura: e.target.value})} />
+                                <input className="input" placeholder="Ej: 001-001-0001" value={pagoData.factura} onChange={e => setPagoData({...pagoData, factura: e.target.value})} />
+                            </div>
+                            <div className="form-group grid-span-2">
+                                <label className="label">Referencia (Opcional)</label>
+                                <input className="input" placeholder="Referencia bancaria" value={pagoData.referencia} onChange={e => setPagoData({...pagoData, referencia: e.target.value})} />
                             </div>
                         </div>
 
