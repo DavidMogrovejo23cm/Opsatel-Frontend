@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
     { path: '/hoja-ruta', label: 'Hoja de Ruta', icon: '🗓️', roles: ['administrador', 'tecnico'] },
     { path: '/activacion', label: 'Activación', icon: '⚡', roles: ['administrador', 'tecnico', 'instalador'] },
     { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador'] },
-    { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador'] },
+    { path: '/administrar', label: 'Administrar', icon: '⚙️', roles: ['administrador', 'tecnico'] },
     { path: '/call-center', label: 'Call Center', icon: '📞', roles: ['administrador'] },
     { path: '/balance', label: 'Balance', icon: '📒', roles: ['administrador'] },
     { path: '/config', label: 'Configuración', icon: '🛠️', roles: ['administrador'] },

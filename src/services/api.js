@@ -46,6 +46,8 @@ export const clienteService = {
   actualizar: (id, data) => api.patch(`/clientes/${id}`, data),
   getById: (id) => api.get(`/clientes/${id}`),
   eliminar: (id) => api.delete(`/clientes/${id}`),
+  borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
+  suspenderServicio: (id) => api.post(`/clientes/${id}/suspender-mikrotik`),
   uploadCedula: (id, formData) => api.post(`/clientes/${id}/upload-cedula`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

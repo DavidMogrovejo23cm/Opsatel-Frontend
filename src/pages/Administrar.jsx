@@ -4,7 +4,11 @@ import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
 
 
+import { useAuth } from '../context/AuthContext';
+
 const Administrar = () => {
+  const { user } = useAuth();
+  const isTecnico = user?.rol === 'tecnico';
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -286,7 +290,9 @@ const Administrar = () => {
                       </td>
                       <td style={cellStyle}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
+                          {!isTecnico && (
+                            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
+                          )}
                           {(c.service_port || c.id_port) && (
                             <button
                               className="btn btn-secondary"
@@ -311,7 +317,7 @@ const Administrar = () => {
                               🗑️ Borrar OLT
                             </button>
                           )}
-                          {c.ip && c.qos_status !== 'APPLIED' && (
+                          {!isTecnico && c.ip && c.qos_status !== 'APPLIED' && (
                              <button
                                className="btn btn-secondary"
                                style={{
