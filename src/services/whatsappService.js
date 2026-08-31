@@ -57,9 +57,28 @@ export const whatsappService = {
   enviarGlobal: (mensaje) =>
     api.post('/whatsapp/enviar-global', { mensaje: mensaje }),
 
+  // Administradores de WhatsApp
+  obtenerAdministradores: () =>
+    api.get('/whatsapp/administradores'),
+
+  crearAdministrador: (numero, nombre, permisos = 'admin_total', activo = true) =>
+    api.post('/whatsapp/administradores', {
+      numero: numero,
+      nombre: nombre,
+      permisos: permisos,
+      activo: activo
+    }),
+
+  actualizarAdministrador: (admin_id, data) =>
+    api.patch(`/whatsapp/administradores/${admin_id}`, data),
+
+  eliminarAdministrador: (admin_id) =>
+    api.delete(`/whatsapp/administradores/${admin_id}`),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
   }
 };
+

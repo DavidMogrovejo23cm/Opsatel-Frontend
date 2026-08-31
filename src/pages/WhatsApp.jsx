@@ -33,15 +33,86 @@ const WhatsApp = () => {
     // Historial
     const [historial, setHistorial] = useState([]);
 
+    // Administradores autorizados
+    const [administradores, setAdministradores] = useState([]);
+    const [nombreAdmin, setNombreAdmin] = useState('');
+    const [numeroAdmin, setNumeroAdmin] = useState('');
+    const [permisosAdmin, setPermisosAdmin] = useState('admin_total');
+    const [guardandoAdmin, setGuardandoAdmin] = useState(false);
+    const [cargandoAdmins, setCargandoAdmins] = useState(false);
+
     useEffect(() => {
         cargarConfiguracion();
         cargarHistorial();
         cargarEstadoConexion();
+        cargarAdministradores();
         
         // Recargar historial cada 30 segundos
         const intervalo = setInterval(cargarHistorial, 30000);
         return () => clearInterval(intervalo);
     }, []);
+
+    const cargarAdministradores = async () => {
+        setCargandoAdmins(true);
+        try {
+            const respuesta = await whatsappService.obtenerAdministradores();
+            setAdministradores(respuesta.data || respuesta || []);
+        } catch (error) {
+            console.error("Error cargando administradores:", error);
+        } finally {
+            setCargandoAdmins(false);
+        }
+    };
+
+    const manejarGuardarAdministrador = async () => {
+        if (!nombreAdmin.trim() || !numeroAdmin.trim()) {
+            showWarning('Ingresa el nombre y el número de teléfono del Administrador');
+            return;
+        }
+
+        setGuardandoAdmin(true);
+        try {
+            await whatsappService.crearAdministrador(numeroAdmin, nombreAdmin, permisosAdmin, true);
+            showSuccess('Administrador registrado correctamente');
+            setNombreAdmin('');
+            setNumeroAdmin('');
+            setPermisosAdmin('admin_total');
+            cargarAdministradores();
+        } catch (error) {
+            showError('Error al guardar administrador: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setGuardandoAdmin(false);
+        }
+    };
+
+    const manejarAlternarEstadoAdmin = async (admin) => {
+        try {
+            await whatsappService.actualizarAdministrador(admin.id, { activo: !admin.activo });
+            showSuccess(`Administrador ${!admin.activo ? 'activado' : 'desactivado'}`);
+            cargarAdministradores();
+        } catch (error) {
+            showError('Error al actualizar estado: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const manejarEliminarAdmin = async (admin) => {
+        const confirmado = await showConfirm(
+            '🗑️ Eliminar Administrador',
+            `¿Estás seguro de eliminar a ${admin.nombre} (${admin.numero}) como Administrador? Ya no podrá enviar comandos por WhatsApp.`,
+            'Sí, eliminar',
+            'Cancelar'
+        );
+        if (!confirmado) return;
+
+        try {
+            await whatsappService.eliminarAdministrador(admin.id);
+            showSuccess('Administrador eliminado correctamente');
+            cargarAdministradores();
+        } catch (error) {
+            showError('Error al eliminar: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
 
     // Polling del estado de conexión cuando estamos en la pestaña de Conexión o si no está conectado
     useEffect(() => {
@@ -315,8 +386,9 @@ const WhatsApp = () => {
             </div>
 
             <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                {['Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR'].map(tab => (
+                {['Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
                     <button
+
                         key={tab}
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setActiveTab(tab)}
@@ -910,6 +982,147 @@ const WhatsApp = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+                )}
+
+                {/* ADMINISTRADORES */}
+                {activeTab === 'Administradores' && (
+                    <div>
+                        <h3>👑 Números Autorizados como Administradores</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
+                            Registra y gestiona los números de teléfono de WhatsApp que tienen permisos para ejecutar comandos especiales (Alta directa en Hoja de Ruta, consulta de caja, reportes de mora, etc.).
+                        </p>
+
+                        <div style={{ 
+                            background: 'rgba(234, 179, 8, 0.05)', 
+                            border: '1px solid rgba(234, 179, 8, 0.3)',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            marginBottom: '25px'
+                        }}>
+                            <h4 style={{ color: '#fef08a', margin: '0 0 15px 0' }}>➕ Registrar Nuevo Administrador</h4>
+                            
+                            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px' }}>
+                                <div className="input-group" style={{ flex: 1, minWidth: '200px' }}>
+                                    <label className="label">Nombre / Alias del Administrador</label>
+                                    <input 
+                                        type="text"
+                                        className="input" 
+                                        value={nombreAdmin}
+                                        onChange={e => setNombreAdmin(e.target.value)}
+                                        placeholder="Ej: Ing. David - Gerente"
+                                        style={{ marginTop: '8px' }}
+                                    />
+                                </div>
+
+                                <div className="input-group" style={{ flex: 1, minWidth: '200px' }}>
+                                    <label className="label">Número de WhatsApp</label>
+                                    <input 
+                                        type="text"
+                                        className="input" 
+                                        value={numeroAdmin}
+                                        onChange={e => setNumeroAdmin(e.target.value)}
+                                        placeholder="+593982520824 o 0982520824"
+                                        style={{ marginTop: '8px' }}
+                                    />
+                                    <small style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                                        Se formateará automáticamente al código de país (593...).
+                                    </small>
+                                </div>
+
+                                <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
+                                    <label className="label">Permiso / Rol</label>
+                                    <select 
+                                        className="input" 
+                                        value={permisosAdmin} 
+                                        onChange={e => setPermisosAdmin(e.target.value)}
+                                        style={{ marginTop: '8px', height: '40px', background: '#0e1726', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0 10px' }}
+                                    >
+                                        <option value="admin_total">👑 Admin Total (Instalaciones, Caja, Reportes)</option>
+                                        <option value="operador">🛠️ Operador (Solo Instalaciones)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button 
+                                className="btn btn-primary"
+                                onClick={manejarGuardarAdministrador}
+                                disabled={guardandoAdmin}
+                                style={{ width: '100%', background: 'linear-gradient(90deg, #eab308, #ca8a04)', color: '#000', fontWeight: 'bold' }}
+                            >
+                                {guardandoAdmin ? '⏳ Guardando...' : '⭐ Registrar Número Autorizado'}
+                            </button>
+                        </div>
+
+                        {/* LISTADO DE ADMINISTRADORES */}
+                        <h4>📜 Administradores Registrados</h4>
+                        {cargandoAdmins ? (
+                            <p style={{ color: 'var(--text-muted)' }}>Cargando lista de administradores...</p>
+                        ) : administradores.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '30px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                                <p style={{ fontSize: '2rem', margin: 0 }}>📵</p>
+                                <p style={{ marginTop: '8px' }}>No hay números administradores registrados. Agrega el primero arriba.</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                                            <th style={{ padding: '12px' }}>Nombre / Alias</th>
+                                            <th style={{ padding: '12px' }}>Número WhatsApp</th>
+                                            <th style={{ padding: '12px' }}>Permisos</th>
+                                            <th style={{ padding: '12px' }}>Estado</th>
+                                            <th style={{ padding: '12px' }}>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {administradores.map((admin) => (
+                                            <tr key={admin.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <td style={{ padding: '12px', fontWeight: 'bold' }}>
+                                                    👑 {admin.nombre}
+                                                </td>
+                                                <td style={{ padding: '12px', fontFamily: 'monospace', color: '#60a5fa' }}>
+                                                    {admin.numero}
+                                                </td>
+                                                <td style={{ padding: '12px', fontSize: '0.85rem' }}>
+                                                    <span style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#fef08a', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        {admin.permisos || 'admin_total'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '12px' }}>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: 'bold',
+                                                        background: admin.activo ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                        color: admin.activo ? '#86efac' : '#fca5a5'
+                                                    }}>
+                                                        {admin.activo ? '✅ Activo' : '❌ Inactivo'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+                                                    <button 
+                                                        className="btn btn-secondary"
+                                                        onClick={() => manejarAlternarEstadoAdmin(admin)}
+                                                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                                                    >
+                                                        {admin.activo ? 'Desactivar' : 'Activar'}
+                                                    </button>
+                                                    <button 
+                                                        className="btn"
+                                                        onClick={() => manejarEliminarAdmin(admin)}
+                                                        style={{ padding: '4px 10px', fontSize: '0.8rem', background: '#ef4444', color: '#fff' }}
+                                                    >
+                                                        🗑️ Eliminar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
