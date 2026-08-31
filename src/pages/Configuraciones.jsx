@@ -70,13 +70,15 @@ const Configuraciones = () => {
     const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
     const [diasPermanencia, setDiasPermanencia] = useState(7);
     const [diasSaving, setDiasSaving] = useState(false);
+    const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true });
+    const [suspensionSaving, setSuspensionSaving] = useState(false);
 
     const fetchData = async () => {
         const user = configuracionService.getCurrentUser();
         const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
 
         try {
-            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes, diasRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes, diasRes, suspRes] = await Promise.all([
                 configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
@@ -84,9 +86,17 @@ const Configuraciones = () => {
                 configuracionService.getParroquias().catch(e => ({ data: [] })),
                 configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } })),
                 configuracionService.getCajasNap().catch(e => ({ data: [] })),
-                configuracionService.getDiasPermanencia().catch(e => ({ data: { dias: 7 } }))
+                configuracionService.getDiasPermanencia().catch(e => ({ data: { dias: 7 } })),
+                configuracionService.getSuspensionCorteConfig().catch(e => ({ data: { dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true } }))
             ]);
             if (diasRes.data?.dias) setDiasPermanencia(diasRes.data.dias);
+            if (suspRes.data) {
+                setSuspensionForm({
+                    dia_corte: suspRes.data.dia_corte || 20,
+                    hora_corte: suspRes.data.hora_corte || '01:00',
+                    auto_suspension_enabled: suspRes.data.auto_suspension_enabled !== false
+                });
+            }
             
             setNodos(paRes.data);
             setPlanes(plRes.data);
@@ -650,6 +660,18 @@ const Configuraciones = () => {
         }
     };
 
+    const handleSaveSuspensionConfig = async () => {
+        setSuspensionSaving(true);
+        try {
+            await configuracionService.setSuspensionCorteConfig(suspensionForm);
+            showSuccess('Configuración de suspensión por fecha guardada correctamente');
+        } catch (error) {
+            showError('Error al guardar suspensión: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setSuspensionSaving(false);
+        }
+    };
+
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -998,6 +1020,78 @@ const Configuraciones = () => {
                                 style={{ padding: '10px 24px' }}
                             >
                                 {diasSaving ? '⏳ Guardando...' : '💾 Guardar'}
+                            </button>
+                        </div>
+
+                        {/* Card para Suspensión por Fecha de Corte (Día 20) */}
+                        <div style={{
+                            background: 'rgba(239, 68, 68, 0.05)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            maxWidth: '520px',
+                            marginTop: '24px'
+                        }}>
+                            <h4 style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '1rem' }}>
+                                ⚙️ Suspensión de Servicio por Corte / Mora
+                            </h4>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '18px', lineHeight: '1.4' }}>
+                                Configura el día del mes para la suspensión de servicio por falta de pago. En esa fecha, los clientes en mora se agregan a la lista de MikroTik y su estado pasa a <strong style={{ color: '#ef4444' }}>Moroso</strong>. Al pagar, se reactivan automáticamente.
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                        🗓️ Día de corte mensual
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="31"
+                                        className="input"
+                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                        value={suspensionForm.dia_corte}
+                                        onChange={e => setSuspensionForm({ ...suspensionForm, dia_corte: parseInt(e.target.value) || 20 })}
+                                    />
+                                </div>
+
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                        ⏰ Hora de corte (HH:MM)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                        value={suspensionForm.hora_corte}
+                                        onChange={e => setSuspensionForm({ ...suspensionForm, hora_corte: e.target.value })}
+                                        placeholder="01:00"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
+                                <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                    ⚡ Suspensión Automática
+                                </label>
+                                <select
+                                    className="input"
+                                    style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                    value={suspensionForm.auto_suspension_enabled ? 'true' : 'false'}
+                                    onChange={e => setSuspensionForm({ ...suspensionForm, auto_suspension_enabled: e.target.value === 'true' })}
+                                >
+                                    <option value="true" style={{ background: '#1e1b4b' }}>✅ Activado (Corte masivo en fecha)</option>
+                                    <option value="false" style={{ background: '#1e1b4b' }}>❌ Desactivado</option>
+                                </select>
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSaveSuspensionConfig}
+                                disabled={suspensionSaving}
+                                style={{ padding: '10px 24px', background: '#ef4444', border: 'none', width: '100%', fontWeight: 'bold' }}
+                            >
+                                {suspensionSaving ? '⏳ Guardando...' : '💾 Guardar Configuración de Suspensión'}
                             </button>
                         </div>
                     </div>

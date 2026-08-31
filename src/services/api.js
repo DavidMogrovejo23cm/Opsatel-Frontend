@@ -144,6 +144,9 @@ export const configuracionService = {
   // Dias de permanencia en Administrar
   getDiasPermanencia: () => api.get('/configuraciones/dias-permanencia'),
   setDiasPermanencia: (dias) => api.put('/configuraciones/dias-permanencia', { dias }),
+  // Suspensión de servicio por fecha de corte
+  getSuspensionCorteConfig: () => api.get('/configuraciones/suspension-corte'),
+  setSuspensionCorteConfig: (data) => api.put('/configuraciones/suspension-corte', data),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

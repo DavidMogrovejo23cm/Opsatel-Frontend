@@ -34,31 +34,6 @@ const General = () => {
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
   const [uploadingCedula, setUploadingCedula] = useState(false);
-  const [suspendingId, setSuspendingId] = useState(null);
-
-  const handleSuspenderServicio = async (cliente) => {
-    if (!cliente.ip) {
-      return showWarning(`El cliente '${cliente.nombre}' no tiene una IP asignada.`);
-    }
-    const isSayausi = cliente.nodo && cliente.nodo.toUpperCase().includes('SAYAUS');
-    const listName = isSayausi ? 'CLIENTES_SUSPENDIDOS_POR_PAGOS' : 'CLIENTES_SUSPENDIDOS_POR_PAGO';
-
-    if (!window.confirm(`¿Deseas suspender el servicio de "${cliente.nombre}" en MikroTik?\n\nIP: ${cliente.ip}\nNodo: ${cliente.nodo || 'Sin Nodo'}\nLista: ${listName}`)) {
-      return;
-    }
-
-    setSuspendingId(cliente.id);
-    try {
-      const res = await clienteService.suspenderServicio(cliente.id);
-      showSuccess(res.data.message || `Servicio suspendido en MikroTik (${listName})`);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      showError('Error al suspender: ' + (err.response?.data?.detail || err.message));
-    } finally {
-      setSuspendingId(null);
-    }
-  };
 
   // Definición de las columnas del sistema
   const allColumns = [
@@ -575,24 +550,6 @@ const General = () => {
                     </th>
                   );
                 })}
-                <th key="acciones_suspender" style={{
-                  padding: '12px',
-                  borderBottom: '1px solid var(--glass-border)',
-                  borderRight: '1px solid var(--glass-border)',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                  width: 140,
-                  minWidth: 140,
-                  maxWidth: 140,
-                  position: 'sticky',
-                  right: 0,
-                  background: '#131526',
-                  zIndex: 22,
-                  borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
-                }}>
-                  Suspender
-                </th>
                 {selectedAction === 'BORRAR' && (
                   <th key="acciones" style={{
                     padding: '12px',
@@ -605,7 +562,7 @@ const General = () => {
                     minWidth: 100,
                     maxWidth: 100,
                     position: 'sticky',
-                    right: 140,
+                    right: 0,
                     background: '#131526',
                     zIndex: 22,
                     borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
@@ -805,9 +762,10 @@ const General = () => {
                           <span style={{
                             color: col === 'estado' ? (
                               c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
-                                c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
-                                  c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
-                                    c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
+                                ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
+                                  c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
+                                    c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
+                                      c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
                             ) : 'inherit',
                             fontWeight: col === 'id' ? '600' : 'normal'
                           }}>
@@ -907,41 +865,6 @@ const General = () => {
                       </td>
                     );
                   })}
-                  <td key="acciones_suspender" style={{
-                    padding: '6px 12px',
-                    whiteSpace: 'nowrap',
-                    width: 140,
-                    minWidth: 140,
-                    maxWidth: 140,
-                    textAlign: 'center',
-                    position: 'sticky',
-                    right: 0,
-                    background: '#131526',
-                    zIndex: 12,
-                    borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                  }}>
-                    <button
-                      onClick={() => handleSuspenderServicio(c)}
-                      disabled={suspendingId === c.id}
-                      style={{
-                        padding: '5px 10px',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                        color: '#f87171',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.72rem',
-                        fontWeight: 'bold',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                        opacity: suspendingId === c.id ? 0.6 : 1
-                      }}
-                      title={`Suspender servicio en MikroTik (IP: ${c.ip || 'Sin IP'})`}
-                    >
-                      {suspendingId === c.id ? '⏳...' : '🚫 Suspender Servicio'}
-                    </button>
-                  </td>
                   {selectedAction === 'BORRAR' && (
                     <td key="acciones" style={{
                       padding: '6px 12px',
@@ -951,7 +874,7 @@ const General = () => {
                       maxWidth: 100,
                       textAlign: 'center',
                       position: 'sticky',
-                      right: 140,
+                      right: 0,
                       background: '#131526',
                       zIndex: 12,
                       borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
