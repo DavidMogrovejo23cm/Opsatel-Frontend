@@ -73,7 +73,8 @@ const Admin = () => {
   const openPagoModal = (cliente) => {
     setSelectedCliente(cliente);
 
-    const internetSugerido = Math.max(
+    const isMantenimiento = !!cliente.mantenimiento;
+    const internetSugerido = isMantenimiento ? "10.00" : Math.max(
       0,
       parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)
     ).toFixed(2);
@@ -102,6 +103,7 @@ const Admin = () => {
       comentarios_edit: cliente.comentarios || '',
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE',
       cortesiaPct: '',
+      isMantenimiento: isMantenimiento,
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
       original_adicional: cliente.adicional || '0',
@@ -164,7 +166,8 @@ const Admin = () => {
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
-        cortesia_total: pagoData.cortesiaMode === 'TOTAL'
+        cortesia_total: pagoData.cortesiaMode === 'TOTAL',
+        mantenimiento: !!pagoData.isMantenimiento
       });
 
       // Luego registrar el pago que descontará del saldo actualizado
@@ -211,6 +214,7 @@ const Admin = () => {
         cod: pagoData.cod,
         facturas: pagoData.facturas,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
+        mantenimiento: !!pagoData.isMantenimiento,
         saldo: parseFloat(pagoData.original_internet || 0)
       });
       showSuccess("Valores guardados correctamente");
@@ -758,46 +762,73 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  {/* Sección de cortesía */}
+                  {/* Sección de cortesía y mantenimiento */}
                   <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '12px', border: '1px dashed rgba(99, 102, 241, 0.2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input
-                        type="checkbox"
-                        id="cortesia_total"
-                        checked={pagoData.cortesiaMode === 'TOTAL'}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          const mode = isChecked ? 'TOTAL' : 'NONE';
-                          if (mode === 'TOTAL') {
-                            setPagoData({
-                              ...pagoData,
-                              cortesiaMode: mode,
-                              monto: "0",
-                              descuentoValue: pagoData.original_internet,
-                              iptvDescuentoValue: pagoData.original_plus
-                            });
-                          } else {
-                            const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.deuda_plus) + parseFloat(pagoData.deuda_adicional)).toFixed(2);
-                            setPagoData({
-                              ...pagoData,
-                              cortesiaMode: mode,
-                              monto: originalTotal,
-                              descuentoValue: 0,
-                              iptvDescuentoValue: 0
-                            });
-                          }
-                        }}
-                        style={{ width: '18px', height: '18px', accentColor: '#818cf8', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="cortesia_total" style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total (Cobro $0.00)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          id="cortesia_total"
+                          checked={pagoData.cortesiaMode === 'TOTAL'}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            const mode = isChecked ? 'TOTAL' : 'NONE';
+                            if (mode === 'TOTAL') {
+                              setPagoData({
+                                ...pagoData,
+                                cortesiaMode: mode,
+                                monto: "0",
+                                descuentoValue: pagoData.original_internet,
+                                iptvDescuentoValue: pagoData.original_plus
+                              });
+                            } else {
+                              const originalTotal = (parseFloat(pagoData.original_internet) + parseFloat(pagoData.deuda_plus) + parseFloat(pagoData.deuda_adicional)).toFixed(2);
+                              setPagoData({
+                                ...pagoData,
+                                cortesiaMode: mode,
+                                monto: originalTotal,
+                                descuentoValue: 0,
+                                iptvDescuentoValue: 0
+                              });
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', accentColor: '#818cf8', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8' }}>Cortesía Total (Cobro $0.00)</span>
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          id="mantenimiento_modal_checkbox"
+                          checked={!!pagoData.isMantenimiento}
+                          onChange={async (e) => {
+                            const isChecked = e.target.checked;
+                            const newInternetVal = isChecked ? "10.00" : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo).toFixed(2) : "0.00");
+                            const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
+                            const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
+                            const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
+
+                            setPagoData(prev => ({
+                              ...prev,
+                              isMantenimiento: isChecked,
+                              original_internet: newInternetVal,
+                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                            }));
+
+                            try {
+                              await clienteService.updateAdmin(selectedCliente.id, { mantenimiento: isChecked });
+                              showSuccess(`Mantenimiento ${isChecked ? 'activado ($10.00)' : 'desactivado'} para ${selectedCliente.nombre}`);
+                              if (selectedCliente) selectedCliente.mantenimiento = isChecked;
+                            } catch (err) {
+                              showError('Error al actualizar mantenimiento');
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', accentColor: '#ec4899', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#f472b6' }}>🛠️ Mantenimiento ($10.00/mes)</span>
+                      </label>
                     </div>
-                    {selectedCliente?.mantenimiento && (
-                      <div style={{ marginTop: '8px' }}>
-                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', background: 'rgba(236,72,153,0.2)', color: '#f472b6', border: '1px solid rgba(236,72,153,0.4)', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          🛠️ Plan Mantenimiento ($10.00/mes)
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
