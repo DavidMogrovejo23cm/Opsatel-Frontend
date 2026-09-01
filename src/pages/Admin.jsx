@@ -74,10 +74,18 @@ const Admin = () => {
     setSelectedCliente(cliente);
 
     const isMantenimiento = !!cliente.mantenimiento;
-    const internetSugerido = isMantenimiento ? "10.00" : Math.max(
-      0,
-      parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0)
-    ).toFixed(2);
+    const customPriceVal = cliente.precio_plan_especial !== null && cliente.precio_plan_especial !== undefined ? parseFloat(cliente.precio_plan_especial) : 0;
+    const isCustomPlan = !isMantenimiento && customPriceVal > 0;
+
+    let netFee = 0;
+    if (isMantenimiento) {
+      netFee = 10.00;
+    } else if (isCustomPlan) {
+      netFee = customPriceVal;
+    } else {
+      netFee = Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0));
+    }
+    const internetSugerido = netFee.toFixed(2);
 
     const deudaPlus = parseFloat(cliente.plus || 0);
     const deudaAdicional = parseFloat(cliente.adicional || 0);
@@ -104,6 +112,9 @@ const Admin = () => {
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE',
       cortesiaPct: '',
       isMantenimiento: isMantenimiento,
+      isCustomPlan: isCustomPlan,
+      precio_plan_especial: customPriceVal,
+      customPlanPriceInput: customPriceVal > 0 ? customPriceVal.toString() : internetSugerido,
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
       original_adicional: cliente.adicional || '0',
@@ -814,18 +825,22 @@ const Admin = () => {
                             setPagoData(prev => ({
                               ...prev,
                               isMantenimiento: isChecked,
+                              isCustomPlan: false,
+                              precio_plan_especial: 0,
                               original_internet: newInternetVal,
                               monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                             }));
 
                             if (selectedCliente) {
                               selectedCliente.mantenimiento = isChecked;
+                              selectedCliente.precio_plan_especial = 0;
                               selectedCliente.saldo = isChecked ? 10.00 : (planPrice > 0 ? planPrice : selectedCliente.saldo);
                             }
 
                             try {
                               await clienteService.updateAdmin(selectedCliente.id, {
                                 mantenimiento: isChecked,
+                                precio_plan_especial: 0,
                                 ...(isChecked ? { saldo: 10.00 } : (planPrice > 0 ? { saldo: planPrice } : {}))
                               });
                               showSuccess(`Mantenimiento ${isChecked ? 'activado ($10.00)' : 'desactivado (tarifa plan)'} para ${selectedCliente.nombre}`);
@@ -837,7 +852,129 @@ const Admin = () => {
                         />
                         <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#f472b6' }}>🛠️ Mantenimiento ($10.00/mes)</span>
                       </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          id="modificar_saldo_plan_checkbox"
+                          checked={!!pagoData.isCustomPlan}
+                          onChange={async (e) => {
+                            const isChecked = e.target.checked;
+                            const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
+                            const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo) : 0);
+                            
+                            if (!isChecked) {
+                              // Desmarcado: restaurar precio original del plan
+                              const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
+                              const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
+                              const newInternetVal = pagoData.isMantenimiento ? "10.00" : planPrice.toFixed(2);
+                              const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
+
+                              setPagoData(prev => ({
+                                ...prev,
+                                isCustomPlan: false,
+                                precio_plan_especial: 0,
+                                customPlanPriceInput: '',
+                                original_internet: newInternetVal,
+                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                              }));
+
+                              if (selectedCliente) {
+                                selectedCliente.precio_plan_especial = 0;
+                                if (!selectedCliente.mantenimiento) selectedCliente.saldo = planPrice;
+                              }
+
+                              try {
+                                await clienteService.updateAdmin(selectedCliente.id, {
+                                  precio_plan_especial: 0,
+                                  ...(selectedCliente.mantenimiento ? {} : { saldo: planPrice })
+                                });
+                                showSuccess(`Tarifa del plan restaurada a $${planPrice.toFixed(2)} para ${selectedCliente.nombre}`);
+                              } catch (err) {
+                                showError('Error al restaurar tarifa del plan');
+                              }
+                            } else {
+                              // Marcado: habilitar modificación de saldo
+                              const currentVal = parseFloat(pagoData.customPlanPriceInput || pagoData.original_internet) || planPrice;
+                              const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
+                              const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
+                              const newTotal = (currentVal + deudaPlus + deudaAdic).toFixed(2);
+
+                              setPagoData(prev => ({
+                                ...prev,
+                                isCustomPlan: true,
+                                isMantenimiento: false,
+                                precio_plan_especial: currentVal,
+                                customPlanPriceInput: currentVal.toFixed(2),
+                                original_internet: currentVal.toFixed(2),
+                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                              }));
+
+                              if (selectedCliente) {
+                                selectedCliente.mantenimiento = false;
+                                selectedCliente.precio_plan_especial = currentVal;
+                                selectedCliente.saldo = currentVal;
+                              }
+
+                              try {
+                                await clienteService.updateAdmin(selectedCliente.id, {
+                                  mantenimiento: false,
+                                  precio_plan_especial: currentVal,
+                                  saldo: currentVal
+                                });
+                                showSuccess(`Modificación de tarifa activada para ${selectedCliente.nombre}`);
+                              } catch (err) {
+                                showError('Error al activar tarifa especial');
+                              }
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', accentColor: '#fbbf24', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fbbf24' }}>🏷️ Modificar saldo plan</span>
+                      </label>
                     </div>
+
+                    {pagoData.isCustomPlan && (
+                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(251, 191, 36, 0.3)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: 'bold' }}>Valor Promocional del Internet ($):</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="input"
+                          style={{ width: '120px', height: '36px', padding: '4px 8px', borderColor: '#fbbf24', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', margin: 0 }}
+                          value={pagoData.customPlanPriceInput}
+                          onChange={async (e) => {
+                            const inputVal = e.target.value;
+                            const numericVal = parseFloat(inputVal) || 0;
+                            const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
+                            const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
+                            const newTotal = (numericVal + deudaPlus + deudaAdic).toFixed(2);
+
+                            setPagoData(prev => ({
+                              ...prev,
+                              customPlanPriceInput: inputVal,
+                              precio_plan_especial: numericVal,
+                              original_internet: numericVal.toFixed(2),
+                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                            }));
+
+                            if (selectedCliente) {
+                              selectedCliente.precio_plan_especial = numericVal;
+                              selectedCliente.saldo = numericVal;
+                            }
+
+                            try {
+                              await clienteService.updateAdmin(selectedCliente.id, {
+                                precio_plan_especial: numericVal,
+                                saldo: numericVal
+                              });
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

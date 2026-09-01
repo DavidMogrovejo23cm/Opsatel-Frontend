@@ -793,15 +793,16 @@ const General = () => {
                                 );
                               }
                               if (col === 'plan') {
-                                let precio = 0; let isSpecial = false;
+                                let precio = 0; let isSpecial = false; let isPromo = false;
                                 if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
-                                else if (c.tercera_edad && c.precio_plan_especial) { precio = c.precio_plan_especial; isSpecial = true; }
+                                else if (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; isPromo = true; }
+                                else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
                                 else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ color: precio > 0 ? (c.mantenimiento ? '#ec4899' : (isSpecial ? '#f59e0b' : '#fbbf24')) : 'var(--text-muted)', fontWeight: '600' }}>
+                                    <span style={{ color: precio > 0 ? (c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#fbbf24'))) : 'var(--text-muted)', fontWeight: '600' }}>
                                       {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
-                                      {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>)}
+                                      {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
                                     </span>
                                     <button
                                       type="button"
