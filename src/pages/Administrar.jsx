@@ -35,6 +35,7 @@ const Administrar = () => {
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
   const [diasPermanencia, setDiasPermanencia] = useState(7);
+  const [nowTick, setNowTick] = useState(Date.now());
 
   // Estado para confirmación de borrado OLT
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -61,6 +62,7 @@ const Administrar = () => {
   useEffect(() => {
     fetchData();
     const interval = setInterval(() => fetchData(true), 30000);
+    const tickInterval = setInterval(() => setNowTick(Date.now()), 5000);
     
     const fetchSelects = async () => {
       try {
@@ -79,6 +81,11 @@ const Administrar = () => {
       }
     };
     fetchSelects();
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(tickInterval);
+    };
   }, []);
 
   const startEdit = (cliente) => {
@@ -121,6 +128,46 @@ const Administrar = () => {
     }
   };
 
+  const handleFinalizarCliente = async (clienteId) => {
+    try {
+      await clienteService.actualizar(clienteId, {
+        fecha_firma: '2020-01-01 00:00:00',
+        instalation_date: '2020-01-01 00:00:00'
+      });
+      showSuccess('Cliente finalizado correctamente (movido a General)');
+      fetchData();
+    } catch (err) {
+      showError('Error al finalizar cliente: ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleFinalizarTodos = async () => {
+    if (filteredClientes.length === 0) {
+      showWarning('No hay clientes en la lista para finalizar.');
+      return;
+    }
+    if (!window.confirm(`¿Deseas finalizar todos los ${filteredClientes.length} clientes mostrados y moverlos a General?`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await Promise.all(
+        filteredClientes.map(c =>
+          clienteService.actualizar(c.id, {
+            fecha_firma: '2020-01-01 00:00:00',
+            instalation_date: '2020-01-01 00:00:00'
+          })
+        )
+      );
+      showSuccess(`¡Se finalizaron ${filteredClientes.length} clientes correctamente!`);
+      fetchData();
+    } catch (err) {
+      showError('Error al finalizar clientes: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveEdit = async () => {
     if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
       return showWarning('Los campos Nombre, Cédula y Celular son obligatorios.');
@@ -158,7 +205,7 @@ const Administrar = () => {
       const parts = str.replace('T', ' ').split(' ');
       const [y, m, d] = parts[0].split('-').map(Number);
       const timeParts = parts[1].split(':').map(Number);
-      return new Date(y, m - 1, d, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0);
+      return { isDateOnly: false, dateObj: new Date(y, m - 1, d, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0) };
     }
 
     // Formato DD/MM/YYYY HH:mm:ss
@@ -166,26 +213,26 @@ const Administrar = () => {
       const parts = str.replace('T', ' ').split(' ');
       const [d, m, y] = parts[0].split('/').map(Number);
       const timeParts = parts[1].split(':').map(Number);
-      return new Date(y, m - 1, d, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0);
+      return { isDateOnly: false, dateObj: new Date(y, m - 1, d, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0) };
     }
     
-    // Formato YYYY-MM-DD -> Parsear como medianoche local
+    // Formato YYYY-MM-DD (sin hora)
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
       const [y, m, d] = str.split('-').map(Number);
-      return new Date(y, m - 1, d, 0, 0, 0, 0);
+      return { isDateOnly: true, dateObj: new Date(y, m - 1, d, 0, 0, 0, 0) };
     }
     
-    // Formato DD/MM/YYYY
+    // Formato DD/MM/YYYY (sin hora)
     if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
       const parts = str.split('/');
       const d = Number(parts[0]);
       const m = Number(parts[1]);
       const y = Number(parts[2]);
-      return new Date(y, m - 1, d, 0, 0, 0, 0);
+      return { isDateOnly: true, dateObj: new Date(y, m - 1, d, 0, 0, 0, 0) };
     }
     
     const parsed = new Date(str);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    return isNaN(parsed.getTime()) ? null : { isDateOnly: false, dateObj: parsed };
   };
 
   const filteredClientes = clientes.filter(c => {
@@ -195,17 +242,35 @@ const Administrar = () => {
     const rawFecha = c.fecha_firma || c.instalation_date;
     if (!rawFecha) return false;
 
-    const fechaObj = parseFechaFirma(rawFecha);
-    if (!fechaObj) return false;
+    const parsed = parseFechaFirma(rawFecha);
+    if (!parsed) return false;
 
-    const ahora = Date.now();
+    const { isDateOnly, dateObj } = parsed;
     const valPermanencia = parseFloat(diasPermanencia) || 7;
     const msPermanencia = valPermanencia * 24 * 60 * 60 * 1000;
-    const limiteInferior = ahora - msPermanencia;
+    const limiteInferior = nowTick - msPermanencia;
 
-    // Si la fecha/hora de creación o firma es anterior al límite, el cliente YA NO es reciente -> Ocultar de Administrar Recientes
-    if (fechaObj.getTime() < limiteInferior) {
-      return false;
+    if (!isDateOnly) {
+      // Con HORA exacta: expira exactamente pasados los N minutos o N días transcurridos
+      if (dateObj.getTime() < limiteInferior) {
+        return false;
+      }
+    } else {
+      // Solo FECHA (sin hora)
+      if (valPermanencia < 1) {
+        // Para 5 minutos o sub-diario: si la fecha no es de hoy, expira inmediatamente
+        const hoy = new Date(nowTick);
+        const esMismoDia = dateObj.getFullYear() === hoy.getFullYear() &&
+                           dateObj.getMonth() === hoy.getMonth() &&
+                           dateObj.getDate() === hoy.getDate();
+        if (!esMismoDia) return false;
+      } else {
+        // Para días (ej. 1 día, 2 días...): expira al cumplir los N días transcurridos
+        const inicioDiaLimite = new Date(new Date(nowTick).getFullYear(), new Date(nowTick).getMonth(), new Date(nowTick).getDate() - Math.floor(valPermanencia) + 1, 0, 0, 0, 0).getTime();
+        if (dateObj.getTime() < inicioDiaLimite) {
+          return false;
+        }
+      }
     }
 
     return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -230,7 +295,26 @@ const Administrar = () => {
             </strong>.
           </p>
         </div>
-        <div className="page-actions">
+        <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {filteredClientes.length > 0 && (
+            <button
+              className="btn btn-secondary"
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                background: 'rgba(16,185,129,0.15)',
+                border: '1px solid rgba(16,185,129,0.4)',
+                color: '#34d399',
+                cursor: 'pointer',
+                borderRadius: '8px',
+                fontWeight: 700
+              }}
+              title="Finalizar la permanencia de todos los clientes mostrados y moverlos a General"
+              onClick={handleFinalizarTodos}
+            >
+              🏁 Finalizar Todos ({filteredClientes.length})
+            </button>
+          )}
           <input
             className="input"
             placeholder="Buscar..."
@@ -346,6 +430,26 @@ const Administrar = () => {
                       </td>
                       <td style={cellStyle}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          {!isTecnico && (
+                            <button
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '0.75rem',
+                                background: 'rgba(16,185,129,0.12)',
+                                border: '1px solid rgba(16,185,129,0.4)',
+                                color: '#34d399',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                transition: 'all 0.2s'
+                              }}
+                              title="Finalizar la permanencia en Administrar Recientes (mover inmediatamente a General)"
+                              onClick={() => handleFinalizarCliente(c.id)}
+                            >
+                              🏁 Finalizar
+                            </button>
+                          )}
                           {!isTecnico && (
                             <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
                           )}
