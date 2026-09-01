@@ -367,6 +367,14 @@ const Administrar = () => {
                           <select style={inputStyle} value={editData.parroquia} onChange={(e) => handleEditChange('parroquia', e.target.value)}>
                             {parroquiasList.map(p => <option key={p.id} value={p.nombre} style={{ background: '#1e1b4b' }}>{p.nombre}</option>)}
                           </select>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', cursor: 'pointer', color: '#f472b6', fontWeight: 600 }}>
+                            <input
+                              type="checkbox"
+                              checked={!!editData.mantenimiento}
+                              onChange={(e) => handleEditChange('mantenimiento', e.target.checked)}
+                            />
+                            🛠️ Mantenimiento ($10)
+                          </label>
                         </div>
                       </td>
                       <td style={cellStyle}>
@@ -407,6 +415,7 @@ const Administrar = () => {
                       <td style={cellStyle}>
                         <div>{c.plan}</div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{c.parroquia}</div>
+                        {c.mantenimiento && <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6', fontWeight: 700 }}>🛠️ MANTENIMIENTO ($10)</small>}
                       </td>
                       <td style={cellStyle}>
                         <span style={{ color: '#4ade80', fontWeight: 'bold' }}>{c.potencia || '-'}</span>
@@ -451,7 +460,24 @@ const Administrar = () => {
                             </button>
                           )}
                           {!isTecnico && (
-                            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => startEdit(c)}>✏️ Editar</button>
+                            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => {
+                              setEditingId(c.id);
+                              setEditData({
+                                nombre: c.nombre || '',
+                                cedula: c.cedula || '',
+                                celular: c.celular || '',
+                                tecnico: c.tecnico || '',
+                                red: c.red || '',
+                                plan: c.plan || '',
+                                parroquia: c.parroquia || '',
+                                potencia: c.potencia || '',
+                                estado: c.estado || '',
+                                cedula_tipo: c.cedula_tipo || '',
+                                cedula_frontal: c.cedula_frontal || null,
+                                cedula_posterior: c.cedula_posterior || null,
+                                mantenimiento: !!c.mantenimiento
+                              });
+                            }}>✏️ Editar</button>
                           )}
                           {(c.service_port || c.id_port) && (
                             <button

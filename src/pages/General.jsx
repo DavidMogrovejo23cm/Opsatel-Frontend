@@ -794,9 +794,40 @@ const General = () => {
                               }
                               if (col === 'plan') {
                                 let precio = 0; let isSpecial = false;
-                                if (c.tercera_edad && c.precio_plan_especial) { precio = c.precio_plan_especial; isSpecial = true; }
+                                if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
+                                else if (c.tercera_edad && c.precio_plan_especial) { precio = c.precio_plan_especial; isSpecial = true; }
                                 else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
-                                return <span style={{ color: precio > 0 ? (isSpecial ? '#f59e0b' : '#fbbf24') : 'var(--text-muted)', fontWeight: '600' }}>{precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}{isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>}</span>;
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: precio > 0 ? (c.mantenimiento ? '#ec4899' : (isSpecial ? '#f59e0b' : '#fbbf24')) : 'var(--text-muted)', fontWeight: '600' }}>
+                                      {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
+                                      {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      style={{
+                                        padding: '2px 6px', fontSize: '0.65rem', border: `1px solid ${c.mantenimiento ? '#ec4899' : 'rgba(255,255,255,0.2)'}`,
+                                        background: c.mantenimiento ? 'rgba(236,72,153,0.2)' : 'rgba(255,255,255,0.05)',
+                                        color: c.mantenimiento ? '#f472b6' : '#cbd5e1', cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap'
+                                      }}
+                                      title="Marcar / desmarcar Mantenimiento ($10.00/mes)"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          const newStatus = !c.mantenimiento;
+                                          await clienteService.actualizar(c.id, { mantenimiento: newStatus });
+                                          showSuccess(`Mantenimiento ${newStatus ? 'activado ($10.00)' : 'desactivado'} para ${c.nombre}`);
+                                          fetchData();
+                                        } catch (err) {
+                                          showError('Error al actualizar mantenimiento');
+                                        }
+                                      }}
+                                    >
+                                      {c.mantenimiento ? '🛠️ Mantenimiento ✓' : '🛠️ Mantenimiento'}
+                                    </button>
+                                  </div>
+                                );
                               }
                               if (col === 'fotos_cedula') {
                                 return <div style={{ display: 'flex', gap: '8px' }}>

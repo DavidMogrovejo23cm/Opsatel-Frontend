@@ -791,6 +791,13 @@ const Admin = () => {
                       />
                       <label htmlFor="cortesia_total" style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#818cf8', cursor: 'pointer' }}>Cortesía Total (Cobro $0.00)</label>
                     </div>
+                    {selectedCliente?.mantenimiento && (
+                      <div style={{ marginTop: '8px' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', background: 'rgba(236,72,153,0.2)', color: '#f472b6', border: '1px solid rgba(236,72,153,0.4)', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          🛠️ Plan Mantenimiento ($10.00/mes)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

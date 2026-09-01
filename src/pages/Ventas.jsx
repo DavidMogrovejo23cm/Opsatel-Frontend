@@ -51,6 +51,7 @@ const Ventas = () => {
     ubicacion: '',
     tercera_edad: false,
     plan_corporativo: false,
+    mantenimiento: false,
     precio_plan_especial: 0,
     comentarios: '',
     fecha_firma: new Date().toISOString().split('T')[0]
@@ -451,6 +452,7 @@ const Ventas = () => {
         cedula_tipo: '', ubicacion: '',
         tercera_edad: false,
         plan_corporativo: false,
+        mantenimiento: false,
         precio_plan_especial: 0,
         comentarios: '',
         fecha_firma: new Date().toISOString().split('T')[0]
@@ -505,7 +507,9 @@ const Ventas = () => {
   // Cálculo de Prorrateo en tiempo real (misma fórmula que el backend)
   const prorrateo = useMemo(() => {
     let tarifa = 0;
-    if (formData.tercera_edad || formData.plan_corporativo) {
+    if (formData.mantenimiento) {
+      tarifa = 10.0;
+    } else if (formData.tercera_edad || formData.plan_corporativo) {
       tarifa = parseFloat(formData.precio_plan_especial) || 0;
     } else if (formData.plan) {
       const selectedPlan = planesList.find(p => p.nombre === formData.plan);
@@ -522,7 +526,7 @@ const Ventas = () => {
     const monto = (tarifa / totalDays) * activeDays;
 
     return { monto: monto.toFixed(2), activeDays, totalDays, tarifa };
-  }, [formData.plan, formData.precio_plan_especial, formData.tercera_edad, formData.plan_corporativo, formData.fecha_firma, planesList]);
+  }, [formData.plan, formData.precio_plan_especial, formData.tercera_edad, formData.plan_corporativo, formData.mantenimiento, formData.fecha_firma, planesList]);
 
   return (
     <>
@@ -747,7 +751,7 @@ const Ventas = () => {
                 </small>
               </div>
             )}
-            <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
               <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
                 <input
                   type="checkbox"
@@ -767,6 +771,16 @@ const Ventas = () => {
                   style={{ width: '18px', height: '18px', accentColor: '#818cf8' }}
                 />
                 Plan Corporativo
+              </label>
+              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                <input
+                  type="checkbox"
+                  name="mantenimiento"
+                  checked={formData.mantenimiento}
+                  onChange={handleChange}
+                  style={{ width: '18px', height: '18px', accentColor: '#ec4899' }}
+                />
+                🛠️ Mantenimiento ($10.00/mes)
               </label>
             </div>
             {(formData.tercera_edad || formData.plan_corporativo) && (
