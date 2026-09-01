@@ -15,9 +15,12 @@ const General = () => {
   const [editingCell, setEditingCell] = useState(null);
   const [tempValue, setTempValue] = useState('');
 
-  // Autenticación de entrada: se pide PIN una sola vez al entrar
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showEntryPinModal, setShowEntryPinModal] = useState(true);
+  const currentUser = configuracionService.getCurrentUser();
+  const hasDirectAccess = currentUser && (currentUser.rol === 'administrador' || currentUser.acceso_general_sin_clave);
+
+  // Autenticación de entrada: se pide PIN una sola vez al entrar si no tiene acceso directo sin clave
+  const [isAuthenticated, setIsAuthenticated] = useState(!!hasDirectAccess);
+  const [showEntryPinModal, setShowEntryPinModal] = useState(!hasDirectAccess);
   const [entryPinInput, setEntryPinInput] = useState('');
 
   // Estados para el PIN de seguridad (legacy, solo para delete si no autenticado)

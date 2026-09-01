@@ -63,9 +63,12 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
     { path: 'divider-2', type: 'divider', roles: ['administrador', 'tecnico'] },
   ];
 
-  const filteredItems = menuItems.filter(item =>
-    !item.roles || (user && item.roles.includes(user.rol))
-  );
+  const filteredItems = menuItems.filter(item => {
+    if (item.path === '/general') {
+      return user && (user.rol === 'administrador' || user.acceso_general_sin_clave);
+    }
+    return !item.roles || (user && item.roles.includes(user.rol));
+  });
 
   return (
     <>

@@ -57,7 +57,7 @@ const Configuraciones = () => {
     const [newBanco, setNewBanco] = useState({ nombre: '' });
     const [newPuerto, setNewPuerto] = useState({ numero: '', nodo_id: '', limite_ip: '', limite_device: '', limite_service_port: '' });
     const [searchPuerto, setSearchPuerto] = useState('');
-    const [newUsuario, setNewUsuario] = useState({ username: '', password: '', rol: 'tecnico' });
+    const [newUsuario, setNewUsuario] = useState({ username: '', password: '', rol: 'tecnico', acceso_general_sin_clave: false });
     const [isEditingUser, setIsEditingUser] = useState(null);
     const [isEditingNodo, setIsEditingNodo] = useState(null);
     const [isEditingPlan, setIsEditingPlan] = useState(null);
@@ -226,7 +226,7 @@ const Configuraciones = () => {
                     await configuracionService.crearUsuario(newUsuario);
                     showSuccess('Usuario creado');
                 }
-                setNewUsuario({ username: '', password: '', rol: 'tecnico' });
+                setNewUsuario({ username: '', password: '', rol: 'tecnico', acceso_general_sin_clave: false });
                 setIsEditingUser(null);
                 fetchData();
             } else if (type === 'Finanzas Base') {
@@ -286,8 +286,27 @@ const Configuraciones = () => {
 
     const handleEditUser = (user) => {
         setIsEditingUser(user.id);
-        setNewUsuario({ username: user.username, password: '', rol: user.rol });
+        setNewUsuario({ username: user.username, password: '', rol: user.rol, acceso_general_sin_clave: !!user.acceso_general_sin_clave });
         setActiveTab('Usuarios');
+    };
+
+    const handleToggleGeneralAccess = async (userRow, allowSinClave) => {
+        try {
+            await configuracionService.actualizarUsuario(userRow.id, {
+                username: userRow.username,
+                rol: userRow.rol,
+                acceso_general_sin_clave: allowSinClave
+            });
+            showSuccess(`Acceso General ${allowSinClave ? 'SIN CLAVE activado' : 'CON CLAVE requerido'} para ${userRow.username}`);
+            const currentLoggedUser = configuracionService.getCurrentUser();
+            if (currentLoggedUser && currentLoggedUser.username === userRow.username) {
+                currentLoggedUser.acceso_general_sin_clave = allowSinClave;
+                localStorage.setItem('user', JSON.stringify(currentLoggedUser));
+            }
+            fetchData();
+        } catch (error) {
+            showError('Error al actualizar permisos: ' + (error.response?.data?.detail || error.message));
+        }
     };
 
     const handleEditNodo = (nod) => {
@@ -679,7 +698,7 @@ const Configuraciones = () => {
                     <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
                         {columns.map(col => (
                             <th key={col} style={{ padding: '12px' }}>
-                                {col === 'nodo_id' ? 'Nodo / Zona' : col.toUpperCase()}
+                                {col === 'nodo_id' ? 'Nodo / Zona' : col === 'acceso_general_sin_clave' ? 'ACCESO GENERAL' : col.toUpperCase()}
                             </th>
                         ))}
                         <th style={{ padding: '12px' }}>Acciones</th>
@@ -692,12 +711,34 @@ const Configuraciones = () => {
                                 <td key={col} style={{ padding: '12px' }}>
                                     {col === 'nodo_id' 
                                         ? (nodos.find(p => p.id === row[col])?.nombre || <span style={{ color: '#ef4444' }}>⚠️ SIN ASIGNAR</span>) 
+                                        : col === 'acceso_general_sin_clave'
+                                        ? (row[col] 
+                                            ? <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 600 }}>🔓 Sin Clave (Modificable)</span>
+                                            : <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)', fontWeight: 600 }}>🔒 Requiere Clave</span>)
                                         : row[col]}
                                 </td>
                             ))}
-                            <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+                            <td style={{ padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 {type === 'Usuarios' && (
-                                    <button className="btn btn-secondary" onClick={() => handleEditUser(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
+                                    <select
+                                        className="input"
+                                        style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'rgba(30,41,59,0.9)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.4)', borderRadius: '6px', margin: 0, cursor: 'pointer', fontWeight: 600 }}
+                                        defaultValue=""
+                                        onChange={async (e) => {
+                                            const action = e.target.value;
+                                            e.target.value = "";
+                                            if (action === 'edit') handleEditUser(row);
+                                            else if (action === 'allow_no_key') await handleToggleGeneralAccess(row, true);
+                                            else if (action === 'require_key') await handleToggleGeneralAccess(row, false);
+                                            else if (action === 'delete') handleDelete('Usuarios', row.id);
+                                        }}
+                                    >
+                                        <option value="" disabled>⚙️ Acciones...</option>
+                                        <option value="edit">✏️ Editar Usuario</option>
+                                        <option value="allow_no_key">🔓 Permitir General Sin Clave</option>
+                                        <option value="require_key">🔒 Requerir Clave para General</option>
+                                        <option value="delete">🗑️ Eliminar Usuario</option>
+                                    </select>
                                 )}
                                 {type === 'Nodos' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditNodo(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
@@ -717,7 +758,9 @@ const Configuraciones = () => {
                                 {type === 'Puertos' && (
                                     <button className="btn btn-secondary" onClick={() => handleEditPuerto(row)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f655', color: '#93c5fd', border: 'none' }}>Editar</button>
                                 )}
-                                <button className="btn btn-secondary" onClick={() => handleDelete(type, row.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#ef444455', color: '#fca5a5', border: 'none' }}>Eliminar</button>
+                                {type !== 'Usuarios' && (
+                                    <button className="btn btn-secondary" onClick={() => handleDelete(type, row.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#ef444455', color: '#fca5a5', border: 'none' }}>Eliminar</button>
+                                )}
                             </td>
                         </tr>
                     ))}
@@ -943,14 +986,20 @@ const Configuraciones = () => {
                                     <option value="tecnico">Técnico</option>
                                     <option value="instalador">Instalador</option>
                                 </select>
-
+                            </div>
+                            <div className="input-group" style={{ margin: 0 }}>
+                                <label className="label">Acceso a General</label>
+                                <select className="input" style={{ margin: 0 }} value={newUsuario.acceso_general_sin_clave ? 'si' : 'no'} onChange={e => setNewUsuario({ ...newUsuario, acceso_general_sin_clave: e.target.value === 'si' })}>
+                                    <option value="no">🔒 Requiere Clave</option>
+                                    <option value="si">🔓 Sin Clave (Modificar campos)</option>
+                                </select>
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Usuarios')}>{isEditingUser ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingUser && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingUser(null); setNewUsuario({ username: '', password: '', rol: 'tecnico' }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingUser(null); setNewUsuario({ username: '', password: '', rol: 'tecnico', acceso_general_sin_clave: false }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable(usuarios, ['id', 'username', 'rol'], 'Usuarios')}
+                        {renderTable(usuarios, ['id', 'username', 'rol', 'acceso_general_sin_clave'], 'Usuarios')}
                     </div>
                 )}
 
