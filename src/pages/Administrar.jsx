@@ -149,15 +149,67 @@ const Administrar = () => {
     }
   };
 
+  const parseFechaFirma = (fechaStr) => {
+    if (!fechaStr) return null;
+    const str = String(fechaStr).trim();
+    
+    // Formato YYYY-MM-DD -> Parsear como medianoche local
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+    
+    // Formato YYYY-MM-DD HH:mm:ss o YYYY-MM-DDTHH:mm:ss
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(str)) {
+      const parts = str.replace('T', ' ').split(' ');
+      const [y, m, d] = parts[0].split('-').map(Number);
+      const timeParts = parts[1].split(':').map(Number);
+      return new Date(y, m - 1, d, timeParts[0] || 0, timeParts[1] || 0, timeParts[2] || 0);
+    }
+    
+    // Formato DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
+      const parts = str.split('/');
+      const d = Number(parts[0]);
+      const m = Number(parts[1]);
+      const y = Number(parts[2]);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+    
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
   const filteredClientes = clientes.filter(c => {
     // Filtro: Solo Activos (según solicitud del usuario)
     if (c.estado?.toUpperCase() !== 'ACTIVO') return false;
 
     if (!c.fecha_firma) return false;
-    const fechaFirma = new Date(c.fecha_firma);
-    const haceNDias = new Date();
-    haceNDias.setDate(haceNDias.getDate() - diasPermanencia);
-    if (fechaFirma < haceNDias) return false;
+    const fechaFirma = parseFechaFirma(c.fecha_firma);
+    if (!fechaFirma) return false;
+
+    const ahora = new Date();
+    const valPermanencia = parseFloat(diasPermanencia) || 7;
+    const msPermanencia = valPermanencia * 24 * 60 * 60 * 1000;
+
+    let limiteInferior;
+    if (valPermanencia >= 1) {
+      // Para días (1 día, 2 días...), incluir desde inicio de día o hace N*24h (lo que sea más amplio)
+      const inicioDiaLimite = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - Math.floor(valPermanencia) + 1, 0, 0, 0, 0).getTime();
+      const limiteExacto24h = ahora.getTime() - msPermanencia;
+      limiteInferior = Math.min(inicioDiaLimite, limiteExacto24h);
+    } else {
+      // Para 5 minutos u opciones sub-diarias
+      limiteInferior = ahora.getTime() - msPermanencia;
+    }
+
+    if (valPermanencia < 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(c.fecha_firma).trim())) {
+      const hoyStr = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0') + '-' + String(ahora.getDate()).padStart(2, '0');
+      const esDeHoy = String(c.fecha_firma).trim() === hoyStr;
+      if (!esDeHoy && fechaFirma.getTime() < limiteInferior) return false;
+    } else if (fechaFirma.getTime() < limiteInferior) {
+      return false;
+    }
 
     return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            c.id?.toString().includes(searchTerm) ||
@@ -172,7 +224,14 @@ const Administrar = () => {
       <div className="page-header">
         <div className="page-header-info">
           <h1>Administrar Recientes</h1>
-          <p>Clientes creados en los últimos {diasPermanencia} {diasPermanencia === 1 ? 'día' : 'días'}.</p>
+          <p>
+            Clientes creados en los últimos{' '}
+            <strong style={{ color: '#38bdf8' }}>
+              {Math.abs(diasPermanencia - 5 / 1440) < 0.0001
+                ? '5 minutos'
+                : (diasPermanencia === 1 ? '1 día' : `${diasPermanencia} días`)}
+            </strong>.
+          </p>
         </div>
         <div className="page-actions">
           <input

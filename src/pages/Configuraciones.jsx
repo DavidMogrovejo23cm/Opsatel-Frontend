@@ -993,24 +993,29 @@ const Configuraciones = () => {
                         }}>
                             <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
                                 <label className="label" style={{ fontSize: '0.9rem', marginBottom: '10px', display: 'block' }}>
-                                    🗓️ Días de permanencia de clientes
+                                    ⏳ Tiempo de permanencia de clientes
                                 </label>
                                 <select
                                     id="select-dias-permanencia"
                                     className="input"
-                                    style={{ margin: 0, maxWidth: '200px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600 }}
+                                    style={{ margin: 0, maxWidth: '220px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600 }}
                                     value={diasPermanencia}
-                                    onChange={e => setDiasPermanencia(parseInt(e.target.value))}
+                                    onChange={e => setDiasPermanencia(parseFloat(e.target.value))}
                                 >
+                                    <option value={5 / 1440} style={{ background: '#1e1b4b' }}>
+                                        ⚡ 5 minutos
+                                    </option>
                                     {[1,2,3,4,5,6,7,8,9,10].map(d => (
                                         <option key={d} value={d} style={{ background: '#1e1b4b' }}>
-                                            {d} {d === 1 ? 'día' : 'días'}
+                                            🗓️ {d} {d === 1 ? 'día' : 'días'}
                                         </option>
                                     ))}
                                 </select>
                             </div>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                                Actualmente se muestran clientes activos creados en los últimos <strong style={{ color: '#38bdf8' }}>{diasPermanencia} {diasPermanencia === 1 ? 'día' : 'días'}</strong>.
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                                Actualmente se muestran clientes activos creados en los últimos <strong style={{ color: '#38bdf8' }}>
+                                    {Math.abs(diasPermanencia - 5 / 1440) < 0.0001 ? '5 minutos' : (diasPermanencia === 1 ? '1 día' : `${diasPermanencia} días`)}
+                                </strong>.
                             </p>
                             <button
                                 id="btn-guardar-dias-permanencia"

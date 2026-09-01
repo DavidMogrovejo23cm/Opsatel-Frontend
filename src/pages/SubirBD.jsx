@@ -110,11 +110,12 @@ const SubirBD = () => {
               El archivo Excel generado contendrá pestañas individuales para:
             </p>
             <ul style={{ color: 'rgba(255,255,255,0.6)', paddingLeft: '20px', marginBottom: '32px', lineHeight: '1.8', fontSize: '0.95rem' }}>
-              <li>Clientes y Saldos</li>
-              <li>Historial de Pagos y Egresos</li>
-              <li>Configuración de Nodos, Puertos y Planes</li>
-              <li>Historial de WhatsApp y Asistencias del Personal</li>
-              <li>Proyectos y Gastos consolidados</li>
+              <li>Clientes en cualquier estado (Activos, Suspendidos, Retirados y Eliminados)</li>
+              <li>Historial completo de Pagos, Saldos y Egresos</li>
+              <li>Call Center, Tickets y Hojas de Ruta de Técnicos</li>
+              <li>Balance, Finanzas, Turnos de Caja, Proyectos y Gastos</li>
+              <li>Asistencias del Personal y Horarios</li>
+              <li>Configuración total (Nodos, Puertos, OLT, WhatsApp, Cajas NAP, etc.)</li>
             </ul>
           </div>
 
