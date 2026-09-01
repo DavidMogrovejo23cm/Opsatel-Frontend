@@ -10,6 +10,7 @@ const HojaRuta = () => {
     const [clientes, setClientes] = useState([]);
     const [cajasNap, setCajasNap] = useState([]);
     const [planesList, setPlanesList] = useState([]);
+    const [tecnicosList, setTecnicosList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showObsModal, setShowObsModal] = useState(false);
