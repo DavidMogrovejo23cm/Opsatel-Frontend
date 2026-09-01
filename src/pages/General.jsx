@@ -364,6 +364,7 @@ const General = () => {
   };
 
   const [statusFilter, setStatusFilter] = useState('TODOS');
+  const [pagoFilter, setPagoFilter] = useState('TODOS'); // 'TODOS', 'PAGADO', 'PENDIENTE_PAGO'
   const [selectedAction, setSelectedAction] = useState('VER'); // 'VER' o 'BORRAR'
 
   const filteredClientes = clientes
@@ -377,9 +378,18 @@ const General = () => {
       if (!matchSearch) return false;
 
       // Filtro por estado
-      if (statusFilter === 'ACTIVO') return c.estado?.toUpperCase() === 'ACTIVO';
-      if (statusFilter === 'INACTIVO') return c.estado?.toUpperCase() === 'INACTIVO';
-      if (statusFilter === 'PENDIENTE') return c.estado?.toUpperCase() === 'PENDIENTE';
+      if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
+      if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
+      if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
+
+      // Filtro por pago (Pagados vs Con Deuda Pendiente)
+      const saldoVal = (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : parseFloat(c.saldo || 0)));
+      const plusVal = parseFloat(c.plus || 0);
+      const adicVal = parseFloat(c.adicional || 0);
+      const totalDeuda = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
+
+      if (pagoFilter === 'PAGADO' && totalDeuda > 0) return false;
+      if (pagoFilter === 'PENDIENTE_PAGO' && totalDeuda <= 0) return false;
 
       return true;
     })
@@ -478,6 +488,16 @@ const General = () => {
             <option value="ACTIVO">Activos</option>
             <option value="INACTIVO">Inactivos</option>
             <option value="PENDIENTE">Pendientes</option>
+          </select>
+          <select
+            className="input"
+            style={{ marginBottom: 0, background: '#1e1b4b', color: '#60a5fa', fontWeight: '600' }}
+            value={pagoFilter}
+            onChange={(e) => setPagoFilter(e.target.value)}
+          >
+            <option value="TODOS">💳 Todos los Pagos</option>
+            <option value="PAGADO">✅ Pagados (Pendiente $0)</option>
+            <option value="PENDIENTE_PAGO">⚠️ Con Deuda Pendiente</option>
           </select>
           <input
             className="input"
@@ -808,29 +828,6 @@ const General = () => {
                                       {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
                                       {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
                                     </span>
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      style={{
-                                        padding: '2px 6px', fontSize: '0.65rem', border: `1px solid ${c.mantenimiento ? '#ec4899' : 'rgba(255,255,255,0.2)'}`,
-                                        background: c.mantenimiento ? 'rgba(236,72,153,0.2)' : 'rgba(255,255,255,0.05)',
-                                        color: c.mantenimiento ? '#f472b6' : '#cbd5e1', cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap'
-                                      }}
-                                      title="Marcar / desmarcar Mantenimiento ($10.00/mes)"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        try {
-                                          const newStatus = !c.mantenimiento;
-                                          await clienteService.actualizar(c.id, { mantenimiento: newStatus });
-                                          showSuccess(`Mantenimiento ${newStatus ? 'activado ($10.00)' : 'desactivado'} para ${c.nombre}`);
-                                          fetchData();
-                                        } catch (err) {
-                                          showError('Error al actualizar mantenimiento');
-                                        }
-                                      }}
-                                    >
-                                      {c.mantenimiento ? '🛠️ Mantenimiento ✓' : '🛠️ Mantenimiento'}
-                                    </button>
                                   </div>
                                 );
                               }
