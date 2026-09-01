@@ -774,11 +774,8 @@ const General = () => {
                           }}>
                             {(() => {
                               if (col === 'total') {
-                                const saldoVal = (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : parseFloat(c.saldo || 0)));
-                                const plusVal = parseFloat(c.plus || 0);
-                                const adicVal = parseFloat(c.adicional || 0);
-                                const totalPendienteCompleto = saldoVal + plusVal + adicVal;
-                                return <span style={{ color: totalPendienteCompleto > 0 ? '#f87171' : '#4ade80', fontWeight: 'bold' }}>${totalPendienteCompleto.toFixed(2)}</span>;
+                                const totalPagado = parseFloat(c.pago_mensual || 0);
+                                return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
                               }
                               if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
                                 const valPagado = c[col];
@@ -786,8 +783,11 @@ const General = () => {
                                 return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
                               }
                               if (col === 'total_pago') {
-                                const pendiente = parseFloat(c.total_pago || 0);
-                                return <span style={{ color: pendiente <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${pendiente.toFixed(2)}</span>;
+                                const saldoVal = (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : parseFloat(c.saldo || 0)));
+                                const plusVal = parseFloat(c.plus || 0);
+                                const adicVal = parseFloat(c.adicional || 0);
+                                const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
+                                return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
                               }
                               if (col === 'cedula_tipo') {
                                 return (
