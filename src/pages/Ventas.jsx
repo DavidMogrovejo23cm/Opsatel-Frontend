@@ -376,12 +376,18 @@ const Ventas = () => {
     setLoading(true);
     setMessage(null);
     console.log("Enviando contrato con parroquia:", formData.parroquia);
+    const nowTimeStr = new Date().toTimeString().split(' ')[0];
+    let fechaFirmaVal = normalizeDateInput(formData.fecha_firma);
+    if (fechaFirmaVal && !fechaFirmaVal.includes(':')) {
+      fechaFirmaVal += ` ${nowTimeStr}`;
+    }
+
     const payload = {
       ...formData,
       correo: (formData.correo && String(formData.correo).trim()) ? String(formData.correo).trim() : null,
       precio_plan_especial: parseFloat(formData.precio_plan_especial) || 0.0,
       plan: formData.tercera_edad ? 'TERCERA EDAD' : (formData.plan_corporativo ? 'CORPORATIVO' : formData.plan),
-      fecha_firma: normalizeDateInput(formData.fecha_firma)
+      fecha_firma: fechaFirmaVal
     };
     try {
       const response = await clienteService.crear(payload);
