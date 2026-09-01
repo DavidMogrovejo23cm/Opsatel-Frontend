@@ -122,7 +122,11 @@ const General = () => {
     setFileFrontal(null);
     setFilePosterior(null);
     setEditingCell({ id, col });
-    setTempValue(value || '');
+    if (col === 'cedula_tipo') {
+      setTempValue(value || 'No');
+    } else {
+      setTempValue(value || '');
+    }
   };
 
   const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
@@ -380,6 +384,8 @@ const General = () => {
       // Filtro por estado
       if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
       if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
+      if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase())) return false;
+      if (statusFilter === 'JURIDICO' && c.estado?.toUpperCase() !== 'JURIDICO') return false;
       if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
 
       // Filtro por pago (Pagados vs Con Deuda Pendiente)
@@ -487,6 +493,8 @@ const General = () => {
             <option value="TODOS">Todos los Estados</option>
             <option value="ACTIVO">Activos</option>
             <option value="INACTIVO">Inactivos</option>
+            <option value="PROCESO">En Proceso</option>
+            <option value="JURIDICO">Jurídico</option>
             <option value="PENDIENTE">Pendientes</option>
           </select>
           <select
@@ -733,9 +741,7 @@ const General = () => {
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
                                     {fileFrontal ? '✅ Front.' : '📸 Front.'}
-                                    <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
-                                  </label>
-                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
+<label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
                                     {filePosterior ? '✅ Post.' : '📸 Post.'}
                                     <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
                                   </label>
@@ -754,7 +760,13 @@ const General = () => {
                                   <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => { setEditingCell(null); setFileFrontal(null); setFilePosterior(null); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingCell(null);
+                                      setFileFrontal(null);
+                                      setFilePosterior(null);
+                                      setTempValue('');
+                                    }}
                                     style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                                     title="Cancelar"
                                   >
@@ -787,7 +799,7 @@ const General = () => {
                               c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
                                 ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
                                   c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
-                                    c[col]?.toUpperCase() === 'EN PROCESO' ? '#fbbf24' :
+                                    ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
                                       c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
                             ) : 'inherit',
                             fontWeight: col === 'id' ? '600' : 'normal'

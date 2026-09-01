@@ -391,6 +391,8 @@ const Administrar = () => {
                           <option value="Pendiente">Pendiente</option>
                           <option value="En Activación">En Activación</option>
                           <option value="Activo">Activo</option>
+                          <option value="En Proceso">En Proceso (Congelado)</option>
+                          <option value="Juridico">Jurídico (Congelado)</option>
                           <option value="Suspendido">Suspendido</option>
                           <option value="Retirado">Retirado</option>
                         </select>
