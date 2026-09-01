@@ -804,7 +804,9 @@ const Admin = () => {
                           checked={!!pagoData.isMantenimiento}
                           onChange={async (e) => {
                             const isChecked = e.target.checked;
-                            const newInternetVal = isChecked ? "10.00" : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo).toFixed(2) : "0.00");
+                            const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
+                            const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.tercera_edad && selectedCliente?.precio_plan_especial ? parseFloat(selectedCliente.precio_plan_especial) : 0);
+                            const newInternetVal = isChecked ? "10.00" : (planPrice > 0 ? planPrice.toFixed(2) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo).toFixed(2) : "0.00"));
                             const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
                             const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
                             const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
@@ -816,10 +818,17 @@ const Admin = () => {
                               monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                             }));
 
+                            if (selectedCliente) {
+                              selectedCliente.mantenimiento = isChecked;
+                              selectedCliente.saldo = isChecked ? 10.00 : (planPrice > 0 ? planPrice : selectedCliente.saldo);
+                            }
+
                             try {
-                              await clienteService.updateAdmin(selectedCliente.id, { mantenimiento: isChecked });
-                              showSuccess(`Mantenimiento ${isChecked ? 'activado ($10.00)' : 'desactivado'} para ${selectedCliente.nombre}`);
-                              if (selectedCliente) selectedCliente.mantenimiento = isChecked;
+                              await clienteService.updateAdmin(selectedCliente.id, {
+                                mantenimiento: isChecked,
+                                ...(isChecked ? { saldo: 10.00 } : (planPrice > 0 ? { saldo: planPrice } : {}))
+                              });
+                              showSuccess(`Mantenimiento ${isChecked ? 'activado ($10.00)' : 'desactivado (tarifa plan)'} para ${selectedCliente.nombre}`);
                             } catch (err) {
                               showError('Error al actualizar mantenimiento');
                             }
