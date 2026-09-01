@@ -45,16 +45,21 @@ const HojaRuta = () => {
     const fetchData = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
-            const [hrRes, clRes, cnRes, plRes] = await Promise.all([
+            const [hrRes, clRes, cnRes, plRes, usrRes] = await Promise.all([
                 hojaRutaService.listar(),
                 clienteService.listar(),
                 configuracionService.getCajasNap().catch(e => ({ data: [] })),
-                configuracionService.getPlanes().catch(e => ({ data: [] }))
+                configuracionService.getPlanes().catch(e => ({ data: [] })),
+                configuracionService.getUsuarios().catch(e => ({ data: [] }))
             ]);
             setRegistros(hrRes.data || []);
             setClientes(clRes.data || []);
             setCajasNap(cnRes.data || []);
             setPlanesList(plRes.data || []);
+
+            const allUsers = usrRes.data || [];
+            const tecs = allUsers.filter(u => u.rol?.toLowerCase() === 'tecnico');
+            setTecnicosList(tecs.length > 0 ? tecs : allUsers);
         } catch (err) {
             console.error(err);
         } finally {
@@ -623,7 +628,25 @@ const HojaRuta = () => {
                                         </div>
                                         <div>
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Técnico Responsable</label>
-                                            <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.tecnico} onChange={e => setFormData({ ...formData, tecnico: e.target.value })} placeholder="Nombre del técnico" required />
+                                            <select
+                                                className="input"
+                                                style={{ width: '100%', padding: '12px', boxSizing: 'border-box', background: '#1e293b', color: '#ffffff' }}
+                                                value={formData.tecnico}
+                                                onChange={e => setFormData({ ...formData, tecnico: e.target.value })}
+                                                required
+                                            >
+                                                <option value="" style={{ background: '#1e293b', color: '#94a3b8' }}>-- Seleccionar Técnico --</option>
+                                                {tecnicosList.map(t => (
+                                                    <option key={t.id || t.username} value={t.username} style={{ background: '#1e293b', color: '#ffffff' }}>
+                                                        👨‍🔧 {t.username} {t.rol ? `(${t.rol})` : ''}
+                                                    </option>
+                                                ))}
+                                                {formData.tecnico && !tecnicosList.some(t => t.username === formData.tecnico) && (
+                                                    <option value={formData.tecnico} style={{ background: '#1e293b', color: '#ffffff' }}>
+                                                        👨‍🔧 {formData.tecnico}
+                                                    </option>
+                                                )}
+                                            </select>
                                         </div>
                                     </div>
 

@@ -9,18 +9,24 @@ const Ventas = () => {
   const [nodosList, setNodosList] = useState([]);
   const [parroquiasList, setParroquiasList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
+  const [tecnicosList, setTecnicosList] = useState([]);
 
   useEffect(() => {
     const fetchSelects = async () => {
       try {
-        const [paRes, ppRes, plRes] = await Promise.all([
+        const [paRes, ppRes, plRes, usrRes] = await Promise.all([
           configuracionService.getNodos(),
           configuracionService.getParroquias(),
-          configuracionService.getPlanes()
+          configuracionService.getPlanes(),
+          configuracionService.getUsuarios().catch(() => ({ data: [] }))
         ]);
         setNodosList(paRes.data);
         setParroquiasList(ppRes.data);
         setPlanesList(plRes.data);
+        
+        const allUsers = usrRes.data || [];
+        const tecs = allUsers.filter(u => u.rol?.toLowerCase() === 'tecnico');
+        setTecnicosList(tecs.length > 0 ? tecs : allUsers);
       } catch (error) {
         console.error("Error fetching configuraciones", error);
       }
@@ -1023,7 +1029,34 @@ const Ventas = () => {
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>Técnico Responsable</label>
-                  <input className="input" value={instForm.tecnico} onChange={e => setInstForm({ ...instForm, tecnico: e.target.value })} placeholder="Nombre del técnico asignado" style={{ width: '100%', boxSizing: 'border-box' }} required />
+                  <select
+                    className="input"
+                    value={instForm.tecnico}
+                    onChange={e => setInstForm({ ...instForm, tecnico: e.target.value })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: '1px solid rgba(167,139,250,0.4)',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
+                      fontSize: '0.85rem'
+                    }}
+                    required
+                  >
+                    <option value="" style={{ background: '#0f172a', color: '#94a3b8' }}>-- Seleccionar Técnico Responsable --</option>
+                    {tecnicosList.map(t => (
+                      <option key={t.id || t.username} value={t.username} style={{ background: '#0f172a', color: '#ffffff' }}>
+                        👨‍🔧 {t.username} {t.rol ? `(${t.rol})` : ''}
+                      </option>
+                    ))}
+                    {instForm.tecnico && !tecnicosList.some(t => t.username === instForm.tecnico) && (
+                      <option value={instForm.tecnico} style={{ background: '#0f172a', color: '#ffffff' }}>
+                        👨‍🔧 {instForm.tecnico}
+                      </option>
+                    )}
+                  </select>
                 </div>
                 {instForm.observacion && (
                   <div style={{ gridColumn: 'span 2' }}>

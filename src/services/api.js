@@ -123,6 +123,7 @@ export const configuracionService = {
   eliminarPuerto: (id) => api.delete(`/configuraciones/puertos/${id}`),
   // Usuarios
   getUsuarios: () => api.get('/auth/usuarios'),
+  getTecnicos: () => api.get('/auth/tecnicos'),
   crearUsuario: (data) => api.post('/auth/register', data),
   actualizarUsuario: (id, data) => api.patch(`/auth/usuarios/${id}`, data),
   eliminarUsuario: (id) => api.delete(`/auth/usuarios/${id}`),
