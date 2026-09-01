@@ -681,11 +681,11 @@ const Admin = () => {
                   <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldos Actuales en Sistema</h4>
 
-                    {(parseFloat(selectedCliente.saldo || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
+                    {(parseFloat(pagoData.original_internet || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
                         <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                          ${parseFloat(selectedCliente.saldo).toFixed(2)}
+                          ${parseFloat(pagoData.original_internet || 0).toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -718,8 +718,8 @@ const Admin = () => {
                     <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 'bold' }}>
                         <span>Total Pendiente:</span>
-                        <span style={{ color: (parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0) + parseFloat(selectedCliente.saldo || 0)) > 0 ? '#f87171' : '#4ade80' }}>
-                          ${(parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0) + parseFloat(selectedCliente.saldo || 0)).toFixed(2)}
+                        <span style={{ color: (pagoData.cortesiaMode === 'TOTAL' ? 0 : (parseFloat(pagoData.original_internet || 0) + parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0))) > 0 ? '#f87171' : '#4ade80' }}>
+                          ${(pagoData.cortesiaMode === 'TOTAL' ? 0 : (parseFloat(pagoData.original_internet || 0) + parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0))).toFixed(2)}
                         </span>
                       </div>
                     </div>
