@@ -741,7 +741,9 @@ const General = () => {
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
                                     {fileFrontal ? '✅ Front.' : '📸 Front.'}
-<label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
+                                    <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                                  </label>
+                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
                                     {filePosterior ? '✅ Post.' : '📸 Post.'}
                                     <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
                                   </label>
