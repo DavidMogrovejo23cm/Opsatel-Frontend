@@ -1598,9 +1598,9 @@ const Balance = () => {
 
         {/* METRICAS PRINCIPALES */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-          <StatCard title="Total Plataforma" value={fmt(sumatoria_total)} icon="🚀" color="#a78bfa" subtitle="Sumatoria Total Recaudada" />
-          <StatCard title="IPTV Plus (Clientes Internet)" value={fmt(desglose_origen?.iptv_plus || 0)} icon="📺" color="#3b82f6" subtitle="Pantallas Extras de Clientes" />
-          <StatCard title="Clientes Extras (Solo Plataforma)" value={fmt(desglose_origen?.clientes_extras || 0)} icon="🌍" color="#10b981" subtitle="Cuentas Plataforma Externas" />
+          <Card title="Total Plataforma" value={fmt(sumatoria_total)} icon="🚀" color="#a78bfa" sub="Sumatoria Total Recaudada" />
+          <Card title="IPTV Plus (Clientes Internet)" value={fmt(desglose_origen?.iptv_plus || 0)} icon="📺" color="#3b82f6" sub="Pantallas Extras de Clientes" />
+          <Card title="Clientes Extras (Solo Plataforma)" value={fmt(desglose_origen?.clientes_extras || 0)} icon="🌍" color="#10b981" sub="Cuentas Plataforma Externas" />
         </div>
 
         {/* DESGLOSE POR ENTIDAD BANCARIA */}
