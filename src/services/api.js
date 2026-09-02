@@ -202,6 +202,7 @@ export const balanceService = {
   eliminarGastoProyecto: (proyId, gastoId) => api.delete(`/balance/proyectos/${proyId}/gastos/${gastoId}`),
   // Reportes
   reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
+  reportePlataforma: (mes) => api.get(`/balance/reporte-plataforma?mes=${mes}`),
   reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),
   exportarReporteExcel: (mes) => api.get(`/balance/reporte-excel?mes=${mes}`, { responseType: 'blob' }),
   exportarReporteAnualExcel: (anio) => api.get(`/balance/reporte-anual-excel?anio=${anio}`, { responseType: 'blob' }),

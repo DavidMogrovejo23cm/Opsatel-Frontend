@@ -454,7 +454,7 @@ function MonthNavBar({ value, onChange }) {
   const [aStr, mNum] = value.split('-');
   const currentMonthIdx = parseInt(mNum, 10) - 1;
   const currentYear = parseInt(aStr, 10);
-  
+
   const shortMonths = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 
   return (
@@ -464,8 +464,8 @@ function MonthNavBar({ value, onChange }) {
         <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 950, letterSpacing: 2, background: 'linear-gradient(90deg, #fff, rgba(255,255,255,0.5))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{currentYear}</h2>
         <button onClick={() => onChange(`${currentYear + 1}-${mNum}`)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
       </div>
-      
-      <div style={{ 
+
+      <div style={{
         display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap',
         background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)'
       }}>
@@ -473,10 +473,10 @@ function MonthNavBar({ value, onChange }) {
           const isSelected = i === currentMonthIdx;
           const mVal = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
           return (
-            <button 
+            <button
               key={m}
               onClick={() => onChange(mVal)}
-              style={{ 
+              style={{
                 padding: '12px 20px', borderRadius: 14, border: 'none',
                 background: isSelected ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
                 color: isSelected ? 'white' : 'rgba(255,255,255,0.4)',
@@ -851,8 +851,8 @@ function HistorialClientes({ mesTarget }) {
     }
   };
 
-  const filtered = clientes.filter(c => 
-    c.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
+  const filtered = clientes.filter(c =>
+    c.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
     (c.nodo && c.nodo.toLowerCase().includes(filtro.toLowerCase())) ||
     (c.plan && c.plan.toLowerCase().includes(filtro.toLowerCase()))
   );
@@ -870,7 +870,7 @@ function HistorialClientes({ mesTarget }) {
     return isActivo && isNew;
   });
 
-  const filteredProspectos = filtered.filter(c => 
+  const filteredProspectos = filtered.filter(c =>
     c.estado && c.estado.toLowerCase() !== 'activo'
   );
 
@@ -889,9 +889,9 @@ function HistorialClientes({ mesTarget }) {
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>Distribución de la deuda total en los últimos 6 meses</p>
         </div>
         <div style={{ position: 'relative', width: 300 }}>
-          <input 
-            type="text" 
-            placeholder="🔍 Buscar cliente, nodo o plan..." 
+          <input
+            type="text"
+            placeholder="🔍 Buscar cliente, nodo o plan..."
             value={filtro}
             onChange={e => setFiltro(e.target.value)}
             style={{ ...IS, padding: '10px 14px 10px 36px' }}
@@ -899,12 +899,12 @@ function HistorialClientes({ mesTarget }) {
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔎</span>
         </div>
       </div>
-      
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Cargando historial...</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          
+
           {/* SECCIÓN 1: CLIENTES RECIÉN ACTIVADOS */}
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ marginBottom: 16 }}>
@@ -915,7 +915,7 @@ function HistorialClientes({ mesTarget }) {
                 Clientes activados recientemente durante el mes de facturación seleccionado.
               </p>
             </div>
-            
+
             <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
@@ -931,7 +931,7 @@ function HistorialClientes({ mesTarget }) {
                 </thead>
                 <tbody>
                   {filteredRecientes.map((c, idx) => (
-                    <tr key={c.id} style={{ 
+                    <tr key={c.id} style={{
                       borderBottom: '1px solid rgba(255,255,255,0.03)',
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
                     }} className="hover-row">
@@ -993,9 +993,9 @@ function HistorialClientes({ mesTarget }) {
                 </p>
               </div>
               <div style={{ position: 'relative', width: 260 }}>
-                <input 
-                  type="text" 
-                  placeholder="🔍 Buscar cliente por nombre..." 
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar cliente por nombre..."
                   value={filtroCartera}
                   onChange={e => setFiltroCartera(e.target.value)}
                   style={{ ...IS, padding: '8px 12px 8px 32px', fontSize: '0.8rem' }}
@@ -1022,9 +1022,9 @@ function HistorialClientes({ mesTarget }) {
                     let saldoPendiente = parseFloat(c.saldo_total || 0);
                     const tarifa = parseFloat(c.tarifa_mensual || 0);
                     const isDeudor = saldoPendiente > 0;
-                    
+
                     return (
-                      <tr key={c.id} style={{ 
+                      <tr key={c.id} style={{
                         borderBottom: '1px solid rgba(255,255,255,0.03)',
                         background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
                       }} className="hover-row">
@@ -1038,27 +1038,27 @@ function HistorialClientes({ mesTarget }) {
                           let cellVal = 0;
                           if (saldoPendiente > 0) {
                             if (tarifa > 0) {
-                               if (i === months.length - 1) {
-                                 cellVal = saldoPendiente;
-                               } else {
-                                 cellVal = Math.min(saldoPendiente, tarifa);
-                               }
-                               saldoPendiente -= cellVal;
+                              if (i === months.length - 1) {
+                                cellVal = saldoPendiente;
+                              } else {
+                                cellVal = Math.min(saldoPendiente, tarifa);
+                              }
+                              saldoPendiente -= cellVal;
                             } else {
-                               if (i === 0) {
-                                 cellVal = saldoPendiente;
-                                 saldoPendiente = 0;
-                               }
+                              if (i === 0) {
+                                cellVal = saldoPendiente;
+                                saldoPendiente = 0;
+                              }
                             }
                           }
                           const hasDebt = cellVal > 0;
                           return (
-                            <td key={m.key} style={{ 
-                              padding: '12px 16px', textAlign: 'right', 
-                              color: hasDebt ? P.egreso : 'var(--text-muted)', 
-                              fontWeight: hasDebt ? 700 : 400 
+                            <td key={m.key} style={{
+                              padding: '12px 16px', textAlign: 'right',
+                              color: hasDebt ? P.egreso : 'var(--text-muted)',
+                              fontWeight: hasDebt ? 700 : 400
                             }}>
-                              {hasDebt ? fmt(cellVal) : <span style={{opacity:0.4}}>Pagado</span>}
+                              {hasDebt ? fmt(cellVal) : <span style={{ opacity: 0.4 }}>Pagado</span>}
                             </td>
                           );
                         })}
@@ -1076,7 +1076,7 @@ function HistorialClientes({ mesTarget }) {
               </table>
             </div>
           </div>
-          
+
         </div>
       )}
     </motion.div>
@@ -1092,6 +1092,7 @@ const Balance = () => {
   const [mes, setMes] = useState(DEFAULT_MES);
   const [anio, setAnio] = useState(DEFAULT_ANIO);
   const [report, setReport] = useState(null);
+  const [reportPlataforma, setReportPlataforma] = useState(null);
   const [reportAnual, setReportAnual] = useState(null);
   const [egresos, setEgresos] = useState([]);
   const [proyectos, setProyectos] = useState([]);
@@ -1106,12 +1107,14 @@ const Balance = () => {
 
   // ── FETCH ──
   const fetchMensual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteMensual(mes); setReport(r.data); } catch (e) { } setLoading(false); }, [mes]);
+  const fetchPlataforma = useCallback(async () => { setLoading(true); try { const r = await balanceService.reportePlataforma(mes); setReportPlataforma(r.data); } catch (e) { } setLoading(false); }, [mes]);
   const fetchAnual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch (e) { } setLoading(false); }, [anio]);
   const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
   const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
 
   useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
+  useEffect(() => { if (vista === 'plataforma') fetchPlataforma(); }, [vista, fetchPlataforma]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
   useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
@@ -1392,9 +1395,9 @@ const Balance = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
           <SectionTitle icon="📋" text="Detalle de Egresos (Hoja de Cálculo)" margin={0} />
           <div style={{ position: 'relative', width: 280 }}>
-            <input 
-              type="text" 
-              placeholder="🔍 Buscar en egresos..." 
+            <input
+              type="text"
+              placeholder="🔍 Buscar en egresos..."
               value={filtroEgreso}
               onChange={e => setFiltroEgreso(e.target.value)}
               style={{ ...IS, padding: '8px 14px 8px 36px', fontSize: '0.82rem', background: 'rgba(255,255,255,0.04)' }}
@@ -1421,28 +1424,28 @@ const Balance = () => {
                 {egData.lista
                   .filter(e => {
                     const search = filtroEgreso.toLowerCase();
-                    return e.descripcion.toLowerCase().includes(search) || 
-                           (e.subcategoria && e.subcategoria.toLowerCase().includes(search)) ||
-                           e.categoria.toLowerCase().includes(search) ||
-                           e.metodo_pago.toLowerCase().includes(search);
+                    return e.descripcion.toLowerCase().includes(search) ||
+                      (e.subcategoria && e.subcategoria.toLowerCase().includes(search)) ||
+                      e.categoria.toLowerCase().includes(search) ||
+                      e.metodo_pago.toLowerCase().includes(search);
                   })
                   .map((eg, idx) => (
-                  <tr key={eg.id} style={{
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
-                    transition: 'background 0.2s'
-                  }} className="hover-row">
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[eg.categoria] || eg.categoria} color={P.cat[eg.categoria] || '#94a3b8'} /></td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: P.egreso, fontWeight: 800, fontSize: '0.95rem' }}>{fmt(eg.monto)}</td>
-                  </tr>
-                ))}
+                    <tr key={eg.id} style={{
+                      borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                      transition: 'background 0.2s'
+                    }} className="hover-row">
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[eg.categoria] || eg.categoria} color={P.cat[eg.categoria] || '#94a3b8'} /></td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: P.egreso, fontWeight: 800, fontSize: '0.95rem' }}>{fmt(eg.monto)}</td>
+                    </tr>
+                  ))}
               </tbody>
               <tfoot style={{ position: 'sticky', bottom: 0 }}>
                 <tr style={{ background: 'rgba(244,63,94,0.15)', backdropFilter: 'blur(10px)', fontWeight: 900 }}>
@@ -1563,6 +1566,128 @@ const Balance = () => {
             </div>
           </>
         )}
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // VISTA PLATAFORMA (IPTV)
+  // ─────────────────────────────────────────────────────────────────
+  const renderPlataforma = () => {
+    if (!reportPlataforma) return null;
+    const { sumatoria_total, desglose_origen, desglose_bancos, transacciones } = reportPlataforma;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <MonthNavBar />
+
+        {/* HEADER DE SECCIÓN PLATAFORMA */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '20px 24px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>🚀</span> Recaudación por Plataforma (IPTV & Cuentas Extras)
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Consolidado financiero exclusivo de pantallas adicionales e ingresos por cuentas de plataforma.
+            </p>
+          </div>
+          <button onClick={fetchPlataforma} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: 12, fontSize: '0.82rem' }}>
+            🔄 Refrescar
+          </button>
+        </div>
+
+        {/* METRICAS PRINCIPALES */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+          <StatCard title="Total Plataforma" value={fmt(sumatoria_total)} icon="🚀" color="#a78bfa" subtitle="Sumatoria Total Recaudada" />
+          <StatCard title="IPTV Plus (Clientes Internet)" value={fmt(desglose_origen?.iptv_plus || 0)} icon="📺" color="#3b82f6" subtitle="Pantallas Extras de Clientes" />
+          <StatCard title="Clientes Extras (Solo Plataforma)" value={fmt(desglose_origen?.clientes_extras || 0)} icon="🌍" color="#10b981" subtitle="Cuentas Plataforma Externas" />
+        </div>
+
+        {/* DESGLOSE POR ENTIDAD BANCARIA */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', marginBottom: 18, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
+            🏦 Desglose de Plataforma por Entidad Bancaria
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+            <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+              <div style={{ color: '#10b981', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>💵 Efectivo / Ventanilla</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.efectivo || 0)}</div>
+            </div>
+            <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+              <div style={{ color: '#f59e0b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>🏦 Banco Pichincha</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.pichincha || 0)}</div>
+            </div>
+            <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+              <div style={{ color: '#6366f1', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>🏛️ Coac JEP / Guayaquil</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.jep || 0)}</div>
+            </div>
+            <div style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>💳 Otros Métodos</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.otros || 0)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* TABLA DE TRANSACCIONES DETALLADAS DE PLATAFORMA */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', marginBottom: 18, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
+            📋 Transacciones y Cobros Registrados en Plataforma
+          </h4>
+          <div style={{ overflowX: 'auto', borderRadius: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Cliente / Usuario</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Tipo de Ingreso</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Banco / Método</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Fecha</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Monto Recaudado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!transacciones || transacciones.length === 0) ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>🚀</div>
+                      No hay cobros de plataforma registrados en este mes.
+                    </td>
+                  </tr>
+                ) : transacciones.map((t, idx) => (
+                  <tr key={t.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 700, color: 'white' }}>{t.cliente}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{
+                        padding: '4px 10px', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700,
+                        background: t.tipo?.includes('Internet') ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)',
+                        color: t.tipo?.includes('Internet') ? '#60a5fa' : '#34d399',
+                        border: `1px solid ${t.tipo?.includes('Internet') ? 'rgba(59,130,246,0.25)' : 'rgba(16,185,129,0.25)'}`
+                      }}>
+                        {t.tipo}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#cbd5e1' }}>
+                      {t.banco}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      {t.fecha}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#a78bfa', fontSize: '0.95rem' }}>
+                      {fmt(t.monto)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {transacciones && transacciones.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: 'rgba(167,139,250,0.1)', borderTop: '2px solid rgba(167,139,250,0.3)' }}>
+                    <td colSpan={4} style={{ padding: '14px 16px', fontWeight: 900, color: '#f8fafc', letterSpacing: 1 }}>TOTAL PLATAFORMA</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'right', color: '#a78bfa', fontSize: '1.2rem', fontWeight: 900 }}>{fmt(sumatoria_total)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1928,8 +2053,9 @@ const Balance = () => {
         </div>
       </div>
 
-      <div className="page-actions" style={{ marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+      <div className="page-actions" style={{ marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Tab id="mensual" label="Resumen Mensual" icon="📊" />
+        <Tab id="plataforma" label="Plataforma (IPTV)" icon="🚀" />
         <Tab id="anual" label="Evolución Anual" icon="📈" />
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />
         <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
@@ -1945,6 +2071,7 @@ const Balance = () => {
           ) : (
             <>
               {vista === 'mensual' && renderMensual()}
+              {vista === 'plataforma' && renderPlataforma()}
               {vista === 'anual' && renderAnual()}
               {vista === 'egresos' && renderEgresos()}
               {vista === 'gastos-fijos' && renderGastosFijos()}

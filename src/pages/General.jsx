@@ -129,6 +129,50 @@ const General = () => {
     }
   };
 
+const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return resolve(file);
+            const compressedFile = new File([blob], file.name || 'cedula.jpg', {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = event.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+};
+
   const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
     try {
       setUploadingCedula(true);
@@ -136,8 +180,14 @@ const General = () => {
 
       if (fileFront || filePost) {
         const uploadData = new FormData();
-        if (fileFront) uploadData.append('frontal', fileFront);
-        if (filePost) uploadData.append('posterior', filePost);
+        if (fileFront) {
+          const compFront = await compressImage(fileFront);
+          uploadData.append('frontal', compFront);
+        }
+        if (filePost) {
+          const compPost = await compressImage(filePost);
+          uploadData.append('posterior', compPost);
+        }
         await clienteService.uploadCedula(id, uploadData);
       }
 
