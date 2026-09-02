@@ -453,23 +453,23 @@ const HojaRuta = () => {
                                                 {r.actividad}
                                             </span>
                                         </td>
-                                        <td style={{ verticalAlign: 'top', paddingTop: '10px' }}>
-                                            <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
+                                        <td style={{ verticalAlign: 'middle', padding: '12px 10px' }}>
+                                            <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '280px', maxHeight: '70px', overflowY: 'auto', paddingRight: '4px' }}>
                                                 {r.observacion || 'Sin observación'}
                                             </div>
                                             {r.observacion_tecnico && (
-                                                <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: '4px', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                                <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: '4px', opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
                                                     <strong>⚙️:</strong> {r.observacion_tecnico}
                                                 </div>
                                             )}
                                             <button
                                                 onClick={() => handleOpenObs(r)}
-                                                style={{ fontSize: '0.65rem', color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 0' }}
+                                                style={{ fontSize: '0.7rem', color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', textDecoration: 'underline' }}
                                             >
                                                 {user.rol?.toLowerCase() === 'tecnico' ? '✎ Editar Obs. Técnica' : '👁 Ver Obs. Técnica'}
                                             </button>
                                         </td>
-                                        <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px' }}>
+                                        <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px', verticalAlign: 'middle' }}>
                                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 {user.rol?.toLowerCase() === 'administrador' ? (
                                                     <>
@@ -799,17 +799,19 @@ const HojaRuta = () => {
             </AnimatePresence>
 
             <style>{`
-                .hr-main-container { width: 100%; padding: 24px; }
-                .hr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-                .hr-title { font-size: 2.4rem; font-weight: 900; margin: 0; color: #a78bfa; }
-                .hr-subtitle { color: var(--text-muted); font-size: 1rem; margin-top: 5px; }
-                .hr-actions { display: flex; gap: 16px; align-items: center; }
-                .hr-date-filter { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
-                .hr-search { width: 250px; margin-bottom: 0; border-radius: 15px; }
-                .hr-btn { padding: 12px 20px; }
-                .hr-btn-secondary { padding: 12px 20px; border: 1px solid #7e22ce; color: #a78bfa; }
-                .hr-table-container { overflow-x: auto; border-radius: 15px; }
-                .hr-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+                .hr-main-container { width: 100%; padding: 24px; box-sizing: border-box; }
+                .hr-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; gap: 20px; flex-wrap: wrap; }
+                .hr-header-info { flex: 0 0 auto; min-width: 240px; }
+                .hr-title { font-size: 2.2rem; font-weight: 800; margin: 0; color: #a78bfa; white-space: nowrap; }
+                .hr-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: 4px; }
+                .hr-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
+                .hr-date-filter { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); height: 40px; }
+                .hr-search { width: 230px; margin-bottom: 0; border-radius: 12px; height: 40px; }
+                .hr-btn { padding: 8px 16px; height: 40px; border-radius: 12px; font-weight: 600; white-space: nowrap; }
+                .hr-btn-secondary { padding: 8px 16px; height: 40px; border-radius: 12px; font-weight: 600; border: 1px solid #7e22ce; color: #a78bfa; white-space: nowrap; }
+                .hr-table-container { overflow-x: auto; border-radius: 15px; width: 100%; }
+                .hr-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 1100px; }
+                .hr-table td { vertical-align: middle; padding: 12px 10px; }
 
                 .status-chip { border: 1px solid; padding: 4px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
