@@ -448,6 +448,81 @@ function GastoFijoForm({ initial, onSave, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MOVIMIENTO INTERNO FORM (Transferencia entre cuentas/bancos)
+// ─────────────────────────────────────────────────────────────────────────────
+function MovimientoInternoForm({ initial, onSave, onClose }) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState(initial || {
+    origen: 'Efectivo',
+    destino: 'Pichincha',
+    monto: '',
+    fecha: todayStr,
+    observacion: ''
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (!form.monto || parseFloat(form.monto) <= 0) return showWarning('Ingresa un monto válido mayor a 0.');
+    if (!form.fecha) return showWarning('Selecciona la fecha del movimiento.');
+    if (form.origen === form.destino) return showWarning('El origen y el destino deben ser diferentes.');
+
+    await onSave({
+      ...form,
+      monto: parseFloat(form.monto)
+    });
+    onClose();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Origen (De dónde sale)</label>
+          <select style={IS} value={form.origen} onChange={e => set('origen', e.target.value)}>
+            <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
+            <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
+            <option value="JEP" style={OS}>🏛️ Coac JEP</option>
+            <option value="Otro" style={OS}>💳 Otro / Banco</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Para / Destino (Hacia dónde va)</label>
+          <select style={IS} value={form.destino} onChange={e => set('destino', e.target.value)}>
+            <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
+            <option value="JEP" style={OS}>🏛️ Coac JEP</option>
+            <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
+            <option value="Otro" style={OS}>💳 Otro / Banco</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Monto / Valor ($)</label>
+          <input style={IS} type="number" step="0.01" min="0.01" placeholder="Ej: 300.00" value={form.monto} onChange={e => set('monto', e.target.value)} required />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Fecha de Pago / Transacción</label>
+          <input style={IS} type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} required />
+        </div>
+      </div>
+
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Observación / Concepto (Opcional)</label>
+        <input style={IS} placeholder="Ej: Depósito de caja chica a cuenta Pichincha" value={form.observacion || ''} onChange={e => set('observacion', e.target.value)} />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 10 }}>
+        <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Cancelar</button>
+        <button type="submit" style={{ padding: '10px 20px', borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Guardar Movimiento</button>
+      </div>
+    </form>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MONTH NAVIGATION BAR (Horizontal Strip)
 // ─────────────────────────────────────────────────────────────────────────────
 function MonthNavBar({ value = DEFAULT_MES, onChange }) {
@@ -1094,6 +1169,7 @@ const Balance = () => {
   const [anio, setAnio] = useState(DEFAULT_ANIO);
   const [report, setReport] = useState(null);
   const [reportPlataforma, setReportPlataforma] = useState(null);
+  const [reportMovsInternos, setReportMovsInternos] = useState(null);
   const [reportAnual, setReportAnual] = useState(null);
   const [egresos, setEgresos] = useState([]);
   const [proyectos, setProyectos] = useState([]);
@@ -1103,12 +1179,14 @@ const Balance = () => {
   const [modalProy, setModalProy] = useState(null);
   const [modalColchon, setModalColchon] = useState(null);
   const [modalGastoFijo, setModalGastoFijo] = useState(null);
+  const [modalMovInterno, setModalMovInterno] = useState(null);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
 
   // ── FETCH ──
   const fetchMensual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteMensual(mes); setReport(r.data); } catch (e) { } setLoading(false); }, [mes]);
   const fetchPlataforma = useCallback(async () => { setLoading(true); try { const r = await balanceService.reportePlataforma(mes); setReportPlataforma(r.data); } catch (e) { } setLoading(false); }, [mes]);
+  const fetchMovsInternos = useCallback(async () => { setLoading(true); try { const r = await balanceService.listarMovimientosInternos(mes); setReportMovsInternos(r.data); } catch (e) { } setLoading(false); }, [mes]);
   const fetchAnual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch (e) { } setLoading(false); }, [anio]);
   const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
@@ -1116,8 +1194,26 @@ const Balance = () => {
 
   useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
   useEffect(() => { if (vista === 'plataforma') fetchPlataforma(); }, [vista, fetchPlataforma]);
+  useEffect(() => { if (vista === 'movimientos-internos') fetchMovsInternos(); }, [vista, mes, fetchMovsInternos]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
   useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
+  useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
+  useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
+
+  const handleSaveMovInterno = async data => {
+    if (data.id) await balanceService.actualizarMovimientoInterno(data.id, data);
+    else await balanceService.crearMovimientoInterno(data);
+    fetchMovsInternos();
+    showSuccess('Movimiento interno guardado correctamente');
+  };
+
+  const handleDeleteMovInterno = async id => {
+    const confirmado = await showConfirm('¿Eliminar movimiento?', '¿Deseas eliminar este movimiento interno?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
+    await balanceService.eliminarMovimientoInterno(id);
+    fetchMovsInternos();
+    showSuccess('Movimiento eliminado');
+  };
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
   useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
 
@@ -1694,6 +1790,143 @@ const Balance = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────
+  // VISTA MOVIMIENTOS INTERNOS
+  // ─────────────────────────────────────────────────────────────────
+  const renderMovimientosInternos = () => {
+    if (!reportMovsInternos) return null;
+    const { movimientos, totales_movidos, recaudacion_bruta, saldos_finales } = reportMovsInternos;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <MonthNavBar value={mes} onChange={val => setMes(val)} />
+
+        {/* HEADER DE SECCIÓN */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '20px 24px', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>🔄</span> Movimientos Internos entre Cuentas
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Registro de depósitos y transferencias internas entre caja chica y cuentas bancarias.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={fetchMovsInternos} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: 12, fontSize: '0.82rem' }}>
+              🔄 Refrescar
+            </button>
+            <button onClick={() => setModalMovInterno('crear')} className="btn btn-primary" style={{ padding: '8px 18px', borderRadius: 12, fontSize: '0.85rem', fontWeight: 700, background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
+              + Registrar Movimiento Interno
+            </button>
+          </div>
+        </div>
+
+        {/* METRICAS DE SALDOS FINALES DISPONIBLES */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+          <Card title="Efectivo Final (Caja)" value={fmt(saldos_finales?.efectivo || 0)} icon="💵" color="#4ade80" sub={`Recaudado ${fmt(recaudacion_bruta?.efectivo)} - Movido ${fmt(totales_movidos?.efectivo)}`} />
+          <Card title="Banco Pichincha Final" value={fmt(saldos_finales?.pichincha || 0)} icon="🏦" color="#facc15" sub={`Recaudado ${fmt(recaudacion_bruta?.pichincha)} - Movido ${fmt(totales_movidos?.pichincha)}`} />
+          <Card title="Coac JEP Final" value={fmt(saldos_finales?.jep || 0)} icon="🏛️" color="#fb923c" sub={`Recaudado ${fmt(recaudacion_bruta?.jep)} - Movido ${fmt(totales_movidos?.jep)}`} />
+        </div>
+
+        {/* TABLA PRINCIPAL DE MOVIMIENTOS INTERNOS (COMO LA HOJA DE CÁLCULO DEL USUARIO) */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', marginBottom: 18, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
+            📊 Registro de Transferencias y Depósitos Internos
+          </h4>
+          <div style={{ overflowX: 'auto', borderRadius: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', width: 60 }}>Item #</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Para (Destino)</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Fecha de Pago</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Tipo (Origen)</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Valor ($)</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Observación</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', width: 100 }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!movimientos || movimientos.length === 0) ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>🔄</div>
+                      No hay movimientos internos registrados en este mes.
+                    </td>
+                  </tr>
+                ) : movimientos.map((m, idx) => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: 'rgba(250,204,21,0.15)', color: '#facc15', border: '1px solid rgba(250,204,21,0.3)' }}>
+                        {m.destino}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                      {m.fecha}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}>
+                        {m.origen}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '0.95rem' }}>
+                      {fmt(m.monto)}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      {m.observacion || '—'}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                        <button onClick={() => setModalMovInterno(m)} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, color: '#6366f1', padding: '5px 8px', cursor: 'pointer' }} title="Editar">✏️</button>
+                        <button onClick={() => handleDeleteMovInterno(m.id)} style={{ background: 'rgba(244,63,94,0.12)', border: 'none', borderRadius: 8, color: '#f43f5e', padding: '5px 8px', cursor: 'pointer' }} title="Eliminar">🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* TABLA RESUMEN INFERIOR (MATCHING HOJA DE CÁLCULO) */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', maxWidth: 500, alignSelf: 'flex-end', width: '100%' }}>
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f8fafc', marginBottom: 14, letterSpacing: '0.03em' }}>
+            📈 Resumen de Movimientos y Saldos Finales
+          </h4>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Efectivo Movido</td>
+                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.efectivo)}</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Trans. Pichincha Movido</td>
+                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.pichincha)}</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Trans. JEP Movido</td>
+                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.jep)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(74,222,128,0.12)', borderTop: '2px solid rgba(74,222,128,0.3)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#4ade80' }}>Total Efectivo Final (Caja)</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '1rem' }}>{fmt(saldos_finales?.efectivo)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(250,204,21,0.12)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#facc15' }}>Total Trans. Pichincha Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#facc15', fontSize: '1rem' }}>{fmt(saldos_finales?.pichincha)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(251,146,60,0.12)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#fb923c' }}>Total Trans. JEP Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#fb923c', fontSize: '1rem' }}>{fmt(saldos_finales?.jep)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // VISTA ANUAL
   // ─────────────────────────────────────────────────────────────────
   const renderAnual = () => {
@@ -2057,6 +2290,7 @@ const Balance = () => {
       <div className="page-actions" style={{ marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Tab id="mensual" label="Resumen Mensual" icon="📊" />
         <Tab id="plataforma" label="Plataforma (IPTV)" icon="🚀" />
+        <Tab id="movimientos-internos" label="Movimientos Internos" icon="🔄" />
         <Tab id="anual" label="Evolución Anual" icon="📈" />
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />
         <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
@@ -2073,6 +2307,7 @@ const Balance = () => {
             <>
               {vista === 'mensual' && renderMensual()}
               {vista === 'plataforma' && renderPlataforma()}
+              {vista === 'movimientos-internos' && renderMovimientosInternos()}
               {vista === 'anual' && renderAnual()}
               {vista === 'egresos' && renderEgresos()}
               {vista === 'gastos-fijos' && renderGastosFijos()}
@@ -2112,6 +2347,13 @@ const Balance = () => {
       {modalGastoFijo !== null && (
         <Modal title={modalGastoFijo === 'crear' ? '➕ Nuevo Egreso Fijo' : '✏️ Editar Egreso Fijo'} onClose={() => setModalGastoFijo(null)}>
           <GastoFijoForm initial={modalGastoFijo !== 'crear' ? { ...modalGastoFijo } : null} onSave={handleSaveGastoFijo} onClose={() => setModalGastoFijo(null)} />
+        </Modal>
+      )}
+
+      {/* Modal Movimiento Interno */}
+      {modalMovInterno !== null && (
+        <Modal title={modalMovInterno === 'crear' ? '➕ Registrar Movimiento Interno' : '✏️ Editar Movimiento Interno'} onClose={() => setModalMovInterno(null)}>
+          <MovimientoInternoForm initial={modalMovInterno !== 'crear' ? { ...modalMovInterno } : null} onSave={handleSaveMovInterno} onClose={() => setModalMovInterno(null)} />
         </Modal>
       )}
     </div>

@@ -218,6 +218,11 @@ export const balanceService = {
   crearGastoFijo: (data) => api.post('/balance/gastos-fijos', data),
   actualizarGastoFijo: (id, data) => api.patch(`/balance/gastos-fijos/${id}`, data),
   eliminarGastoFijo: (id) => api.delete(`/balance/gastos-fijos/${id}`),
+  // Movimientos Internos
+  listarMovimientosInternos: (mes) => api.get(`/balance/movimientos-internos?mes=${mes}`),
+  crearMovimientoInterno: (data) => api.post('/balance/movimientos-internos', data),
+  actualizarMovimientoInterno: (id, data) => api.put(`/balance/movimientos-internos/${id}`, data),
+  eliminarMovimientoInterno: (id) => api.delete(`/balance/movimientos-internos/${id}`),
 };
 
 export const asistenciaService = {
