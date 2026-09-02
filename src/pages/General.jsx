@@ -720,7 +720,7 @@ const General = () => {
                                 ))}
                               </select>
                             ) : col === 'cedula_tipo' ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px', padding: '4px 0' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
                                 <select
                                   className="input"
                                   style={{
@@ -729,10 +729,22 @@ const General = () => {
                                     height: '28px',
                                     fontSize: '0.78rem',
                                     background: '#1e1b4b',
-                                    border: '1px solid var(--primary)'
+                                    border: '1px solid var(--primary)',
+                                    color: tempValue === 'Si' ? '#4ade80' : '#ffffff',
+                                    fontWeight: 'bold'
                                   }}
-                                  value={tempValue || 'No'}
-                                  onChange={(e) => setTempValue(e.target.value)}
+                                  value={tempValue === 'Si' ? 'Si' : 'No'}
+                                  onChange={async (e) => {
+                                    const val = e.target.value;
+                                    setTempValue(val);
+                                    try {
+                                      await clienteService.actualizar(c.id, { cedula_tipo: val });
+                                      showSuccess(`Cédula digitalizada cambiada a: ${val}`);
+                                      fetchData();
+                                    } catch (err) {
+                                      showError('Error al guardar estado de cédula');
+                                    }
+                                  }}
                                   autoFocus
                                 >
                                   <option value="No">¿Digitalizada? No</option>
@@ -749,16 +761,18 @@ const General = () => {
                                   </label>
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                                  <button
-                                    type="button"
-                                    className="btn btn-primary"
-                                    disabled={uploadingCedula}
-                                    onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
-                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                    title="Guardar Cédula y Fotos"
-                                  >
-                                    {uploadingCedula ? '⏳' : '✅ Guardar'}
-                                  </button>
+                                  {(fileFrontal || filePosterior) && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary"
+                                      disabled={uploadingCedula}
+                                      onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
+                                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                      title="Subir Fotos Seleccionadas"
+                                    >
+                                      {uploadingCedula ? '⏳' : 'Subir Fotos'}
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     className="btn btn-secondary"
@@ -770,9 +784,9 @@ const General = () => {
                                       setTempValue('');
                                     }}
                                     style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                    title="Cancelar"
+                                    title="Cerrar"
                                   >
-                                    ❌
+                                    ❌ Cerrar
                                   </button>
                                 </div>
                               </div>

@@ -381,8 +381,15 @@ const Administrar = () => {
                         <input style={{ ...inputStyle, width: '80px' }} value={editData.potencia} onChange={(e) => handleEditChange('potencia', e.target.value)} placeholder="-22.5" />
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ color: editData.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontSize: '0.75rem' }}>Digitalizada: {editData.cedula_tipo || 'No'}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <select
+                            style={{ ...inputStyle, fontSize: '0.75rem', padding: '2px 4px' }}
+                            value={editData.cedula_tipo === 'Si' ? 'Si' : 'No'}
+                            onChange={(e) => handleEditChange('cedula_tipo', e.target.value)}
+                          >
+                            <option value="No">Digitalizada: No</option>
+                            <option value="Si">Digitalizada: Si</option>
+                          </select>
                           <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(editData.cedula_frontal || editData.cedula_posterior) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
                         </div>
                       </td>
