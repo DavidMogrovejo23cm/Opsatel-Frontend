@@ -450,8 +450,9 @@ function GastoFijoForm({ initial, onSave, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MONTH NAVIGATION BAR (Horizontal Strip)
 // ─────────────────────────────────────────────────────────────────────────────
-function MonthNavBar({ value, onChange }) {
-  const [aStr, mNum] = value.split('-');
+function MonthNavBar({ value = DEFAULT_MES, onChange }) {
+  const valStr = value || DEFAULT_MES;
+  const [aStr, mNum] = valStr.split('-');
   const currentMonthIdx = parseInt(mNum, 10) - 1;
   const currentYear = parseInt(aStr, 10);
 
@@ -1579,7 +1580,7 @@ const Balance = () => {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <MonthNavBar />
+        <MonthNavBar value={mes} onChange={val => setMes(val)} />
 
         {/* HEADER DE SECCIÓN PLATAFORMA */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '20px 24px' }}>
