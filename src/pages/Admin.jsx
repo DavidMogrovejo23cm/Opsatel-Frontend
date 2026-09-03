@@ -93,6 +93,12 @@ const Admin = () => {
 
     const isCortesiaTotal = !!cliente.cortesia_total;
 
+    const planData = planesList.find(p => p.nombre === cliente.plan);
+    const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
+    const initialScreens = (cliente.iptv_max_conn !== undefined && cliente.iptv_max_conn !== null && cliente.iptv_max_conn !== 0)
+      ? cliente.iptv_max_conn
+      : (baseScreens + Math.round(deudaPlus / 2));
+
     setPagoData({
       monto: isCortesiaTotal ? "0" : totalPendiente,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
@@ -107,6 +113,7 @@ const Admin = () => {
       adicional: "0",
       deuda_plus: cliente.plus || '0',
       deuda_adicional: cliente.adicional || '0',
+      iptv_max_conn: initialScreens,
       notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE',
@@ -141,9 +148,9 @@ const Admin = () => {
     let abonoAdicional = 0;
 
     if (pagoData.cortesiaMode === 'TOTAL') {
-      abonoInternet = 0;
-      abonoPlus = 0;
-      abonoAdicional = 0;
+      abonoInternet = deudaInternet;
+      abonoPlus = deudaPlus;
+      abonoAdicional = deudaAdicional;
     } else {
       // 1. Pagar Internet
       abonoInternet = Math.min(resto, deudaInternet);
@@ -172,8 +179,9 @@ const Admin = () => {
         return showWarning('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
-      // Sincronizar deudas modificadas, comentarios y cortesía PRIMERO en el backend
+      // Sincronizar deudas modificadas, pantallas, comentarios y cortesía PRIMERO en el backend
       await clienteService.updateAdmin(selectedCliente.id, {
+        iptv_max_conn: pagoData.iptv_max_conn !== undefined ? pagoData.iptv_max_conn : selectedCliente.iptv_max_conn,
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
@@ -403,19 +411,23 @@ const Admin = () => {
                     <input
                       type="number"
                       value={(() => {
+                        if (c.iptv_max_conn !== undefined && c.iptv_max_conn !== null && c.iptv_max_conn !== 0) {
+                          return c.iptv_max_conn;
+                        }
                         const planData = planesList.find(p => p.nombre === c.plan);
                         const base = planData ? (planData.pantallas ?? 0) : 0;
-                        return base + parseFloat(c.plus || 0) / 2;
+                        return base + Math.round(parseFloat(c.plus || 0) / 2);
                       })()}
                       onChange={async (e) => {
                         const val = parseInt(e.target.value);
                         if (isNaN(val) || val < 0) return;
                         const planData = planesList.find(p => p.nombre === c.plan);
                         const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
+                        const newPlus = (Math.max(0, (val - baseScreens) * 2)).toString();
                         try {
                           await clienteService.updateAdmin(c.id, {
                             iptv_max_conn: val,
-                            plus: (Math.max(0, (val - baseScreens) * 2)).toString()
+                            plus: newPlus
                           });
                           fetchData();
                         } catch (error) {
@@ -710,9 +722,12 @@ const Admin = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '6px', paddingTop: '6px' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Monto IPTV ({(() => {
+                        if (pagoData.iptv_max_conn !== undefined && pagoData.iptv_max_conn !== null && pagoData.iptv_max_conn !== 0) {
+                          return pagoData.iptv_max_conn;
+                        }
                         const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
                         const base = planData ? (planData.pantallas ?? 0) : 0;
-                        return base + parseFloat(pagoData.deuda_plus || 0) / 2;
+                        return base + Math.round(parseFloat(pagoData.deuda_plus || 0) / 2);
                       })()} Pantallas):</span>
                       <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
                         ${parseFloat(pagoData.deuda_plus || 0).toFixed(2)}
@@ -746,16 +761,34 @@ const Admin = () => {
                     <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       ⚙️ Modificar Deudas en Cuenta (Guardar Valores)
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda IPTV Plus ($)</label>
-                        <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.deuda_plus} onChange={(e) => {
-                          const val = e.target.value;
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Pantallas IPTV</label>
+                        <input type="number" min="0" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.iptv_max_conn ?? 0} onChange={(e) => {
+                          const screensVal = parseInt(e.target.value) || 0;
+                          const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
+                          const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
+                          const calcPlus = (Math.max(0, (screensVal - baseScreens) * 2)).toFixed(2);
                           const originalInternetVal = parseFloat(pagoData.original_internet || 0);
                           const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
-                          const debtPlusVal = parseFloat(val || 0);
+                          const debtPlusVal = parseFloat(calcPlus || 0);
                           const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
-                          setPagoData({ ...pagoData, deuda_plus: val, monto: newTotal });
+                          setPagoData({ ...pagoData, iptv_max_conn: screensVal, deuda_plus: calcPlus, monto: newTotal });
+                        }} />
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda Plus ($)</label>
+                        <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.deuda_plus} onChange={(e) => {
+                          const val = e.target.value;
+                          const debtPlusVal = parseFloat(val || 0);
+                          const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
+                          const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
+                          const calcScreens = baseScreens + Math.round(debtPlusVal / 2);
+                          const originalInternetVal = parseFloat(pagoData.original_internet || 0);
+                          const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
+                          const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
+                          setPagoData({ ...pagoData, iptv_max_conn: calcScreens, deuda_plus: val, monto: newTotal });
                         }} />
                       </div>
 
