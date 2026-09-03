@@ -450,17 +450,50 @@ function GastoFijoForm({ initial, onSave, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MOVIMIENTO INTERNO FORM (Transferencia entre cuentas/bancos)
 // ─────────────────────────────────────────────────────────────────────────────
-function MovimientoInternoForm({ initial, onSave, onClose }) {
+function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
+
+  const getSaldoForOrigen = (origenKey, sf) => {
+    if (!sf) return 0;
+    const key = (origenKey || '').toLowerCase();
+    if (key.includes('efectivo')) return sf.efectivo !== undefined ? parseFloat(sf.efectivo || 0) : 0;
+    if (key.includes('pichincha')) return sf.pichincha !== undefined ? parseFloat(sf.pichincha || 0) : 0;
+    if (key.includes('jep')) return sf.jep !== undefined ? parseFloat(sf.jep || 0) : 0;
+    return 0;
+  };
+
+  const initialOrigen = initial?.origen || 'Efectivo';
+  const initialMonto = (initial && initial.monto !== undefined && initial.monto !== null && initial.monto !== '')
+    ? initial.monto
+    : (getSaldoForOrigen(initialOrigen, saldosFinales) > 0 ? getSaldoForOrigen(initialOrigen, saldosFinales).toFixed(2) : '');
+
   const [form, setForm] = useState(initial || {
     origen: 'Efectivo',
     destino: 'Pichincha',
-    monto: '',
+    monto: initialMonto,
     fecha: todayStr,
     observacion: ''
   });
 
+  useEffect(() => {
+    if (!initial && saldosFinales) {
+      const saldo = getSaldoForOrigen(form.origen, saldosFinales);
+      if (saldo > 0 && (!form.monto || form.monto === '0' || form.monto === '0.00')) {
+        setForm(f => ({ ...f, monto: saldo.toFixed(2) }));
+      }
+    }
+  }, [saldosFinales]);
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleOrigenChange = (newOrigen) => {
+    const saldo = getSaldoForOrigen(newOrigen, saldosFinales);
+    setForm(f => ({
+      ...f,
+      origen: newOrigen,
+      monto: saldo > 0 ? saldo.toFixed(2) : f.monto
+    }));
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -480,7 +513,7 @@ function MovimientoInternoForm({ initial, onSave, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Origen (De dónde sale)</label>
-          <select style={IS} value={form.origen} onChange={e => set('origen', e.target.value)}>
+          <select style={IS} value={form.origen} onChange={e => handleOrigenChange(e.target.value)}>
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
             <option value="JEP" style={OS}>🏛️ Coac JEP</option>
@@ -2353,7 +2386,12 @@ const Balance = () => {
       {/* Modal Movimiento Interno */}
       {modalMovInterno !== null && (
         <Modal title={modalMovInterno === 'crear' ? '➕ Registrar Movimiento Interno' : '✏️ Editar Movimiento Interno'} onClose={() => setModalMovInterno(null)}>
-          <MovimientoInternoForm initial={modalMovInterno !== 'crear' ? { ...modalMovInterno } : null} onSave={handleSaveMovInterno} onClose={() => setModalMovInterno(null)} />
+          <MovimientoInternoForm
+            initial={modalMovInterno !== 'crear' ? { ...modalMovInterno } : null}
+            saldosFinales={reportMovsInternos?.saldos_finales}
+            onSave={handleSaveMovInterno}
+            onClose={() => setModalMovInterno(null)}
+          />
         </Modal>
       )}
     </div>
