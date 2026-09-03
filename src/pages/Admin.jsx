@@ -78,22 +78,24 @@ const Admin = () => {
     const customPriceVal = cliente.precio_plan_especial !== null && cliente.precio_plan_especial !== undefined ? parseFloat(cliente.precio_plan_especial) : 0;
     const isCustomPlan = !isMantenimiento && customPriceVal > 0;
 
+    const planObj = planesList.find(p => p.nombre.toLowerCase() === (cliente?.plan || '').toLowerCase());
+    const basePlanPrice = planObj ? parseFloat(planObj.precio || 0) : (cliente.tercera_edad && customPriceVal > 0 ? customPriceVal : 0);
+
+    let currentMonthlyFee = basePlanPrice;
+    if (isMantenimiento) {
+      currentMonthlyFee = 10.00;
+    } else if (isCustomPlan) {
+      currentMonthlyFee = customPriceVal;
+    }
+
     let netFee = 0;
     if (cliente.saldo !== null && cliente.saldo !== undefined) {
       netFee = Math.max(0, parseFloat(cliente.saldo || 0));
-    } else if (isMantenimiento) {
-      netFee = 10.00;
-    } else if (isCustomPlan) {
-      netFee = customPriceVal;
     } else {
-      const planObj = planesList.find(p => p.nombre.toLowerCase() === (cliente?.plan || '').toLowerCase());
-      const planPrice = planObj ? parseFloat(planObj.precio || 0) : 0;
-      if (planPrice > 0) {
-        netFee = planPrice;
-      } else {
-        netFee = Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
-      }
+      netFee = currentMonthlyFee > 0 ? currentMonthlyFee : Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
     }
+
+    const priorDebt = Math.max(0, netFee - currentMonthlyFee);
     const internetSugerido = netFee.toFixed(2);
 
     const deudaPlus = parseFloat(cliente.plus || 0);
@@ -109,6 +111,7 @@ const Admin = () => {
       : (baseScreens + Math.round(deudaPlus / 2));
 
     setPagoData({
+      priorDebt: priorDebt,
       monto: isCortesiaTotal ? "0" : totalPendiente,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI') ? 'SI' : 'NONE',
@@ -129,7 +132,7 @@ const Admin = () => {
       isMantenimiento: isMantenimiento,
       isCustomPlan: isCustomPlan,
       precio_plan_especial: customPriceVal,
-      customPlanPriceInput: customPriceVal > 0 ? customPriceVal.toString() : internetSugerido,
+      customPlanPriceInput: customPriceVal > 0 ? customPriceVal.toString() : (basePlanPrice > 0 ? basePlanPrice.toString() : internetSugerido),
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
       original_adicional: cliente.adicional || '0',
@@ -147,7 +150,7 @@ const Admin = () => {
     const montoTotal = parseFloat(pagoData.monto || 0);
     let resto = montoTotal;
 
-    const deudaInternet = Math.max(0, parseFloat(selectedCliente.saldo || 0));
+    const deudaInternet = Math.max(0, parseFloat(pagoData.original_internet || 0));
     const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
     const deudaAdicional = parseFloat(pagoData.deuda_adicional || 0);
 
@@ -198,7 +201,8 @@ const Admin = () => {
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
         mantenimiento: isMantenimiento,
-        precio_plan_especial: isCustomPlan ? customPriceVal : 0
+        precio_plan_especial: isCustomPlan ? customPriceVal : 0,
+        saldo: parseFloat(pagoData.original_internet || 0)
       });
 
       // Luego registrar el pago que descontará del saldo actualizado
@@ -236,12 +240,7 @@ const Admin = () => {
       const isCustomPlan = !!pagoData.isCustomPlan;
       const customPriceVal = parseFloat(pagoData.precio_plan_especial || pagoData.customPlanPriceInput || 0);
 
-      let newSaldo = parseFloat(pagoData.original_internet || 0);
-      if (isMantenimiento) {
-        newSaldo = 10.00;
-      } else if (isCustomPlan) {
-        newSaldo = customPriceVal;
-      }
+      const newSaldo = parseFloat(pagoData.original_internet || 0);
 
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.deuda_plus,
@@ -892,7 +891,9 @@ const Admin = () => {
                             const isChecked = e.target.checked;
                             const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
                             const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.tercera_edad && selectedCliente?.precio_plan_especial ? parseFloat(selectedCliente.precio_plan_especial) : 0);
-                            const newInternetVal = isChecked ? "10.00" : (planPrice > 0 ? planPrice.toFixed(2) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo).toFixed(2) : "0.00"));
+                            const priorDebt = pagoData.priorDebt !== undefined ? pagoData.priorDebt : 0;
+                            const monthFee = isChecked ? 10.00 : planPrice;
+                            const newInternetVal = (priorDebt + monthFee).toFixed(2);
                             const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
                             const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
                             const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
@@ -919,29 +920,32 @@ const Admin = () => {
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
-                            const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo) : 0);
+                            const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.tercera_edad && selectedCliente?.precio_plan_especial ? parseFloat(selectedCliente.precio_plan_especial) : 0);
+                            const priorDebt = pagoData.priorDebt !== undefined ? pagoData.priorDebt : 0;
 
                             if (!isChecked) {
-                              // Desmarcado: restaurar precio original del plan
+                              // Desmarcado: restaurar precio original del plan (o mantenimiento si aplica)
+                              const monthFee = pagoData.isMantenimiento ? 10.00 : planPrice;
+                              const newInternetVal = (priorDebt + monthFee).toFixed(2);
                               const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
                               const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
-                              const newInternetVal = pagoData.isMantenimiento ? "10.00" : planPrice.toFixed(2);
                               const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
 
                               setPagoData(prev => ({
                                 ...prev,
                                 isCustomPlan: false,
                                 precio_plan_especial: 0,
-                                customPlanPriceInput: '',
+                                customPlanPriceInput: planPrice.toString(),
                                 original_internet: newInternetVal,
                                 monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                               }));
                             } else {
                               // Marcado: habilitar modificación de saldo
-                              const currentVal = parseFloat(pagoData.customPlanPriceInput || pagoData.original_internet) || planPrice;
+                              const currentVal = parseFloat(pagoData.customPlanPriceInput) || planPrice;
+                              const newInternetVal = (priorDebt + currentVal).toFixed(2);
                               const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
                               const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
-                              const newTotal = (currentVal + deudaPlus + deudaAdic).toFixed(2);
+                              const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
 
                               setPagoData(prev => ({
                                 ...prev,
@@ -949,7 +953,7 @@ const Admin = () => {
                                 isMantenimiento: false,
                                 precio_plan_especial: currentVal,
                                 customPlanPriceInput: currentVal.toFixed(2),
-                                original_internet: currentVal.toFixed(2),
+                                original_internet: newInternetVal,
                                 monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                               }));
                             }
@@ -972,15 +976,17 @@ const Admin = () => {
                           onChange={(e) => {
                             const inputVal = e.target.value;
                             const numericVal = parseFloat(inputVal) || 0;
+                            const priorDebt = pagoData.priorDebt !== undefined ? pagoData.priorDebt : 0;
+                            const newInternetVal = (priorDebt + numericVal).toFixed(2);
                             const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
                             const deudaAdic = parseFloat(pagoData.deuda_adicional || 0);
-                            const newTotal = (numericVal + deudaPlus + deudaAdic).toFixed(2);
+                            const newTotal = (parseFloat(newInternetVal) + deudaPlus + deudaAdic).toFixed(2);
 
                             setPagoData(prev => ({
                               ...prev,
                               customPlanPriceInput: inputVal,
                               precio_plan_especial: numericVal,
-                              original_internet: numericVal.toFixed(2),
+                              original_internet: newInternetVal,
                               monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                             }));
                           }}
