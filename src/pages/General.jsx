@@ -525,10 +525,10 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
-        <div className="page-actions">
+        <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="input"
-            style={{ marginBottom: 0, background: '#1e1b4b' }}
+            style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: '#1e1b4b', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
           >
@@ -537,7 +537,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </select>
           <select
             className="input"
-            style={{ marginBottom: 0, background: '#1e1b4b' }}
+            style={{ width: 'auto', minWidth: '150px', marginBottom: 0, background: '#1e1b4b', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -550,7 +550,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </select>
           <select
             className="input"
-            style={{ marginBottom: 0, background: '#1e1b4b', color: '#60a5fa', fontWeight: '600' }}
+            style={{ width: 'auto', minWidth: '180px', marginBottom: 0, background: '#1e1b4b', color: '#60a5fa', fontWeight: '600', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={pagoFilter}
             onChange={(e) => setPagoFilter(e.target.value)}
           >
@@ -561,7 +561,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           <input
             className="input"
             placeholder="Buscar por ID, Nombre o Cédula..."
-            style={{ marginBottom: 0 }}
+            style={{ width: 'auto', minWidth: '220px', maxWidth: '300px', flex: 1, marginBottom: 0, fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
