@@ -17,6 +17,7 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
+  const [selectedComentariosModal, setSelectedComentariosModal] = useState(null);
 
   // Controlan la transaccionabilidad y UI del modal sobrepuesto de pagos
   const [pagoData, setPagoData] = useState({
@@ -83,7 +84,15 @@ const Admin = () => {
     } else if (isCustomPlan) {
       netFee = customPriceVal;
     } else {
-      netFee = Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0));
+      const planObj = planesList.find(p => p.nombre.toLowerCase() === (cliente?.plan || '').toLowerCase());
+      const planPrice = planObj ? parseFloat(planObj.precio || 0) : 0;
+      if (cliente.saldo !== null && cliente.saldo !== undefined && parseFloat(cliente.saldo || 0) > 0) {
+        netFee = parseFloat(cliente.saldo);
+      } else if (planPrice > 0) {
+        netFee = planPrice;
+      } else {
+        netFee = Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
+      }
     }
     const internetSugerido = netFee.toFixed(2);
 
@@ -179,9 +188,8 @@ const Admin = () => {
         return showWarning('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
-      // Sincronizar deudas modificadas, pantallas, comentarios y cortesía PRIMERO en el backend
+      // Sincronizar deudas modificadas, comentarios y cortesía PRIMERO en el backend
       await clienteService.updateAdmin(selectedCliente.id, {
-        iptv_max_conn: pagoData.iptv_max_conn !== undefined ? pagoData.iptv_max_conn : selectedCliente.iptv_max_conn,
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
@@ -237,8 +245,7 @@ const Admin = () => {
         saldo: parseFloat(pagoData.original_internet || 0)
       });
       showSuccess("Valores guardados correctamente");
-      fetchData();
-      setShowPagoModal(false);
+      fetchData(true);
     } catch (error) {
       showError("Error al guardar valores: " + (error.response?.data?.detail || error.message));
     }
@@ -294,9 +301,12 @@ const Admin = () => {
       if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
       if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
       if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
+      if (statusFilter === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(c.estado?.toUpperCase())) return false;
+      if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase())) return false;
 
       return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.id?.toString().includes(searchTerm)
+        c.id?.toString().includes(searchTerm) ||
+        c.ip?.toLowerCase().includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => a.id - b.id);
 
@@ -317,11 +327,13 @@ const Admin = () => {
             <option value="ACTIVO">Solo Activos</option>
             <option value="INACTIVO">Solo Inactivos</option>
             <option value="PENDIENTE">Solo Pendientes</option>
+            <option value="JURIDICO">Solo Jurídicos</option>
+            <option value="PROCESO">Solo En Proceso</option>
           </select>
 
           <input
             className="input"
-            placeholder="Buscar por ID o Nombre..."
+            placeholder="Buscar por ID, Nombre o IP..."
             style={{
               maxWidth: '250px',
               marginBottom: 0,
@@ -333,8 +345,8 @@ const Admin = () => {
 
           {isAdmin && (
             <>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={ejecutarFacturacion}
                 disabled={facturando || cooldown > 0}
                 style={{ opacity: (facturando || cooldown > 0) ? 0.7 : 1, cursor: (facturando || cooldown > 0) ? 'not-allowed' : 'pointer' }}
@@ -351,8 +363,9 @@ const Admin = () => {
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left' }}>
             <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
               <tr style={{ background: '#15122e' }}>
-                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>ID</th>
-                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Nombre</th>
+                <th style={{ position: 'sticky', top: 0, left: 0, background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '60px', minWidth: '60px' }}>ID</th>
+                <th style={{ position: 'sticky', top: 0, left: '60px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '200px', minWidth: '200px' }}>Nombre</th>
+                <th style={{ position: 'sticky', top: 0, left: '260px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', borderRight: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '130px', minWidth: '130px' }}>IP</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Estado</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan Base</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Pantallas IPTV</th>
@@ -361,7 +374,7 @@ const Admin = () => {
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Instalación / Últ. Visita</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Acciones</th>
-                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Nota de Pago/Reparación</th>
+                <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Comentarios del Contrato</th>
               </tr>
             </thead>
             <tbody>
@@ -370,15 +383,22 @@ const Admin = () => {
                   borderBottom: '1px solid rgba(255,255,255,0.05)',
                   opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
                 }}>
-                  <td style={{ padding: '12px' }}>{c.id}</td>
-                  <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</td>
+                  <td style={{ position: 'sticky', left: 0, zIndex: 15, background: '#130f26', padding: '12px 10px', whiteSpace: 'nowrap' }}>{c.id}</td>
+                  <td style={{ position: 'sticky', left: '60px', zIndex: 15, background: '#130f26', padding: '12px 10px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.nombre}</td>
+                  <td style={{ position: 'sticky', left: '260px', zIndex: 15, background: '#130f26', padding: '12px 10px', borderRight: '2px solid rgba(255, 255, 255, 0.15)', fontFamily: 'monospace', color: '#38bdf8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{c.ip || '-'}</td>
                   <td>
                     <span style={{
                       padding: '4px 8px',
                       borderRadius: '8px',
                       fontSize: '0.75rem',
-                      background: c.estado?.toUpperCase() === 'ACTIVO' ? 'rgba(16, 185, 129, 0.1)' : (c.estado?.toUpperCase() === 'INACTIVO' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)'),
-                      color: c.estado?.toUpperCase() === 'ACTIVO' ? '#10b981' : (c.estado?.toUpperCase() === 'INACTIVO' ? '#ef4444' : '#f59e0b')
+                      background: c.estado?.toUpperCase() === 'ACTIVO' ? 'rgba(16, 185, 129, 0.1)' :
+                        (c.estado?.toUpperCase() === 'INACTIVO' ? 'rgba(239, 68, 68, 0.1)' :
+                          (c.estado?.toUpperCase() === 'JURIDICO' || c.estado?.toUpperCase() === 'JURÍDICO' ? 'rgba(236, 72, 153, 0.1)' :
+                            (['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase()) ? 'rgba(245, 158, 11, 0.1)' : 'rgba(148, 163, 184, 0.1)'))),
+                      color: c.estado?.toUpperCase() === 'ACTIVO' ? '#10b981' :
+                        (c.estado?.toUpperCase() === 'INACTIVO' ? '#ef4444' :
+                          (c.estado?.toUpperCase() === 'JURIDICO' || c.estado?.toUpperCase() === 'JURÍDICO' ? '#ec4899' :
+                            (['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase()) ? '#f59e0b' : '#94a3b8')))
                     }}>
                       {c.estado}
                     </span>
@@ -516,8 +536,39 @@ const Admin = () => {
                     </button>
                   </td>
 
-                  <td style={{ fontSize: '0.75rem', color: '#a78bfa', whiteSpace: 'pre-wrap', maxWidth: '180px' }}>
-                    {c.notas_pago || '-'}
+                  <td style={{ fontSize: '0.8rem', color: '#e2e8f0', maxWidth: '220px', padding: '12px 10px' }}>
+                    {c.comentarios ? (
+                      <div>
+                        <span style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          wordBreak: 'break-word'
+                        }}>
+                          {c.comentarios}
+                        </span>
+                        <button
+                          onClick={() => setSelectedComentariosModal({ nombre: c.nombre, comentarios: c.comentarios })}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#60a5fa',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            padding: 0,
+                            marginTop: '4px',
+                            textDecoration: 'underline',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Ver más
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>-</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -761,34 +812,16 @@ const Admin = () => {
                     <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       ⚙️ Modificar Deudas en Cuenta (Guardar Valores)
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Pantallas IPTV</label>
-                        <input type="number" min="0" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.iptv_max_conn ?? 0} onChange={(e) => {
-                          const screensVal = parseInt(e.target.value) || 0;
-                          const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
-                          const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
-                          const calcPlus = (Math.max(0, (screensVal - baseScreens) * 2)).toFixed(2);
-                          const originalInternetVal = parseFloat(pagoData.original_internet || 0);
-                          const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
-                          const debtPlusVal = parseFloat(calcPlus || 0);
-                          const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
-                          setPagoData({ ...pagoData, iptv_max_conn: screensVal, deuda_plus: calcPlus, monto: newTotal });
-                        }} />
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda Plus ($)</label>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#c084fc' }}>Deuda IPTV Plus ($)</label>
                         <input type="number" step="0.01" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.deuda_plus} onChange={(e) => {
                           const val = e.target.value;
-                          const debtPlusVal = parseFloat(val || 0);
-                          const planData = planesList.find(p => p.nombre === selectedCliente?.plan);
-                          const baseScreens = planData ? (planData.pantallas ?? 0) : 0;
-                          const calcScreens = baseScreens + Math.round(debtPlusVal / 2);
                           const originalInternetVal = parseFloat(pagoData.original_internet || 0);
                           const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
+                          const debtPlusVal = parseFloat(val || 0);
                           const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
-                          setPagoData({ ...pagoData, iptv_max_conn: calcScreens, deuda_plus: val, monto: newTotal });
+                          setPagoData({ ...pagoData, deuda_plus: val, monto: newTotal });
                         }} />
                       </div>
 
@@ -895,7 +928,7 @@ const Admin = () => {
                             const isChecked = e.target.checked;
                             const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
                             const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo) : 0);
-                            
+
                             if (!isChecked) {
                               // Desmarcado: restaurar precio original del plan
                               const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
@@ -1076,7 +1109,7 @@ const Admin = () => {
 
                       {/* Cod */}
                       <div className="form-group" style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod Referencia</label>
+                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod Factura</label>
                         <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
                       </div>
 
@@ -1126,6 +1159,38 @@ const Admin = () => {
                 </button>
               </div>
             </motion.div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Liviano para Ver Más Comentarios del Contrato */}
+      {selectedComentariosModal && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{
+            background: '#151030', border: '1px solid rgba(96, 165, 250, 0.3)',
+            borderRadius: '16px', padding: '24px', maxWidth: '550px', width: '100%',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#60a5fa' }}>
+                📝 Comentarios del Contrato - {selectedComentariosModal.nombre}
+              </h3>
+              <button onClick={() => setSelectedComentariosModal(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.4rem' }}>&times;</button>
+            </div>
+            <div style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', maxHeight: '350px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '10px' }}>
+              {selectedComentariosModal.comentarios}
+            </div>
+            <div style={{ marginTop: '16px', textAlign: 'right' }}>
+              <button className="btn btn-secondary" onClick={() => setSelectedComentariosModal(null)} style={{ padding: '6px 16px', fontSize: '0.85rem' }}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>,
         document.body

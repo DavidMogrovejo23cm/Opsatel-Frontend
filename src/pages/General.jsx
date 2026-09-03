@@ -40,9 +40,9 @@ const General = () => {
 
   // Definición de las columnas del sistema
   const allColumns = [
-    "id", "nombre", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
+    "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
     "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
-    "ip", "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
+    "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "facturas", "app", "payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
   ];
 
@@ -52,6 +52,7 @@ const General = () => {
     allColumns.forEach(col => {
       if (col === 'id') widths[col] = 60;
       else if (col === 'nombre') widths[col] = 220;
+      else if (col === 'ip') widths[col] = 130;
       else if (col === 'celular') widths[col] = 130;
       else if (col === 'cedula') widths[col] = 110;
       else widths[col] = 150;
@@ -575,8 +576,9 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                 {allColumns.map(col => {
                   const isId = col === 'id';
                   const isNombre = col === 'nombre';
+                  const isIp = col === 'ip';
 
-                  // Posiciones sticky para ID y Nombre
+                  // Posiciones sticky para ID, Nombre e IP
                   let stickyStyle = {};
                   if (isId) {
                     stickyStyle = {
@@ -589,6 +591,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     stickyStyle = {
                       position: 'sticky',
                       left: colWidths['id'] || 60,
+                      zIndex: 22,
+                      background: '#131526'
+                    };
+                  } else if (isIp) {
+                    stickyStyle = {
+                      position: 'sticky',
+                      left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                       zIndex: 22,
                       background: '#131526',
                       borderRight: '2px solid rgba(255, 255, 255, 0.15)'
@@ -660,8 +669,9 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
                     const isId = col === 'id';
                     const isNombre = col === 'nombre';
+                    const isIp = col === 'ip';
 
-                    // Posiciones sticky para ID y Nombre
+                    // Posiciones sticky para ID, Nombre e IP
                     let stickyStyle = {};
                     if (isId) {
                       stickyStyle = {
@@ -674,6 +684,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       stickyStyle = {
                         position: 'sticky',
                         left: colWidths['id'] || 60,
+                        zIndex: 12,
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526'
+                      };
+                    } else if (isIp) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                         zIndex: 12,
                         background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526',
                         borderRight: '2px solid rgba(255, 255, 255, 0.15)'
