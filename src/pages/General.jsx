@@ -440,7 +440,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
 
       // Filtro por pago (Pagados vs Con Deuda Pendiente)
-      const saldoVal = (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : parseFloat(c.saldo || 0)));
+      const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
       const plusVal = parseFloat(c.plus || 0);
       const adicVal = parseFloat(c.adicional || 0);
       const totalDeuda = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
@@ -898,7 +898,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                 return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
                               }
                               if (col === 'total_pago') {
-                                const saldoVal = (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : parseFloat(c.saldo || 0)));
+                                const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
                                 const plusVal = parseFloat(c.plus || 0);
                                 const adicVal = parseFloat(c.adicional || 0);
                                 const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);

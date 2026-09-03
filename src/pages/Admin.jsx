@@ -79,16 +79,16 @@ const Admin = () => {
     const isCustomPlan = !isMantenimiento && customPriceVal > 0;
 
     let netFee = 0;
-    if (isMantenimiento) {
+    if (cliente.saldo !== null && cliente.saldo !== undefined) {
+      netFee = Math.max(0, parseFloat(cliente.saldo || 0));
+    } else if (isMantenimiento) {
       netFee = 10.00;
     } else if (isCustomPlan) {
       netFee = customPriceVal;
     } else {
       const planObj = planesList.find(p => p.nombre.toLowerCase() === (cliente?.plan || '').toLowerCase());
       const planPrice = planObj ? parseFloat(planObj.precio || 0) : 0;
-      if (cliente.saldo !== null && cliente.saldo !== undefined && parseFloat(cliente.saldo || 0) > 0) {
-        netFee = parseFloat(cliente.saldo);
-      } else if (planPrice > 0) {
+      if (planPrice > 0) {
         netFee = planPrice;
       } else {
         netFee = Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
