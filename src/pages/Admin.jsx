@@ -123,7 +123,6 @@ const Admin = () => {
       deuda_plus: cliente.plus || '0',
       deuda_adicional: cliente.adicional || '0',
       iptv_max_conn: initialScreens,
-      notas_pago: cliente.notas_pago || '',
       comentarios_edit: cliente.comentarios || '',
       cortesiaMode: isCortesiaTotal ? 'TOTAL' : 'NONE',
       cortesiaPct: '',
@@ -215,11 +214,7 @@ const Admin = () => {
         adicional: abonoAdicional.toFixed(2),
         descuento_internet: descInternet,
         descuento_plus: descPlus,
-        descuento_adicional: descAdicional,
-        notas_pago: (() => {
-          let nota = (pagoData.notas_pago && String(pagoData.notas_pago).trim()) ? String(pagoData.notas_pago).trim() : '';
-          return nota.trim() || null;
-        })()
+        descuento_adicional: descAdicional
       });
 
       setShowPagoModal(false);
@@ -235,7 +230,6 @@ const Admin = () => {
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
-        notas_pago: pagoData.notas_pago,
         comentarios: pagoData.comentarios_edit,
         app: pagoData.app,
         cod: pagoData.cod,
@@ -364,8 +358,7 @@ const Admin = () => {
             <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
               <tr style={{ background: '#15122e' }}>
                 <th style={{ position: 'sticky', top: 0, left: 0, background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '60px', minWidth: '60px' }}>ID</th>
-                <th style={{ position: 'sticky', top: 0, left: '60px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '200px', minWidth: '200px' }}>Nombre</th>
-                <th style={{ position: 'sticky', top: 0, left: '260px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', borderRight: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '130px', minWidth: '130px' }}>IP</th>
+                <th style={{ position: 'sticky', top: 0, left: '60px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', borderRight: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '220px', minWidth: '220px' }}>Nombre</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Estado</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan Base</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Pantallas IPTV</th>
@@ -384,8 +377,7 @@ const Admin = () => {
                   opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
                 }}>
                   <td style={{ position: 'sticky', left: 0, zIndex: 15, background: '#130f26', padding: '12px 10px', whiteSpace: 'nowrap' }}>{c.id}</td>
-                  <td style={{ position: 'sticky', left: '60px', zIndex: 15, background: '#130f26', padding: '12px 10px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.nombre}</td>
-                  <td style={{ position: 'sticky', left: '260px', zIndex: 15, background: '#130f26', padding: '12px 10px', borderRight: '2px solid rgba(255, 255, 255, 0.15)', fontFamily: 'monospace', color: '#38bdf8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{c.ip || '-'}</td>
+                  <td style={{ position: 'sticky', left: '60px', zIndex: 15, background: '#130f26', padding: '12px 10px', borderRight: '2px solid rgba(255, 255, 255, 0.15)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.nombre}</td>
                   <td>
                     <span style={{
                       padding: '4px 8px',
@@ -1128,21 +1120,9 @@ const Admin = () => {
                       </div>
 
                       {/* Fecha Pago */}
-                      <div className="form-group" style={{ marginBottom: '8px' }}>
+                      <div className="form-group grid-span-2" style={{ marginBottom: 0 }}>
                         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Fecha Pago</label>
                         <input type="date" className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.payment_date} onChange={(e) => setPagoData({ ...pagoData, payment_date: e.target.value })} />
-                      </div>
-
-                      {/* Nota de Pago / Reparación */}
-                      <div className="form-group grid-span-2" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Nota de Pago / Reparación (Adicional)</label>
-                        <textarea
-                          className="input"
-                          style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', minHeight: '36px', resize: 'vertical', paddingTop: '6px', paddingBottom: '6px', fontSize: '0.8rem' }}
-                          value={pagoData.notas_pago}
-                          onChange={(e) => setPagoData({ ...pagoData, notas_pago: e.target.value })}
-                          placeholder="Escriba aquí si hay reparaciones..."
-                        />
                       </div>
                     </div>
                   </div>

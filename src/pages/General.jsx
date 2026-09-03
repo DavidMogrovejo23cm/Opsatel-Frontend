@@ -43,7 +43,7 @@ const General = () => {
     "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
     "fecha_firma", "instalation_date", "estado", "comentarios", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
-    "tiempo", "arrienda", "facturas", "app", "payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "notas_pago"
+    "tiempo", "arrienda", "facturas", "app", "payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total"
   ];
 
   // Estado para los anchos ajustables de cada columna
@@ -619,7 +619,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       overflow: 'hidden',
                       ...stickyStyle
                     }}>
-                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'notas_pago' ? 'Nota de Pago / Reparación' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
+                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO CONTRATO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
 
                       {/* Control para redimensionar la columna */}
                       <div
@@ -975,13 +975,6 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                 return (
                                   <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
                                     {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
-                                  </div>
-                                );
-                              }
-                              if (col === 'notas_pago') {
-                                return (
-                                  <div style={{ color: '#fcd34d', whiteSpace: 'pre-line', fontSize: '0.75rem', fontStyle: 'italic' }}>
-                                    {c.notas_pago ? c.notas_pago.split('/').join('\n') : '-'}
                                   </div>
                                 );
                               }
