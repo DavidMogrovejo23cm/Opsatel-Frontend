@@ -187,13 +187,18 @@ const Admin = () => {
         return showWarning('Debe seleccionar el banco para el cobro de IPTV (Bank Plus).');
       }
 
-      // Sincronizar deudas modificadas, comentarios y cortesía PRIMERO en el backend
+      const isMantenimiento = !!pagoData.isMantenimiento;
+      const isCustomPlan = !!pagoData.isCustomPlan;
+      const customPriceVal = parseFloat(pagoData.precio_plan_especial || pagoData.customPlanPriceInput || 0);
+
+      // Sincronizar deudas modificadas, comentarios, cortesía y tarifas especiales PRIMERO en el backend
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
-        mantenimiento: !!pagoData.isMantenimiento
+        mantenimiento: isMantenimiento,
+        precio_plan_especial: isCustomPlan ? customPriceVal : 0
       });
 
       // Luego registrar el pago que descontará del saldo actualizado
@@ -227,6 +232,17 @@ const Admin = () => {
 
   const handleGuardarCambios = async () => {
     try {
+      const isMantenimiento = !!pagoData.isMantenimiento;
+      const isCustomPlan = !!pagoData.isCustomPlan;
+      const customPriceVal = parseFloat(pagoData.precio_plan_especial || pagoData.customPlanPriceInput || 0);
+
+      let newSaldo = parseFloat(pagoData.original_internet || 0);
+      if (isMantenimiento) {
+        newSaldo = 10.00;
+      } else if (isCustomPlan) {
+        newSaldo = customPriceVal;
+      }
+
       await clienteService.updateAdmin(selectedCliente.id, {
         plus: pagoData.deuda_plus,
         adicional: pagoData.deuda_adicional,
@@ -235,8 +251,9 @@ const Admin = () => {
         cod: pagoData.cod,
         facturas: pagoData.facturas,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
-        mantenimiento: !!pagoData.isMantenimiento,
-        saldo: parseFloat(pagoData.original_internet || 0)
+        mantenimiento: isMantenimiento,
+        precio_plan_especial: isCustomPlan ? customPriceVal : 0,
+        saldo: newSaldo
       });
       showSuccess("Valores guardados correctamente");
       fetchData(true);
@@ -871,7 +888,7 @@ const Admin = () => {
                           type="checkbox"
                           id="mantenimiento_modal_checkbox"
                           checked={!!pagoData.isMantenimiento}
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const isChecked = e.target.checked;
                             const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
                             const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.tercera_edad && selectedCliente?.precio_plan_especial ? parseFloat(selectedCliente.precio_plan_especial) : 0);
@@ -888,23 +905,6 @@ const Admin = () => {
                               original_internet: newInternetVal,
                               monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                             }));
-
-                            if (selectedCliente) {
-                              selectedCliente.mantenimiento = isChecked;
-                              selectedCliente.precio_plan_especial = 0;
-                              selectedCliente.saldo = isChecked ? 10.00 : (planPrice > 0 ? planPrice : selectedCliente.saldo);
-                            }
-
-                            try {
-                              await clienteService.updateAdmin(selectedCliente.id, {
-                                mantenimiento: isChecked,
-                                precio_plan_especial: 0,
-                                ...(isChecked ? { saldo: 10.00 } : (planPrice > 0 ? { saldo: planPrice } : {}))
-                              });
-                              showSuccess(`Mantenimiento ${isChecked ? 'activado ($10.00)' : 'desactivado (tarifa plan)'} para ${selectedCliente.nombre}`);
-                            } catch (err) {
-                              showError('Error al actualizar mantenimiento');
-                            }
                           }}
                           style={{ width: '18px', height: '18px', accentColor: '#ec4899', cursor: 'pointer' }}
                         />
@@ -916,7 +916,7 @@ const Admin = () => {
                           type="checkbox"
                           id="modificar_saldo_plan_checkbox"
                           checked={!!pagoData.isCustomPlan}
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const isChecked = e.target.checked;
                             const planObj = planesList.find(p => p.nombre.toLowerCase() === (selectedCliente?.plan || '').toLowerCase());
                             const planPrice = planObj ? parseFloat(planObj.precio || 0) : (selectedCliente?.saldo ? parseFloat(selectedCliente.saldo) : 0);
@@ -936,21 +936,6 @@ const Admin = () => {
                                 original_internet: newInternetVal,
                                 monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                               }));
-
-                              if (selectedCliente) {
-                                selectedCliente.precio_plan_especial = 0;
-                                if (!selectedCliente.mantenimiento) selectedCliente.saldo = planPrice;
-                              }
-
-                              try {
-                                await clienteService.updateAdmin(selectedCliente.id, {
-                                  precio_plan_especial: 0,
-                                  ...(selectedCliente.mantenimiento ? {} : { saldo: planPrice })
-                                });
-                                showSuccess(`Tarifa del plan restaurada a $${planPrice.toFixed(2)} para ${selectedCliente.nombre}`);
-                              } catch (err) {
-                                showError('Error al restaurar tarifa del plan');
-                              }
                             } else {
                               // Marcado: habilitar modificación de saldo
                               const currentVal = parseFloat(pagoData.customPlanPriceInput || pagoData.original_internet) || planPrice;
@@ -967,23 +952,6 @@ const Admin = () => {
                                 original_internet: currentVal.toFixed(2),
                                 monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                               }));
-
-                              if (selectedCliente) {
-                                selectedCliente.mantenimiento = false;
-                                selectedCliente.precio_plan_especial = currentVal;
-                                selectedCliente.saldo = currentVal;
-                              }
-
-                              try {
-                                await clienteService.updateAdmin(selectedCliente.id, {
-                                  mantenimiento: false,
-                                  precio_plan_especial: currentVal,
-                                  saldo: currentVal
-                                });
-                                showSuccess(`Modificación de tarifa activada para ${selectedCliente.nombre}`);
-                              } catch (err) {
-                                showError('Error al activar tarifa especial');
-                              }
                             }
                           }}
                           style={{ width: '18px', height: '18px', accentColor: '#fbbf24', cursor: 'pointer' }}
@@ -1001,7 +969,7 @@ const Admin = () => {
                           className="input"
                           style={{ width: '120px', height: '36px', padding: '4px 8px', borderColor: '#fbbf24', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', margin: 0 }}
                           value={pagoData.customPlanPriceInput}
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const inputVal = e.target.value;
                             const numericVal = parseFloat(inputVal) || 0;
                             const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
@@ -1015,20 +983,6 @@ const Admin = () => {
                               original_internet: numericVal.toFixed(2),
                               monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
                             }));
-
-                            if (selectedCliente) {
-                              selectedCliente.precio_plan_especial = numericVal;
-                              selectedCliente.saldo = numericVal;
-                            }
-
-                            try {
-                              await clienteService.updateAdmin(selectedCliente.id, {
-                                precio_plan_especial: numericVal,
-                                saldo: numericVal
-                              });
-                            } catch (err) {
-                              console.error(err);
-                            }
                           }}
                         />
                       </div>
