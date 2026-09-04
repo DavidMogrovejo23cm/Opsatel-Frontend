@@ -119,18 +119,29 @@ const OS = { background: '#1a1040', color: 'white' };
 // EGRESO FORM  (con campo "en qué se gastó")
 // ─────────────────────────────────────────────────────────────────────────────
 function EgresoForm({ initial, onSave, onClose }) {
-  const [form, setForm] = useState(initial || {
-    descripcion: '', categoria: 'operacional', subcategoria: '',
-    monto: '', fecha: DEFAULT_MES + '-01', mes: DEFAULT_MES,
-    metodo_pago: 'Efectivo', notas: ''
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState(() => {
+    if (initial) {
+      const fechaVal = initial.fecha ? String(initial.fecha).split('T')[0] : (initial.mes ? `${initial.mes}-01` : todayStr);
+      return {
+        ...initial,
+        fecha: fechaVal,
+        mes: initial.mes || fechaVal.slice(0, 7)
+      };
+    }
+    return {
+      descripcion: '', categoria: 'operacional', subcategoria: '',
+      monto: '', fecha: todayStr, mes: todayStr.slice(0, 7),
+      metodo_pago: 'Efectivo', notas: ''
+    };
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async e => {
     e.preventDefault();
     if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
-    const mes = form.fecha?.slice(0, 7) || DEFAULT_MES;
-    await onSave({ ...form, monto: parseFloat(form.monto), mes });
+    const mes = form.fecha ? form.fecha.slice(0, 7) : DEFAULT_MES;
+    await onSave({ ...form, monto: parseFloat(form.monto), fecha: form.fecha, mes });
     onClose();
   };
 
@@ -169,7 +180,21 @@ function EgresoForm({ initial, onSave, onClose }) {
           <input style={IS} type="number" step="0.01" min="0" value={form.monto} onChange={e => set('monto', e.target.value)} required />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>📅 Fecha del Gasto</label>
+          <input
+            style={IS}
+            type="date"
+            value={form.fecha || ''}
+            onChange={e => {
+              const newFecha = e.target.value;
+              const newMes = newFecha ? newFecha.slice(0, 7) : form.mes;
+              setForm(f => ({ ...f, fecha: newFecha, mes: newMes }));
+            }}
+            required
+          />
+        </div>
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Método de Pago</label>
           <select style={IS} value={form.metodo_pago} onChange={e => set('metodo_pago', e.target.value)}>
@@ -832,7 +857,49 @@ function ProyectoDetalle({ proyecto, onClose }) {
                             </td>
                             <td style={{ padding: '8px 12px', color: P.balance, fontWeight: 700 }}>{g.item}</td>
                             <td style={{ padding: '8px 12px', fontWeight: 500 }}>{g.descripcion}</td>
-                            <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{g.fecha || '—'}</td>
+                            
+                            {editingFechaId === g.id ? (
+                              <td style={{ padding: '4px 8px' }}>
+                                <input
+                                  type="date"
+                                  autoFocus
+                                  defaultValue={g.fecha ? String(g.fecha).split('T')[0] : ''}
+                                  onBlur={(e) => handleQuickUpdateEgresoFecha(g.id, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleQuickUpdateEgresoFecha(g.id, e.target.value);
+                                    if (e.key === 'Escape') setEditingFechaId(null);
+                                  }}
+                                  onChange={(e) => {
+                                    if (e.target.value) handleQuickUpdateEgresoFecha(g.id, e.target.value);
+                                  }}
+                                  style={{
+                                    background: 'rgba(99, 102, 241, 0.25)',
+                                    border: '1px solid #6366f1',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.85rem',
+                                    outline: 'none',
+                                    fontFamily: 'Outfit, sans-serif'
+                                  }}
+                                />
+                              </td>
+                            ) : (
+                              <td
+                                onDoubleClick={() => setEditingFechaId(g.id)}
+                                title="Haz doble clic para modificar la fecha directamente"
+                                style={{
+                                  padding: '8px 12px',
+                                  color: '#818cf8',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                📅 {g.fecha || '—'} <small style={{ fontSize: '0.65rem', opacity: 0.6 }}>(doble clic)</small>
+                              </td>
+                            )}
+
                             <td style={{ padding: '8px 12px' }}><Badge text={g.tipo_pago || '—'} color="#fbbf24" /></td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', color: g.pendiente ? 'var(--text-muted)' : P.egreso, fontWeight: 700, textDecoration: g.pendiente ? 'line-through' : 'none' }}>
                               {fmt(g.valor)}
@@ -1215,6 +1282,37 @@ const Balance = () => {
   const [modalMovInterno, setModalMovInterno] = useState(null);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
+  const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
+
+  const handleQuickUpdateEgresoFecha = async (egresoId, newFecha) => {
+    if (!newFecha) {
+      setEditingFechaId(null);
+      return;
+    }
+    try {
+      const targetEgreso = egresos.find(e => e.id === egresoId);
+      const newMes = newFecha.slice(0, 7);
+      if (targetEgreso) {
+        await balanceService.actualizarEgreso(egresoId, {
+          ...targetEgreso,
+          fecha: newFecha,
+          mes: newMes
+        });
+      } else {
+        await balanceService.actualizarEgreso(egresoId, {
+          fecha: newFecha,
+          mes: newMes
+        });
+      }
+      showSuccess(`Fecha de gasto actualizada a ${newFecha}`);
+      fetchEgresos();
+      if (vista === 'mensual') fetchMensual();
+    } catch (err) {
+      showError("Error al actualizar la fecha del egreso");
+    } finally {
+      setEditingFechaId(null);
+    }
+  };
 
   // ── FETCH ──
   const fetchMensual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteMensual(mes); setReport(r.data); } catch (e) { } setLoading(false); }, [mes]);
@@ -2135,7 +2233,50 @@ const Balance = () => {
                       <td style={{ padding: '12px 16px' }}>
                         {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.5)' }}>{eg.fecha}</td>
+
+                      {/* COLUMNA FECHA CON EDICION DIRECTA EN DOBLE CLICK */}
+                      {editingFechaId === eg.id ? (
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="date"
+                            autoFocus
+                            defaultValue={eg.fecha ? String(eg.fecha).split('T')[0] : ''}
+                            onBlur={(e) => handleQuickUpdateEgresoFecha(eg.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuickUpdateEgresoFecha(eg.id, e.target.value);
+                              if (e.key === 'Escape') setEditingFechaId(null);
+                            }}
+                            onChange={(e) => {
+                              if (e.target.value) handleQuickUpdateEgresoFecha(eg.id, e.target.value);
+                            }}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.25)',
+                              border: '1px solid #6366f1',
+                              color: 'white',
+                              borderRadius: '8px',
+                              padding: '4px 8px',
+                              fontSize: '0.85rem',
+                              outline: 'none',
+                              fontFamily: 'Outfit, sans-serif'
+                            }}
+                          />
+                        </td>
+                      ) : (
+                        <td
+                          onDoubleClick={() => setEditingFechaId(eg.id)}
+                          title="Haz doble clic para modificar la fecha directamente"
+                          style={{
+                            padding: '12px 16px',
+                            color: '#818cf8',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            userSelect: 'none'
+                          }}
+                        >
+                          📅 {eg.fecha || '—'} <small style={{ fontSize: '0.65rem', opacity: 0.6 }}>(doble clic)</small>
+                        </td>
+                      )}
+
                       <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.3)' }}>{eg.mes}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.7rem' }}>{eg.metodo_pago.toUpperCase()}</span>
