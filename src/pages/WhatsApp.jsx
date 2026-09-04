@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { whatsappService } from '../services/whatsappService';
+import { configuracionService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
@@ -23,6 +24,9 @@ const WhatsApp = () => {
     // Difusión Masiva (Global)
     const [mensajeGlobal, setMensajeGlobal] = useState('');
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
+    const [nodoSeleccionado, setNodoSeleccionado] = useState('todos');
+    const [listaNodos, setListaNodos] = useState([]);
+    const [listaClientes, setListaClientes] = useState([]);
 
     // Estado del puente (Conexión QR)
     const [connectionStatus, setConnectionStatus] = useState('OFFLINE');
@@ -46,11 +50,42 @@ const WhatsApp = () => {
         cargarHistorial();
         cargarEstadoConexion();
         cargarAdministradores();
+        cargarDatosNodosYClientes();
         
         // Recargar historial cada 30 segundos
         const intervalo = setInterval(cargarHistorial, 30000);
         return () => clearInterval(intervalo);
     }, []);
+
+    const cargarDatosNodosYClientes = async () => {
+        try {
+            const [resNodos, resClientes] = await Promise.all([
+                configuracionService.getNodos(),
+                clienteService.listar()
+            ]);
+            
+            const rawNodos = resNodos.data || resNodos || [];
+            const rawClientes = resClientes.data || resClientes || [];
+
+            const nombresNodosConfig = rawNodos.map(n => typeof n === 'string' ? n : (n.nombre || n.nodo)).filter(Boolean);
+            const nombresNodosClientes = rawClientes.map(c => c.nodo).filter(Boolean);
+            
+            const listaCompleta = Array.from(new Set(['Sayausí', 'Baños', ...nombresNodosConfig, ...nombresNodosClientes]));
+            
+            setListaNodos(listaCompleta);
+            setListaClientes(rawClientes);
+        } catch (error) {
+            console.error("Error cargando nodos/clientes:", error);
+        }
+    };
+
+    const getClientesDestinoCount = () => {
+        const activos = listaClientes.filter(c => c.estado === 'Activo' && c.celular && c.celular.trim() !== '');
+        if (nodoSeleccionado === 'todos') {
+            return activos.length;
+        }
+        return activos.filter(c => c.nodo && c.nodo.toLowerCase().includes(nodoSeleccionado.toLowerCase())).length;
+    };
 
     const cargarAdministradores = async () => {
         setCargandoAdmins(true);
@@ -262,9 +297,14 @@ const WhatsApp = () => {
             return;
         }
 
+        const count = getClientesDestinoCount();
+        const descripcionDestino = nodoSeleccionado === 'todos' 
+            ? `a TODOS los clientes activos (${count} clientes)` 
+            : `a los clientes activos del nodo "${nodoSeleccionado}" (${count} clientes)`;
+
         const confirmacion1 = await showConfirm(
             '⚠️ ADVERTENCIA DE SEGURIDAD',
-            'Estás a punto de enviar un mensaje masivo a TODOS los clientes con estado "Activo" en Opsatel.\n\nEsto enviará mensajes uno tras otro de forma asíncrona.\n\n¿Estás seguro de continuar con el envío?',
+            `Estás a punto de enviar un mensaje masivo ${descripcionDestino}.\n\nEsto enviará mensajes uno tras otro de forma asíncrona en segundo plano.\n\n¿Estás seguro de continuar con el envío?`,
             'Continuar',
             'Cancelar'
         );
@@ -272,7 +312,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            '¿Realmente deseas ejecutar la difusión masiva ahora?\nEste proceso NO se puede cancelar una vez iniciado.',
+            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\nEste proceso NO se puede cancelar una vez iniciado.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -280,7 +320,8 @@ const WhatsApp = () => {
 
         setEnviandoGlobal(true);
         try {
-            await whatsappService.enviarGlobal(mensajeGlobal);
+            const nodoParam = nodoSeleccionado === 'todos' ? null : nodoSeleccionado;
+            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam);
             showSuccess('Difusión masiva iniciada en segundo plano con éxito. Puedes revisar el avance en la pestaña de Historial.');
             setMensajeGlobal('');
             setActiveTab('Historial');
@@ -652,9 +693,9 @@ const WhatsApp = () => {
                 {/* DIFUSIÓN MASIVA */}
                 {activeTab === 'Difusión Masiva' && (
                     <div>
-                        <h3>📢 Difusión Global de Emergencia</h3>
+                        <h3>📢 Difusión Global / Por Nodos</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Envía un mensaje masivo a todos los clientes que se encuentran en estado **"Activo"**. El proceso corre en segundo plano y no congela el servidor.
+                            Envía un mensaje masivo a todos los clientes en estado **"Activo"**, o filtra por un nodo específico (ej. Sayausí, Baños). El proceso se ejecuta en segundo plano.
                         </p>
 
                         <div style={{ 
@@ -664,13 +705,58 @@ const WhatsApp = () => {
                             borderRadius: '8px',
                             marginBottom: '20px'
                         }}>
+                            {/* Selector de Nodos */}
+                            <div className="input-group" style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 'bold', margin: 0 }}>
+                                        🎯 Seleccionar Destinatarios (Todos o Por Nodo)
+                                    </label>
+                                    <span style={{ 
+                                        fontSize: '0.85rem', 
+                                        padding: '4px 12px', 
+                                        borderRadius: '12px', 
+                                        background: 'rgba(59, 130, 246, 0.2)', 
+                                        color: '#93c5fd',
+                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                        fontWeight: '600'
+                                    }}>
+                                        👥 Destinatarios: {getClientesDestinoCount()} cliente(s)
+                                    </span>
+                                </div>
+                                <select 
+                                    className="input"
+                                    value={nodoSeleccionado}
+                                    onChange={e => setNodoSeleccionado(e.target.value)}
+                                    style={{ 
+                                        height: '42px', 
+                                        background: '#0e1726', 
+                                        color: '#fff', 
+                                        border: '1px solid rgba(96, 165, 250, 0.4)', 
+                                        borderRadius: '6px', 
+                                        padding: '0 12px',
+                                        fontSize: '0.95rem',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <option value="todos">🌐 Todos los Nodos (Todos los clientes activos)</option>
+                                    {listaNodos.map((nodo, i) => (
+                                        <option key={i} value={nodo}>
+                                            📍 Nodo: {nodo}
+                                        </option>
+                                    ))}
+                                </select>
+                                <small style={{ color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>
+                                    Selecciona "Todos los Nodos" para enviar a toda la red, o filtra únicamente por clientes pertenecientes al nodo (ej: Sayausí, Baños).
+                                </small>
+                            </div>
+
                             <div className="input-group">
                                 <label className="label" style={{ color: '#fca5a5', fontWeight: 'bold' }}>⚠️ Mensaje de Difusión Masiva</label>
                                 <textarea 
                                     className="input" 
                                     value={mensajeGlobal}
                                     onChange={e => setMensajeGlobal(e.target.value)}
-                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para todos los clientes activos..."
+                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para los clientes seleccionados..."
                                     rows="5"
                                     style={{ marginTop: '8px', fontFamily: 'monospace', borderColor: 'rgba(239,68,68,0.2)' }}
                                 />
@@ -694,7 +780,7 @@ const WhatsApp = () => {
                             >
                                 {connectionStatus !== 'CONNECTED' 
                                     ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
-                                    : (enviandoGlobal ? '⏳ Difundiendo en background...' : '🚀 Lanzar Difusión Masiva')
+                                    : (enviandoGlobal ? '⏳ Difundiendo en background...' : `🚀 Lanzar Difusión Masiva (${getClientesDestinoCount()} Clientes)`)
                                 }
                             </button>
                         </div>

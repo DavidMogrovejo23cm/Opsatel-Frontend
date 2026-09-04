@@ -53,9 +53,9 @@ export const whatsappService = {
   obtenerQrBridge: () =>
     api.get('/whatsapp/qr-bridge'),
 
-  // Difusión global masiva
-  enviarGlobal: (mensaje) =>
-    api.post('/whatsapp/enviar-global', { mensaje: mensaje }),
+  // Difusión global masiva (opcionalmente filtrada por nodo)
+  enviarGlobal: (mensaje, nodo = null) =>
+    api.post('/whatsapp/enviar-global', { mensaje: mensaje, nodo: nodo }),
 
   // Administradores de WhatsApp
   obtenerAdministradores: () =>
