@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -37,9 +37,48 @@ const DEFAULT_ANIO = now.getFullYear();
 const fmt = n => `$${Number(n || 0).toFixed(2)}`;
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
+const getAccountKey = (str) => {
+  if (!str) return '';
+  const s = String(str).toLowerCase().trim();
+  if (s.includes('iptv')) {
+    if (s.includes('efectivo')) return 'iptv_efectivo';
+    if (s.includes('pichincha')) return 'iptv_pichincha';
+    if (s.includes('jep')) return 'iptv_jep';
+    return 'iptv_efectivo';
+  }
+  if (s.includes('efectivo')) return 'efectivo';
+  if (s.includes('pichincha')) return 'pichincha';
+  if (s.includes('jep')) return 'jep';
+  return '';
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTES UI
 // ─────────────────────────────────────────────────────────────────────────────
+function MiniBalanceCard({ title, value, icon, color, sub }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${color}33`,
+        borderTop: `3px solid ${color}`,
+        borderRadius: 14,
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        minWidth: 0
+      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+        <span style={{ color, fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right' }}>{title}</span>
+      </div>
+      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: 2 }}>{fmt(value)}</div>
+      {sub && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+    </motion.div>
+  );
+}
+
 function Card({ title, value, icon, color, sub }) {
   return (
     <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
@@ -621,10 +660,10 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
 
   const getSaldoForOrigen = (origenKey, sf) => {
     if (!sf) return 0;
-    const key = (origenKey || '').toLowerCase();
-    if (key.includes('efectivo')) return sf.efectivo !== undefined ? parseFloat(sf.efectivo || 0) : 0;
-    if (key.includes('pichincha')) return sf.pichincha !== undefined ? parseFloat(sf.pichincha || 0) : 0;
-    if (key.includes('jep')) return sf.jep !== undefined ? parseFloat(sf.jep || 0) : 0;
+    const key = getAccountKey(origenKey);
+    if (sf[key] && sf[key].final !== undefined) {
+      return sf[key].final;
+    }
     return 0;
   };
 
@@ -683,6 +722,9 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
             <option value="JEP" style={OS}>🏛️ Coac JEP</option>
+            <option value="IPTV Efectivo" style={OS}>📺 IPTV Efectivo</option>
+            <option value="IPTV Pichincha" style={OS}>📺 IPTV Pichincha</option>
+            <option value="IPTV JEP" style={OS}>📺 IPTV JEP</option>
             <option value="Otro" style={OS}>💳 Otro / Banco</option>
           </select>
         </div>
@@ -692,6 +734,9 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
             <option value="JEP" style={OS}>🏛️ Coac JEP</option>
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
+            <option value="IPTV Efectivo" style={OS}>📺 IPTV Efectivo</option>
+            <option value="IPTV Pichincha" style={OS}>📺 IPTV Pichincha</option>
+            <option value="IPTV JEP" style={OS}>📺 IPTV JEP</option>
             <option value="Otro" style={OS}>💳 Otro / Banco</option>
           </select>
         </div>
@@ -998,7 +1043,7 @@ function ProyectoDetalle({ proyecto, onClose }) {
                             </td>
                             <td style={{ padding: '8px 12px', color: P.balance, fontWeight: 700 }}>{g.item}</td>
                             <td style={{ padding: '8px 12px', fontWeight: 500 }}>{g.descripcion}</td>
-                            
+
                             {editingFechaId === g.id ? (
                               <td style={{ padding: '4px 8px' }}>
                                 <input
@@ -1452,7 +1497,7 @@ const Balance = () => {
     setCustomCategorias(updated);
     try {
       localStorage.setItem('opsatel_custom_categorias', JSON.stringify(updated));
-    } catch (e) {}
+    } catch (e) { }
 
     showSuccess(`Categoría "${cleanName}" agregada correctamente`);
     return catKey;
@@ -1463,7 +1508,7 @@ const Balance = () => {
     setCustomCategorias(updated);
     try {
       localStorage.setItem('opsatel_custom_categorias', JSON.stringify(updated));
-    } catch (e) {}
+    } catch (e) { }
     showSuccess('Categoría eliminada');
   };
 
@@ -1506,9 +1551,50 @@ const Balance = () => {
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
   const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
 
+  const saldosFinalesCalculados = useMemo(() => {
+    const movs = reportMovsInternos?.movimientos || [];
+    const recBruta = reportMovsInternos?.recaudacion_bruta || {};
+    const recIPTV = reportPlataforma?.desglose_bancos || {};
+
+    const accs = {
+      efectivo: { title: 'Efectivo Final (Caja)', icon: '💵', color: '#4ade80', rec: parseFloat(recBruta.efectivo || 0), salidas: 0, entradas: 0 },
+      pichincha: { title: 'Banco Pichincha Final', icon: '🏦', color: '#facc15', rec: parseFloat(recBruta.pichincha || 0), salidas: 0, entradas: 0 },
+      jep: { title: 'Coac JEP Final', icon: '🏛️', color: '#fb923c', rec: parseFloat(recBruta.jep || 0), salidas: 0, entradas: 0 },
+      iptv_efectivo: { title: 'IPTV Efectivo Final', icon: '📺', color: '#ec4899', rec: parseFloat(recIPTV.efectivo || 0), salidas: 0, entradas: 0 },
+      iptv_pichincha: { title: 'IPTV Pichincha Final', icon: '📺', color: '#e879f9', rec: parseFloat(recIPTV.pichincha || 0), salidas: 0, entradas: 0 },
+      iptv_jep: { title: 'IPTV JEP Final', icon: '📺', color: '#c084fc', rec: parseFloat(recIPTV.jep || 0), salidas: 0, entradas: 0 }
+    };
+
+    movs.forEach(m => {
+      const origKey = getAccountKey(m.origen);
+      const destKey = getAccountKey(m.destino);
+      const val = parseFloat(m.monto || 0);
+
+      if (accs[origKey]) accs[origKey].salidas += val;
+      if (accs[destKey]) accs[destKey].entradas += val;
+    });
+
+    const res = {};
+    Object.keys(accs).forEach(k => {
+      const item = accs[k];
+      res[k] = {
+        ...item,
+        final: item.rec - item.salidas + item.entradas,
+        movido: item.salidas - item.entradas
+      };
+    });
+
+    return res;
+  }, [reportMovsInternos, reportPlataforma]);
+
   useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
   useEffect(() => { if (vista === 'plataforma') fetchPlataforma(); }, [vista, fetchPlataforma]);
-  useEffect(() => { if (vista === 'movimientos-internos') fetchMovsInternos(); }, [vista, mes, fetchMovsInternos]);
+  useEffect(() => {
+    if (vista === 'movimientos-internos') {
+      fetchMovsInternos();
+      fetchPlataforma();
+    }
+  }, [vista, mes, fetchMovsInternos, fetchPlataforma]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
   useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
@@ -1518,6 +1604,7 @@ const Balance = () => {
     if (data.id) await balanceService.actualizarMovimientoInterno(data.id, data);
     else await balanceService.crearMovimientoInterno(data);
     fetchMovsInternos();
+    fetchPlataforma();
     showSuccess('Movimiento interno guardado correctamente');
   };
 
@@ -1526,10 +1613,9 @@ const Balance = () => {
     if (!confirmado) return;
     await balanceService.eliminarMovimientoInterno(id);
     fetchMovsInternos();
+    fetchPlataforma();
     showSuccess('Movimiento eliminado');
   };
-  useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
-  useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
 
   const handleSaveEgreso = async data => {
     const finalFecha = data.fecha || new Date().toISOString().split('T')[0];
@@ -2116,7 +2202,7 @@ const Balance = () => {
   // ─────────────────────────────────────────────────────────────────
   const renderMovimientosInternos = () => {
     if (!reportMovsInternos) return null;
-    const { movimientos, totales_movidos, recaudacion_bruta, saldos_finales } = reportMovsInternos;
+    const { movimientos } = reportMovsInternos;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -2129,11 +2215,11 @@ const Balance = () => {
               <span>🔄</span> Movimientos Internos entre Cuentas
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Registro de depósitos y transferencias internas entre caja chica y cuentas bancarias.
+              Registro de depósitos y transferencias internas entre cuentas de caja, bancos e IPTV.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={fetchMovsInternos} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: 12, fontSize: '0.82rem' }}>
+            <button onClick={() => { fetchMovsInternos(); fetchPlataforma(); }} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: 12, fontSize: '0.82rem' }}>
               🔄 Refrescar
             </button>
             <button onClick={() => setModalMovInterno('crear')} className="btn btn-primary" style={{ padding: '8px 18px', borderRadius: 12, fontSize: '0.85rem', fontWeight: 700, background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
@@ -2142,14 +2228,53 @@ const Balance = () => {
           </div>
         </div>
 
-        {/* METRICAS DE SALDOS FINALES DISPONIBLES */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-          <Card title="Efectivo Final (Caja)" value={fmt(saldos_finales?.efectivo || 0)} icon="💵" color="#4ade80" sub={`Recaudado ${fmt(recaudacion_bruta?.efectivo)} - Movido ${fmt(totales_movidos?.efectivo)}`} />
-          <Card title="Banco Pichincha Final" value={fmt(saldos_finales?.pichincha || 0)} icon="🏦" color="#facc15" sub={`Recaudado ${fmt(recaudacion_bruta?.pichincha)} - Movido ${fmt(totales_movidos?.pichincha)}`} />
-          <Card title="Coac JEP Final" value={fmt(saldos_finales?.jep || 0)} icon="🏛️" color="#fb923c" sub={`Recaudado ${fmt(recaudacion_bruta?.jep)} - Movido ${fmt(totales_movidos?.jep)}`} />
+        {/* 6 MÉTRICAS DE SALDOS FINALES COMPACTAS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
+          <MiniBalanceCard
+            title="Efectivo (Caja)"
+            value={saldosFinalesCalculados.efectivo?.final || 0}
+            icon="💵"
+            color="#4ade80"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.efectivo?.rec)} - Mov. ${fmt(saldosFinalesCalculados.efectivo?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="Pichincha"
+            value={saldosFinalesCalculados.pichincha?.final || 0}
+            icon="🏦"
+            color="#facc15"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.pichincha?.rec)} - Mov. ${fmt(saldosFinalesCalculados.pichincha?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="Coac JEP"
+            value={saldosFinalesCalculados.jep?.final || 0}
+            icon="🏛️"
+            color="#fb923c"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.jep?.rec)} - Mov. ${fmt(saldosFinalesCalculados.jep?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="IPTV Efectivo"
+            value={saldosFinalesCalculados.iptv_efectivo?.final || 0}
+            icon="📺"
+            color="#ec4899"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.iptv_efectivo?.rec)} - Mov. ${fmt(saldosFinalesCalculados.iptv_efectivo?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="IPTV Pichincha"
+            value={saldosFinalesCalculados.iptv_pichincha?.final || 0}
+            icon="📺"
+            color="#e879f9"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.iptv_pichincha?.rec)} - Mov. ${fmt(saldosFinalesCalculados.iptv_pichincha?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="IPTV JEP"
+            value={saldosFinalesCalculados.iptv_jep?.final || 0}
+            icon="📺"
+            color="#c084fc"
+            sub={`Rec. ${fmt(saldosFinalesCalculados.iptv_jep?.rec)} - Mov. ${fmt(saldosFinalesCalculados.iptv_jep?.movido)}`}
+          />
         </div>
 
-        {/* TABLA PRINCIPAL DE MOVIMIENTOS INTERNOS (COMO LA HOJA DE CÁLCULO DEL USUARIO) */}
+        {/* TABLA PRINCIPAL DE MOVIMIENTOS INTERNOS */}
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
           <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', marginBottom: 18, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
             📊 Registro de Transferencias y Depósitos Internos
@@ -2175,71 +2300,85 @@ const Balance = () => {
                       No hay movimientos internos registrados en este mes.
                     </td>
                   </tr>
-                ) : movimientos.map((m, idx) => (
-                  <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                    <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: 'rgba(250,204,21,0.15)', color: '#facc15', border: '1px solid rgba(250,204,21,0.3)' }}>
-                        {m.destino}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#f8fafc' }}>
-                      {m.fecha}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}>
-                        {m.origen}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '0.95rem' }}>
-                      {fmt(m.monto)}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {m.observacion || '—'}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                        <button onClick={() => setModalMovInterno(m)} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, color: '#6366f1', padding: '5px 8px', cursor: 'pointer' }} title="Editar">✏️</button>
-                        <button onClick={() => handleDeleteMovInterno(m.id)} style={{ background: 'rgba(244,63,94,0.12)', border: 'none', borderRadius: 8, color: '#f43f5e', padding: '5px 8px', cursor: 'pointer' }} title="Eliminar">🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                ) : movimientos.map((m, idx) => {
+                  const isOrigenIPTV = (m.origen || '').toLowerCase().includes('iptv');
+                  const isDestinoIPTV = (m.destino || '').toLowerCase().includes('iptv');
+                  return (
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{
+                          padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700,
+                          background: isDestinoIPTV ? 'rgba(236,72,153,0.15)' : 'rgba(250,204,21,0.15)',
+                          color: isDestinoIPTV ? '#ec4899' : '#facc15',
+                          border: `1px solid ${isDestinoIPTV ? 'rgba(236,72,153,0.3)' : 'rgba(250,204,21,0.3)'}`
+                        }}>
+                          {m.destino}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                        {m.fecha}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{
+                          padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700,
+                          background: isOrigenIPTV ? 'rgba(236,72,153,0.15)' : 'rgba(167,139,250,0.15)',
+                          color: isOrigenIPTV ? '#ec4899' : '#a78bfa',
+                          border: `1px solid ${isOrigenIPTV ? 'rgba(236,72,153,0.3)' : 'rgba(167,139,250,0.3)'}`
+                        }}>
+                          {m.origen}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '0.95rem' }}>
+                        {fmt(m.monto)}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        {m.observacion || '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={() => setModalMovInterno(m)} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, color: '#6366f1', padding: '5px 8px', cursor: 'pointer' }} title="Editar">✏️</button>
+                          <button onClick={() => handleDeleteMovInterno(m.id)} style={{ background: 'rgba(244,63,94,0.12)', border: 'none', borderRadius: 8, color: '#f43f5e', padding: '5px 8px', cursor: 'pointer' }} title="Eliminar">🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* TABLA RESUMEN INFERIOR (MATCHING HOJA DE CÁLCULO) */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', maxWidth: 500, alignSelf: 'flex-end', width: '100%' }}>
+        {/* TABLA RESUMEN INFERIOR */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', maxWidth: 520, alignSelf: 'flex-end', width: '100%' }}>
           <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f8fafc', marginBottom: 14, letterSpacing: '0.03em' }}>
-            📈 Resumen de Movimientos y Saldos Finales
+            📈 Resumen de Saldos Finales por Cuenta
           </h4>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <tbody>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Efectivo Movido</td>
-                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.efectivo)}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Trans. Pichincha Movido</td>
-                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.pichincha)}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Total Trans. JEP Movido</td>
-                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f8fafc' }}>{fmt(totales_movidos?.jep)}</td>
-              </tr>
-              <tr style={{ background: 'rgba(74,222,128,0.12)', borderTop: '2px solid rgba(74,222,128,0.3)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#4ade80' }}>Total Efectivo Final (Caja)</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '1rem' }}>{fmt(saldos_finales?.efectivo)}</td>
+              <tr style={{ background: 'rgba(74,222,128,0.12)', borderTop: '1px solid rgba(74,222,128,0.3)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#4ade80' }}>💵 Total Efectivo Final (Caja)</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#4ade80', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.efectivo?.final)}</td>
               </tr>
               <tr style={{ background: 'rgba(250,204,21,0.12)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#facc15' }}>Total Trans. Pichincha Final</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#facc15', fontSize: '1rem' }}>{fmt(saldos_finales?.pichincha)}</td>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#facc15' }}>🏦 Total Pichincha Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#facc15', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.pichincha?.final)}</td>
               </tr>
               <tr style={{ background: 'rgba(251,146,60,0.12)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#fb923c' }}>Total Trans. JEP Final</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#fb923c', fontSize: '1rem' }}>{fmt(saldos_finales?.jep)}</td>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#fb923c' }}>🏛️ Total Coac JEP Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#fb923c', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.jep?.final)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(236,72,153,0.12)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#ec4899' }}>📺 Total IPTV Efectivo Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#ec4899', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.iptv_efectivo?.final)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(232,121,249,0.12)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#e879f9' }}>📺 Total IPTV Pichincha Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#e879f9', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.iptv_pichincha?.final)}</td>
+              </tr>
+              <tr style={{ background: 'rgba(192,132,252,0.12)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#c084fc' }}>📺 Total IPTV JEP Final</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#c084fc', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.iptv_jep?.final)}</td>
               </tr>
             </tbody>
           </table>
@@ -2364,9 +2503,9 @@ const Balance = () => {
   const renderEgresos = () => {
     const displayEgresos = filterEgresosByMes
       ? egresos.filter(e => {
-          const eMes = e.mes || (e.fecha ? String(e.fecha).slice(0, 7) : '');
-          return eMes === mes;
-        })
+        const eMes = e.mes || (e.fecha ? String(e.fecha).slice(0, 7) : '');
+        return eMes === mes;
+      })
       : egresos;
 
     const sortedEgresos = [...displayEgresos].sort((a, b) => {
@@ -2769,7 +2908,7 @@ const Balance = () => {
         <Modal title={modalMovInterno === 'crear' ? '➕ Registrar Movimiento Interno' : '✏️ Editar Movimiento Interno'} onClose={() => setModalMovInterno(null)}>
           <MovimientoInternoForm
             initial={modalMovInterno !== 'crear' ? { ...modalMovInterno } : null}
-            saldosFinales={reportMovsInternos?.saldos_finales}
+            saldosFinales={saldosFinalesCalculados}
             onSave={handleSaveMovInterno}
             onClose={() => setModalMovInterno(null)}
           />
