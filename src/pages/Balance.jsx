@@ -1825,6 +1825,26 @@ const Balance = () => {
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
+              onClick={() => setModalEgreso('crear')}
+              className="btn btn-primary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: 12,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #a855f7, #7e22ce)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 14px rgba(168,85,247,0.3)'
+              }}
+            >
+              💸 Registrar Egreso
+            </button>
+            <button
               onClick={() => setModalMovInterno('crear')}
               className="btn btn-primary"
               style={{
