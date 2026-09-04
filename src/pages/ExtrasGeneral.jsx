@@ -52,8 +52,6 @@ const ExtrasGeneral = () => {
     };
 
     const [formData, setFormData] = useState(initialForm);
-    const [iptvBouquets, setIptvBouquets] = useState([1, 2, 5]);
-    const [iptvOutputs, setIptvOutputs] = useState([1, 2]);
 
     useEffect(() => {
         if (!isEditing && formData.nombre_cliente && formData.cod) {
@@ -71,32 +69,23 @@ const ExtrasGeneral = () => {
         }
     }, [formData.nombre_cliente, formData.cod, isEditing]);
 
-    const getIptvScript = () => {
-        const useExp = formData.estado === '30 DÍAS';
-        return `INSERT INTO lines (
-  member_id, username, password, bouquet, allowed_outputs, max_connections,
-  admin_enabled, enabled, ${useExp ? 'exp_date, ' : ''}is_restreamer, is_trial, is_mag, is_e2, is_stalker, is_isplock,
-  allowed_ips, allowed_ua, created_at, force_server_id, bypass_ua
-) VALUES (
-  1, '${formData.usuario}', '${formData.contrasena}', '[${iptvBouquets}]', '[${iptvOutputs}]', ${formData.cuentas || 1},
-  1, 1, ${useExp ? "UNIX_TIMESTAMP() + (30 * 86400), " : ""}0, 0, 0, 0, 0, 0, '[]', '[]', UNIX_TIMESTAMP(), 0, 0
-);`;
-    };
-
-    const handleBouquetChange = (id) => {
-        if (iptvBouquets.includes(id)) {
-            setIptvBouquets(prev => prev.filter(b => b !== id));
-        } else {
-            setIptvBouquets(prev => [...prev, id]);
+    const getStartMonthIdx = (fechaIngreso) => {
+        if (!fechaIngreso) return 0;
+        try {
+            const str = String(fechaIngreso).trim();
+            if (str.includes('-')) {
+                const parts = str.split('-');
+                const m = parseInt(parts[0].length === 4 ? parts[1] : parts[1], 10);
+                if (!isNaN(m) && m >= 1 && m <= 12) return m - 1;
+            } else if (str.includes('/')) {
+                const parts = str.split('/');
+                const m = parseInt(parts[1], 10);
+                if (!isNaN(m) && m >= 1 && m <= 12) return m - 1;
+            }
+        } catch (e) {
+            console.error("Error parsing fecha_ingreso:", e);
         }
-    };
-
-    const handleOutputChange = (id) => {
-        if (iptvOutputs.includes(id)) {
-            setIptvOutputs(prev => prev.filter(o => o !== id));
-        } else {
-            setIptvOutputs(prev => [...prev, id]);
-        }
+        return 0;
     };
 
     const fetchData = async () => {
@@ -127,23 +116,30 @@ const ExtrasGeneral = () => {
     };
 
     const calculateDebe = (e) => {
+        if (!e) return 0;
         const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
         const currentMonthIdx = new Date().getMonth();
         let totalDebe = 0;
         
-        // Determinar mes de inicio basado en fecha_ingreso
-        let startMonthIdx = 0;
-        if (e.fecha_ingreso) {
-            const mesIngreso = parseInt(e.fecha_ingreso.split('-')[1]);
-            startMonthIdx = mesIngreso - 1;
-        }
+        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
 
         for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
             const m = listMonths[i];
-            const saldoMes = (parseFloat(e[`${m}_pago`] || 0) === 0 && (parseFloat(e[`${m}_saldo`] || 0) === 0)) 
-                ? parseFloat(e.valor || 0) 
-                : parseFloat(e[`${m}_saldo`] || 0);
-            totalDebe += saldoMes;
+            const pagoMes = parseFloat(e[`${m}_pago`] || 0);
+            const saldoField = e[`${m}_saldo`];
+            const valorBase = parseFloat(e.valor || 0);
+
+            let saldoMes = 0;
+            if (pagoMes > 0) {
+                saldoMes = parseFloat(saldoField || 0);
+            } else {
+                if (saldoField !== undefined && saldoField !== null && saldoField !== '' && parseFloat(saldoField) >= 0) {
+                    saldoMes = parseFloat(saldoField);
+                } else {
+                    saldoMes = valorBase;
+                }
+            }
+            totalDebe += Math.max(0, saldoMes);
         }
         return totalDebe;
     };
@@ -151,9 +147,7 @@ const ExtrasGeneral = () => {
     const stats = useMemo(() => {
         let pend = 0;
         extras.forEach(e => {
-            months.forEach(m => {
-                pend += parseFloat(e[`${m.toLowerCase()}_saldo`] || 0);
-            });
+            pend += calculateDebe(e);
         });
         return { pend, total: extras.length, activos: extras.filter(x => x.activo === 'SI').length };
     }, [extras]);
@@ -385,22 +379,39 @@ const ExtrasGeneral = () => {
                                             </button>
                                         </div>
                                     </td>
-                                    {months.map(m => {
+                                    {months.map((m, mIdx) => {
                                         const l = m.toLowerCase();
+                                        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
+                                        const isPriorToIngreso = mIdx < startMonthIdx;
+
                                         const pagoMes = parseFloat(e[l + '_pago'] || 0);
                                         const saldoMes = parseFloat(e[l + '_saldo'] || 0);
                                         const valorBase = parseFloat(e.valor || 0);
-                                        const saldoAMostrar = (pagoMes === 0 && saldoMes === 0) ? valorBase : saldoMes;
+                                        
+                                        let saldoAMostrar = 0;
+                                        if (isPriorToIngreso) {
+                                            saldoAMostrar = 0;
+                                        } else {
+                                            if (pagoMes > 0) {
+                                                saldoAMostrar = saldoMes;
+                                            } else {
+                                                if (e[l + '_saldo'] !== undefined && e[l + '_saldo'] !== null && e[l + '_saldo'] !== '') {
+                                                    saldoAMostrar = saldoMes;
+                                                } else {
+                                                    saldoAMostrar = valorBase;
+                                                }
+                                            }
+                                        }
                                         const hasPaid = pagoMes > 0;
 
                                         return (
                                             <React.Fragment key={m}>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_factura'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: 0.8 }}>{e[l + '_fecha_pago'] ? formatToDMY(e[l + '_fecha_pago']) : '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center' }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem' }}>{e[l + '_banco'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem' }}>{e[l + '_cod'] || '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8', fontWeight: 'bold', textAlign: 'center' }}>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_factura'] || '-')}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: isPriorToIngreso ? 0.35 : 0.8 }}>{isPriorToIngreso ? '-' : (e[l + '_fecha_pago'] ? formatToDMY(e[l + '_fecha_pago']) : '-')}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center', opacity: isPriorToIngreso ? 0.35 : 1 }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_banco'] || '-')}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_cod'] || '-')}</td>
+                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: isPriorToIngreso ? '#64748b' : (saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8'), fontWeight: 'bold', textAlign: 'center' }}>
                                                     ${saldoAMostrar.toFixed(2)}
                                                 </td>
                                             </React.Fragment>
@@ -507,69 +518,6 @@ const ExtrasGeneral = () => {
                                         <label className="label">OBSERVACIONES</label>
                                         <textarea className="input" name="observaciones" value={formData.observaciones} onChange={e => setFormData({ ...formData, observaciones: e.target.value })} rows="3" style={{ resize: 'none' }}></textarea>
                                     </div>
-
-                                    {/* GENERADOR DE SCRIPT IPTV */}
-                                    <div className="grid-span-2" style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '16px', borderRadius: '15px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '20px' }}>
-                                        <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#60a5fa' }}>GENERADOR DE SCRIPT IPTV</h3>
-                                        
-                                        <div className="grid-responsive" style={{ marginBottom: '20px' }}>
-                                            <div className="input-group">
-                                                <label className="label">BOUQUETS</label>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
-                                                    {[
-                                                        { id: 1, label: 'TV VIVO' },
-                                                        { id: 2, label: 'PELICULAS' },
-                                                        { id: 5, label: 'SERIES' },
-                                                        { id: 10, label: 'ADULTOS' }
-                                                    ].map(b => (
-                                                        <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>
-                                                            <input type="checkbox" checked={iptvBouquets.includes(b.id)} onChange={() => handleBouquetChange(b.id)} />
-                                                            {b.label}
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="input-group">
-                                                <label className="label">OUTPUTS</label>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
-                                                    {[
-                                                        { id: 1, label: 'HLS' },
-                                                        { id: 2, label: 'MPEGTS' },
-                                                        { id: 3, label: 'RTMP' }
-                                                    ].map(o => (
-                                                        <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>
-                                                            <input type="checkbox" checked={iptvOutputs.includes(o.id)} onChange={() => handleOutputChange(o.id)} />
-                                                            {o.label}
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ position: 'relative' }}>
-                                            <label className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                SCRIPT SQL
-                                                <button 
-                                                    type="button" 
-                                                    className="btn btn-primary"
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(getIptvScript());
-                                                        showToast("Script copiado!");
-                                                    }}
-                                                    style={{ padding: '2px 8px', fontSize: '0.6rem', minWidth: 'auto' }}
-                                                >
-                                                    COPIAR
-                                                </button>
-                                            </label>
-                                            <pre style={{ 
-                                                background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '10px', 
-                                                fontSize: '0.7rem', color: '#c7d2fe', border: '1px solid rgba(255,255,255,0.05)',
-                                                whiteSpace: 'pre-wrap', fontFamily: 'monospace', margin: '4px 0 0 0'
-                                            }}>
-                                                {getIptvScript()}
-                                            </pre>
-                                        </div>
-                                    </div>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -650,13 +598,37 @@ const ExtrasGeneral = () => {
                     background: 'rgba(2, 6, 23, 0.95)', zIndex: 10000,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
                 }}>
-                    <div className="glass-card glass" style={{ width: '100%', maxWidth: '450px', padding: '24px' }}>
-                        <h2 style={{ marginBottom: '8px', fontWeight: '900' }}>Registrar Pago</h2>
-                        <p style={{ color: '#94a3b8', marginBottom: '24px', fontSize: '0.9rem' }}>Pagar servicio de <b>{selectedForPago?.nombre_cliente}</b></p>
-                        
+                    <div className="glass-card glass" style={{ width: '100%', maxWidth: '480px', padding: '24px' }}>
+                        <h2 style={{ marginBottom: '4px', fontWeight: '900', color: '#34d399' }}>💳 Registrar Pago Extra</h2>
+                        <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '0.9rem' }}>
+                            Cliente: <b>{selectedForPago?.nombre_cliente}</b> ({selectedForPago?.cod})
+                        </p>
+
+                        <div style={{ 
+                            background: 'rgba(59, 130, 246, 0.1)', 
+                            border: '1px solid rgba(59, 130, 246, 0.2)', 
+                            borderRadius: '8px', 
+                            padding: '12px 16px', 
+                            marginBottom: '20px',
+                            display: 'flex',
+                            justify: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div>
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>VALOR MENSUAL</span>
+                                <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${parseFloat(selectedForPago?.valor || 0).toFixed(2)}</span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>DEUDA ACUMULADA</span>
+                                <span style={{ fontWeight: 'bold', color: calculateDebe(selectedForPago) > 0 ? '#f87171' : '#34d399' }}>
+                                    ${calculateDebe(selectedForPago).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="grid-responsive" style={{ gap: '16px' }}>
                             <div className="form-group">
-                                <label className="label">Mes de inicio</label>
+                                <label className="label">Mes de inicio del pago</label>
                                 <select className="input" value={pagoData.mes} onChange={e => setPagoData({...pagoData, mes: e.target.value})} style={{ background: '#1e293b' }}>
                                     {months.map(m => <option key={m} value={m.toUpperCase()}>{m.toUpperCase()}</option>)}
                                 </select>
@@ -679,13 +651,13 @@ const ExtrasGeneral = () => {
                                 <input className="input" placeholder="Ej: 001-001-0001" value={pagoData.factura} onChange={e => setPagoData({...pagoData, factura: e.target.value})} />
                             </div>
                             <div className="form-group grid-span-2">
-                                <label className="label">Referencia (Opcional)</label>
+                                <label className="label">Referencia / Comprobante (Opcional)</label>
                                 <input className="input" placeholder="Referencia bancaria" value={pagoData.referencia} onChange={e => setPagoData({...pagoData, referencia: e.target.value})} />
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
-                            <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cerrar</button>
+                            <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
                             <button className="btn btn-primary" style={{ background: '#10b981' }} onClick={handleConfirmPago}>Confirmar Pago</button>
                         </div>
                     </div>
