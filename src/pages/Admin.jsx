@@ -301,6 +301,129 @@ const Admin = () => {
     }
   };
 
+  const exportPdfSayausi = () => {
+    const clientesSayausi = safeClientes
+      .filter(c => {
+        const isSayausi = c.nodo && c.nodo.toUpperCase().includes('SAYAUS');
+        const isActivo = !c.estado || c.estado.toUpperCase() === 'ACTIVO';
+        return isSayausi && isActivo;
+      })
+      .sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+
+    if (clientesSayausi.length === 0) {
+      showWarning('No se encontraron clientes activos registrados en el nodo Sayausí.');
+      return;
+    }
+
+    const now = new Date();
+    const fechaGen = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showError('Por favor permite las ventanas emergentes (popups) para exportar el PDF.');
+      return;
+    }
+
+    const rowsHtml = clientesSayausi.map((c, idx) => {
+      const itemNum = String(c.id || idx + 1).padStart(3, '0');
+      const nombreUpper = (c.nombre || '').toUpperCase();
+      const valPending = parseFloat(c.total_pago || 0);
+      const valDisplay = valPending > 0 ? `$${valPending.toFixed(2)}` : '$0.00';
+
+      return `
+        <tr>
+          <td style="padding: 10px 12px; text-align: center; font-weight: bold; border: 1px solid black; font-size: 13px;">${itemNum}</td>
+          <td style="padding: 10px 12px; text-align: left; border: 1px solid black; font-size: 12px; font-weight: 500;">${nombreUpper}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: bold; border: 1px solid black; font-size: 13px;">${valDisplay}</td>
+          <td style="padding: 10px 12px; border: 1px solid black;"></td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Reporte Cobranzas Sayausi</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 15mm;
+            }
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              color: #000;
+              margin: 0;
+              padding: 10px 20px;
+              background: #fff;
+            }
+            h1 {
+              text-align: center;
+              font-size: 24px;
+              font-weight: 900;
+              margin: 10px 0 6px 0;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+            }
+            .subtitle {
+              text-align: center;
+              font-size: 14px;
+              margin-top: 0;
+              margin-bottom: 25px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              border: 1px solid black;
+            }
+            th {
+              border: 1px solid black;
+              padding: 10px 12px;
+              font-size: 13px;
+              font-weight: bold;
+              text-transform: uppercase;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            td {
+              border: 1px solid black;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            @media print {
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>REPORTE DE COBRANZAS SAYAUSI</h1>
+          <div class="subtitle">Clientes Activos - Generado el: ${fechaGen}</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 12%; text-align: center;">ITEM</th>
+                <th style="width: 48%; text-align: left;">Nombres</th>
+                <th style="width: 20%; text-align: center;">VALOR</th>
+                <th style="width: 20%; text-align: center;">FIRMA</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
   const [statusFilter, setStatusFilter] = useState('ACTIVO');
@@ -327,6 +450,24 @@ const Admin = () => {
           <h1>Pagos y Cobros</h1>
         </div>
         <div className="page-actions" style={{ gap: '12px', alignItems: 'center' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={exportPdfSayausi}
+            style={{
+              background: '#1e1b4b',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            📄 PDF Sayausí
+          </button>
+
           <select
             className="input"
             style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
