@@ -13,7 +13,7 @@ import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../
 // PALETA
 // ─────────────────────────────────────────────────────────────────────────────
 const P = {
-  ingreso: '#10b981', egreso: '#f43f5e', proyecto: '#f59e0b',
+  ingreso: '#10b981', egreso: '#a855f7', proyecto: '#f59e0b',
   internet: '#0ea5e9', iptv: '#ec4899', extras: '#8b5cf6',
   adic: '#14b8a6', balance: '#6366f1',
   pichincha: '#facc15', jep: '#fb923c', efectivo: '#4ade80',
@@ -1865,7 +1865,7 @@ const Balance = () => {
             value={fmt(egData.total)}
             sub="Gastos operativos"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#f43f5e' },
+              { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#a855f7' },
               { icon: '🏦', nombre: 'Pichincha', monto: egPichincha, color: '#facc15' },
               { icon: '🏛️', nombre: 'Coac JEP', monto: egJep, color: '#fb923c' }
             ]}
