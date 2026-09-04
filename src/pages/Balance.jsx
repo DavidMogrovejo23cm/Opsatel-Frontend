@@ -1781,11 +1781,11 @@ const Balance = () => {
     }, {});
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
-    // Desglose por banco para las 4 cards principales (Relacionado directamente con movimientos internos normales, no IPTV)
-    const ingEfectivo = parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo || 0);
-    const ingPichincha = parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha || 0);
-    const ingJep = parseFloat(reportMovsInternos?.recaudacion_bruta?.jep || 0);
-    const totalIngresosMovs = (reportMovsInternos?.recaudacion_bruta)
+    // Desglose por banco para las 4 cards principales (Sincronizado al unísono con saldos finales de Movimientos Internos)
+    const ingEfectivo = saldosFinalesCalculados?.efectivo?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo || 0);
+    const ingPichincha = saldosFinalesCalculados?.pichincha?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha || 0);
+    const ingJep = saldosFinalesCalculados?.jep?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.jep || 0);
+    const totalIngresosMovs = (reportMovsInternos?.recaudacion_bruta || saldosFinalesCalculados?.efectivo)
       ? (ingEfectivo + ingPichincha + ingJep)
       : ingresos.total;
 
