@@ -1771,12 +1771,6 @@ const Balance = () => {
   const renderMensual = () => {
     if (!report) return null;
     const { ingresos, egresos: egData, proyectos: proyData, balance_neto } = report;
-    const barData = [
-      { name: 'Ingresos', total: ingresos.total, fill: P.ingreso },
-      { name: 'Egresos', total: egData.total, fill: P.egreso },
-      { name: 'Proyectos', total: proyData.total, fill: P.proyecto },
-      { name: 'Balance', total: Math.abs(balance_neto), fill: balance_neto >= 0 ? P.ingreso : P.egreso },
-    ];
     const [anioStr, mesNum] = mes.split('-');
     const mesLabel = MONTH_NAMES[parseInt(mesNum, 10) - 1] + ' ' + anioStr;
 
@@ -1791,6 +1785,9 @@ const Balance = () => {
     const ingEfectivo = parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo || 0);
     const ingPichincha = parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha || 0);
     const ingJep = parseFloat(reportMovsInternos?.recaudacion_bruta?.jep || 0);
+    const totalIngresosMovs = (reportMovsInternos?.recaudacion_bruta)
+      ? (ingEfectivo + ingPichincha + ingJep)
+      : ingresos.total;
 
     const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('efectivo') ? sum + v : sum, 0);
     const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('pichincha') ? sum + v : sum, 0);
@@ -1803,6 +1800,16 @@ const Balance = () => {
     const balEfectivo = ingEfectivo - egEfectivo - proyEfectivo;
     const balPichincha = ingPichincha - egPichincha - proyPichincha;
     const balJep = ingJep - egJep - proyJep;
+    const finalBalanceNeto = (reportMovsInternos?.recaudacion_bruta)
+      ? (totalIngresosMovs - egData.total - proyData.total)
+      : balance_neto;
+
+    const barData = [
+      { name: 'Ingresos', total: totalIngresosMovs, fill: P.ingreso },
+      { name: 'Egresos', total: egData.total, fill: P.egreso },
+      { name: 'Proyectos', total: proyData.total, fill: P.proyecto },
+      { name: 'Balance', total: Math.abs(finalBalanceNeto), fill: finalBalanceNeto >= 0 ? P.ingreso : P.egreso },
+    ];
 
     return (
       <div>
@@ -1843,7 +1850,7 @@ const Balance = () => {
             icon="📥"
             title="Ingresos"
             color={P.ingreso}
-            value={fmt(ingresos.total)}
+            value={fmt(totalIngresosMovs)}
             sub="Total recaudado"
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: ingEfectivo, color: '#4ade80' },
@@ -1876,11 +1883,11 @@ const Balance = () => {
             ]}
           />
           <Card
-            icon={balance_neto >= 0 ? '💰' : '⚠️'}
+            icon={finalBalanceNeto >= 0 ? '💰' : '⚠️'}
             title="Balance Neto"
-            color={balance_neto >= 0 ? P.ingreso : P.egreso}
-            value={fmt(balance_neto)}
-            sub={balance_neto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'}
+            color={finalBalanceNeto >= 0 ? P.ingreso : P.egreso}
+            value={fmt(finalBalanceNeto)}
+            sub={finalBalanceNeto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'}
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#4ade80' : '#f43f5e' },
               { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#f43f5e' },
