@@ -1787,10 +1787,10 @@ const Balance = () => {
     }, {});
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
-    // Desglose por banco para las 4 cards principales
-    const ingEfectivo = (reportMovsInternos?.recaudacion_bruta?.efectivo || 0) + (reportPlataforma?.desglose_bancos?.efectivo || 0);
-    const ingPichincha = (reportMovsInternos?.recaudacion_bruta?.pichincha || 0) + (reportPlataforma?.desglose_bancos?.pichincha || 0);
-    const ingJep = (reportMovsInternos?.recaudacion_bruta?.jep || 0) + (reportPlataforma?.desglose_bancos?.jep || 0);
+    // Desglose por banco para las 4 cards principales (Relacionado directamente con movimientos internos normales, no IPTV)
+    const ingEfectivo = parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo || 0);
+    const ingPichincha = parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha || 0);
+    const ingJep = parseFloat(reportMovsInternos?.recaudacion_bruta?.jep || 0);
 
     const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('efectivo') ? sum + v : sum, 0);
     const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('pichincha') ? sum + v : sum, 0);
@@ -1816,9 +1816,25 @@ const Balance = () => {
               <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cierre de caja para {mesLabel}</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={() => { fetchMensual(); fetchMovsInternos(); fetchPlataforma(); }} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>🔄 Refrescar</button>
-            <button onClick={handleExportar} title="Genera el reporte Excel mensual estructurado con formato para la presentación ante el regulador ARCOTEL" style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', transition: 'transform 0.2s' }}>📥 Exportar Arcotel</button>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => setModalMovInterno('crear')}
+              className="btn btn-primary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: 12,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              🔄 Movimiento Interno
+            </button>
+            <button onClick={() => { fetchMensual(); fetchMovsInternos(); fetchPlataforma(); }} style={{ padding: '8px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>🔄 Refrescar</button>
+            <button onClick={handleExportar} title="Genera el reporte Excel mensual estructurado con formato para la presentación ante el regulador ARCOTEL" style={{ padding: '8px 16px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', transition: 'transform 0.2s' }}>📥 Exportar Arcotel</button>
           </div>
         </div>
 
@@ -1896,44 +1912,44 @@ const Balance = () => {
             </div>
           </div>
 
-          {/* Gráficas de Torta */}
+          {/* Gráficas de Distribución de Gastos en Barras */}
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24 }}>
-            <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700 }}>🥧 Distribución de Gastos</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700 }}>📊 Distribución de Gastos</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
-                <div style={{ width: '100%', height: '160px' }}>
+                <div style={{ width: '100%', height: '180px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={egByCat} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
-                        {egByCat.map((e, i) => <Cell key={i} fill={e.color} />)}
-                      </Pie>
-                      <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                    </PieChart>
+                    <BarChart data={egByCat} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+                      <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                      <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={28}>
+                        {egByCat.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR MÉTODO</p>
-                <div style={{ width: '100%', height: '160px' }}>
+                <div style={{ width: '100%', height: '180px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieMetodo} innerRadius={35} outerRadius={55} paddingAngle={5} dataKey="value" stroke="none">
-                        {pieMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
-                      </Pie>
-                      <ReTooltip {...tooltipStyle} formatter={v => fmt(v)} />
-                    </PieChart>
+                    <BarChart data={pieMetodo} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+                      <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                      <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={28}>
+                        {pieMetodo.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginTop: 15 }}>
-              {egByCat.map(c => (
-                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.color }} />
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{c.name}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
