@@ -57,6 +57,21 @@ const WhatsApp = () => {
         return () => clearInterval(intervalo);
     }, []);
 
+    const normalizeLocationKey = (str) => {
+        if (!str) return '';
+        return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+    };
+
+    const formatCanonicalLocation = (str) => {
+        if (!str) return '';
+        const key = normalizeLocationKey(str);
+        if (key.includes("SAYAUSI")) return "Sayausí";
+        if (key.includes("BANOS")) return "Baños";
+        if (key.includes("CENTRO")) return "Centro";
+        const trimmed = str.toString().trim();
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    };
+
     const cargarDatosNodosYClientes = async () => {
         try {
             const [resNodos, resClientes] = await Promise.all([
@@ -67,12 +82,28 @@ const WhatsApp = () => {
             const rawNodos = resNodos.data || resNodos || [];
             const rawClientes = resClientes.data || resClientes || [];
 
-            const nombresNodosConfig = rawNodos.map(n => typeof n === 'string' ? n : (n.nombre || n.nodo)).filter(Boolean);
-            const nombresNodosClientes = rawClientes.map(c => c.nodo).filter(Boolean);
-            
-            const listaCompleta = Array.from(new Set(['Sayausí', 'Baños', ...nombresNodosConfig, ...nombresNodosClientes]));
-            
-            setListaNodos(listaCompleta);
+            const map = new Map(); // key -> canonical display name
+            map.set("SAYAUSI", "Sayausí");
+            map.set("BANOS", "Baños");
+
+            rawNodos.forEach(n => {
+                const val = typeof n === 'string' ? n : (n.nombre || n.nodo);
+                if (val && typeof val === 'string' && val.trim()) {
+                    const key = normalizeLocationKey(val);
+                    if (!map.has(key)) map.set(key, formatCanonicalLocation(val));
+                }
+            });
+
+            rawClientes.forEach(c => {
+                [c.nodo, c.parroquia].forEach(val => {
+                    if (val && typeof val === 'string' && val.trim()) {
+                        const key = normalizeLocationKey(val);
+                        if (!map.has(key)) map.set(key, formatCanonicalLocation(val));
+                    }
+                });
+            });
+
+            setListaNodos(Array.from(map.values()));
             setListaClientes(rawClientes);
         } catch (error) {
             console.error("Error cargando nodos/clientes:", error);
@@ -80,11 +111,25 @@ const WhatsApp = () => {
     };
 
     const getClientesDestinoCount = () => {
-        const activos = listaClientes.filter(c => c.estado === 'Activo' && c.celular && c.celular.trim() !== '');
+        const activos = listaClientes.filter(c => {
+            const isActivo = c.estado && (
+                c.estado.toUpperCase() === 'ACTIVO' || 
+                c.estado.toUpperCase() === 'ACTIVA'
+            );
+            const hasCelular = c.celular && String(c.celular).trim() !== '';
+            return isActivo && hasCelular;
+        });
+
         if (nodoSeleccionado === 'todos') {
             return activos.length;
         }
-        return activos.filter(c => c.nodo && c.nodo.toLowerCase().includes(nodoSeleccionado.toLowerCase())).length;
+
+        const targetKey = normalizeLocationKey(nodoSeleccionado);
+        return activos.filter(c => {
+            const nodoKey = normalizeLocationKey(c.nodo);
+            const parroquiaKey = normalizeLocationKey(c.parroquia);
+            return nodoKey.includes(targetKey) || parroquiaKey.includes(targetKey);
+        }).length;
     };
 
     const cargarAdministradores = async () => {
@@ -705,22 +750,29 @@ const WhatsApp = () => {
                             borderRadius: '8px',
                             marginBottom: '20px'
                         }}>
-                            {/* Selector de Nodos */}
-                            <div className="input-group" style={{ marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 'bold', margin: 0 }}>
-                                        🎯 Seleccionar Destinatarios (Todos o Por Nodo)
+                            {/* Selector de Nodos y Parroquias (Compacto a un lado) */}
+                            <div style={{ 
+                                marginBottom: '20px', 
+                                maxWidth: '440px', 
+                                background: 'rgba(15, 23, 42, 0.6)', 
+                                padding: '14px 16px', 
+                                borderRadius: '8px', 
+                                border: '1px solid rgba(96, 165, 250, 0.25)' 
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 'bold', margin: 0, fontSize: '0.88rem' }}>
+                                        🎯 Filtrar Destinatarios
                                     </label>
                                     <span style={{ 
-                                        fontSize: '0.85rem', 
-                                        padding: '4px 12px', 
+                                        fontSize: '0.8rem', 
+                                        padding: '3px 10px', 
                                         borderRadius: '12px', 
-                                        background: 'rgba(59, 130, 246, 0.2)', 
+                                        background: 'rgba(59, 130, 246, 0.25)', 
                                         color: '#93c5fd',
-                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                        border: '1px solid rgba(59, 130, 246, 0.4)',
                                         fontWeight: '600'
                                     }}>
-                                        👥 Destinatarios: {getClientesDestinoCount()} cliente(s)
+                                        👥 {getClientesDestinoCount()} cliente(s)
                                     </span>
                                 </div>
                                 <select 
@@ -728,26 +780,24 @@ const WhatsApp = () => {
                                     value={nodoSeleccionado}
                                     onChange={e => setNodoSeleccionado(e.target.value)}
                                     style={{ 
-                                        height: '42px', 
+                                        height: '38px', 
                                         background: '#0e1726', 
                                         color: '#fff', 
                                         border: '1px solid rgba(96, 165, 250, 0.4)', 
                                         borderRadius: '6px', 
-                                        padding: '0 12px',
-                                        fontSize: '0.95rem',
-                                        fontWeight: '500'
+                                        padding: '0 10px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '500',
+                                        width: '100%'
                                     }}
                                 >
-                                    <option value="todos">🌐 Todos los Nodos (Todos los clientes activos)</option>
+                                    <option value="todos">🌐 Todos los Nodos / Parroquias</option>
                                     {listaNodos.map((nodo, i) => (
                                         <option key={i} value={nodo}>
-                                            📍 Nodo: {nodo}
+                                            📍 {nodo}
                                         </option>
                                     ))}
                                 </select>
-                                <small style={{ color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>
-                                    Selecciona "Todos los Nodos" para enviar a toda la red, o filtra únicamente por clientes pertenecientes al nodo (ej: Sayausí, Baños).
-                                </small>
                             </div>
 
                             <div className="input-group">
