@@ -116,9 +116,127 @@ const IS = {
 const OS = { background: '#1a1040', color: 'white' };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MODAL CATEGORÍAS DE GASTOS
+// ─────────────────────────────────────────────────────────────────────────────
+function CategoriasModal({ customCategorias, onAddCategory, onRemoveCategory, onClose }) {
+  const [newCatName, setNewCatName] = useState('');
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    onAddCategory(newCatName);
+    setNewCatName('');
+  };
+
+  const baseList = [
+    { key: 'operacional', label: '⚙️ Operacional', color: '#f59e0b', isBase: true },
+    { key: 'nomina', label: '👔 Nómina', color: '#0ea5e9', isBase: true },
+    { key: 'proyecto', label: '🏗️ Proyecto', color: '#8b5cf6', isBase: true },
+    { key: 'otro', label: '📦 Otro', color: '#94a3b8', isBase: true },
+  ];
+
+  const customList = (customCategorias || []).map(c => ({
+    key: c.key,
+    label: `${c.icon || '🏷️'} ${c.label}`,
+    color: '#ec4899',
+    isBase: false
+  }));
+
+  const allCats = [...baseList, ...customList];
+
+  return (
+    <Modal title="🏷️ Categorías de Gastos" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <form onSubmit={handleAdd} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            style={IS}
+            placeholder="Nombre de nueva categoría (ej: Ferretería)..."
+            value={newCatName}
+            onChange={e => setNewCatName(e.target.value)}
+            autoFocus
+          />
+          <button
+            type="submit"
+            style={{
+              padding: '10px 20px',
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              fontSize: '0.88rem'
+            }}
+          >
+            ＋ Agregar
+          </button>
+        </form>
+
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+            Categorías Existentes y Personalizadas
+          </h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {allCats.map(cat => (
+              <div
+                key={cat.key}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: `${cat.color}15`,
+                  border: `1px solid ${cat.color}40`,
+                  padding: '6px 14px',
+                  borderRadius: 10,
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: 'white'
+                }}
+              >
+                <span>{cat.label}</span>
+                {!cat.isBase && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveCategory(cat.key)}
+                    style={{ background: 'none', border: 'none', color: '#f43f5e', cursor: 'pointer', padding: '0 2px', marginLeft: 4, fontWeight: 'bold', fontSize: '0.9rem' }}
+                    title="Eliminar categoría personalizada"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '10px 22px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontFamily: 'Outfit, sans-serif'
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EGRESO FORM  (con campo "en qué se gastó")
 // ─────────────────────────────────────────────────────────────────────────────
-function EgresoForm({ initial, onSave, onClose }) {
+function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onSave, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState(() => {
     if (initial) {
@@ -145,6 +263,20 @@ function EgresoForm({ initial, onSave, onClose }) {
     onClose();
   };
 
+  const baseOptions = [
+    { key: 'operacional', label: '⚙️ Operacional' },
+    { key: 'nomina', label: '👔 Nómina' },
+    { key: 'proyecto', label: '🏗️ Proyecto' },
+    { key: 'otro', label: '📦 Otro' }
+  ];
+
+  const customOptions = (customCategorias || []).map(c => ({
+    key: c.key,
+    label: `${c.icon || '🏷️'} ${c.label}`
+  }));
+
+  const categoryOptions = [...baseOptions, ...customOptions];
+
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
@@ -170,9 +302,18 @@ function EgresoForm({ initial, onSave, onClose }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Categoría</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600, margin: 0 }}>Categoría</label>
+            <button
+              type="button"
+              onClick={onOpenCategoriasModal}
+              style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+            >
+              ＋ Crear Categoría
+            </button>
+          </div>
           <select style={IS} value={form.categoria} onChange={e => set('categoria', e.target.value)}>
-            {CATEGORIAS.map(c => <option key={c} value={c} style={OS}>{CAT_LABELS[c]}</option>)}
+            {categoryOptions.map(c => <option key={c.key} value={c.key} style={OS}>{c.label}</option>)}
           </select>
         </div>
         <div>
@@ -1283,6 +1424,47 @@ const Balance = () => {
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
   const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
+  const [showCatModal, setShowCatModal] = useState(false); // Modal de categorías de gastos
+  const [customCategorias, setCustomCategorias] = useState(() => {
+    try {
+      const saved = localStorage.getItem('opsatel_custom_categorias');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleAddCustomCategory = (nombreCat) => {
+    if (!nombreCat || !nombreCat.trim()) return null;
+    const cleanName = nombreCat.trim();
+    const catKey = cleanName.toLowerCase().replace(/\s+/g, '_');
+
+    const isBase = CATEGORIAS.includes(catKey);
+    const exists = customCategorias.some(c => c.key === catKey);
+    if (isBase || exists) {
+      showWarning('Esta categoría ya existe.');
+      return catKey;
+    }
+
+    const newCat = { key: catKey, label: cleanName, icon: '🏷️' };
+    const updated = [...customCategorias, newCat];
+    setCustomCategorias(updated);
+    try {
+      localStorage.setItem('opsatel_custom_categorias', JSON.stringify(updated));
+    } catch (e) {}
+
+    showSuccess(`Categoría "${cleanName}" agregada correctamente`);
+    return catKey;
+  };
+
+  const handleRemoveCustomCategory = (catKey) => {
+    const updated = customCategorias.filter(c => c.key !== catKey);
+    setCustomCategorias(updated);
+    try {
+      localStorage.setItem('opsatel_custom_categorias', JSON.stringify(updated));
+    } catch (e) {}
+    showSuccess('Categoría eliminada');
+  };
 
   const handleQuickUpdateEgresoFecha = async (egresoId, newFecha) => {
     if (!newFecha) {
@@ -2190,10 +2372,18 @@ const Balance = () => {
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📖 Libro de Egresos</h3>
             <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Listado histórico de gastos operativos y proyectos.</p>
           </div>
-          <button id="btn-nuevo-egreso" onClick={() => setModalEgreso('crear')}
-            style={{ padding: '12px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
-            ＋ Registrar Nuevo Egreso
-          </button>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowCatModal(true)}
+              style={{ padding: '12px 20px', borderRadius: 14, background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              🏷️ Categorías de Gastos
+            </button>
+            <button id="btn-nuevo-egreso" onClick={() => setModalEgreso('crear')}
+              style={{ padding: '12px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
+              ＋ Registrar Nuevo Egreso
+            </button>
+          </div>
         </div>
 
         <div className="grid-responsive" style={{ marginBottom: 28 }}>
@@ -2494,8 +2684,24 @@ const Balance = () => {
       {/* Modal Egreso */}
       {modalEgreso !== null && (
         <Modal title={modalEgreso === 'crear' ? '➕ Nuevo Egreso' : '✏️ Editar Egreso'} onClose={() => setModalEgreso(null)}>
-          <EgresoForm initial={modalEgreso !== 'crear' ? { ...modalEgreso } : null} onSave={handleSaveEgreso} onClose={() => setModalEgreso(null)} />
+          <EgresoForm
+            initial={modalEgreso !== 'crear' ? { ...modalEgreso } : null}
+            customCategorias={customCategorias}
+            onOpenCategoriasModal={() => setShowCatModal(true)}
+            onSave={handleSaveEgreso}
+            onClose={() => setModalEgreso(null)}
+          />
         </Modal>
+      )}
+
+      {/* Modal Categorías de Gastos */}
+      {showCatModal && (
+        <CategoriasModal
+          customCategorias={customCategorias}
+          onAddCategory={handleAddCustomCategory}
+          onRemoveCategory={handleRemoveCustomCategory}
+          onClose={() => setShowCatModal(false)}
+        />
       )}
 
       {/* Modal Proyecto */}
