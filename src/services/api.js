@@ -148,6 +148,10 @@ export const configuracionService = {
   // Suspensión de servicio por fecha de corte
   getSuspensionCorteConfig: () => api.get('/configuraciones/suspension-corte'),
   setSuspensionCorteConfig: (data) => api.put('/configuraciones/suspension-corte', data),
+  // Clientes exentos de corte (Excepciones)
+  getExentosCorte: () => api.get('/configuraciones/clientes-exentos-corte'),
+  addExentoCorte: (id) => api.post(`/configuraciones/clientes-exentos-corte/${id}`),
+  removeExentoCorte: (id) => api.delete(`/configuraciones/clientes-exentos-corte/${id}`),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;

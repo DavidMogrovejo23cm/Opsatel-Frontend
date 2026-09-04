@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { configuracionService, oltService, libreqosService } from '../services/api';
+import { configuracionService, oltService, libreqosService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
@@ -72,13 +72,30 @@ const Configuraciones = () => {
     const [diasSaving, setDiasSaving] = useState(false);
     const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true });
     const [suspensionSaving, setSuspensionSaving] = useState(false);
+    const [exentosCorte, setExentosCorte] = useState([]);
+    const [exentosLoading, setExentosLoading] = useState(false);
+    const [allClientes, setAllClientes] = useState([]);
+    const [selectedClienteExentoId, setSelectedClienteExentoId] = useState('');
+    const [searchExentoText, setSearchExentoText] = useState('');
+
+    const fetchExentos = async () => {
+        try {
+            setExentosLoading(true);
+            const res = await configuracionService.getExentosCorte();
+            setExentosCorte(res.data?.exentos || []);
+        } catch (e) {
+            console.error('Error al cargar exentos', e);
+        } finally {
+            setExentosLoading(false);
+        }
+    };
 
     const fetchData = async () => {
         const user = configuracionService.getCurrentUser();
         const isAdmin = user && (user.rol === 'administrador' || user.rol === 'admin');
 
         try {
-            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes, diasRes, suspRes] = await Promise.all([
+            const [paRes, plRes, baRes, puRes, ppRes, finRes, cnRes, diasRes, suspRes, exentosRes, cliRes] = await Promise.all([
                 configuracionService.getNodos().catch(e => ({ data: [] })),
                 configuracionService.getPlanes().catch(e => ({ data: [] })),
                 configuracionService.getBancos().catch(e => ({ data: [] })),
@@ -87,7 +104,9 @@ const Configuraciones = () => {
                 configuracionService.getFinanzasBase().catch(e => ({ data: { caja_chica: 0, pichincha: 0, jep: 0 } })),
                 configuracionService.getCajasNap().catch(e => ({ data: [] })),
                 configuracionService.getDiasPermanencia().catch(e => ({ data: { dias: 7 } })),
-                configuracionService.getSuspensionCorteConfig().catch(e => ({ data: { dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true } }))
+                configuracionService.getSuspensionCorteConfig().catch(e => ({ data: { dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true } })),
+                configuracionService.getExentosCorte().catch(e => ({ data: { exentos: [] } })),
+                clienteService.listar().catch(e => ({ data: [] }))
             ]);
             if (diasRes.data?.dias) setDiasPermanencia(diasRes.data.dias);
             if (suspRes.data) {
@@ -97,6 +116,8 @@ const Configuraciones = () => {
                     auto_suspension_enabled: suspRes.data.auto_suspension_enabled !== false
                 });
             }
+            if (exentosRes.data?.exentos) setExentosCorte(exentosRes.data.exentos);
+            if (cliRes.data) setAllClientes(cliRes.data);
             
             setNodos(paRes.data);
             setPlanes(plRes.data);
@@ -691,6 +712,37 @@ const Configuraciones = () => {
         }
     };
 
+    const handleAddExento = async () => {
+        if (!selectedClienteExentoId) return showWarning('Seleccione un cliente para agregar a la lista de excepciones');
+        try {
+            setExentosLoading(true);
+            await configuracionService.addExentoCorte(selectedClienteExentoId);
+            showSuccess('Cliente agregado a las excepciones de corte');
+            setSelectedClienteExentoId('');
+            setSearchExentoText('');
+            fetchExentos();
+        } catch (e) {
+            showError('Error al agregar excepción: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setExentosLoading(false);
+        }
+    };
+
+    const handleRemoveExento = async (id, nombre) => {
+        const confirm = await showConfirm('Remover Excepción', `¿Deseas remover a "${nombre}" de la lista de excepciones de corte?`);
+        if (!confirm) return;
+        try {
+            setExentosLoading(true);
+            await configuracionService.removeExentoCorte(id);
+            showSuccess('Cliente removido de las excepciones de corte');
+            fetchExentos();
+        } catch (e) {
+            showError('Error al remover excepción: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setExentosLoading(false);
+        }
+    };
+
     const renderTable = (data, columns, type) => (
         <div className="table-container" style={{ marginTop: '20px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -1077,76 +1129,179 @@ const Configuraciones = () => {
                             </button>
                         </div>
 
-                        {/* Card para Suspensión por Fecha de Corte (Día 20) */}
+                        {/* Fila de 2 cards: Suspensión de Servicio por Corte y Lista de Excepciones de Corte */}
                         <div style={{
-                            background: 'rgba(239, 68, 68, 0.05)',
-                            border: '1px solid rgba(239, 68, 68, 0.25)',
-                            borderRadius: '12px',
-                            padding: '24px',
-                            maxWidth: '520px',
-                            marginTop: '24px'
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                            gap: '24px',
+                            marginTop: '24px',
+                            width: '100%'
                         }}>
-                            <h4 style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '1rem' }}>
-                                ⚙️ Suspensión de Servicio por Corte / Mora
-                            </h4>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '18px', lineHeight: '1.4' }}>
-                                Configura el día del mes para la suspensión de servicio por falta de pago. En esa fecha, los clientes en mora se agregan a la lista de MikroTik y su estado pasa a <strong style={{ color: '#ef4444' }}>Moroso</strong>. Al pagar, se reactivan automáticamente.
-                            </p>
+                            {/* Card para Suspensión por Fecha de Corte (Día 20) */}
+                            <div style={{
+                                background: 'rgba(239, 68, 68, 0.05)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                borderRadius: '12px',
+                                padding: '24px'
+                            }}>
+                                <h4 style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '1rem' }}>
+                                    ⚙️ Suspensión de Servicio por Corte / Mora
+                                </h4>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '18px', lineHeight: '1.4' }}>
+                                    Configura el día del mes para la suspensión de servicio por falta de pago. En esa fecha, los clientes en mora se agregan a la lista de MikroTik y su estado pasa a <strong style={{ color: '#ef4444' }}>Moroso</strong>. Al pagar, se reactivan automáticamente.
+                                </p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
-                                <div className="input-group" style={{ margin: 0 }}>
-                                    <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
-                                        🗓️ Día de corte mensual
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="31"
-                                        className="input"
-                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
-                                        value={suspensionForm.dia_corte}
-                                        onChange={e => setSuspensionForm({ ...suspensionForm, dia_corte: parseInt(e.target.value) || 20 })}
-                                    />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                            🗓️ Día de corte mensual
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="31"
+                                            className="input"
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                            value={suspensionForm.dia_corte}
+                                            onChange={e => setSuspensionForm({ ...suspensionForm, dia_corte: parseInt(e.target.value) || 20 })}
+                                        />
+                                    </div>
+
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                            ⏰ Hora de corte (HH:MM)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                            value={suspensionForm.hora_corte}
+                                            onChange={e => setSuspensionForm({ ...suspensionForm, hora_corte: e.target.value })}
+                                            placeholder="01:00"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="input-group" style={{ margin: 0 }}>
+                                <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
                                     <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
-                                        ⏰ Hora de corte (HH:MM)
+                                        ⚡ Suspensión Automática
                                     </label>
-                                    <input
-                                        type="text"
+                                    <select
                                         className="input"
                                         style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
-                                        value={suspensionForm.hora_corte}
-                                        onChange={e => setSuspensionForm({ ...suspensionForm, hora_corte: e.target.value })}
-                                        placeholder="01:00"
-                                    />
+                                        value={suspensionForm.auto_suspension_enabled ? 'true' : 'false'}
+                                        onChange={e => setSuspensionForm({ ...suspensionForm, auto_suspension_enabled: e.target.value === 'true' })}
+                                    >
+                                        <option value="true" style={{ background: '#1e1b4b' }}>✅ Activado (Corte masivo en fecha)</option>
+                                        <option value="false" style={{ background: '#1e1b4b' }}>❌ Desactivado</option>
+                                    </select>
                                 </div>
-                            </div>
 
-                            <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
-                                <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
-                                    ⚡ Suspensión Automática
-                                </label>
-                                <select
-                                    className="input"
-                                    style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
-                                    value={suspensionForm.auto_suspension_enabled ? 'true' : 'false'}
-                                    onChange={e => setSuspensionForm({ ...suspensionForm, auto_suspension_enabled: e.target.value === 'true' })}
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleSaveSuspensionConfig}
+                                    disabled={suspensionSaving}
+                                    style={{ padding: '10px 24px', background: '#ef4444', border: 'none', width: '100%', fontWeight: 'bold' }}
                                 >
-                                    <option value="true" style={{ background: '#1e1b4b' }}>✅ Activado (Corte masivo en fecha)</option>
-                                    <option value="false" style={{ background: '#1e1b4b' }}>❌ Desactivado</option>
-                                </select>
+                                    {suspensionSaving ? '⏳ Guardando...' : '💾 Guardar Configuración de Suspensión'}
+                                </button>
                             </div>
 
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSaveSuspensionConfig}
-                                disabled={suspensionSaving}
-                                style={{ padding: '10px 24px', background: '#ef4444', border: 'none', width: '100%', fontWeight: 'bold' }}
-                            >
-                                {suspensionSaving ? '⏳ Guardando...' : '💾 Guardar Configuración de Suspensión'}
-                            </button>
+                            {/* Card para Lista de Excepciones de Corte (Clientes Exentos) */}
+                            <div style={{
+                                background: 'rgba(16, 185, 129, 0.05)',
+                                border: '1px solid rgba(16, 185, 129, 0.25)',
+                                borderRadius: '12px',
+                                padding: '24px',
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}>
+                                <h4 style={{ color: '#34d399', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '1rem' }}>
+                                    🛡️ Excepciones de Corte (Clientes Exentos)
+                                </h4>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '18px', lineHeight: '1.4' }}>
+                                    Agrega clientes que <strong style={{ color: '#34d399' }}>NUNCA deben ser cortados</strong> automáticamente por mora. Estarán protegidos de la regla de suspensión masiva.
+                                </p>
+
+                                {/* Buscador / Selector para agregar nuevo exento */}
+                                <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            placeholder="🔍 Filtrar por nombre o cédula..."
+                                            value={searchExentoText}
+                                            onChange={e => setSearchExentoText(e.target.value)}
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', fontSize: '0.82rem', padding: '8px 12px' }}
+                                        />
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <select
+                                            className="input"
+                                            style={{ background: 'rgba(15,23,42,0.95)', color: 'var(--text-main)', fontSize: '0.82rem', margin: 0, flex: 1 }}
+                                            value={selectedClienteExentoId}
+                                            onChange={e => setSelectedClienteExentoId(e.target.value)}
+                                        >
+                                            <option value="">-- Seleccionar cliente a eximir --</option>
+                                            {allClientes
+                                                .filter(c => {
+                                                    const isAlreadyExento = exentosCorte.some(ex => String(ex.id) === String(c.id));
+                                                    if (isAlreadyExento) return false;
+                                                    if (!searchExentoText.trim()) return true;
+                                                    const txt = searchExentoText.toLowerCase();
+                                                    return (c.nombre || '').toLowerCase().includes(txt) || (c.cedula || '').includes(txt) || (c.nodo || '').toLowerCase().includes(txt);
+                                                })
+                                                .slice(0, 50)
+                                                .map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        #{c.id} - {c.nombre} ({c.cedula || 'Sin cédula'}) - {c.nodo || 'Sin nodo'}
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleAddExento}
+                                            disabled={exentosLoading || !selectedClienteExentoId}
+                                            style={{ padding: '8px 16px', background: '#10b981', border: 'none', fontWeight: 'bold', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+                                        >
+                                            ➕ Eximir
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Lista de Exentos Registrados */}
+                                <div style={{ flex: 1, minHeight: '160px', maxHeight: '240px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    {exentosCorte.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                                            🛡️ No hay excepciones registradas. Todos los clientes aplican para el corte regular.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {exentosCorte.map(ex => (
+                                                <div key={ex.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '8px 12px' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span>🛡️</span> {ex.nombre} <span style={{ fontSize: '0.7rem', color: '#34d399', background: 'rgba(52,211,153,0.15)', padding: '2px 6px', borderRadius: '4px' }}>EXENTO</span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                            CI: {ex.cedula || 'N/A'} | IP: {ex.ip || 'N/A'} | Nodo: {ex.nodo || 'N/A'}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRemoveExento(ex.id, ex.nombre)}
+                                                        style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                        title="Remover de exentos"
+                                                    >
+                                                        🗑️ Quitar
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
