@@ -79,13 +79,14 @@ function MiniBalanceCard({ title, value, icon, color, sub }) {
   );
 }
 
-function Card({ title, value, icon, color, sub }) {
+function Card({ title, value, icon, color, sub, bancos }) {
   return (
     <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
       style={{
         background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}44`,
         borderLeft: `4px solid ${color}`, borderRadius: 16, padding: '20px 22px',
-        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0
+        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
       }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '1.6rem' }}>{icon}</span>
@@ -93,6 +94,28 @@ function Card({ title, value, icon, color, sub }) {
       </div>
       <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginTop: 4 }}>{value}</div>
       {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{sub}</div>}
+
+      {bancos && bancos.length > 0 && (
+        <div style={{
+          marginTop: 6,
+          paddingTop: 10,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6
+        }}>
+          {bancos.map((b, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+              <span style={{ color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                <span style={{ fontSize: '0.85rem' }}>{b.icon}</span> {b.nombre}
+              </span>
+              <span style={{ color: b.color || 'white', fontWeight: 800 }}>
+                {fmt(b.monto)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -1587,7 +1610,13 @@ const Balance = () => {
     return res;
   }, [reportMovsInternos, reportPlataforma]);
 
-  useEffect(() => { if (vista === 'mensual') fetchMensual(); }, [vista, fetchMensual]);
+  useEffect(() => {
+    if (vista === 'mensual') {
+      fetchMensual();
+      fetchMovsInternos();
+      fetchPlataforma();
+    }
+  }, [vista, mes, fetchMensual, fetchMovsInternos, fetchPlataforma]);
   useEffect(() => { if (vista === 'plataforma') fetchPlataforma(); }, [vista, fetchPlataforma]);
   useEffect(() => {
     if (vista === 'movimientos-internos') {
@@ -1758,6 +1787,23 @@ const Balance = () => {
     }, {});
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
+    // Desglose por banco para las 4 cards principales
+    const ingEfectivo = (reportMovsInternos?.recaudacion_bruta?.efectivo || 0) + (reportPlataforma?.desglose_bancos?.efectivo || 0);
+    const ingPichincha = (reportMovsInternos?.recaudacion_bruta?.pichincha || 0) + (reportPlataforma?.desglose_bancos?.pichincha || 0);
+    const ingJep = (reportMovsInternos?.recaudacion_bruta?.jep || 0) + (reportPlataforma?.desglose_bancos?.jep || 0);
+
+    const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('efectivo') ? sum + v : sum, 0);
+    const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('pichincha') ? sum + v : sum, 0);
+    const egJep = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('jep') ? sum + v : sum, 0);
+
+    const proyEfectivo = proyData?.bancos?.efectivo || 0;
+    const proyPichincha = proyData?.bancos?.pichincha || 0;
+    const proyJep = proyData?.bancos?.jep || 0;
+
+    const balEfectivo = ingEfectivo - egEfectivo - proyEfectivo;
+    const balPichincha = ingPichincha - egPichincha - proyPichincha;
+    const balJep = ingJep - egJep - proyJep;
+
     return (
       <div>
         <MonthNavBar value={mes} onChange={val => setMes(val)} />
@@ -1771,18 +1817,60 @@ const Balance = () => {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={fetchMensual} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>🔄 Refrescar</button>
+            <button onClick={() => { fetchMensual(); fetchMovsInternos(); fetchPlataforma(); }} style={{ padding: '10px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>🔄 Refrescar</button>
             <button onClick={handleExportar} title="Genera el reporte Excel mensual estructurado con formato para la presentación ante el regulador ARCOTEL" style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', transition: 'transform 0.2s' }}>📥 Exportar Arcotel</button>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginBottom: 32 }}>
-          <Card icon="📥" title="Ingresos" color={P.ingreso} value={fmt(ingresos.total)} sub="Total recaudado" />
-          <Card icon="📤" title="Egresos" color={P.egreso} value={fmt(egData.total)} sub="Gastos operativos" />
-          <Card icon="🏗️" title="Proyectos" color={P.proyecto} value={fmt(proyData.total)} sub="Inversión en obras" />
-          <Card icon={balance_neto >= 0 ? '💰' : '⚠️'} title="Balance Neto"
-            color={balance_neto >= 0 ? P.ingreso : P.egreso} value={fmt(balance_neto)}
-            sub={balance_neto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'} />
+          <Card
+            icon="📥"
+            title="Ingresos"
+            color={P.ingreso}
+            value={fmt(ingresos.total)}
+            sub="Total recaudado"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo', monto: ingEfectivo, color: '#4ade80' },
+              { icon: '🏦', nombre: 'Pichincha', monto: ingPichincha, color: '#facc15' },
+              { icon: '🏛️', nombre: 'Coac JEP', monto: ingJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon="📤"
+            title="Egresos"
+            color={P.egreso}
+            value={fmt(egData.total)}
+            sub="Gastos operativos"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#f43f5e' },
+              { icon: '🏦', nombre: 'Pichincha', monto: egPichincha, color: '#facc15' },
+              { icon: '🏛️', nombre: 'Coac JEP', monto: egJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon="🏗️"
+            title="Proyectos"
+            color={P.proyecto}
+            value={fmt(proyData.total)}
+            sub="Inversión en obras"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo', monto: proyEfectivo, color: '#f59e0b' },
+              { icon: '🏦', nombre: 'Pichincha', monto: proyPichincha, color: '#facc15' },
+              { icon: '🏛️', nombre: 'Coac JEP', monto: proyJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon={balance_neto >= 0 ? '💰' : '⚠️'}
+            title="Balance Neto"
+            color={balance_neto >= 0 ? P.ingreso : P.egreso}
+            value={fmt(balance_neto)}
+            sub={balance_neto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'}
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#4ade80' : '#f43f5e' },
+              { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#f43f5e' },
+              { icon: '🏛️', nombre: 'Coac JEP', monto: balJep, color: balJep >= 0 ? '#fb923c' : '#f43f5e' }
+            ]}
+          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px,1fr))', gap: 20, marginBottom: 32 }}>
