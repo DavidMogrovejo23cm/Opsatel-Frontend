@@ -1425,6 +1425,7 @@ const Balance = () => {
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
   const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
   const [showCatModal, setShowCatModal] = useState(false); // Modal de categorías de gastos
+  const [filterEgresosByMes, setFilterEgresosByMes] = useState(true); // Filtrar egresos estrictamente por mes activo
   const [customCategorias, setCustomCategorias] = useState(() => {
     try {
       const saved = localStorage.getItem('opsatel_custom_categorias');
@@ -1531,9 +1532,17 @@ const Balance = () => {
   useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
 
   const handleSaveEgreso = async data => {
-    if (data.id) await balanceService.actualizarEgreso(data.id, data);
-    else await balanceService.crearEgreso(data);
-    fetchEgresos(); if (vista === 'mensual') fetchMensual();
+    const finalFecha = data.fecha || new Date().toISOString().split('T')[0];
+    const finalMes = finalFecha.slice(0, 7);
+    const payload = {
+      ...data,
+      fecha: finalFecha,
+      mes: finalMes
+    };
+    if (data.id) await balanceService.actualizarEgreso(data.id, payload);
+    else await balanceService.crearEgreso(payload);
+    fetchEgresos();
+    if (vista === 'mensual') fetchMensual();
   };
   const handleDeleteEgreso = async id => {
     const confirmado = await showConfirm('¿Eliminar egreso?', '¿Eliminar este egreso?', 'Sí, eliminar', 'Cancelar');
@@ -2353,9 +2362,16 @@ const Balance = () => {
   // VISTA EGRESOS
   // ─────────────────────────────────────────────────────────────────
   const renderEgresos = () => {
-    const sortedEgresos = [...egresos].sort((a, b) => {
-      if (a.categoria !== b.categoria) return a.categoria.localeCompare(b.categoria);
-      return b.fecha.localeCompare(a.fecha);
+    const displayEgresos = filterEgresosByMes
+      ? egresos.filter(e => {
+          const eMes = e.mes || (e.fecha ? String(e.fecha).slice(0, 7) : '');
+          return eMes === mes;
+        })
+      : egresos;
+
+    const sortedEgresos = [...displayEgresos].sort((a, b) => {
+      if (a.categoria !== b.categoria) return (a.categoria || '').localeCompare(b.categoria || '');
+      return (b.fecha || '').localeCompare(a.fecha || '');
     });
 
     // Grouping by category for visual hierarchy
@@ -2366,29 +2382,47 @@ const Balance = () => {
     }, {});
 
     return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <MonthNavBar value={mes} onChange={val => setMes(val)} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, background: 'rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📖 Libro de Egresos</h3>
-            <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Listado histórico de gastos operativos y proyectos.</p>
+            <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Listado de gastos operativos y proyectos por mes.</p>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => setFilterEgresosByMes(!filterEgresosByMes)}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 12,
+                background: filterEgresosByMes ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(99, 102, 241, 0.4)',
+                color: filterEgresosByMes ? '#818cf8' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                fontFamily: 'Outfit, sans-serif'
+              }}
+            >
+              {filterEgresosByMes ? `🗓️ Mes Seleccionado (${mes})` : '📚 Ver Todo el Histórico'}
+            </button>
             <button
               onClick={() => setShowCatModal(true)}
-              style={{ padding: '12px 20px', borderRadius: 14, background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8 }}
+              style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 8 }}
             >
               🏷️ Categorías de Gastos
             </button>
             <button id="btn-nuevo-egreso" onClick={() => setModalEgreso('crear')}
-              style={{ padding: '12px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
+              style={{ padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#f43f5e,#e11d48)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 20px rgba(244,63,94,0.3)' }}>
               ＋ Registrar Nuevo Egreso
             </button>
           </div>
         </div>
 
-        <div className="grid-responsive" style={{ marginBottom: 28 }}>
+        <div className="grid-responsive" style={{ marginBottom: 12 }}>
           {CATEGORIAS.map(cat => {
-            const total = egresos.filter(e => e.categoria === cat).reduce((s, e) => s + parseFloat(e.monto), 0);
+            const total = displayEgresos.filter(e => e.categoria === cat).reduce((s, e) => s + parseFloat(e.monto || 0), 0);
             return (
               <div key={cat} style={{ background: `${P.cat[cat]}0a`, border: `1px solid ${P.cat[cat]}33`, borderRadius: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: P.cat[cat] }}>{CAT_LABELS[cat].toUpperCase()}</span>
