@@ -25,28 +25,50 @@ const ExtraPagos = () => {
     "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
   ];
 
+  const getStartMonthIdx = (fechaIngreso) => {
+    if (!fechaIngreso) return 0;
+    try {
+      const str = String(fechaIngreso).trim();
+      if (str.includes('-')) {
+        const parts = str.split('-');
+        const m = parseInt(parts[0].length === 4 ? parts[1] : parts[1], 10);
+        if (!isNaN(m) && m >= 1 && m <= 12) return m - 1;
+      } else if (str.includes('/')) {
+        const parts = str.split('/');
+        const m = parseInt(parts[1], 10);
+        if (!isNaN(m) && m >= 1 && m <= 12) return m - 1;
+      }
+    } catch (e) {
+      console.error("Error parsing fecha_ingreso:", e);
+    }
+    return 0;
+  };
+
   const calculateDebe = (e) => {
+    if (!e) return 0;
     const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
     const currentMonthIdx = new Date().getMonth();
     let totalDebe = 0;
     
-    // Determinar mes de inicio basado en fecha_ingreso
-    let startMonthIdx = 0;
-    if (e.fecha_ingreso) {
-        try {
-            const mesIngreso = parseInt(e.fecha_ingreso.split('-')[1]);
-            startMonthIdx = mesIngreso - 1;
-        } catch(err) { startMonthIdx = 0; }
-    }
+    const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
 
     for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
-        const m = listMonths[i];
-        // El saldo del mes en ExtrasGeneral se calcula como (valor - pago). 
-        // Si no se ha tocado el mes (pago=0 y saldo=0), se debe el valor total del mes.
-        const saldoMes = (parseFloat(e[`${m}_pago`] || 0) === 0 && (parseFloat(e[`${m}_saldo`] || 0) === 0)) 
-            ? parseFloat(e.valor || 0) 
-            : parseFloat(e[`${m}_saldo`] || 0);
-        totalDebe += saldoMes;
+      const m = listMonths[i];
+      const pagoMes = parseFloat(e[`${m}_pago`] || 0);
+      const saldoField = e[`${m}_saldo`];
+      const valorBase = parseFloat(e.valor || 0);
+
+      let saldoMes = 0;
+      if (pagoMes > 0) {
+        saldoMes = parseFloat(saldoField || 0);
+      } else {
+        if (saldoField !== undefined && saldoField !== null && saldoField !== '' && parseFloat(saldoField) >= 0) {
+          saldoMes = parseFloat(saldoField);
+        } else {
+          saldoMes = valorBase;
+        }
+      }
+      totalDebe += Math.max(0, saldoMes);
     }
     return totalDebe;
   };
@@ -88,7 +110,7 @@ const ExtraPagos = () => {
     const debt = calculateDebe(extra);
     setSelectedExtra(extra);
     setPagoData({
-      monto: debt > 0 ? debt : extra.valor || 0, // Sugerir el total de la deuda si existe
+      monto: debt > 0 ? debt : extra.valor || 0,
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       mes: months[new Date().getMonth()],
       referencia: '',
@@ -110,7 +132,7 @@ const ExtraPagos = () => {
       showSuccess("Pago extra registrado correctamente");
       fetchData();
     } catch (err) {
-      showError("Error al registrar pago extra");
+      showError("Error al registrar pago extra: " + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -221,10 +243,32 @@ const ExtraPagos = () => {
           zIndex: 9999, padding: '20px'
         }}>
           <div className="glass-card glass" style={{ width: '100%', maxWidth: '450px', padding: '24px' }}>
-            <h2 style={{ marginBottom: '8px', fontWeight: '900' }}>Registrar Pago Extra</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
-              Cliente: <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedExtra?.nombre_cliente}</span>
+            <h2 style={{ marginBottom: '4px', fontWeight: '900', color: '#34d399' }}>💳 Registrar Pago Extra</h2>
+            <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '0.9rem' }}>
+              Cliente: <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedExtra?.nombre_cliente}</span> ({selectedExtra?.cod})
             </p>
+
+            <div style={{ 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              border: '1px solid rgba(59, 130, 246, 0.2)', 
+              borderRadius: '8px', 
+              padding: '12px 16px', 
+              marginBottom: '20px',
+              display: 'flex',
+              justify: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>VALOR MENSUAL</span>
+                <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${parseFloat(selectedExtra?.valor || 0).toFixed(2)}</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>DEUDA ACUMULADA</span>
+                <span style={{ fontWeight: 'bold', color: calculateDebe(selectedExtra) > 0 ? '#f87171' : '#34d399' }}>
+                  ${calculateDebe(selectedExtra).toFixed(2)}
+                </span>
+              </div>
+            </div>
 
             <div className="grid-responsive" style={{ gap: '16px' }}>
               <div className="form-group">
