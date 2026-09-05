@@ -177,7 +177,14 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
   const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
     try {
       setUploadingCedula(true);
-      await clienteService.actualizar(id, { cedula_tipo: newCedulaTipo });
+
+      const targetClient = clientes.find(c => c.id === id);
+      const hasExistingPhoto = targetClient && ((targetClient.cedula_frontal && targetClient.cedula_frontal.trim() !== '') || (targetClient.cedula_posterior && targetClient.cedula_posterior.trim() !== ''));
+      const hasNewPhoto = !!(fileFront || filePost);
+
+      const finalCedulaTipo = (hasExistingPhoto || hasNewPhoto) ? 'Si' : (newCedulaTipo || 'No');
+
+      await clienteService.actualizar(id, { cedula_tipo: finalCedulaTipo });
 
       if (fileFront || filePost) {
         const uploadData = new FormData();
@@ -797,16 +804,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                     fontSize: '0.78rem',
                                     background: '#1e1b4b',
                                     border: '1px solid var(--primary)',
-                                    color: tempValue === 'Si' ? '#4ade80' : '#ffffff',
+                                    color: (tempValue === 'Si' || tempValue === 'SI') ? '#4ade80' : '#ffffff',
                                     fontWeight: 'bold'
                                   }}
-                                  value={tempValue === 'Si' ? 'Si' : 'No'}
+                                  value={(tempValue === 'Si' || tempValue === 'SI') ? 'Si' : 'No'}
                                   onChange={async (e) => {
                                     const val = e.target.value;
                                     setTempValue(val);
                                     try {
                                       await clienteService.actualizar(c.id, { cedula_tipo: val });
-                                      showSuccess(`Cédula digitalizada cambiada a: ${val}`);
+                                      showSuccess(`Cédula cambiada a: ${val}`);
                                       fetchData();
                                     } catch (err) {
                                       showError('Error al guardar estado de cédula');
@@ -814,8 +821,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                   }}
                                   autoFocus
                                 >
-                                  <option value="No">¿Digitalizada? No</option>
-                                  <option value="Si">¿Digitalizada? Si</option>
+                                  <option value="No">No</option>
+                                  <option value="Si">Si</option>
                                 </select>
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
@@ -905,12 +912,15 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                 return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
                               }
                               if (col === 'cedula_tipo') {
-                                return (
-                                  <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontWeight: '500' }}>
-                                    ¿Digitalizada? {c.cedula_tipo || 'No'}
-                                  </span>
-                                );
-                              }
+                                 const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
+                                 const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
+                                 const displayVal = isSi ? 'Si' : 'No';
+                                 return (
+                                   <span style={{ color: isSi ? '#4ade80' : '#94a3b8', fontWeight: 'bold' }}>
+                                     {displayVal}
+                                   </span>
+                                 );
+                               }
                               if (col === 'plan') {
                                 let precio = 0; let isSpecial = false; let isPromo = false;
                                 if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
