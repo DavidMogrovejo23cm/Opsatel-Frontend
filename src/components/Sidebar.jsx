@@ -9,6 +9,19 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
   const [pendientesCount, setPendientesCount] = React.useState(0);
   const navigate = useNavigate();
 
+  const [theme, setTheme] = React.useState(() => {
+    return localStorage.getItem('opsatel_theme') || 'dark';
+  });
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('opsatel_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   React.useEffect(() => {
     const fetchCount = async () => {
       try {
@@ -85,18 +98,16 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
           flexDirection: 'column',
           padding: '24px',
           zIndex: 150,
-          background: 'linear-gradient(180deg, #1a1040 0%, #1e1550 60%, #151035 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.07)',
           overflowY: 'auto',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {/* Logo + close button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }}>
               <img
                 src="/image%20copy.png"
                 alt="Logo"
@@ -104,7 +115,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
               />
             </div>
             <h2 style={{
-              fontSize: '1.15rem', fontWeight: 'bold', margin: 0,
+              fontSize: '1.05rem', fontWeight: 'bold', margin: 0,
               background: 'linear-gradient(to right, var(--primary), var(--secondary))',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
             }}>
@@ -126,15 +137,41 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: 'rgba(255, 255, 255, 0.85)',
-                marginLeft: '8px',
+                color: 'var(--text-main)',
+                marginLeft: '4px',
                 padding: 0,
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 outline: 'none',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
               }}
             >
               🔄
+            </motion.button>
+            <motion.button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '50%',
+                width: '26px',
+                height: '26px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--text-main)',
+                marginLeft: '2px',
+                padding: 0,
+                fontSize: '0.78rem',
+                outline: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
             </motion.button>
           </div>
           {/* Close button — only visible when sidebar is open as drawer (mobile) */}
