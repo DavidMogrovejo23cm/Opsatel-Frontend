@@ -289,31 +289,39 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid-responsive" style={{ marginBottom: '40px' }}>
+      <div 
+        className="grid-responsive" 
+        style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '14px',
+          marginBottom: '28px' 
+        }}
+      >
         {cards.map((card, i) => (
           <motion.div
             key={card.title}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.05 }}
             className={`glass-card glass ${card.clickable ? 'clickable-card' : ''}`}
             style={{
               borderLeft: `4px solid ${card.color}`,
-              padding: '20px',
+              padding: '12px 16px',
               cursor: card.clickable ? 'pointer' : 'default',
             }}
             onClick={card.onClick}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '1.8rem' }}>{card.icon}</div>
+              <div style={{ fontSize: '1.35rem' }}>{card.icon}</div>
               {card.trend && (
-                <span style={{ fontSize: '1.2rem', color: card.trend === 1 ? '#4ade80' : '#f87171' }}>
+                <span style={{ fontSize: '1.05rem', color: card.trend === 1 ? '#4ade80' : '#f87171' }}>
                   {card.trend === 1 ? '↑' : '↓'}
                 </span>
               )}
             </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '500', marginTop: '8px' }}>{card.title}</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 'bold', marginTop: '4px' }}>{card.value}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: '500', marginTop: '4px' }}>{card.title}</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', marginTop: '2px' }}>{card.value}</div>
           </motion.div>
         ))}
       </div>
