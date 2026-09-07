@@ -71,7 +71,7 @@ const SubirBD = () => {
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.3 }}
       className="page-container"
-      style={{ padding: '24px', color: '#fff', minHeight: '100vh', background: 'var(--bg-main)' }}
+      style={{ padding: '24px', color: 'var(--text-main)', minHeight: '100vh', background: 'transparent' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>

@@ -535,7 +535,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="input"
-            style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: '#1e1b4b', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
+            style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
           >
@@ -544,7 +544,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </select>
           <select
             className="input"
-            style={{ width: 'auto', minWidth: '150px', marginBottom: 0, background: '#1e1b4b', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
+            style={{ width: 'auto', minWidth: '150px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -557,7 +557,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </select>
           <select
             className="input"
-            style={{ width: 'auto', minWidth: '180px', marginBottom: 0, background: '#1e1b4b', color: '#60a5fa', fontWeight: '600', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
+            style={{ width: 'auto', minWidth: '180px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--primary)', fontWeight: '600', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={pagoFilter}
             onChange={(e) => setPagoFilter(e.target.value)}
           >
@@ -578,7 +578,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       {loading ? <p>Cargando datos...</p> : (
         <div className="table-container" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
           <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', zIndex: 20 }}>
+            <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg, rgba(15, 23, 42, 0.95))', backdropFilter: 'blur(10px)', zIndex: 20 }}>
               <tr>
                 {allColumns.map(col => {
                   const isId = col === 'id';
@@ -592,22 +592,22 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       position: 'sticky',
                       left: 0,
                       zIndex: 22,
-                      background: '#131526'
+                      background: 'var(--sticky-col-bg, #131526)'
                     };
                   } else if (isNombre) {
                     stickyStyle = {
                       position: 'sticky',
                       left: colWidths['id'] || 60,
                       zIndex: 22,
-                      background: '#131526'
+                      background: 'var(--sticky-col-bg, #131526)'
                     };
                   } else if (isIp) {
                     stickyStyle = {
                       position: 'sticky',
                       left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                       zIndex: 22,
-                      background: '#131526',
-                      borderRight: '2px solid rgba(255, 255, 255, 0.15)'
+                      background: 'var(--sticky-col-bg, #131526)',
+                      borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                     };
                   }
 
@@ -660,9 +660,9 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     maxWidth: 100,
                     position: 'sticky',
                     right: 0,
-                    background: '#131526',
+                    background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
-                    borderLeft: '2px solid rgba(255, 255, 255, 0.15)'
+                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                   }}>
                     Acción
                   </th>
@@ -671,7 +671,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             </thead>
             <tbody>
               {filteredClientes.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))' }}>
                   {allColumns.map(col => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
                     const isId = col === 'id';
@@ -685,22 +685,22 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                         position: 'sticky',
                         left: 0,
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526'
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)'
                       };
                     } else if (isNombre) {
                       stickyStyle = {
                         position: 'sticky',
                         left: colWidths['id'] || 60,
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526'
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)'
                       };
                     } else if (isIp) {
                       stickyStyle = {
                         position: 'sticky',
                         left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : '#131526',
-                        borderRight: '2px solid rgba(255, 255, 255, 0.15)'
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)',
+                        borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                       };
                     }
 

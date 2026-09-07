@@ -262,7 +262,7 @@ const ExtrasGeneral = () => {
     const filteredMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
     return (
-        <div style={{ color: 'white', padding: '10px' }}>
+        <div style={{ padding: '10px' }}>
 
             {/* HEADER */}
             <div className="page-header" style={{ marginBottom: '24px' }}>
@@ -307,9 +307,9 @@ const ExtrasGeneral = () => {
                 <div style={{ maxHeight: '65vh' }}>
                     <table style={{ tableLayout: 'fixed' }}>
                         <thead>
-                            <tr style={{ background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                <th rowSpan="2" style={{ width: '80px', zIndex: 11, position: 'sticky', left: 0, background: '#1e293b', padding: '15px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>COD</th>
-                                <th rowSpan="2" style={{ width: '220px', zIndex: 11, position: 'sticky', left: '80px', background: '#1e293b', padding: '15px', borderRight: '2px solid #3b82f6' }}>NOMBRE CLIENTE</th>
+                            <tr style={{ background: 'var(--table-header-bg, #1e293b)', borderBottom: '1px solid var(--table-border, rgba(255,255,255,0.1))' }}>
+                                <th rowSpan="2" style={{ width: '80px', zIndex: 11, position: 'sticky', left: 0, background: 'var(--sticky-col-bg, #1e293b)', padding: '15px', borderRight: '1px solid var(--table-border, rgba(255,255,255,0.1))' }}>COD</th>
+                                <th rowSpan="2" style={{ width: '220px', zIndex: 11, position: 'sticky', left: '80px', background: 'var(--sticky-col-bg, #1e293b)', padding: '15px', borderRight: '2px solid #3b82f6' }}>NOMBRE CLIENTE</th>
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTACTO</th>
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>PROVEEDOR</th>
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>USUARIO</th>
@@ -323,15 +323,15 @@ const ExtrasGeneral = () => {
                                 <th rowSpan="2" style={{ width: '100px', padding: '15px' }}>ACTIVO</th>
                                 <th rowSpan="2" style={{ width: '120px', padding: '15px', textAlign: 'center' }}>ACCIONES</th>
                                 {months.map(m => (
-                                    <th key={m} style={{ width: '600px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '10px', background: '#1e1b4b' }} colSpan="6">
+                                    <th key={m} style={{ width: '600px', textAlign: 'center', borderLeft: '1px solid var(--table-border, rgba(255,255,255,0.1))', padding: '10px', background: 'var(--table-header-bg, #1e1b4b)' }} colSpan="6">
                                         {m.toUpperCase()}
                                     </th>
                                 ))}
                             </tr>
-                            <tr style={{ background: '#0f172a', fontSize: '0.7rem' }}>
+                            <tr style={{ background: 'var(--sticky-sub-bg, #0f172a)', fontSize: '0.7rem' }}>
                                 {months.map(m => (
                                     <React.Fragment key={m + '_sub'}>
-                                        <th style={{ width: '100px', padding: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>Factura</th>
+                                        <th style={{ width: '100px', padding: '8px', borderLeft: '1px solid var(--glass-border, rgba(255,255,255,0.1))' }}>Factura</th>
                                         <th style={{ width: '100px', padding: '8px' }}>Fecha</th>
                                         <th style={{ width: '100px', padding: '8px', color: '#34d399' }}>Pago</th>
                                         <th style={{ width: '100px', padding: '8px' }}>Banco</th>
@@ -343,9 +343,9 @@ const ExtrasGeneral = () => {
                         </thead>
                         <tbody>
                             {filtered.map(e => (
-                                <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ position: 'sticky', left: 0, zIndex: 5, width: '80px', background: '#0f172a', padding: '14px', color: '#a855f7', fontWeight: 'bold', borderRight: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.cod}</td>
-                                    <td style={{ position: 'sticky', left: '80px', zIndex: 5, width: '220px', background: '#0f172a', padding: '14px', fontWeight: 'bold', borderRight: '2px solid #3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre_cliente}</td>
+                                <tr key={e.id} style={{ borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))' }}>
+                                    <td style={{ position: 'sticky', left: 0, zIndex: 5, width: '80px', background: 'var(--sticky-col-bg, #0f172a)', padding: '14px', color: '#a855f7', fontWeight: 'bold', borderRight: '1px solid var(--glass-border, rgba(255,255,255,0.1))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.cod}</td>
+                                    <td style={{ position: 'sticky', left: '80px', zIndex: 5, width: '220px', background: 'var(--sticky-col-bg, #0f172a)', padding: '14px', fontWeight: 'bold', borderRight: '2px solid #3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre_cliente}</td>
                                     <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.contacto}</td>
                                     <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.proveedor}</td>
                                     <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.usuario}</td>

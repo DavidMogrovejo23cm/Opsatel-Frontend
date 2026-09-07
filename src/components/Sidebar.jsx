@@ -178,7 +178,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
           <button
             onClick={() => setIsOpen(false)}
             className="sidebar-close-btn"
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted, rgba(255,255,255,0.6))', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}
           >
             ×
           </button>
@@ -186,22 +186,22 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
 
         {/* User info */}
         <div style={{
-          background: 'rgba(139,92,246,0.12)',
+          background: 'var(--user-info-bg, rgba(139,92,246,0.12))',
           padding: '12px',
           borderRadius: '12px',
           marginBottom: '24px',
-          border: '1px solid rgba(139,92,246,0.2)'
+          border: '1px solid var(--user-info-border, rgba(139,92,246,0.2))'
         }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sesión como:</div>
-          <div style={{ fontWeight: 'bold', textTransform: 'capitalize', marginTop: '2px' }}>{user?.username}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '500' }}>{user?.rol}</div>
+          <div style={{ fontWeight: 'bold', textTransform: 'capitalize', marginTop: '2px', color: 'var(--text-main)' }}>{user?.username}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '600' }}>{user?.rol}</div>
         </div>
 
         {/* Nav */}
         <nav style={{ flex: 1 }}>
           {filteredItems.map((item, index) => {
             if (item.type === 'divider') {
-              return <div key={`div-${index}`} style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '12px 0' }} />;
+              return <div key={`div-${index}`} style={{ height: '1px', background: 'var(--glass-border, rgba(255,255,255,0.05))', margin: '12px 0' }} />;
             }
             return (
               <NavLink
@@ -216,10 +216,10 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
                   borderRadius: '12px',
                   marginBottom: '4px',
                   transition: 'all 0.25s ease',
-                  background: isActive ? 'rgba(255,255,255,0.18)' : 'transparent',
-                  border: isActive ? '1px solid rgba(255,255,255,0.25)' : 'none',
-                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.75)',
-                  fontWeight: isActive ? '700' : '400',
+                  background: isActive ? 'var(--sidebar-active-bg, rgba(255,255,255,0.18))' : 'transparent',
+                  border: isActive ? '1px solid var(--sidebar-active-border, rgba(255,255,255,0.25))' : 'none',
+                  color: isActive ? 'var(--sidebar-active-color, #ffffff)' : 'var(--sidebar-text-color, rgba(255,255,255,0.75))',
+                  fontWeight: isActive ? '700' : '500',
                   textDecoration: 'none',
                 })}
               >
