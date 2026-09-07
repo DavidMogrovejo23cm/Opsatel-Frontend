@@ -27,12 +27,14 @@ export const authService = {
         username: response.data.username,
         rol: response.data.rol
       }));
+      localStorage.setItem('last_activity', Date.now().toString());
     }
     return response.data;
   },
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('last_activity');
   },
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
