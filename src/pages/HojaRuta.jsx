@@ -3,7 +3,31 @@ import { hojaRutaService, clienteService, configuracionService } from '../servic
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import OpsatelSwal from '../utils/alerts';
 
+// Extrae la potencia óptica en dBm registrada en la observación técnica
+const parsePotenciaOptica = (texto) => {
+    if (!texto) return '';
+    const match = String(texto).match(/\[POTENCIA(?:\s*ÓPTICA)?:\s*([+-]?\d+(?:[.,]\d+)?)\s*dBm\]/i) ||
+                  String(texto).match(/(-?\d+(?:[.,]\d+)?)\s*dBm/i);
+    return match ? match[1].replace(',', '.') : '';
+};
+
+// Limpia el tag de potencia para editar la observación sin duplicados
+const cleanObsText = (texto) => {
+    if (!texto) return '';
+    return String(texto).replace(/\[POTENCIA(?:\s*ÓPTICA)?:\s*[+-]?\d+(?:[.,]\d+)?\s*dBm\]\s*/i, '').trim();
+};
+
+// Determina el estado de calidad de la señal óptica GPON según el estándar del ISP
+const getSignalQuality = (val) => {
+    const num = parseFloat(String(val).replace(',', '.'));
+    if (isNaN(num)) return null;
+    if (num > -12) return { text: 'Saturación (> -12 dBm)', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)', border: '#f87171' };
+    if (num >= -23 && num <= -15) return { text: 'Excelente (-15 a -23 dBm)', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.2)', border: '#4ade80' };
+    if (num < -23 && num >= -26) return { text: 'Aceptable (-23 a -26 dBm)', color: '#eab308', bg: 'rgba(234, 179, 8, 0.2)', border: '#facc15' };
+    return { text: 'Atenuación Crítica (< -26 dBm)', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)', border: '#f87171' };
+};
 
 const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
@@ -189,7 +213,12 @@ const HojaRuta = () => {
 
     const handleOpenObs = (r) => {
         setEditingId(r.id);
-        setFormData({ ...r });
+        const pot = parsePotenciaOptica(r.observacion_tecnico);
+        setTechPotencia(pot);
+        setFormData({ 
+            ...r,
+            observacion_tecnico: cleanObsText(r.observacion_tecnico)
+        });
         setShowObsModal(true);
     };
 
@@ -238,10 +267,65 @@ const HojaRuta = () => {
             return;
         }
         
+        const record = registros.find(r => r.id === id);
         let nextEstado = 'Pendiente';
         if (currentEstado === 'Pendiente') nextEstado = 'En proceso';
         else if (currentEstado === 'En proceso') nextEstado = 'Realizado';
         else nextEstado = 'Pendiente';
+
+        // CONTROL DE CALIDAD: Prohibir cierre de instalación sin registrar potencia óptica
+        if (nextEstado === 'Realizado' && record && (record.actividad || '').toUpperCase().includes('INSTAL')) {
+            const existingPot = parsePotenciaOptica(record.observacion_tecnico);
+            if (!existingPot) {
+                const { value: potValue, isConfirmed } = await OpsatelSwal.fire({
+                    title: '⚠️ Control de Calidad: Potencia Requerida',
+                    html: `
+                        <div style="text-align: left; font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
+                            No se puede marcar la instalación como <b>REALIZADO</b> sin registrar la lectura del Power Meter en la roseta/ONT.
+                            <br/><br/>
+                            <b>Rango norma GPON:</b> -12.0 dBm a -27.0 dBm
+                        </div>
+                    `,
+                    input: 'text',
+                    inputPlaceholder: 'Ej: -19.5',
+                    showCancelButton: true,
+                    confirmButtonText: 'Registrar y Finalizar',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: (val) => {
+                        if (!val || !val.trim()) return 'Debe ingresar la potencia óptica obligatoriamente.';
+                        const num = parseFloat(val.replace(',', '.').replace(/[^\d.-]/g, ''));
+                        if (isNaN(num)) return 'Ingrese un valor numérico válido (ej: -19.5).';
+                        if (num > -12) return 'Saturación óptica detectada: El valor no puede ser mayor a -12.0 dBm.';
+                        if (num < -27) return 'Atenuación crítica: El valor no puede ser menor a -27.0 dBm.';
+                        return null;
+                    }
+                });
+
+                if (!isConfirmed || !potValue) {
+                    showWarning("Operación cancelada. La instalación permanece en proceso hasta registrar la potencia óptica.");
+                    return;
+                }
+
+                const cleanNum = parseFloat(potValue.replace(',', '.').replace(/[^\d.-]/g, '')).toFixed(2);
+                const cleanText = cleanObsText(record.observacion_tecnico);
+                const updatedObs = `[POTENCIA ÓPTICA: ${cleanNum} dBm] ${cleanText}`.trim();
+
+                try {
+                    await hojaRutaService.actualizar(id, { 
+                        estado: 'Realizado',
+                        observacion_tecnico: updatedObs
+                    });
+                    fetchData(true);
+                    showSuccess(`Instalación cerrada con éxito con potencia de ${cleanNum} dBm`);
+                    return;
+                } catch (err) {
+                    console.error(err);
+                    const msg = err.response?.data?.detail || err.message;
+                    showError("No se pudo completar el cierre: " + msg);
+                    return;
+                }
+            }
+        }
 
         try {
             await hojaRutaService.actualizar(id, { estado: nextEstado });
@@ -255,15 +339,37 @@ const HojaRuta = () => {
 
     const handleSaveTechObs = async () => {
         if (!editingId) return;
+        const record = registros.find(r => r.id === editingId) || formData;
+        const isInstalacion = (record.actividad || '').toUpperCase().includes('INSTAL');
+
+        let potenciaValida = null;
+        if (techPotencia && techPotencia.trim() !== '') {
+            const num = parseFloat(techPotencia.replace(',', '.').replace(/[^\d.-]/g, ''));
+            if (isNaN(num) || num > -12 || num < -27) {
+                showError("Potencia óptica no válida. Debe estar dentro de la norma GPON (-12.0 a -27.0 dBm).");
+                return;
+            }
+            potenciaValida = num.toFixed(2);
+        }
+
+        if (isInstalacion && !potenciaValida) {
+            showWarning("Control de Calidad: Es obligatorio registrar la potencia óptica medida con Power Meter (-12.0 a -27.0 dBm) para las instalaciones.");
+            return;
+        }
+
+        const cleanText = cleanObsText(formData.observacion_tecnico);
+        const finalObs = potenciaValida 
+            ? `[POTENCIA ÓPTICA: ${potenciaValida} dBm] ${cleanText}`.trim()
+            : cleanText;
+
         setSubmitting(true);
         try {
-            // Enviamos SOLO la observación para evitar problemas de permisos con el estado
             await hojaRutaService.actualizar(editingId, { 
-                observacion_tecnico: formData.observacion_tecnico 
+                observacion_tecnico: finalObs 
             });
             setShowObsModal(false);
             fetchData(true);
-            showSuccess("Observación técnica guardada correctamente");
+            showSuccess("Observación técnica y potencia óptica guardadas correctamente");
         } catch (err) {
             console.error(err);
             const msg = err.response?.data?.detail || err.message;
@@ -457,11 +563,38 @@ const HojaRuta = () => {
                                             <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '280px', maxHeight: '70px', overflowY: 'auto', paddingRight: '4px' }}>
                                                 {r.observacion || 'Sin observación'}
                                             </div>
-                                            {r.observacion_tecnico && (
-                                                <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: '4px', opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
-                                                    <strong>⚙️:</strong> {r.observacion_tecnico}
-                                                </div>
-                                            )}
+                                            {r.observacion_tecnico && (() => {
+                                                const pot = parsePotenciaOptica(r.observacion_tecnico);
+                                                const clean = cleanObsText(r.observacion_tecnico);
+                                                const quality = pot ? getSignalQuality(pot) : null;
+                                                return (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                                        {pot && (
+                                                            <div>
+                                                                <span style={{
+                                                                    fontSize: '0.7rem',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '6px',
+                                                                    background: quality ? quality.bg : 'rgba(34, 197, 94, 0.2)',
+                                                                    color: quality ? quality.color : '#4ade80',
+                                                                    border: `1px solid ${quality ? quality.border : '#4ade80'}`,
+                                                                    fontWeight: 800,
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px'
+                                                                }}>
+                                                                    📶 {pot} dBm
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {clean && (
+                                                            <div style={{ fontSize: '0.7rem', color: '#4ade80', opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                                                                <strong>⚙️:</strong> {clean}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                             <button
                                                 onClick={() => handleOpenObs(r)}
                                                 style={{ fontSize: '0.7rem', color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', textDecoration: 'underline' }}
@@ -600,9 +733,8 @@ const HojaRuta = () => {
                                                 <p style={{ fontSize: '0.75rem' }}>Editando registro existente</p>
                                             </div>
                                         ) : (
-                                            <div style={{ padding: '30px 0', textAlign: 'center', opacity: 0.3 }}>
-                                                <div style={{ fontSize: '1.5rem', marginBottom: '10px' }}>👤</div>
-                                                <p style={{ fontSize: '0.7rem' }}>{modalSource === 'GENERAL' ? 'Actividad para externo (Opcional elegir cliente)' : 'Seleccione un cliente para ver comentarios'}</p>
+                                            <div style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>
+                                                <p style={{ fontSize: '0.8rem' }}>Seleccione un cliente para ver detalles</p>
                                             </div>
                                         )}
                                     </div>
@@ -610,13 +742,12 @@ const HojaRuta = () => {
 
                                 {/* COLUMNA DERECHA: FORMULARIO */}
                                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                        <div className="input-group">
-                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programación</label>
-                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={toISODate(formData.fecha)} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
+                                    <div className="input-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                        <div>
+                                            <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha Programada</label>
+                                            <input type="date" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} required />
                                         </div>
-                                        <div className="input-group">
+                                        <div>
                                             <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hora Programación</label>
                                             <input type="time" className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} required />
                                         </div>
@@ -735,29 +866,68 @@ const HojaRuta = () => {
             <AnimatePresence>
                 {showObsModal && (
                     <div className="modal-overlay">
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '500px' }}>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="modal-content glass" style={{ maxWidth: '520px' }}>
                             <div className="modal-header">
-                                <h2>⚙️ Observación Técnica</h2>
+                                <h2>⚙️ Observación Técnica & Control de Calidad</h2>
                                 <button onClick={() => setShowObsModal(false)} className="close-btn">&times;</button>
                             </div>
-                            <form onSubmit={handleSubmit}>
+                            <form onSubmit={e => { e.preventDefault(); handleSaveTechObs(); }}>
+                                {/* CAMPO DEDICADO DE POTENCIA ÓPTICA */}
+                                <div className="input-group" style={{ marginBottom: '16px', background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <label className="label" style={{ fontWeight: 700, margin: 0, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            📶 Potencia Óptica ONT (Power Meter dBm)
+                                            {((formData.actividad || '').toUpperCase().includes('INSTAL')) && (
+                                                <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold' }}>* Obligatorio</span>
+                                            )}
+                                        </label>
+                                        {techPotencia && getSignalQuality(techPotencia) && (
+                                            <span style={{ 
+                                                fontSize: '0.7rem', 
+                                                padding: '2px 8px', 
+                                                borderRadius: '6px', 
+                                                background: getSignalQuality(techPotencia).bg, 
+                                                color: getSignalQuality(techPotencia).color,
+                                                border: `1px solid ${getSignalQuality(techPotencia).border}`,
+                                                fontWeight: 700
+                                            }}>
+                                                {getSignalQuality(techPotencia).text}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="Ej: -19.5 (Rango norma GPON: -12.0 a -27.0 dBm)"
+                                        value={techPotencia}
+                                        onChange={e => setTechPotencia(e.target.value)}
+                                        disabled={user.rol?.toLowerCase() !== 'tecnico' && user.rol?.toLowerCase() !== 'administrador'}
+                                        style={{ width: '100%', padding: '10px 14px', fontSize: '0.95rem', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155' }}
+                                    />
+                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>🟢 Óptimo: -15 a -23 dBm</span>
+                                        <span>🟡 Aceptable: -23 a -26 dBm</span>
+                                        <span>🔴 Límite: -27 dBm</span>
+                                    </div>
+                                </div>
+
                                 <div className="input-group">
                                     <label className="label">Actividades Realizadas por el Técnico</label>
                                     <textarea
                                         className="input"
-                                        rows="10"
+                                        rows="6"
                                         value={formData.observacion_tecnico}
                                         onChange={e => setFormData({ ...formData, observacion_tecnico: e.target.value })}
                                         disabled={user.rol?.toLowerCase() !== 'tecnico' && user.rol?.toLowerCase() !== 'administrador'}
-                                        placeholder="El técnico debe escribir aquí lo realizado..."
-                                        style={{ height: '200px' }}
+                                        placeholder="El técnico debe escribir aquí las actividades realizadas, materiales usados, roseta instalada, etc..."
+                                        style={{ height: '140px' }}
                                     ></textarea>
                                 </div>
                                 <div className="modal-actions">
                                     <button type="button" onClick={() => setShowObsModal(false)} className="btn btn-secondary">Cerrar</button>
                                     {(user.rol?.toLowerCase() === 'tecnico' || user.rol?.toLowerCase() === 'administrador') && (
                                         <button type="button" onClick={handleSaveTechObs} className="btn btn-primary" disabled={submitting}>
-                                            {submitting ? 'Guardando...' : 'Guardar Observación'}
+                                            {submitting ? 'Guardando...' : 'Guardar Observación & Potencia'}
                                         </button>
                                     )}
                                 </div>
