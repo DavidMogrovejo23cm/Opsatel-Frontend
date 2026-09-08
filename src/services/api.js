@@ -157,9 +157,12 @@ export const configuracionService = {
   getCajasNap: () => api.get('/configuraciones/cajas-nap'),
   crearCajaNap: (data) => api.post('/configuraciones/cajas-nap', data),
   actualizarCajaNap: (id, data) => api.patch(`/configuraciones/cajas-nap/${id}`, data),
-  eliminarCajaNap: (id) => api.delete(`/configuraciones/cajas-nap/${id}`),
-  // Eliminar todos los clientes
+  // Eliminar todos los clientes principales
   deleteAllClientes: () => api.delete('/clientes/all'),
+  // Eliminar todos los clientes extras
+  deleteAllClientesExtras: () => api.delete('/extras/all'),
+  // Restablecer todos los valores de dinero a ceros
+  resetValoresDinero: () => api.post('/configuraciones/reset-dinero'),
   // Dias de permanencia en Administrar
   getDiasPermanencia: () => api.get('/configuraciones/dias-permanencia'),
   setDiasPermanencia: (dias) => api.put('/configuraciones/dias-permanencia', { dias }),

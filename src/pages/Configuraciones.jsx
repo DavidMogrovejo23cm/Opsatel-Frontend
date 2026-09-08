@@ -68,6 +68,7 @@ const Configuraciones = () => {
     const [newCajaNap, setNewCajaNap] = useState({ nombre: '' });
     const [isEditingCajaNap, setIsEditingCajaNap] = useState(null);
     const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
     const [diasPermanencia, setDiasPermanencia] = useState(7);
     const [diasSaving, setDiasSaving] = useState(false);
     const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true });
@@ -1308,77 +1309,238 @@ const Configuraciones = () => {
 
                 {activeTab === 'Eliminar Clientes' && (
                     <div>
-                        <h3 style={{ color: '#ef4444', marginBottom: '20px' }}>⚠️ Eliminar Todos los Clientes</h3>
-                        <p style={{ color: '#fca5a5', marginBottom: '20px', fontSize: '0.95rem' }}>
-                            Esta acción es <strong>IRREVERSIBLE</strong>. Se eliminarán TODOS los clientes de la base de datos.
-                            Se requiere contraseña de administrador para confirmar.
-                        </p>
-                        <div style={{ 
-                            background: 'rgba(239, 68, 68, 0.1)', 
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                        <div style={{ marginBottom: '24px' }}>
+                            <h3 style={{ color: '#ef4444', marginBottom: '8px', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                ⚠️ Zona de Mantenimiento y Reinicio
+                            </h3>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '850px', lineHeight: 1.5 }}>
+                                Estas operaciones ejecutan limpiezas masivas y reinicios en la base de datos del sistema. 
+                                <strong> Todas estas acciones son irreversibles</strong> y requieren ingresar la contraseña de administrador para desbloquearse.
+                            </p>
+                        </div>
+
+                        {/* Contraseña de Confirmación */}
+                        <div style={{
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
                             padding: '20px',
-                            borderRadius: '8px',
-                            maxWidth: '400px'
+                            borderRadius: '16px',
+                            maxWidth: '480px',
+                            marginBottom: '28px'
                         }}>
-                            <div className="input-group">
-                                <label className="label" style={{ color: '#fca5a5' }}>Contraseña de Administrador</label>
-                                <input 
-                                    type="password" 
-                                    className="input" 
-                                    value={passwordDeleteClientes} 
-                                    onChange={e => setPasswordDeleteClientes(e.target.value)}
-                                    placeholder="Ingrese la contraseña"
-                                    style={{ marginTop: '8px' }}
-                                />
+                            <label className="label" style={{ color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🔒 Contraseña de Administrador para Desbloquear
+                            </label>
+                            <input
+                                type="password"
+                                className="input"
+                                value={passwordDeleteClientes}
+                                onChange={e => setPasswordDeleteClientes(e.target.value)}
+                                placeholder="Ingresa contraseña de admin..."
+                                style={{ marginTop: '8px' }}
+                            />
+                            <div style={{ fontSize: '0.78rem', marginTop: '6px', color: passwordDeleteClientes === 'admin1.@' ? '#34d399' : '#94a3b8' }}>
+                                {passwordDeleteClientes === 'admin1.@' 
+                                    ? '✅ Acciones desbloqueadas correctamente' 
+                                    : 'ℹ️ Ingresa la contraseña de confirmación para habilitar los botones.'}
                             </div>
-                            <button 
-                                className="btn" 
-                                onClick={async () => {
-                                    if (passwordDeleteClientes !== 'admin1.@') {
-                                        showError('Contraseña incorrecta');
-                                        return;
-                                    }
-                                    const confirm1 = await showConfirm(
-                                        '⚠️ ¿ESTÁS SEGURO?',
-                                        'Esta acción eliminará TODOS los clientes del sistema.\n\nEsta acción NO se puede deshacer.',
-                                        'Continuar',
-                                        'Cancelar'
-                                    );
-                                    if (!confirm1) return;
+                        </div>
 
-                                    const confirm2 = await showConfirm(
-                                        '🚨 CONFIRMACIÓN FINAL',
-                                        '¿Eliminar TODOS los clientes definitivamente?',
-                                        'Sí, eliminar todo',
-                                        'Cancelar'
-                                    );
-                                    if (!confirm2) return;
+                        {/* Grid de 3 Acciones en Tarjetas */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                            gap: '20px',
+                            maxWidth: '1050px'
+                        }}>
+                            {/* Acción 1: Eliminar Clientes Principales */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                background: 'rgba(239, 68, 68, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>👥 🗑️</div>
+                                    <h4 style={{ color: '#ef4444', marginBottom: '8px' }}>Eliminar Clientes Principales</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Elimina <strong>TODOS</strong> los clientes de la base de datos principal, sus contratos, cédulas subidas, hojas de ruta y registros técnicos.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn btn-danger"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿ESTÁS SEGURO?',
+                                            'Esta acción eliminará TODOS los clientes del sistema principal.\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Eliminar TODOS los clientes principales definitivamente?',
+                                            'Sí, eliminar todo',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
 
-                                    try {
-                                        await configuracionService.deleteAllClientes();
-                                        showSuccess('Todos los clientes han sido eliminados exitosamente.');
-                                        setPasswordDeleteClientes('');
-                                        fetchData();
-                                    } catch (error) {
-                                        showError('Error: ' + (error.response?.data?.detail || error.message));
-                                    }
-                                }}
-                                style={{
-                                    marginTop: '15px',
-                                    background: passwordDeleteClientes === 'admin1.@' ? '#ef4444' : '#9ca3af',
-                                    color: 'white',
-                                    padding: '10px 20px',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
-                                    fontWeight: 'bold',
-                                    width: '100%',
-                                    opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6
-                                }}
-                                disabled={passwordDeleteClientes !== 'admin1.@'}
-                            >
-                                🗑️ Eliminar Todos los Clientes
-                            </button>
+                                        try {
+                                            setActionLoading(true);
+                                            await configuracionService.deleteAllClientes();
+                                            showSuccess('Todos los clientes principales han sido eliminados.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : '#9ca3af',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6
+                                    }}
+                                >
+                                    🗑️ Eliminar Todos los Clientes
+                                </button>
+                            </div>
+
+                            {/* Acción 2: Eliminar Clientes Extras */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(244, 63, 94, 0.3)',
+                                background: 'rgba(244, 63, 94, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>⭐ 🗑️</div>
+                                    <h4 style={{ color: '#f43f5e', marginBottom: '8px' }}>Eliminar Clientes Extras</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Elimina <strong>TODOS</strong> los clientes de la sección Extras General y sus historiales de pagos extras asociados.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn btn-danger"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿ELIMINAR CLIENTES EXTRAS?',
+                                            'Esta acción eliminará TODOS los clientes de Extras General y sus pagos.\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Confirmas la eliminación total de los clientes extras?',
+                                            'Sí, eliminar extras',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
+
+                                        try {
+                                            setActionLoading(true);
+                                            await configuracionService.deleteAllClientesExtras();
+                                            showSuccess('Todos los clientes extras han sido eliminados exitosamente.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #f43f5e, #be123c)' : '#9ca3af',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6
+                                    }}
+                                >
+                                    🗑️ Eliminar Clientes Extras
+                                </button>
+                            </div>
+
+                            {/* Acción 3: Restablecer Valores de Dinero a Ceros */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(245, 158, 11, 0.35)',
+                                background: 'rgba(245, 158, 11, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>💰 🔄</div>
+                                    <h4 style={{ color: '#f59e0b', marginBottom: '8px' }}>Restablecer Dinero a Ceros</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Pone en <strong>$0.00</strong> todos los saldos pendientes, totales de pago, adicionales, IPTV y pagos de clientes y extras, limpiando registros para pruebas.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn btn-warning"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿RESTABLECER DINERO A CERO?',
+                                            'Esta acción pondrá en $0.00 todos los saldos, pagos, deudas y movimientos contables de clientes principales y extras.\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Estás seguro de restablecer todos los valores monetarios a $0.00?',
+                                            'Sí, poner a cero',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
+
+                                        try {
+                                            setActionLoading(true);
+                                            await configuracionService.resetValoresDinero();
+                                            showSuccess('Todos los valores de dinero han sido restablecidos a $0.00 exitosamente.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#9ca3af',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6
+                                    }}
+                                >
+                                    🔄 Restablecer Dinero a Cero
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
