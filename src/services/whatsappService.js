@@ -79,6 +79,16 @@ export const whatsappService = {
   eliminarAdministrador: (admin_id) =>
     api.delete(`/whatsapp/administradores/${admin_id}`),
 
+  // Conversaciones y Chat en vivo (Historial de 30 mensajes por cliente)
+  obtenerConversaciones: () =>
+    api.get('/whatsapp/conversaciones'),
+
+  obtenerChat: (numero) =>
+    api.get(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`),
+
+  enviarMensajeChat: (numero, mensaje) =>
+    api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/enviar`, { mensaje: mensaje }),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { whatsappService } from '../services/whatsappService';
 import { configuracionService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
@@ -6,7 +6,7 @@ import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../
 
 
 const WhatsApp = () => {
-    const [activeTab, setActiveTab] = useState('Envío Manual');
+    const [activeTab, setActiveTab] = useState('Chats en Vivo');
     
     // Envío manual
     const [numeroManual, setNumeroManual] = useState('');
@@ -45,12 +45,24 @@ const WhatsApp = () => {
     const [guardandoAdmin, setGuardandoAdmin] = useState(false);
     const [cargandoAdmins, setCargandoAdmins] = useState(false);
 
+    // Chat interactivo en vivo (Historial de 30 mensajes por cliente)
+    const [conversaciones, setConversaciones] = useState([]);
+    const [conversacionActiva, setConversacionActiva] = useState(null);
+    const [mensajesChat, setMensajesChat] = useState([]);
+    const [cargandoConversaciones, setCargandoConversaciones] = useState(false);
+    const [cargandoChat, setCargandoChat] = useState(false);
+    const [nuevoMensajeChat, setNuevoMensajeChat] = useState('');
+    const [enviandoMensajeChat, setEnviandoMensajeChat] = useState(false);
+    const [busquedaChat, setBusquedaChat] = useState('');
+    const chatBottomRef = useRef(null);
+
     useEffect(() => {
         cargarConfiguracion();
         cargarHistorial();
         cargarEstadoConexion();
         cargarAdministradores();
         cargarDatosNodosYClientes();
+        cargarConversaciones();
         
         // Recargar historial cada 30 segundos
         const intervalo = setInterval(cargarHistorial, 30000);
@@ -340,12 +352,126 @@ const WhatsApp = () => {
             setNumeroManual('');
             setMensajeManual('');
             cargarHistorial();
+            cargarConversaciones(true);
         } catch (error) {
             showError('Error al enviar mensaje: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviando(false);
         }
     };
+
+    // ==========================================
+    // MÉTODOS Y CONTROL DEL CHAT EN VIVO
+    // ==========================================
+    const cargarConversaciones = async (silencioso = false) => {
+        if (!silencioso) setCargandoConversaciones(true);
+        try {
+            const res = await whatsappService.obtenerConversaciones();
+            const data = res.data?.conversaciones || res.data || [];
+            setConversaciones(data);
+            setConversacionActiva(prev => {
+                if (!prev && data.length > 0) {
+                    seleccionarConversacion(data[0]);
+                    return data[0];
+                }
+                return prev;
+            });
+        } catch (error) {
+            if (!silencioso) console.error("Error cargando conversaciones:", error);
+        } finally {
+            if (!silencioso) setCargandoConversaciones(false);
+        }
+    };
+
+    const seleccionarConversacion = async (conv) => {
+        if (!conv) return;
+        setConversacionActiva(conv);
+        setCargandoChat(true);
+        try {
+            const res = await whatsappService.obtenerChat(conv.numero);
+            setMensajesChat(res.data?.mensajes || []);
+            if (res.data?.cliente) {
+                setConversacionActiva(prev => ({ ...prev, cliente: res.data.cliente }));
+            }
+        } catch (error) {
+            console.error("Error cargando chat:", error);
+        } finally {
+            setCargandoChat(false);
+        }
+    };
+
+    const refrescarMensajesActivos = async (numero) => {
+        if (!numero) return;
+        try {
+            const res = await whatsappService.obtenerChat(numero);
+            setMensajesChat(res.data?.mensajes || []);
+            if (res.data?.cliente) {
+                setConversacionActiva(prev => ({ ...prev, cliente: res.data.cliente }));
+            }
+        } catch (error) {
+            console.error("Error refrescando chat activo:", error);
+        }
+    };
+
+    const manejarEnviarMensajeChat = async (e) => {
+        if (e) e.preventDefault();
+        if (!nuevoMensajeChat.trim() || !conversacionActiva?.numero) return;
+
+        const texto = nuevoMensajeChat.trim();
+        const num = conversacionActiva.numero;
+        setNuevoMensajeChat('');
+        setEnviandoMensajeChat(true);
+
+        // Optimistic UI update
+        const mensajeOptimista = {
+            id: 'temp-' + Date.now(),
+            numero: num,
+            rol: 'operador',
+            mensaje: texto,
+            tipo: 'texto',
+            fecha_hora: new Date().toISOString()
+        };
+        setMensajesChat(prev => [...prev.slice(-29), mensajeOptimista]);
+
+        try {
+            await whatsappService.enviarMensajeChat(num, texto);
+            await refrescarMensajesActivos(num);
+            cargarConversaciones(true);
+        } catch (error) {
+            showError("Error al enviar mensaje: " + (error.response?.data?.detail || error.message));
+        } finally {
+            setEnviandoMensajeChat(false);
+        }
+    };
+
+    // Polling en vivo para los chats activos
+    useEffect(() => {
+        if (activeTab === 'Chats en Vivo') {
+            cargarConversaciones(true);
+            const timer = setInterval(() => {
+                cargarConversaciones(true);
+                if (conversacionActiva?.numero) {
+                    refrescarMensajesActivos(conversacionActiva.numero);
+                }
+            }, 5000);
+            return () => clearInterval(timer);
+        }
+    }, [activeTab, conversacionActiva?.numero]);
+
+    // Auto-scroll al final del chat al llegar nuevos mensajes
+    useEffect(() => {
+        if (chatBottomRef.current) {
+            chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [mensajesChat]);
+
+    const conversacionesFiltradas = conversaciones.filter(c => {
+        if (!busquedaChat.trim()) return true;
+        const q = busquedaChat.toLowerCase().trim();
+        const nombre = (c.cliente?.nombre || '').toLowerCase();
+        const numero = String(c.numero || '').toLowerCase();
+        return nombre.includes(q) || numero.includes(q);
+    });
 
     const manejarProgramacion = async () => {
         if (!hora || !mensajeProgramado.trim()) {
@@ -538,20 +664,358 @@ const WhatsApp = () => {
             </div>
 
             <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                {['Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
+                {['Chats en Vivo', 'Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
                     <button
-
                         key={tab}
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setActiveTab(tab)}
                         style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
                     >
-                        {tab}
+                        {tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab}
                     </button>
                 ))}
             </div>
 
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '12px' }}>
+                
+                {/* CHATS EN VIVO (HISTORIAL DE MENSAJES CON RETENCIÓN DE 30 MENSAJES) */}
+                {activeTab === 'Chats en Vivo' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    💬 Conversaciones y Chats en Vivo
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
+                                    Historial en tiempo real de clientes con SAM Bot y Operadores. Se conservan automáticamente los <strong>últimos 30 mensajes</strong> por cliente.
+                                </p>
+                            </div>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => { cargarConversaciones(); if (conversacionActiva?.numero) refrescarMensajesActivos(conversacionActiva.numero); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                            >
+                                🔄 Actualizar
+                            </button>
+                        </div>
+
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(280px, 340px) 1fr',
+                            gap: '16px',
+                            minHeight: '620px',
+                            height: 'calc(100vh - 280px)',
+                            maxHeight: '750px'
+                        }}>
+                            {/* Panel Izquierdo: Lista de Conversaciones */}
+                            <div style={{
+                                background: 'rgba(15, 23, 42, 0.65)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
+                            }}>
+                                {/* Buscador */}
+                                <div style={{ padding: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="🔍 Buscar por nombre o teléfono..."
+                                        value={busquedaChat}
+                                        onChange={(e) => setBusquedaChat(e.target.value)}
+                                        style={{ fontSize: '0.85rem', width: '100%', padding: '8px 12px' }}
+                                    />
+                                </div>
+
+                                {/* Lista de chats */}
+                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                    {cargandoConversaciones && conversaciones.length === 0 ? (
+                                        <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                            <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>Cargando chats...</div>
+                                        </div>
+                                    ) : conversacionesFiltradas.length === 0 ? (
+                                        <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💬</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>No hay conversaciones aún</div>
+                                            <div style={{ fontSize: '0.8rem', marginTop: '4px', opacity: 0.7 }}>Los mensajes que envíes o recibas aparecerán aquí</div>
+                                        </div>
+                                    ) : (
+                                        conversacionesFiltradas.map((c) => {
+                                            const isSelected = conversacionActiva?.numero === c.numero;
+                                            const nombreMostrar = c.cliente?.nombre || `+${c.numero}`;
+                                            const fechaHora = c.fecha_hora ? new Date(c.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                            return (
+                                                <div
+                                                    key={c.numero}
+                                                    onClick={() => seleccionarConversacion(c)}
+                                                    style={{
+                                                        padding: '12px 14px',
+                                                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        gap: '12px',
+                                                        alignItems: 'center',
+                                                        background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                                                        borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent',
+                                                        transition: 'background 0.15s ease'
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '50%',
+                                                        background: c.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#fff',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '0.95rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {c.cliente?.nombre ? c.cliente.nombre.charAt(0).toUpperCase() : '📱'}
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                                            <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#93c5fd' : '#f1f5f9' }}>
+                                                                {nombreMostrar}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                                {fechaHora}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }}>
+                                                                {c.ultimo_rol === 'asistente' ? '🤖 SAM: ' : c.ultimo_rol === 'operador' ? '✓ Tú: ' : ''}
+                                                                {c.ultimo_mensaje}
+                                                            </div>
+                                                            <span style={{
+                                                                fontSize: '0.68rem',
+                                                                background: 'rgba(255, 255, 255, 0.08)',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '10px',
+                                                                color: 'var(--text-muted)'
+                                                            }}>
+                                                                {c.total_mensajes}/30
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Panel Derecho: Chat Activo */}
+                            <div style={{
+                                background: 'rgba(15, 23, 42, 0.45)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
+                            }}>
+                                {conversacionActiva ? (
+                                    <>
+                                        {/* Header del Chat */}
+                                        <div style={{
+                                            padding: '12px 18px',
+                                            background: 'rgba(15, 23, 42, 0.75)',
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            flexWrap: 'wrap',
+                                            gap: '10px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{
+                                                    width: '42px',
+                                                    height: '42px',
+                                                    borderRadius: '50%',
+                                                    background: conversacionActiva.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#fff',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1rem'
+                                                }}>
+                                                    {conversacionActiva.cliente?.nombre ? conversacionActiva.cliente.nombre.charAt(0).toUpperCase() : '📱'}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {conversacionActiva.cliente?.nombre || `+${conversacionActiva.numero}`}
+                                                        {conversacionActiva.cliente?.estado && (
+                                                            <span style={{
+                                                                fontSize: '0.7rem',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                background: conversacionActiva.cliente.estado.toUpperCase() === 'ACTIVO' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                                color: conversacionActiva.cliente.estado.toUpperCase() === 'ACTIVO' ? '#86efac' : '#fca5a5'
+                                                            }}>
+                                                                {conversacionActiva.cliente.estado}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                        <span>📞 {conversacionActiva.numero}</span>
+                                                        {conversacionActiva.cliente?.plan && <span>📦 Plan: {conversacionActiva.cliente.plan}</span>}
+                                                        {conversacionActiva.cliente?.nodo && <span>📍 Nodo: {conversacionActiva.cliente.nodo}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '0.72rem', background: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.25)', padding: '3px 8px', borderRadius: '12px' }}>
+                                                    🛡️ Retención: {mensajesChat.length}/30 mensajes
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Área de Mensajes */}
+                                        <div style={{
+                                            flex: 1,
+                                            overflowY: 'auto',
+                                            padding: '18px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '12px',
+                                            background: 'rgba(10, 15, 29, 0.5)'
+                                        }}>
+                                            {cargandoChat && mensajesChat.length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                                                    <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                                    <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>Cargando historial de mensajes...</div>
+                                                </div>
+                                            ) : mensajesChat.length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                                                    <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>💬</div>
+                                                    <div style={{ fontWeight: 500 }}>No hay mensajes en este chat aún.</div>
+                                                    <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>Escribe abajo para enviar el primer mensaje a este cliente.</div>
+                                                </div>
+                                            ) : (
+                                                mensajesChat.map((m) => {
+                                                    const esCliente = m.rol === 'cliente';
+                                                    const esOperador = m.rol === 'operador';
+                                                    const esAsistente = m.rol === 'asistente';
+                                                    
+                                                    const horaFormato = m.fecha_hora 
+                                                        ? new Date(m.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        : '';
+
+                                                    return (
+                                                        <div
+                                                            key={m.id}
+                                                            style={{
+                                                                alignSelf: esCliente ? 'flex-start' : 'flex-end',
+                                                                maxWidth: '78%',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: esCliente ? 'flex-start' : 'flex-end'
+                                                            }}
+                                                        >
+                                                            {/* Burbuja */}
+                                                            <div style={{
+                                                                padding: '10px 14px',
+                                                                borderRadius: esCliente ? '14px 14px 14px 2px' : '14px 14px 2px 14px',
+                                                                background: esCliente
+                                                                    ? 'rgba(30, 41, 59, 0.95)'
+                                                                    : esOperador
+                                                                    ? 'linear-gradient(135deg, #065f46, #047857)'
+                                                                    : 'linear-gradient(135deg, #1e3a8a, #1d4ed8)',
+                                                                border: esCliente
+                                                                    ? '1px solid rgba(255, 255, 255, 0.12)'
+                                                                    : esOperador
+                                                                    ? '1px solid rgba(52, 211, 153, 0.4)'
+                                                                    : '1px solid rgba(96, 165, 250, 0.4)',
+                                                                color: '#f8fafc',
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                                wordBreak: 'break-word',
+                                                                fontSize: '0.9rem',
+                                                                lineHeight: 1.4
+                                                            }}>
+                                                                {/* Cabecera del remitente */}
+                                                                <div style={{
+                                                                    fontSize: '0.72rem',
+                                                                    fontWeight: 600,
+                                                                    marginBottom: '4px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    color: esCliente ? '#93c5fd' : esOperador ? '#a7f3d0' : '#bfdbfe'
+                                                                }}>
+                                                                    {esCliente && <span>👤 Cliente</span>}
+                                                                    {esOperador && <span>👨‍💼 Operador (Tú)</span>}
+                                                                    {esAsistente && <span>🤖 SAM Asistente IA</span>}
+                                                                </div>
+
+                                                                {/* Texto del mensaje */}
+                                                                <div style={{ whiteSpace: 'pre-wrap' }}>
+                                                                    {m.mensaje}
+                                                                </div>
+
+                                                                {/* Hora */}
+                                                                <div style={{
+                                                                    fontSize: '0.68rem',
+                                                                    opacity: 0.7,
+                                                                    textAlign: 'right',
+                                                                    marginTop: '4px'
+                                                                }}>
+                                                                    {horaFormato} {esOperador && '✓✓'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                            <div ref={chatBottomRef} />
+                                        </div>
+
+                                        {/* Barra para Enviar Respuesta */}
+                                        <form onSubmit={manejarEnviarMensajeChat} style={{
+                                            padding: '12px 16px',
+                                            background: 'rgba(15, 23, 42, 0.85)',
+                                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                                            display: 'flex',
+                                            gap: '10px',
+                                            alignItems: 'center'
+                                        }}>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                placeholder={`Responder como operador a ${conversacionActiva.cliente?.nombre || conversacionActiva.numero} (Enter para enviar)...`}
+                                                value={nuevoMensajeChat}
+                                                onChange={(e) => setNuevoMensajeChat(e.target.value)}
+                                                disabled={enviandoMensajeChat}
+                                                style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem' }}
+                                            />
+                                            <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                                disabled={enviandoMensajeChat || !nuevoMensajeChat.trim()}
+                                                style={{ padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                                            >
+                                                {enviandoMensajeChat ? 'Enviando...' : '✈️ Enviar'}
+                                            </button>
+                                        </form>
+                                    </>
+                                ) : (
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', padding: '40px' }}>
+                                        <div style={{ fontSize: '3.5rem', marginBottom: '16px', opacity: 0.5 }}>📱</div>
+                                        <h4 style={{ margin: '0 0 8px 0', color: '#e2e8f0' }}>Centro de Chats de WhatsApp</h4>
+                                        <p style={{ margin: 0, textAlign: 'center', maxWidth: '380px', fontSize: '0.88rem' }}>
+                                            Selecciona una conversación de la izquierda para ver el historial y responder directamente al cliente.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* ENVÍO MANUAL */}
                 {activeTab === 'Envío Manual' && (
