@@ -56,12 +56,7 @@ const WhatsApp = () => {
     const [busquedaChat, setBusquedaChat] = useState('');
     const chatBottomRef = useRef(null);
 
-    // Modal para vincular cliente de la BD
-    const [mostrarModalVincular, setMostrarModalVincular] = useState(false);
-    const [busquedaVincular, setBusquedaVincular] = useState('');
-    const [resultadosVincular, setResultadosVincular] = useState([]);
-    const [buscandoVincular, setBuscandoVincular] = useState(false);
-    const [vinculandoCliente, setVinculandoCliente] = useState(false);
+
 
     useEffect(() => {
         cargarConfiguracion();
@@ -420,47 +415,7 @@ const WhatsApp = () => {
         }
     };
 
-    const buscarClientesParaVincular = async (termino) => {
-        setBusquedaVincular(termino);
-        if (!termino || termino.trim().length < 2) {
-            setResultadosVincular([]);
-            return;
-        }
-        setBuscandoVincular(true);
-        try {
-            const res = await whatsappService.buscarClientesChat(termino.trim());
-            setResultadosVincular(res.data || []);
-        } catch (e) {
-            console.error("Error buscando clientes:", e);
-        } finally {
-            setBuscandoVincular(false);
-        }
-    };
 
-    const ejecutarVincularCliente = async (clienteSel) => {
-        if (!conversacionActiva?.numero || !clienteSel?.id) return;
-        setVinculandoCliente(true);
-        try {
-            const res = await whatsappService.vincularClienteChat(conversacionActiva.numero, clienteSel.id);
-            showSuccess(res.data?.message || "Cliente vinculado correctamente");
-            if (res.data?.cliente) {
-                setConversacionActiva(prev => ({
-                    ...prev,
-                    cliente_id: res.data.cliente.id,
-                    cliente: res.data.cliente,
-                    nombre: res.data.cliente.nombre
-                }));
-            }
-            setMostrarModalVincular(false);
-            setBusquedaVincular('');
-            setResultadosVincular([]);
-            cargarConversaciones(true);
-        } catch (e) {
-            showError("Error vinculando cliente: " + (e.response?.data?.detail || e.message));
-        } finally {
-            setVinculandoCliente(false);
-        }
-    };
 
     const manejarEnviarMensajeChat = async (e) => {
         if (e) e.preventDefault();
@@ -957,29 +912,7 @@ const WhatsApp = () => {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <button
-                                                    onClick={() => {
-                                                        setMostrarModalVincular(true);
-                                                        const nom = conversacionActiva.cliente?.nombre || conversacionActiva.nombre || '';
-                                                        const nomLimpio = nom.replace(/\s*\(.*\)/, '').trim();
-                                                        buscarClientesParaVincular(nomLimpio);
-                                                    }}
-                                                    className="btn btn-secondary btn-sm"
-                                                    style={{
-                                                        fontSize: '0.75rem',
-                                                        padding: '4px 10px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '5px',
-                                                        background: 'rgba(59, 130, 246, 0.15)',
-                                                        borderColor: 'rgba(59, 130, 246, 0.3)',
-                                                        color: '#93c5fd'
-                                                    }}
-                                                    title="Vincular o cambiar el cliente de la base de datos asociado a este chat"
-                                                >
-                                                    🔗 {conversacionActiva.cliente?.id ? 'Cambiar Cliente' : 'Vincular Cliente'}
-                                                </button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '0.72rem', background: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.25)', padding: '4px 10px', borderRadius: '12px' }}>
                                                     🛡️ Retención: {mensajesChat.length}/100 mensajes
                                                 </span>
@@ -1125,156 +1058,7 @@ const WhatsApp = () => {
                             </div>
                         </div>
 
-                        {/* MODAL VINCULAR CLIENTE A CONVERSACIÓN */}
-                        {mostrarModalVincular && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                                backdropFilter: 'blur(4px)',
-                                zIndex: 9999,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '20px'
-                            }}>
-                                <div style={{
-                                    background: '#1e293b',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                                    borderRadius: '16px',
-                                    width: '100%',
-                                    maxWidth: '650px',
-                                    maxHeight: '85vh',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                                    overflow: 'hidden'
-                                }}>
-                                    {/* Header Modal */}
-                                    <div style={{
-                                        padding: '16px 20px',
-                                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        background: 'rgba(15, 23, 42, 0.6)'
-                                    }}>
-                                        <div>
-                                            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                🔗 Vincular Cliente a Conversación
-                                            </h3>
-                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                                Asocia el número <strong>{conversacionActiva?.numero}</strong> con su ficha de cliente en la base de datos.
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => { setMostrarModalVincular(false); setBusquedaVincular(''); setResultadosVincular([]); }}
-                                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer', padding: '4px 8px' }}
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
 
-                                    {/* Input de Búsqueda */}
-                                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="text"
-                                                className="input"
-                                                placeholder="Buscar por ID, nombre, cédula, celular o IP..."
-                                                value={busquedaVincular}
-                                                onChange={(e) => buscarClientesParaVincular(e.target.value)}
-                                                autoFocus
-                                                style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem' }}
-                                            />
-                                            {buscandoVincular && (
-                                                <div style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '0.8rem', color: '#38bdf8' }}>
-                                                    Buscando...
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                                            Escribe al menos 1 caracter para buscar clientes en la base de datos de Opsatel.
-                                        </div>
-                                    </div>
-
-                                    {/* Lista de Resultados */}
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '200px', maxHeight: '400px' }}>
-                                        {resultadosVincular.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                                                {busquedaVincular.trim().length < 1 ? (
-                                                    <div>🔍 Ingresa un término arriba para buscar al cliente.</div>
-                                                ) : (
-                                                    <div>No se encontraron clientes que coincidan con "<strong>{busquedaVincular}</strong>"</div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            resultadosVincular.map((c) => (
-                                                <div
-                                                    key={c.id}
-                                                    style={{
-                                                        padding: '12px 14px',
-                                                        background: 'rgba(15, 23, 42, 0.4)',
-                                                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                                                        borderRadius: '10px',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        gap: '12px',
-                                                        transition: 'all 0.15s ease'
-                                                    }}
-                                                >
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                                                            <span style={{ fontSize: '0.72rem', background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', padding: '1px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                                                                ID #{c.id}
-                                                            </span>
-                                                            <span style={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.92rem' }}>
-                                                                {c.nombre}
-                                                            </span>
-                                                        </div>
-                                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                                            <span>📞 {c.celular || 'Sin cel'}</span>
-                                                            <span>🪪 {c.cedula || 'Sin cédula'}</span>
-                                                            {c.plan && <span>📦 {c.plan}</span>}
-                                                            {c.nodo && <span>📍 {c.nodo}</span>}
-                                                            {c.ip && c.ip !== 'N/A' && <span style={{ color: '#38bdf8' }}>🌐 {c.ip}</span>}
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => ejecutarVincularCliente(c)}
-                                                        disabled={vinculandoCliente}
-                                                        className="btn btn-primary btn-sm"
-                                                        style={{ padding: '6px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
-                                                    >
-                                                        {vinculandoCliente ? 'Vinculando...' : '✓ Vincular'}
-                                                    </button>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-
-                                    {/* Footer Modal */}
-                                    <div style={{
-                                        padding: '12px 20px',
-                                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                                        display: 'flex',
-                                        justifyContent: 'flex-end',
-                                        background: 'rgba(15, 23, 42, 0.6)'
-                                    }}>
-                                        <button
-                                            onClick={() => { setMostrarModalVincular(false); setBusquedaVincular(''); setResultadosVincular([]); }}
-                                            className="btn btn-secondary btn-sm"
-                                        >
-                                            Cerrar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
                 
