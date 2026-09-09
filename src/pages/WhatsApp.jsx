@@ -744,8 +744,9 @@ const WhatsApp = () => {
                                     ) : (
                                         conversacionesFiltradas.map((c) => {
                                             const isSelected = conversacionActiva?.numero === c.numero;
-                                            const nombreMostrar = c.cliente?.nombre || `+${c.numero}`;
+                                            const nombreMostrar = c.cliente?.nombre || c.nombre || (c.numero?.includes('@') ? c.numero : `+${c.numero}`);
                                             const fechaHora = c.fecha_hora ? new Date(c.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                            const inicial = (c.cliente?.nombre || c.nombre || '').replace(/\s*\(.*\)/, '').trim().charAt(0).toUpperCase() || '📱';
                                             return (
                                                 <div
                                                     key={c.numero}
@@ -775,7 +776,7 @@ const WhatsApp = () => {
                                                         fontSize: '0.95rem',
                                                         flexShrink: 0
                                                     }}>
-                                                        {c.cliente?.nombre ? c.cliente.nombre.charAt(0).toUpperCase() : '📱'}
+                                                        {inicial}
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
@@ -844,11 +845,11 @@ const WhatsApp = () => {
                                                     fontWeight: 'bold',
                                                     fontSize: '1rem'
                                                 }}>
-                                                    {conversacionActiva.cliente?.nombre ? conversacionActiva.cliente.nombre.charAt(0).toUpperCase() : '📱'}
+                                                    {(conversacionActiva.cliente?.nombre || conversacionActiva.nombre || '').replace(/\s*\(.*\)/, '').trim().charAt(0).toUpperCase() || '📱'}
                                                 </div>
                                                 <div>
                                                     <div style={{ fontWeight: 600, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        {conversacionActiva.cliente?.nombre || `+${conversacionActiva.numero}`}
+                                                        {conversacionActiva.cliente?.nombre || conversacionActiva.nombre || (conversacionActiva.numero?.includes('@') ? conversacionActiva.numero : `+${conversacionActiva.numero}`)}
                                                         {conversacionActiva.cliente?.estado && (
                                                             <span style={{
                                                                 fontSize: '0.7rem',
@@ -987,7 +988,7 @@ const WhatsApp = () => {
                                             <input
                                                 type="text"
                                                 className="input"
-                                                placeholder={`Responder como operador a ${conversacionActiva.cliente?.nombre || conversacionActiva.numero} (Enter para enviar)...`}
+                                                placeholder={`Responder como operador a ${conversacionActiva.cliente?.nombre || conversacionActiva.nombre || conversacionActiva.numero} (Enter para enviar)...`}
                                                 value={nuevoMensajeChat}
                                                 onChange={(e) => setNuevoMensajeChat(e.target.value)}
                                                 disabled={enviandoMensajeChat}
