@@ -89,6 +89,12 @@ export const whatsappService = {
   enviarMensajeChat: (numero, mensaje) =>
     api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/enviar`, { mensaje: mensaje }),
 
+  vincularClienteChat: (numero, cliente_id) =>
+    api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/vincular-cliente`, { cliente_id: cliente_id }),
+
+  buscarClientesChat: (q) =>
+    api.get('/whatsapp/buscar-clientes-chat', { params: { q: q } }),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
