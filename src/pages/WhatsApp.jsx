@@ -45,7 +45,7 @@ const WhatsApp = () => {
     const [guardandoAdmin, setGuardandoAdmin] = useState(false);
     const [cargandoAdmins, setCargandoAdmins] = useState(false);
 
-    // Chat interactivo en vivo (Historial de 30 mensajes por cliente)
+    // Chat interactivo en vivo (Historial de 100 mensajes por cliente)
     const [conversaciones, setConversaciones] = useState([]);
     const [conversacionActiva, setConversacionActiva] = useState(null);
     const [mensajesChat, setMensajesChat] = useState([]);
@@ -431,7 +431,7 @@ const WhatsApp = () => {
             tipo: 'texto',
             fecha_hora: new Date().toISOString()
         };
-        setMensajesChat(prev => [...prev.slice(-29), mensajeOptimista]);
+        setMensajesChat(prev => [...prev.slice(-99), mensajeOptimista]);
 
         try {
             await whatsappService.enviarMensajeChat(num, texto);
@@ -687,7 +687,7 @@ const WhatsApp = () => {
                                     💬 Conversaciones y Chats en Vivo
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
-                                    Historial en tiempo real de clientes con SAM Bot y Operadores. Se conservan automáticamente los <strong>últimos 30 mensajes</strong> por cliente.
+                                    Historial en tiempo real de clientes con SAM Bot y Operadores. Se conservan automáticamente los <strong>últimos 100 mensajes</strong> por cliente.
                                 </p>
                             </div>
                             <button
@@ -799,7 +799,7 @@ const WhatsApp = () => {
                                                                 borderRadius: '10px',
                                                                 color: 'var(--text-muted)'
                                                             }}>
-                                                                {c.total_mensajes}/30
+                                                                {c.total_mensajes}/100
                                                             </span>
                                                         </div>
                                                     </div>
@@ -872,7 +872,7 @@ const WhatsApp = () => {
 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '0.72rem', background: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.25)', padding: '3px 8px', borderRadius: '12px' }}>
-                                                    🛡️ Retención: {mensajesChat.length}/30 mensajes
+                                                    🛡️ Retención: {mensajesChat.length}/100 mensajes
                                                 </span>
                                             </div>
                                         </div>
