@@ -53,8 +53,10 @@ const WhatsApp = () => {
     const [cargandoChat, setCargandoChat] = useState(false);
     const [nuevoMensajeChat, setNuevoMensajeChat] = useState('');
     const [enviandoMensajeChat, setEnviandoMensajeChat] = useState(false);
-    const [busquedaChat, setBusquedaChat] = useState('');
     const chatBottomRef = useRef(null);
+    const chatContainerRef = useRef(null);
+    const isNearBottomRef = useRef(true);
+    const [mostrarBotonBajar, setMostrarBotonBajar] = useState(false);
 
 
 
@@ -385,16 +387,40 @@ const WhatsApp = () => {
         }
     };
 
+    const scrollAlFondo = (forzar = false) => {
+        if (chatContainerRef.current && (forzar || isNearBottomRef.current)) {
+            chatContainerRef.current.scrollTo({
+                top: chatContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+            if (forzar) {
+                isNearBottomRef.current = true;
+                setMostrarBotonBajar(false);
+            }
+        }
+    };
+
+    const manejarScrollChat = (e) => {
+        const el = e.currentTarget;
+        const distanciaDelFondo = el.scrollHeight - el.scrollTop - el.clientHeight;
+        const estaAlFondo = distanciaDelFondo < 120;
+        isNearBottomRef.current = estaAlFondo;
+        setMostrarBotonBajar(!estaAlFondo);
+    };
+
     const seleccionarConversacion = async (conv) => {
         if (!conv) return;
         setConversacionActiva(conv);
         setCargandoChat(true);
+        isNearBottomRef.current = true;
+        setMostrarBotonBajar(false);
         try {
             const res = await whatsappService.obtenerChat(conv.numero);
             setMensajesChat(res.data?.mensajes || []);
             if (res.data?.cliente) {
                 setConversacionActiva(prev => ({ ...prev, cliente: res.data.cliente }));
             }
+            setTimeout(() => scrollAlFondo(true), 60);
         } catch (error) {
             console.error("Error cargando chat:", error);
         } finally {
@@ -406,7 +432,17 @@ const WhatsApp = () => {
         if (!numero) return;
         try {
             const res = await whatsappService.obtenerChat(numero);
-            setMensajesChat(res.data?.mensajes || []);
+            const nuevos = res.data?.mensajes || [];
+            setMensajesChat(prev => {
+                if (prev.length === nuevos.length && prev.length > 0) {
+                    const pUlt = prev[prev.length - 1];
+                    const nUlt = nuevos[nuevos.length - 1];
+                    if (pUlt.id === nUlt.id && pUlt.mensaje === nUlt.mensaje) {
+                        return prev;
+                    }
+                }
+                return nuevos;
+            });
             if (res.data?.cliente) {
                 setConversacionActiva(prev => ({ ...prev, cliente: res.data.cliente }));
             }
@@ -414,8 +450,6 @@ const WhatsApp = () => {
             console.error("Error refrescando chat activo:", error);
         }
     };
-
-
 
     const manejarEnviarMensajeChat = async (e) => {
         if (e) e.preventDefault();
@@ -436,6 +470,7 @@ const WhatsApp = () => {
             fecha_hora: new Date().toISOString()
         };
         setMensajesChat(prev => [...prev.slice(-99), mensajeOptimista]);
+        setTimeout(() => scrollAlFondo(true), 60);
 
         try {
             await whatsappService.enviarMensajeChat(num, texto);
@@ -462,10 +497,13 @@ const WhatsApp = () => {
         }
     }, [activeTab, conversacionActiva?.numero]);
 
-    // Auto-scroll al final del chat al llegar nuevos mensajes
+    // Auto-scroll al final del chat ÚNICAMENTE si el usuario está cerca del final (no interrumpir si está leyendo arriba)
     useEffect(() => {
-        if (chatBottomRef.current) {
-            chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+        if (isNearBottomRef.current && chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({
+                top: chatContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     }, [mensajesChat]);
 
@@ -920,15 +958,20 @@ const WhatsApp = () => {
                                         </div>
 
                                         {/* Área de Mensajes */}
-                                        <div style={{
-                                            flex: 1,
-                                            overflowY: 'auto',
-                                            padding: '18px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '12px',
-                                            background: 'rgba(10, 15, 29, 0.5)'
-                                        }}>
+                                        <div 
+                                            ref={chatContainerRef}
+                                            onScroll={manejarScrollChat}
+                                            style={{
+                                                flex: 1,
+                                                overflowY: 'auto',
+                                                padding: '18px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                background: 'rgba(10, 15, 29, 0.5)',
+                                                position: 'relative'
+                                            }}
+                                        >
                                             {cargandoChat && mensajesChat.length === 0 ? (
                                                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                                                     <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
@@ -1016,6 +1059,32 @@ const WhatsApp = () => {
                                                 })
                                             )}
                                             <div ref={chatBottomRef} />
+                                            {mostrarBotonBajar && (
+                                                <button
+                                                    onClick={() => scrollAlFondo(true)}
+                                                    style={{
+                                                        position: 'sticky',
+                                                        bottom: '10px',
+                                                        alignSelf: 'center',
+                                                        background: 'rgba(15, 23, 42, 0.92)',
+                                                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                        color: '#93c5fd',
+                                                        borderRadius: '20px',
+                                                        padding: '6px 16px',
+                                                        fontSize: '0.8rem',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+                                                        zIndex: 30,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        backdropFilter: 'blur(6px)',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                >
+                                                    ↓ Ir al final
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Barra para Enviar Respuesta */}
