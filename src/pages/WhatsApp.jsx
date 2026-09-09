@@ -16,10 +16,13 @@ const WhatsApp = () => {
     // Envío programado
     const [hora, setHora] = useState('');
     const [fecha, setFecha] = useState('');
-    const [recurrencia, setRecurrencia] = useState('diario');
-    const [mensajeProgramado, setMensajeProgramado] = useState('ESTE ES UN MENSAJE DE PRUEBA NO RESPONDER');
+    const [diaMes, setDiaMes] = useState(1);
+    const [recurrencia, setRecurrencia] = useState('mensual');
+    const [mensajeProgramado, setMensajeProgramado] = useState('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
     const [configuracion, setConfiguracion] = useState(null);
+    const [configuraciones, setConfiguraciones] = useState([]);
     const [editandoConfig, setEditandoConfig] = useState(false);
+    const [editandoId, setEditandoId] = useState(null);
     
     // Difusión Masiva (Global)
     const [mensajeGlobal, setMensajeGlobal] = useState('');
@@ -36,6 +39,11 @@ const WhatsApp = () => {
 
     // Historial
     const [historial, setHistorial] = useState([]);
+    const [difusiones, setDifusiones] = useState([]);
+    const [vistaHistorial, setVistaHistorial] = useState('difusiones'); // 'difusiones' | 'individuales'
+    const [filtroTipoHistorial, setFiltroTipoHistorial] = useState('todos');
+    const [busquedaHistorial, setBusquedaHistorial] = useState('');
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
     // Administradores autorizados
     const [administradores, setAdministradores] = useState([]);
@@ -320,25 +328,30 @@ const WhatsApp = () => {
 
     const cargarConfiguracion = async () => {
         try {
-            const respuesta = await whatsappService.obtenerConfiguracion();
-            setConfiguracion(respuesta);
-            if (respuesta.hora) {
-                setHora(respuesta.hora);
-                setMensajeProgramado(respuesta.mensaje);
-                setFecha(respuesta.fecha || '');
-                setRecurrencia(respuesta.recurrencia || 'diario');
-            }
+            const [resTodos, resActual] = await Promise.all([
+                whatsappService.obtenerConfiguraciones(),
+                whatsappService.obtenerConfiguracion()
+            ]);
+            const todas = resTodos.data || [];
+            setConfiguraciones(todas);
+            const actual = resActual.data || {};
+            setConfiguracion(actual);
         } catch (error) {
             console.error("Error cargando configuración:", error);
         }
     };
 
-    const cargarHistorial = async () => {
+    const cargarHistorial = async (mostrarCarga = false) => {
+        if (mostrarCarga) setCargandoHistorial(true);
         try {
             const respuesta = await whatsappService.obtenerHistorial();
-            setHistorial(respuesta.historial || []);
+            const data = respuesta.data || {};
+            setHistorial(data.historial || []);
+            setDifusiones(data.difusiones || []);
         } catch (error) {
             console.error("Error cargando historial:", error);
+        } finally {
+            if (mostrarCarga) setCargandoHistorial(false);
         }
     };
 
@@ -515,6 +528,58 @@ const WhatsApp = () => {
         return nombre.includes(q) || numero.includes(q);
     });
 
+    const cancelarEdicion = () => {
+        setEditandoConfig(false);
+        setEditandoId(null);
+        setHora('');
+        setFecha('');
+        setDiaMes(1);
+        setRecurrencia('mensual');
+        setMensajeProgramado('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
+    };
+
+    const manejarEditarConfiguracion = (cfg) => {
+        setEditandoConfig(true);
+        setEditandoId(cfg.id);
+        setHora(cfg.hora || '');
+        setMensajeProgramado(cfg.mensaje || '');
+        setRecurrencia(cfg.recurrencia || 'mensual');
+        setDiaMes(cfg.dia_mes || 1);
+        setFecha(cfg.fecha || '');
+        window.scrollTo({ top: 200, behavior: 'smooth' });
+    };
+
+    const manejarToggleActivo = async (cfgId) => {
+        try {
+            const res = await whatsappService.toggleActivoConfiguracion(cfgId);
+            showSuccess(res.data?.message || 'Estado actualizado');
+            cargarConfiguracion();
+        } catch (error) {
+            showError('Error cambiando estado: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const manejarEliminarConfiguracionPorId = async (cfgId) => {
+        const confirmado = await showConfirm(
+            '¿Eliminar programación?',
+            '¿Estás seguro de eliminar este envío programado permanentemente?',
+            'Sí, eliminar',
+            'Cancelar'
+        );
+        if (!confirmado) return;
+
+        try {
+            await whatsappService.eliminarConfiguracion(cfgId);
+            showSuccess('Programación eliminada con éxito');
+            if (editandoId === cfgId) {
+                cancelarEdicion();
+            }
+            cargarConfiguracion();
+        } catch (error) {
+            showError('Error al eliminar: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
     const manejarProgramacion = async () => {
         if (!hora || !mensajeProgramado.trim()) {
             showWarning('Ingresa hora y mensaje');
@@ -523,17 +588,19 @@ const WhatsApp = () => {
 
         try {
             const fechaParaEnviar = (recurrencia === 'unico' || recurrencia === 'mensual') ? fecha : (editandoConfig ? 'vaciar' : null);
-            if (editandoConfig && configuracion?.id) {
-                await whatsappService.actualizarConfiguracion(configuracion.id, hora, mensajeProgramado, fechaParaEnviar, recurrencia);
-                showSuccess('Configuración actualizada');
+            const diaMesNum = recurrencia === 'mensual' ? (parseInt(diaMes, 10) || 1) : null;
+
+            if (editandoConfig && editandoId) {
+                await whatsappService.actualizarConfiguracion(editandoId, hora, mensajeProgramado, fechaParaEnviar, recurrencia, diaMesNum);
+                showSuccess('Programación actualizada con éxito');
             } else {
-                await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar, recurrencia);
+                await whatsappService.programar(hora, mensajeProgramado, true, fechaParaEnviar, recurrencia, diaMesNum);
                 let msg = 'Envío programado para las ' + hora;
-                if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
-                if (recurrencia === 'mensual' && fecha) msg += ' el día ' + new Date(fecha + 'T00:00:00').getDate() + ' de cada mes';
+                if (recurrencia === 'mensual') msg = `Envío mensual recurrente programado para el día ${diaMesNum} de cada mes a las ${hora}`;
+                else if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
                 showSuccess(msg);
             }
-            setEditandoConfig(false);
+            cancelarEdicion();
             cargarConfiguracion();
         } catch (error) {
             showError('Error: ' + (error.response?.data?.detail || error.message));
@@ -561,9 +628,8 @@ const WhatsApp = () => {
                 await whatsappService.eliminarConfiguracion(configuracion.id);
                 showSuccess('Programación eliminada');
                 setConfiguracion(null);
-                setHora('');
-                setFecha('');
-                setMensajeProgramado('');
+                cancelarEdicion();
+                cargarConfiguracion();
             }
         } catch (error) {
             showError('Error: ' + (error.response?.data?.detail || error.message));
@@ -1202,183 +1268,375 @@ const WhatsApp = () => {
                 {/* ENVÍO PROGRAMADO */}
                 {activeTab === 'Envío Programado' && (
                     <div>
-                        <h3>⏰ Programar Envío Automático</h3>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Configura una hora para que se envíe automáticamente un mensaje a TODOS los clientes activos con celular registrado.
-                        </p>
-
-                        {configuracion?.configurado && !editandoConfig ? (
-                            <div style={{ 
-                                background: 'rgba(34, 197, 94, 0.1)',
-                                border: '2px solid rgba(34, 197, 94, 0.5)',
-                                padding: '20px',
-                                borderRadius: '8px',
-                                marginBottom: '20px'
-                            }}>
-                                <h4 style={{ color: '#86efac', margin: '0 0 15px 0' }}>✅ Envío Programado Activo</h4>
-                                
-                                <div style={{ display: 'flex', gap: '30px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                                    <div>
-                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Hora de envío:</p>
-                                        <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                            {configuracion.hora}
-                                        </p>
-                                    </div>
-                                    {configuracion.fecha && (
-                                        <div>
-                                            <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>
-                                                {configuracion.recurrencia === 'mensual' ? 'Día de cobro/envío:' : 'Fecha única:'}
-                                            </p>
-                                            <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                                {configuracion.recurrencia === 'mensual' 
-                                                    ? `Día ${new Date(configuracion.fecha + 'T00:00:00').getDate()} de cada mes` 
-                                                    : configuracion.fecha}
-                                            </p>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Tipo de Envío:</p>
-                                        <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#86efac', margin: 0 }}>
-                                            {configuracion.recurrencia === 'mensual' 
-                                                ? '🗓️ Recurrente Mensual' 
-                                                : (configuracion.recurrencia === 'unico' ? '📅 Único Programado' : '🔁 Recurrente Diario')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div style={{ marginBottom: '15px' }}>
-                                    <p style={{ color: 'var(--text-muted)', margin: '0 0 5px 0', fontSize: '0.85rem' }}>Mensaje a despachar:</p>
-                                    <div style={{ 
-                                        background: 'rgba(0,0,0,0.3)',
-                                        padding: '10px',
-                                        borderRadius: '6px',
-                                        color: '#86efac',
-                                        fontFamily: 'monospace',
-                                        fontSize: '0.9rem',
-                                        maxHeight: '150px',
-                                        overflow: 'auto'
-                                    }}>
-                                        {configuracion.mensaje}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button 
-                                        className="btn"
-                                        onClick={() => setEditandoConfig(true)}
-                                        style={{ background: '#3b82f6', flex: 1 }}
-                                    >
-                                        ✏️ Editar
-                                    </button>
-                                    <button 
-                                        className="btn"
-                                        onClick={manejarEliminarConfiguracion}
-                                        style={{ background: '#ef4444', flex: 1 }}
-                                    >
-                                        🗑️ Eliminar
-                                    </button>
-                                </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div>
+                                <h3 style={{ margin: 0 }}>⏰ Programar Envío Automático</h3>
+                                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
+                                    Configura mensajes para que se despachen de forma automática a los clientes activos (diarios, mensuales o en fecha única).
+                                </p>
                             </div>
-                        ) : (
-                            <div style={{ 
-                                background: 'rgba(6, 182, 212, 0.05)', 
-                                border: '1px solid rgba(6, 182, 212, 0.3)',
-                                padding: '20px',
-                                borderRadius: '8px',
-                                marginBottom: '20px'
-                            }}>
-                                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                                    <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
-                                        <label className="label">Hora (HH:MM)</label>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={cargarConfiguracion}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                            >
+                                🔄 Actualizar Lista
+                            </button>
+                        </div>
+
+                        {/* FORMULARIO DE PROGRAMACIÓN */}
+                        <div style={{ 
+                            background: editandoConfig ? 'rgba(59, 130, 246, 0.08)' : 'rgba(6, 182, 212, 0.05)', 
+                            border: editandoConfig ? '2px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(6, 182, 212, 0.3)',
+                            padding: '22px',
+                            borderRadius: '12px',
+                            marginBottom: '30px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <h4 style={{ margin: 0, color: editandoConfig ? '#93c5fd' : '#67e8f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {editandoConfig ? '✏️ Modificar Programación Existente' : '➕ Nueva Programación de Mensaje'}
+                                </h4>
+                                {editandoConfig && (
+                                    <span style={{ fontSize: '0.78rem', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', padding: '3px 8px', borderRadius: '4px' }}>
+                                        Editando #{editandoId}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                                <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
+                                    <label className="label">Hora de Envío (HH:MM)</label>
+                                    <input 
+                                        type="time"
+                                        className="input" 
+                                        value={hora}
+                                        onChange={e => setHora(e.target.value)}
+                                        style={{ marginTop: '8px' }}
+                                    />
+                                    <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                        Hora local de Ecuador (GMT-5)
+                                    </small>
+                                </div>
+
+                                <div className="input-group" style={{ flex: 1, minWidth: '200px' }}>
+                                    <label className="label">Tipo de Recurrencia</label>
+                                    <select 
+                                        className="input" 
+                                        value={recurrencia} 
+                                        onChange={e => {
+                                            setRecurrencia(e.target.value);
+                                            if (e.target.value === 'diario') setFecha('');
+                                        }}
+                                        style={{ marginTop: '8px', height: '40px', background: '#0e1726', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0 10px' }}
+                                    >
+                                        <option value="mensual">🗓️ Recurrente Mensual (Mismo día del mes)</option>
+                                        <option value="diario">🔁 Recurrente Diario (Todos los días)</option>
+                                        <option value="unico">📅 Envío Único (Fecha específica)</option>
+                                    </select>
+                                    <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
+                                        {recurrencia === 'mensual' 
+                                            ? 'Se repetirá automáticamente mes a mes' 
+                                            : (recurrencia === 'diario' ? 'Se dispara todos los días a la hora fijada' : 'Se envía solo una vez')}
+                                    </small>
+                                </div>
+
+                                {recurrencia === 'mensual' && (
+                                    <div className="input-group" style={{ flex: 1, minWidth: '180px' }}>
+                                        <label className="label" style={{ color: '#86efac', fontWeight: 600 }}>
+                                            🗓️ Día del Mes a Repetir (1 - 31)
+                                        </label>
+                                        <select
+                                            className="input"
+                                            value={diaMes}
+                                            onChange={e => setDiaMes(parseInt(e.target.value, 10))}
+                                            style={{ marginTop: '8px', height: '40px', background: '#0e1726', color: '#86efac', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '4px', padding: '0 10px', fontWeight: 'bold' }}
+                                        >
+                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                                <option key={d} value={d}>
+                                                    Día {d} de cada mes
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <small style={{ color: '#86efac', marginTop: '5px' }}>
+                                            Ej: El {diaMes} de cada mes a las {hora || '--:--'}
+                                        </small>
+                                    </div>
+                                )}
+
+                                {recurrencia === 'unico' && (
+                                    <div className="input-group" style={{ flex: 1, minWidth: '160px' }}>
+                                        <label className="label">Fecha exacta de envío</label>
                                         <input 
-                                            type="time"
+                                            type="date"
                                             className="input" 
-                                            value={hora}
-                                            onChange={e => setHora(e.target.value)}
+                                            value={fecha}
+                                            onChange={e => setFecha(e.target.value)}
                                             style={{ marginTop: '8px' }}
                                         />
                                         <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                            Hora local en Ecuador (GMT-5)
+                                            Fecha fija puntual
                                         </small>
                                     </div>
+                                )}
+                            </div>
 
-                                    <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
-                                        <label className="label">Tipo de Recurrencia</label>
-                                        <select 
-                                            className="input" 
-                                            value={recurrencia} 
-                                            onChange={e => {
-                                                setRecurrencia(e.target.value);
-                                                if (e.target.value === 'diario') setFecha('');
-                                            }}
-                                            style={{ marginTop: '8px', height: '40px', background: '#0e1726', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0 10px' }}
-                                        >
-                                            <option value="diario">🔁 Recurrente Diario (Todos los días)</option>
-                                            <option value="unico">📅 Envío Único (Una fecha fija)</option>
-                                            <option value="mensual">🗓️ Recurrente Mensual (Mismo día del mes)</option>
-                                        </select>
-                                        <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                            Frecuencia con la que se disparará el cron.
-                                        </small>
-                                    </div>
-
-                                    {(recurrencia === 'unico' || recurrencia === 'mensual') && (
-                                        <div className="input-group" style={{ flex: 1, minWidth: '150px' }}>
-                                            <label className="label">
-                                                {recurrencia === 'mensual' ? 'Día base del mes' : 'Fecha exacta de envío'}
-                                            </label>
-                                            <input 
-                                                type="date"
-                                                className="input" 
-                                                value={fecha}
-                                                onChange={e => setFecha(e.target.value)}
-                                                style={{ marginTop: '8px' }}
-                                            />
-                                            <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                                {recurrencia === 'mensual' ? 'Se repetirá el mismo día de cada mes (ej: el 15)' : 'Fecha fija.'}
-                                            </small>
-                                        </div>
-                                    )}
+                            <div className="input-group" style={{ marginTop: '15px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label className="label">Mensaje Automático</label>
+                                    <small style={{ color: 'var(--text-muted)' }}>
+                                        Caracteres: {mensajeProgramado.length}
+                                    </small>
                                 </div>
+                                {renderChipsVariables(setMensajeProgramado, mensajeProgramado)}
+                                <textarea 
+                                    className="input" 
+                                    value={mensajeProgramado}
+                                    onChange={e => setMensajeProgramado(e.target.value)}
+                                    placeholder="Mensaje que se enviará automáticamente... Usa {nombre}, {saldo}, etc."
+                                    rows="4"
+                                    style={{ marginTop: '8px', fontFamily: 'monospace' }}
+                                />
+                            </div>
 
-                                <div className="input-group" style={{ marginTop: '15px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <label className="label">Mensaje Automático</label>
-                                        <small style={{ color: 'var(--text-muted)' }}>
-                                            Caracteres: {mensajeProgramado.length}
-                                        </small>
-                                    </div>
-                                    {renderChipsVariables(setMensajeProgramado, mensajeProgramado)}
-                                    <textarea 
-                                        className="input" 
-                                        value={mensajeProgramado}
-                                        onChange={e => setMensajeProgramado(e.target.value)}
-                                        placeholder="Mensaje que se enviará automáticamente... Usa {nombre}, {saldo}, etc."
-                                        rows="4"
-                                        style={{ marginTop: '8px', fontFamily: 'monospace' }}
-                                    />
-                                </div>
-
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
                                 <button 
                                     className="btn btn-primary"
                                     onClick={manejarProgramacion}
-                                    style={{ marginTop: '15px', width: '100%' }}
+                                    style={{ flex: 1, padding: '10px 16px', fontWeight: 'bold' }}
                                 >
-                                    {editandoConfig ? '💾 Actualizar Configuración' : '⏰ Guardar Envío Programado'}
+                                    {editandoConfig ? '💾 Guardar Cambios de Programación' : '⏰ Guardar y Programar Mensaje'}
                                 </button>
                                 
                                 {editandoConfig && (
                                     <button 
                                         className="btn btn-secondary"
-                                        onClick={() => {
-                                            setEditandoConfig(false);
-                                            cargarConfiguracion();
-                                        }}
-                                        style={{ marginTop: '10px', width: '100%' }}
+                                        onClick={cancelarEdicion}
+                                        style={{ padding: '10px 20px' }}
                                     >
-                                        ❌ Cancelar Edición
+                                        ❌ Cancelar
                                     </button>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* SECCIÓN DESTACADA: MENSAJES QUE SE REPITEN MES A MES */}
+                        <div style={{ marginBottom: '35px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.15rem', color: '#86efac', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        🗓️ Mensajes que se Repiten Mes a Mes
+                                    </h4>
+                                    <span style={{ 
+                                        fontSize: '0.78rem', 
+                                        padding: '2px 8px', 
+                                        borderRadius: '12px', 
+                                        background: 'rgba(34, 197, 94, 0.2)', 
+                                        color: '#86efac', 
+                                        fontWeight: 'bold',
+                                        border: '1px solid rgba(34, 197, 94, 0.4)'
+                                    }}>
+                                        {configuraciones.filter(c => c.recurrencia === 'mensual').length} configurados
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    Recordatorios de cobro y avisos que se disparan mensualmente
+                                </span>
+                            </div>
+
+                            {configuraciones.filter(c => c.recurrencia === 'mensual').length === 0 ? (
+                                <div style={{ 
+                                    background: 'rgba(34, 197, 94, 0.03)', 
+                                    border: '1px dashed rgba(34, 197, 94, 0.3)', 
+                                    borderRadius: '10px', 
+                                    padding: '30px', 
+                                    textAlign: 'center',
+                                    color: 'var(--text-muted)'
+                                }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🗓️</div>
+                                    <div style={{ fontWeight: 600, color: '#86efac', marginBottom: '4px' }}>
+                                        No hay mensajes recurrentes mensuales configurados aún
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem' }}>
+                                        Usa el formulario superior con recurrencia <strong>"Recurrente Mensual"</strong> y elige el día del mes en que deseas que se envíe periódicamente.
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
+                                    {configuraciones.filter(c => c.recurrencia === 'mensual').map((cfg) => (
+                                        <div 
+                                            key={cfg.id}
+                                            style={{
+                                                background: cfg.activo ? 'rgba(15, 23, 42, 0.85)' : 'rgba(15, 23, 42, 0.5)',
+                                                border: cfg.activo ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(148, 163, 184, 0.2)',
+                                                borderRadius: '10px',
+                                                padding: '16px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                boxShadow: cfg.activo ? '0 4px 14px rgba(34, 197, 94, 0.1)' : 'none',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                        <span style={{ 
+                                                            fontSize: '0.85rem', 
+                                                            fontWeight: 'bold', 
+                                                            color: '#86efac',
+                                                            background: 'rgba(34, 197, 94, 0.15)',
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid rgba(34, 197, 94, 0.3)'
+                                                        }}>
+                                                            🗓️ Día {cfg.dia_mes} de cada mes
+                                                        </span>
+                                                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                                                            ⏰ {cfg.hora}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.78rem', color: '#93c5fd', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span>⏳ <strong>Próximo envío:</strong></span>
+                                                        <span>{cfg.proximo_envio || `El ${cfg.dia_mes} a las ${cfg.hora}`}</span>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => manejarToggleActivo(cfg.id)}
+                                                    style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '14px',
+                                                        border: 'none',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        background: cfg.activo ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.2)',
+                                                        color: cfg.activo ? '#86efac' : '#fca5a5'
+                                                    }}
+                                                    title="Haz clic para pausar o activar"
+                                                >
+                                                    {cfg.activo ? '🟢 Activo (Mes a mes)' : '⏸️ Pausado'}
+                                                </button>
+                                            </div>
+
+                                            <div style={{
+                                                background: 'rgba(0, 0, 0, 0.35)',
+                                                border: '1px solid rgba(255, 255, 255, 0.06)',
+                                                borderRadius: '6px',
+                                                padding: '10px 12px',
+                                                fontSize: '0.84rem',
+                                                fontFamily: 'monospace',
+                                                color: '#e2e8f0',
+                                                whiteSpace: 'pre-wrap',
+                                                maxHeight: '110px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {cfg.mensaje}
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', marginTop: 'auto' }}>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    Destino: {cfg.enviar_a_todos ? '👥 Todos los activos' : 'Filtro específico'}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        onClick={() => manejarEditarConfiguracion(cfg)}
+                                                        style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                                    >
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => manejarEliminarConfiguracionPorId(cfg.id)}
+                                                        style={{ padding: '4px 10px', fontSize: '0.78rem', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                                                    >
+                                                        🗑️ Eliminar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* SECCIÓN: OTROS ENVÍOS PROGRAMADOS (DIARIOS Y ÚNICOS) */}
+                        {configuraciones.filter(c => c.recurrencia !== 'mensual').length > 0 && (
+                            <div style={{ marginTop: '20px' }}>
+                                <h4 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    🔁 Otros Envíos Programados (Diarios y Únicos)
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '14px' }}>
+                                    {configuraciones.filter(c => c.recurrencia !== 'mensual').map(cfg => (
+                                        <div 
+                                            key={cfg.id}
+                                            style={{
+                                                background: 'rgba(15, 23, 42, 0.75)',
+                                                border: '1px solid rgba(96, 165, 250, 0.3)',
+                                                borderRadius: '10px',
+                                                padding: '14px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '10px'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#93c5fd', background: 'rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
+                                                    {cfg.recurrencia === 'diario' ? '🔁 Diario (Todos los días)' : `📅 Único (${cfg.fecha || 'Sin fecha'})`}
+                                                </span>
+                                                <button
+                                                    onClick={() => manejarToggleActivo(cfg.id)}
+                                                    style={{
+                                                        fontSize: '0.72rem',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '10px',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        background: cfg.activo ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                        color: cfg.activo ? '#86efac' : '#fca5a5'
+                                                    }}
+                                                >
+                                                    {cfg.activo ? '🟢 Activo' : '⏸️ Pausado'}
+                                                </button>
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: '#f8fafc' }}>
+                                                ⏰ Hora: <strong>{cfg.hora}</strong>
+                                                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    ⏳ Próximo: {cfg.proximo_envio}
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                background: 'rgba(0, 0, 0, 0.3)',
+                                                borderRadius: '6px',
+                                                padding: '8px 10px',
+                                                fontSize: '0.8rem',
+                                                fontFamily: 'monospace',
+                                                color: '#cbd5e1',
+                                                maxHeight: '70px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {cfg.mensaje}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: 'auto' }}>
+                                                <button
+                                                    className="btn btn-secondary"
+                                                    onClick={() => manejarEditarConfiguracion(cfg)}
+                                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                                >
+                                                    ✏️ Editar
+                                                </button>
+                                                <button
+                                                    className="btn"
+                                                    onClick={() => manejarEliminarConfiguracionPorId(cfg.id)}
+                                                    style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                                                >
+                                                    🗑️ Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1395,10 +1653,10 @@ const WhatsApp = () => {
 
                         <div style={{ 
                             background: 'rgba(239, 68, 68, 0.05)', 
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            padding: '20px',
-                            borderRadius: '8px',
-                            marginBottom: '20px'
+                            border: '1px solid rgba(239, 68, 68, 0.3)', 
+                            padding: '20px', 
+                            borderRadius: '8px', 
+                            marginBottom: '20px' 
                         }}>
                             {/* Selector de Nodos y Parroquias (Compacto a un lado) */}
                             <div style={{ 
@@ -1418,19 +1676,18 @@ const WhatsApp = () => {
                                         padding: '3px 10px', 
                                         borderRadius: '12px', 
                                         background: 'rgba(59, 130, 246, 0.25)', 
-                                        color: '#93c5fd',
-                                        border: '1px solid rgba(59, 130, 246, 0.4)',
-                                        fontWeight: '600'
+                                        color: '#93c5fd', 
+                                        fontWeight: 'bold' 
                                     }}>
-                                        👥 {getClientesDestinoCount()} cliente(s)
+                                        {getClientesDestinoCount()} Clientes Activos
                                     </span>
                                 </div>
-                                <select 
-                                    className="input"
+
+                                <select
                                     value={nodoSeleccionado}
-                                    onChange={e => setNodoSeleccionado(e.target.value)}
+                                    onChange={(e) => setNodoSeleccionado(e.target.value)}
                                     style={{ 
-                                        height: '38px', 
+                                        height: '40px', 
                                         background: '#0e1726', 
                                         color: '#fff', 
                                         border: '1px solid rgba(96, 165, 250, 0.4)', 
@@ -1489,10 +1746,10 @@ const WhatsApp = () => {
                         </div>
 
                         <div style={{ 
-                            background: 'rgba(245, 158, 11, 0.05)',
-                            border: '1px solid rgba(245, 158, 11, 0.3)',
-                            padding: '15px',
-                            borderRadius: '8px'
+                            background: 'rgba(245, 158, 11, 0.05)', 
+                            border: '1px solid rgba(245, 158, 11, 0.3)', 
+                            padding: '15px', 
+                            borderRadius: '8px' 
                         }}>
                             <p style={{ color: '#fde047', margin: 0, fontSize: '0.85rem' }}>
                                 <strong>🚨 Doble Seguridad:</strong> Se solicitarán dos confirmaciones adicionales antes de despachar la difusión. Por favor, asegúrate de que el texto es correcto.
@@ -1505,100 +1762,296 @@ const WhatsApp = () => {
                 {/* HISTORIAL */}
                 {activeTab === 'Historial' && (
                     <div>
-                        <h3>📋 Historial de Envíos</h3>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Listado de los últimos mensajes despachados por el sistema.
-                        </p>
-
-                        {historial.length === 0 ? (
-                            <div style={{ 
-                                textAlign: 'center', 
-                                padding: '40px',
-                                color: 'var(--text-muted)'
-                            }}>
-                                <p style={{ fontSize: '3rem', margin: '0 0 10px 0' }}>📭</p>
-                                <p>No hay mensajes registrados en el historial</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    📋 Historial de Envíos y Difusiones
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
+                                    Registro de difusiones masivas (a todos o por nodo/parroquia), envíos programados y despachos directos.
+                                </p>
                             </div>
-                        ) : (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
-                                            <th style={{ padding: '12px' }}>Fecha/Hora</th>
-                                            <th style={{ padding: '12px' }}>Número</th>
-                                            <th style={{ padding: '12px' }}>Mensaje</th>
-                                            <th style={{ padding: '12px' }}>Tipo</th>
-                                            <th style={{ padding: '12px' }}>Estado</th>
-                                            <th style={{ padding: '12px' }}>Re-enviar</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {historial.map((msg, idx) => (
-                                            <tr 
-                                                key={idx}
-                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                                            >
-                                                <td style={{ padding: '12px', fontSize: '0.9rem' }}>
-                                                    {msg.fecha || 'Pendiente'}
-                                                </td>
-                                                <td style={{ padding: '12px', fontFamily: 'monospace' }}>
-                                                    {msg.numero}
-                                                </td>
-                                                <td style={{ padding: '12px', maxWidth: '300px' }}>
-                                                    <span style={{ 
-                                                        overflow: 'hidden', 
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        display: 'block'
+                            <button 
+                                className="btn btn-secondary"
+                                onClick={() => cargarHistorial(true)}
+                                disabled={cargandoHistorial}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                            >
+                                {cargandoHistorial ? '⏳ Cargando...' : '🔄 Actualizar Historial'}
+                            </button>
+                        </div>
+
+                        {/* SELECTOR DE SUB-VISTAS: DIFUSIONES VS MENSAJES */}
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
+                            <button
+                                onClick={() => setVistaHistorial('difusiones')}
+                                style={{
+                                    background: vistaHistorial === 'difusiones' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                    border: vistaHistorial === 'difusiones' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                                    color: vistaHistorial === 'difusiones' ? '#93c5fd' : 'var(--text-muted)',
+                                    borderRadius: '8px',
+                                    padding: '8px 16px',
+                                    fontSize: '0.88rem',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span>📢 Difusiones Masivas y Programadas</span>
+                                <span style={{
+                                    background: 'rgba(59, 130, 246, 0.3)',
+                                    color: '#fff',
+                                    borderRadius: '12px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {difusiones.length}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => setVistaHistorial('individuales')}
+                                style={{
+                                    background: vistaHistorial === 'individuales' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                    border: vistaHistorial === 'individuales' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                                    color: vistaHistorial === 'individuales' ? '#93c5fd' : 'var(--text-muted)',
+                                    borderRadius: '8px',
+                                    padding: '8px 16px',
+                                    fontSize: '0.88rem',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span>📋 Detalle Individual de Mensajes</span>
+                                <span style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    borderRadius: '12px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {historial.length}
+                                </span>
+                            </button>
+                        </div>
+
+                        {/* VISTA 1: DIFUSIONES MASIVAS Y ENVÍOS PROGRAMADOS */}
+                        {vistaHistorial === 'difusiones' && (
+                            <div>
+                                {difusiones.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                        <p style={{ fontSize: '3rem', margin: '0 0 10px 0' }}>📢</p>
+                                        <h4 style={{ color: '#93c5fd', margin: '0 0 6px 0' }}>No hay difusiones ni envíos programados registrados</h4>
+                                        <p style={{ fontSize: '0.85rem', margin: 0 }}>
+                                            Cuando envíes un comunicado masivo (global o por nodo/parroquia) o el cron despache un mensaje programado, quedará registrado aquí con fecha, hora, destinatarios y mensaje.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                        {difusiones.map((dif, idx) => {
+                                            const esMasiva = dif.tipo === 'difusion_masiva';
+                                            const esProgramado = dif.tipo === 'envio_programado';
+                                            return (
+                                                <div 
+                                                    key={dif.id || idx}
+                                                    style={{
+                                                        background: 'rgba(15, 23, 42, 0.8)',
+                                                        border: esMasiva ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(59, 130, 246, 0.35)',
+                                                        borderRadius: '10px',
+                                                        padding: '16px 20px',
+                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: '10px'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                            <span style={{
+                                                                fontSize: '0.82rem',
+                                                                fontWeight: 'bold',
+                                                                padding: '3px 10px',
+                                                                borderRadius: '6px',
+                                                                background: esMasiva ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                                                                color: esMasiva ? '#fca5a5' : '#93c5fd',
+                                                                border: esMasiva ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(59, 130, 246, 0.4)'
+                                                            }}>
+                                                                {esMasiva ? '📢 Difusión Masiva' : (esProgramado ? '⏰ Envío Programado' : '📤 Envío')}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                                                                🎯 Alcance: <strong style={{ color: '#67e8f9' }}>{dif.alcance || 'TODOS'}</strong>
+                                                            </span>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                                                🗓️ {dif.fecha || 'Fecha registrada'}
+                                                            </span>
+                                                            <span style={{
+                                                                fontSize: '0.78rem',
+                                                                fontWeight: 'bold',
+                                                                padding: '3px 10px',
+                                                                borderRadius: '12px',
+                                                                background: dif.estado === 'completado' ? 'rgba(34, 197, 94, 0.2)' : (dif.estado === 'en_proceso' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
+                                                                color: dif.estado === 'completado' ? '#86efac' : (dif.estado === 'en_proceso' ? '#fef08a' : '#fca5a5')
+                                                            }}>
+                                                                {dif.estado === 'completado' ? '✅ Completado' : (dif.estado === 'en_proceso' ? '⏳ En Proceso' : '❌ Fallido')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{
+                                                        background: 'rgba(0, 0, 0, 0.35)',
+                                                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                                                        borderRadius: '6px',
+                                                        padding: '10px 14px',
+                                                        fontSize: '0.88rem',
+                                                        fontFamily: 'monospace',
+                                                        color: '#f1f5f9',
+                                                        whiteSpace: 'pre-wrap',
+                                                        lineHeight: '1.45'
                                                     }}>
-                                                        {msg.mensaje}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '12px', fontSize: '0.9rem' }}>
-                                                    {msg.tipo === 'automatico' 
-                                                        ? '⏰ Programado' 
-                                                        : (msg.tipo === 'difusion_global' ? '📢 Difusión' : '📤 Manual')}
-                                                </td>
-                                                <td style={{ padding: '12px' }}>
-                                                    <span style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.85rem',
-                                                        fontWeight: 'bold',
-                                                        background: msg.estado === 'enviado' 
-                                                            ? 'rgba(34, 197, 94, 0.2)' 
-                                                            : (msg.estado === 'pendiente' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
-                                                        color: msg.estado === 'enviado' 
-                                                            ? '#86efac' 
-                                                            : (msg.estado === 'pendiente' ? '#fef08a' : '#fca5a5')
-                                                    }}>
-                                                        {msg.estado === 'enviado' 
-                                                            ? '✅ Enviado' 
-                                                            : (msg.estado === 'pendiente' ? '⏳ Pendiente' : '❌ Fallido')}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '12px' }}>
-                                                    {msg.estado === 'fallido' && (
-                                                        <button 
-                                                            className="btn btn-secondary"
-                                                            onClick={() => manejarEnviarMensajePendiente(msg)}
-                                                            style={{ 
-                                                                padding: '6px 12px', 
-                                                                fontSize: '0.8rem', 
-                                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontWeight: 'bold'
-                                                            }}
-                                                        >
-                                                            🔄 Reintentar
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                        {dif.mensaje}
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                        <span>
+                                                            👥 Total Destinatarios: <strong style={{ color: '#fff' }}>{dif.total_destinatarios || 0}</strong> clientes
+                                                        </span>
+                                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                                            <span style={{ color: '#86efac' }}>
+                                                                ✅ {dif.total_exitosos || 0} entregados
+                                                            </span>
+                                                            {dif.total_fallidos > 0 && (
+                                                                <span style={{ color: '#fca5a5' }}>
+                                                                    ❌ {dif.total_fallidos} fallidos
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* VISTA 2: MENSAJES INDIVIDUALES DETALLADOS */}
+                        {vistaHistorial === 'individuales' && (
+                            <div>
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                                    <input 
+                                        type="text"
+                                        className="input"
+                                        placeholder="🔍 Buscar por número o texto..."
+                                        value={busquedaHistorial}
+                                        onChange={e => setBusquedaHistorial(e.target.value)}
+                                        style={{ maxWidth: '320px', fontSize: '0.85rem' }}
+                                    />
+                                    <select
+                                        className="input"
+                                        value={filtroTipoHistorial}
+                                        onChange={e => setFiltroTipoHistorial(e.target.value)}
+                                        style={{ width: 'auto', fontSize: '0.85rem' }}
+                                    >
+                                        <option value="todos">Todos los Tipos</option>
+                                        <option value="difusion">📢 Difusiones</option>
+                                        <option value="automatico">⏰ Programados</option>
+                                        <option value="manual">📤 Manuales</option>
+                                    </select>
+                                </div>
+
+                                {historial.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                                        <p style={{ fontSize: '3rem', margin: '0 0 10px 0' }}>📭</p>
+                                        <p>No hay mensajes registrados en el historial</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                                                    <th style={{ padding: '12px' }}>Fecha/Hora</th>
+                                                    <th style={{ padding: '12px' }}>Número</th>
+                                                    <th style={{ padding: '12px' }}>Mensaje</th>
+                                                    <th style={{ padding: '12px' }}>Tipo</th>
+                                                    <th style={{ padding: '12px' }}>Estado</th>
+                                                    <th style={{ padding: '12px' }}>Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {historial
+                                                    .filter(msg => {
+                                                        if (filtroTipoHistorial === 'difusion' && !msg.tipo?.startsWith('difusion')) return false;
+                                                        if (filtroTipoHistorial === 'automatico' && msg.tipo !== 'automatico') return false;
+                                                        if (filtroTipoHistorial === 'manual' && msg.tipo !== 'manual') return false;
+                                                        if (busquedaHistorial.trim()) {
+                                                            const q = busquedaHistorial.toLowerCase();
+                                                            const num = String(msg.numero || '').toLowerCase();
+                                                            const txt = String(msg.mensaje || '').toLowerCase();
+                                                            return num.includes(q) || txt.includes(q);
+                                                        }
+                                                        return true;
+                                                    })
+                                                    .map((msg, idx) => (
+                                                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            <td style={{ padding: '12px', fontSize: '0.85rem' }}>
+                                                                {msg.fecha || 'Registrado'}
+                                                            </td>
+                                                            <td style={{ padding: '12px', fontFamily: 'monospace' }}>
+                                                                {msg.numero}
+                                                            </td>
+                                                            <td style={{ padding: '12px', maxWidth: '320px' }}>
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                                                    {msg.mensaje}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '12px', fontSize: '0.85rem' }}>
+                                                                {msg.tipo === 'automatico' 
+                                                                    ? '⏰ Programado' 
+                                                                    : (msg.tipo?.startsWith('difusion') ? '📢 Difusión' : '📤 Manual')}
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                <span style={{
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '0.82rem',
+                                                                    fontWeight: 'bold',
+                                                                    background: msg.estado === 'enviado' 
+                                                                        ? 'rgba(34, 197, 94, 0.2)' 
+                                                                        : (msg.estado === 'pendiente' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
+                                                                    color: msg.estado === 'enviado' 
+                                                                        ? '#86efac' 
+                                                                        : (msg.estado === 'pendiente' ? '#fef08a' : '#fca5a5')
+                                                                }}>
+                                                                    {msg.estado === 'enviado' 
+                                                                        ? '✅ Enviado' 
+                                                                        : (msg.estado === 'pendiente' ? '⏳ Pendiente' : '❌ Fallido')}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>
+                                                                {msg.estado === 'fallido' && (
+                                                                    <button 
+                                                                        className="btn btn-secondary"
+                                                                        onClick={() => manejarEnviarMensajePendiente(msg)}
+                                                                        style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                                                    >
+                                                                        🔄 Reintentar
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

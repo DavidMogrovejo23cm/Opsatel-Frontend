@@ -9,34 +9,44 @@ export const whatsappService = {
     }),
 
   // Programar envío automático
-  programar: (hora, mensaje, enviar_a_todos = true, fecha = null, recurrencia = "diario") =>
+  programar: (hora, mensaje, enviar_a_todos = true, fecha = null, recurrencia = "diario", dia_mes = null) =>
     api.post('/whatsapp/programar', {
       hora: hora,
       mensaje: mensaje,
       enviar_a_todos: enviar_a_todos,
       fecha: fecha,
-      recurrencia: recurrencia
+      recurrencia: recurrencia,
+      dia_mes: dia_mes
     }),
+
+  // Obtener todas las configuraciones programadas
+  obtenerConfiguraciones: () =>
+    api.get('/whatsapp/configuraciones'),
 
   // Obtener configuración actual
   obtenerConfiguracion: () =>
     api.get('/whatsapp/configuracion'),
 
+  // Alternar activo/pausado de configuración
+  toggleActivoConfiguracion: (config_id) =>
+    api.patch(`/whatsapp/configuracion/${config_id}/toggle-activo`),
+
   // Actualizar configuración
-  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null, recurrencia = null) =>
+  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null, recurrencia = null, dia_mes = null) =>
     api.patch(`/whatsapp/configuracion/${config_id}`, {
       hora: hora,
       mensaje: mensaje,
       fecha: fecha,
-      recurrencia: recurrencia
+      recurrencia: recurrencia,
+      dia_mes: dia_mes
     }),
 
   // Eliminar configuración
   eliminarConfiguracion: (config_id) =>
     api.delete(`/whatsapp/configuracion/${config_id}`),
 
-  // Obtener historial
-  obtenerHistorial: (limite = 50) =>
+  // Obtener historial (con difusiones y mensajes detallados)
+  obtenerHistorial: (limite = 100) =>
     api.get('/whatsapp/historial', {
       params: { limite: limite }
     }),
