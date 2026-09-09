@@ -193,6 +193,72 @@ const WhatsApp = () => {
         }
     };
 
+    // Estado unificado de conexión (Soporta puente local CONNECTED y servicio GREEN_API)
+    const isConnected = connectionStatus === 'CONNECTED' || connectionStatus === 'GREEN_API';
+
+    const manejarDesvincularWhatsApp = async () => {
+        const confirmado = await showConfirm(
+            '⚠️ Desvincular WhatsApp',
+            '¿Estás seguro de cerrar la sesión de WhatsApp en el servidor? Se desconectará el número actual y podrás escanear un nuevo código QR.',
+            'Sí, cerrar sesión',
+            'Cancelar'
+        );
+        if (!confirmado) return;
+
+        try {
+            await whatsappService.cerrarSesionBridge();
+            showSuccess('Sesión de WhatsApp cerrada. Se generará un nuevo QR para vincular.');
+            setConnectionStatus('INITIALIZING');
+            setQrCodeData(null);
+            setTimeout(() => cargarEstadoConexion(true), 2500);
+        } catch (error) {
+            showError('Error al desvincular WhatsApp: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const tagsVariablesDisponibles = [
+        { tag: '{nombre}', label: '👤 {nombre}' },
+        { tag: '{saldo}', label: '💰 {saldo}' },
+        { tag: '{plan}', label: '📦 {plan}' },
+        { tag: '{nodo}', label: '📍 {nodo}' },
+        { tag: '{parroquia}', label: '🏘️ {parroquia}' },
+        { tag: '{cedula}', label: '🆔 {cedula}' },
+        { tag: '{nombre_completo}', label: '📋 {nombre_completo}' }
+    ];
+
+    const insertarVariable = (variable, setter, valorActual) => {
+        const espaciado = valorActual.length > 0 && !valorActual.endsWith(' ') ? ' ' : '';
+        setter(valorActual + espaciado + variable);
+    };
+
+    const renderChipsVariables = (setter, valorActual) => (
+        <div style={{ marginTop: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                ✨ <strong>Variables dinámicas de la base de datos</strong> (haz clic para insertar):
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {tagsVariablesDisponibles.map(({ tag, label }) => (
+                    <button
+                        key={tag}
+                        type="button"
+                        onClick={() => insertarVariable(tag, setter, valorActual)}
+                        style={{
+                            background: 'rgba(6, 182, 212, 0.15)',
+                            border: '1px solid rgba(6, 182, 212, 0.35)',
+                            color: '#67e8f9',
+                            borderRadius: '5px',
+                            padding: '4px 9px',
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                        }}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 
     // Polling del estado de conexión cuando estamos en la pestaña de Conexión o si no está conectado
     useEffect(() => {
@@ -518,31 +584,34 @@ const WhatsApp = () => {
                             </div>
 
                             <div className="input-group" style={{ marginTop: '15px' }}>
-                                <label className="label">Mensaje</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label className="label">Mensaje</label>
+                                    <small style={{ color: 'var(--text-muted)' }}>
+                                        Caracteres: {mensajeManual.length}
+                                    </small>
+                                </div>
+                                {renderChipsVariables(setMensajeManual, mensajeManual)}
                                 <textarea 
                                     className="input" 
                                     value={mensajeManual}
-                                    onChange={e => setMensajeManual(e.target.value)}
-                                    placeholder="Escribe tu mensaje aquí..."
+                                    onChange={e => setNumeroManual ? setMensajeManual(e.target.value) : null}
+                                    placeholder="Escribe tu mensaje aquí... Puedes usar {nombre}, {saldo}, etc."
                                     rows="4"
                                     style={{ marginTop: '8px', fontFamily: 'monospace' }}
                                 />
-                                <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                    Caracteres: {mensajeManual.length}
-                                </small>
                             </div>
 
                             <button 
                                 className="btn btn-primary"
                                 onClick={manejarEnvioManual}
-                                disabled={enviando || connectionStatus !== 'CONNECTED'}
+                                disabled={enviando || !isConnected}
                                 style={{ 
                                     marginTop: '15px', 
                                     width: '100%', 
-                                    opacity: (enviando || connectionStatus !== 'CONNECTED') ? 0.6 : 1 
+                                    opacity: (enviando || !isConnected) ? 0.6 : 1 
                                 }}
                             >
-                                {connectionStatus !== 'CONNECTED' 
+                                {!isConnected 
                                     ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
                                     : (enviando ? '⏳ Enviando...' : '✉️ Enviar Mensaje desde Servidor')
                                 }
@@ -557,7 +626,7 @@ const WhatsApp = () => {
                     <div>
                         <h3>⏰ Programar Envío Automático</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Configura una hora para que se envíe automáticamente un mensaje a TODOS los clientes con celular registrado.
+                            Configura una hora para que se envíe automáticamente un mensaje a TODOS los clientes activos con celular registrado.
                         </p>
 
                         {configuracion?.configurado && !editandoConfig ? (
@@ -695,18 +764,21 @@ const WhatsApp = () => {
                                 </div>
 
                                 <div className="input-group" style={{ marginTop: '15px' }}>
-                                    <label className="label">Mensaje Automático</label>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <label className="label">Mensaje Automático</label>
+                                        <small style={{ color: 'var(--text-muted)' }}>
+                                            Caracteres: {mensajeProgramado.length}
+                                        </small>
+                                    </div>
+                                    {renderChipsVariables(setMensajeProgramado, mensajeProgramado)}
                                     <textarea 
                                         className="input" 
                                         value={mensajeProgramado}
                                         onChange={e => setMensajeProgramado(e.target.value)}
-                                        placeholder="Mensaje que se enviará automáticamente..."
+                                        placeholder="Mensaje que se enviará automáticamente... Usa {nombre}, {saldo}, etc."
                                         rows="4"
                                         style={{ marginTop: '8px', fontFamily: 'monospace' }}
                                     />
-                                    <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                        Caracteres: {mensajeProgramado.length}
-                                    </small>
                                 </div>
 
                                 <button 
@@ -801,34 +873,37 @@ const WhatsApp = () => {
                             </div>
 
                             <div className="input-group">
-                                <label className="label" style={{ color: '#fca5a5', fontWeight: 'bold' }}>⚠️ Mensaje de Difusión Masiva</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label className="label" style={{ color: '#fca5a5', fontWeight: 'bold' }}>⚠️ Mensaje de Difusión Masiva</label>
+                                    <small style={{ color: 'var(--text-muted)' }}>
+                                        Caracteres: {mensajeGlobal.length}
+                                    </small>
+                                </div>
+                                {renderChipsVariables(setMensajeGlobal, mensajeGlobal)}
                                 <textarea 
                                     className="input" 
                                     value={mensajeGlobal}
                                     onChange={e => setMensajeGlobal(e.target.value)}
-                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para los clientes seleccionados..."
+                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para los clientes seleccionados... Usa {nombre}, {saldo}, etc."
                                     rows="5"
                                     style={{ marginTop: '8px', fontFamily: 'monospace', borderColor: 'rgba(239,68,68,0.2)' }}
                                 />
-                                <small style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-                                    Caracteres: {mensajeGlobal.length}. Recuerda usar un lenguaje claro.
-                                </small>
                             </div>
 
                             <button 
                                 className="btn"
                                 onClick={manejarEnvioGlobal}
-                                disabled={enviandoGlobal || connectionStatus !== 'CONNECTED'}
+                                disabled={enviandoGlobal || !isConnected}
                                 style={{ 
                                     marginTop: '20px', 
                                     width: '100%', 
                                     background: 'linear-gradient(90deg, #ef4444, #b91c1c)',
                                     color: '#fff',
                                     fontWeight: 'bold',
-                                    opacity: (enviandoGlobal || connectionStatus !== 'CONNECTED') ? 0.6 : 1
+                                    opacity: (enviandoGlobal || !isConnected) ? 0.6 : 1
                                 }}
                             >
-                                {connectionStatus !== 'CONNECTED' 
+                                {!isConnected 
                                     ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
                                     : (enviandoGlobal ? '⏳ Difundiendo en background...' : `🚀 Lanzar Difusión Masiva (${getClientesDestinoCount()} Clientes)`)
                                 }
@@ -983,6 +1058,21 @@ const WhatsApp = () => {
                                                 Tu número de WhatsApp está exitosamente vinculado al servidor de Opsatel.
                                                 Los envíos se despacharán de manera instantánea y silenciosa en segundo plano.
                                             </p>
+                                            <button 
+                                                className="btn"
+                                                onClick={manejarDesvincularWhatsApp}
+                                                style={{ 
+                                                    marginTop: '20px', 
+                                                    background: 'rgba(239, 68, 68, 0.15)', 
+                                                    color: '#fca5a5', 
+                                                    border: '1px solid rgba(239, 68, 68, 0.35)', 
+                                                    fontWeight: 'bold',
+                                                    padding: '8px 16px',
+                                                    borderRadius: '6px'
+                                                }}
+                                            >
+                                                🚪 Cerrar Sesión / Desvincular WhatsApp
+                                            </button>
                                         </div>
                                     )}
 

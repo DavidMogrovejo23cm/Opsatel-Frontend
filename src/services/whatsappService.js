@@ -53,6 +53,10 @@ export const whatsappService = {
   obtenerQrBridge: () =>
     api.get('/whatsapp/qr-bridge'),
 
+  // Cerrar sesión / Desvincular puente WhatsApp
+  cerrarSesionBridge: () =>
+    api.post('/whatsapp/logout'),
+
   // Difusión global masiva (opcionalmente filtrada por nodo)
   enviarGlobal: (mensaje, nodo = null) =>
     api.post('/whatsapp/enviar-global', { mensaje: mensaje, nodo: nodo }),
