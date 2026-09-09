@@ -899,8 +899,8 @@ const WhatsApp = () => {
                                                         )}
                                                     </div>
                                                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px', alignItems: 'center' }}>
-                                                        <span>📞 {conversacionActiva.cliente?.celular && conversacionActiva.cliente.celular !== 'N/A' ? conversacionActiva.cliente.celular : conversacionActiva.numero}</span>
-                                                        {conversacionActiva.numero?.includes('@lid') && conversacionActiva.cliente?.celular && (
+                                                        <span>📞 {conversacionActiva.cliente?.celular && conversacionActiva.cliente.celular !== 'N/A' && !conversacionActiva.cliente.celular.includes('@') && conversacionActiva.cliente.celular !== 'No registrado' ? conversacionActiva.cliente.celular : (conversacionActiva.numero?.includes('@') ? 'Contacto WhatsApp' : conversacionActiva.numero)}</span>
+                                                        {conversacionActiva.numero?.includes('@lid') && conversacionActiva.cliente?.celular && !conversacionActiva.cliente.celular.includes('@') && conversacionActiva.cliente.celular !== 'No registrado' && (
                                                             <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>({conversacionActiva.numero})</span>
                                                         )}
                                                         <span>📦 <strong>Plan:</strong> {conversacionActiva.cliente?.plan || 'No registrado'}</span>
