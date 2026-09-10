@@ -26,11 +26,6 @@ import Eliminados from './pages/Eliminados';
 
 function HomeRedirect() {
   const { user } = useAuth();
-  const savedRedirect = sessionStorage.getItem('opsatel_redirect');
-  if (savedRedirect) {
-    sessionStorage.removeItem('opsatel_redirect');
-    return <Navigate to={savedRedirect} replace />;
-  }
   if (user?.rol === 'tecnico') {
     return <Navigate to="/hoja-ruta" replace />;
   }
