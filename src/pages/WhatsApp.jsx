@@ -65,6 +65,7 @@ const WhatsApp = () => {
     const chatContainerRef = useRef(null);
     const isNearBottomRef = useRef(true);
     const [mostrarBotonBajar, setMostrarBotonBajar] = useState(false);
+    const [busquedaChat, setBusquedaChat] = useState('');
 
 
 
