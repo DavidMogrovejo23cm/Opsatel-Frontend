@@ -444,7 +444,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
       if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase())) return false;
       if (statusFilter === 'JURIDICO' && c.estado?.toUpperCase() !== 'JURIDICO') return false;
-      if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
+      if (statusFilter === 'PENDIENTE' && !['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(c.estado?.toUpperCase())) return false;
 
       // Filtro por pago (Pagados vs Con Deuda Pendiente)
       const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
@@ -553,7 +553,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <option value="INACTIVO">Inactivos</option>
             <option value="PROCESO">En Proceso</option>
             <option value="JURIDICO">Jurídico</option>
-            <option value="PENDIENTE">Pendientes</option>
+            <option value="PENDIENTE">Pendientes / En Activación</option>
           </select>
           <select
             className="input"

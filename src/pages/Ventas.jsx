@@ -394,7 +394,8 @@ const Ventas = () => {
       correo: (formData.correo && String(formData.correo).trim()) ? String(formData.correo).trim() : null,
       precio_plan_especial: parseFloat(formData.precio_plan_especial) || 0.0,
       plan: formData.tercera_edad ? 'TERCERA EDAD' : (formData.plan_corporativo ? 'CORPORATIVO' : formData.plan),
-      fecha_firma: fechaFirmaVal
+      fecha_firma: fechaFirmaVal,
+      estado: 'En Activación'
     };
     try {
       const response = await clienteService.crear(payload);

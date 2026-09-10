@@ -168,6 +168,24 @@ const Administrar = () => {
     }
   };
 
+  const handlePasarActivacion = async (cliente) => {
+    const confirmado = await showConfirm(
+      '¿Enviar a Activación?',
+      `¿Desea enviar a "${cliente.nombre}" a la etapa de activación técnica? Su estado cambiará a "En Activación".`,
+      'Sí, enviar a Activación',
+      'Cancelar'
+    );
+    if (confirmado) {
+      try {
+        await clienteService.pasarActivacion(cliente.id);
+        showSuccess(`Cliente "${cliente.nombre}" enviado a Activación exitosamente.`);
+        fetchData();
+      } catch (err) {
+        showError('Error al pasar a activación: ' + (err.response?.data?.detail || err.message));
+      }
+    }
+  };
+
   const saveEdit = async () => {
     if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
       return showWarning('Los campos Nombre, Cédula y Celular son obligatorios.');
@@ -239,7 +257,15 @@ const Administrar = () => {
     // Filtro: Solo Activos (según solicitud del usuario)
     if (c.estado?.toUpperCase() !== 'ACTIVO') return false;
 
-    const rawFecha = c.fecha_firma || c.instalation_date;
+    // Priorizar instalation_date (momento en que fue activado el servicio) o la fecha más reciente
+    let rawFecha = c.instalation_date || c.fecha_firma;
+    if (c.instalation_date && c.fecha_firma) {
+      const pInst = parseFechaFirma(c.instalation_date);
+      const pFirma = parseFechaFirma(c.fecha_firma);
+      if (pInst && pFirma) {
+        rawFecha = pInst.dateObj.getTime() >= pFirma.dateObj.getTime() ? c.instalation_date : c.fecha_firma;
+      }
+    }
     if (!rawFecha) return false;
 
     const parsed = parseFechaFirma(rawFecha);
@@ -510,6 +536,26 @@ const Administrar = () => {
                               }}
                             >
                               🗑️ Borrar OLT
+                            </button>
+                          )}
+                          {(!c.service_port && !c.id_port) && (
+                            <button
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '0.75rem',
+                                background: 'rgba(234,179,8,0.12)',
+                                border: '1px solid rgba(234,179,8,0.4)',
+                                color: '#eab308',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                transition: 'all 0.2s'
+                              }}
+                              title="Enviar cliente a la etapa de Activación técnica"
+                              onClick={() => handlePasarActivacion(c)}
+                            >
+                              ⚡ A Activación
                             </button>
                           )}
                           {!isTecnico && c.ip && c.qos_status !== 'APPLIED' && (

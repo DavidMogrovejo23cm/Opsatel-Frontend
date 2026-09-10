@@ -103,7 +103,7 @@ const HojaRuta = () => {
                 if (modalSource === 'CLIENTE') {
                     const state = c.estado?.toLowerCase() || '';
                     const yaAgendado = clientesYaProgramados.has(c.id);
-                    return (state === 'pendiente' || state === 'pendiente de activacion') && !yaAgendado;
+                    return (['pendiente', 'pendiente de activacion', 'en activación', 'en activacion'].includes(state)) && !yaAgendado;
                 }
                 return c.estado?.toUpperCase() === 'ACTIVO';
             })
