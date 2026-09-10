@@ -105,6 +105,14 @@ export const whatsappService = {
   buscarClientesChat: (q) =>
     api.get('/whatsapp/buscar-clientes-chat', { params: { q: q } }),
 
+  // Eliminar todas las conversaciones y chats en vivo
+  deleteAllConversaciones: () =>
+    api.delete('/whatsapp/conversaciones/all'),
+
+  // Eliminar una conversación individual
+  eliminarConversacion: (numero) =>
+    api.delete(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');

@@ -1346,12 +1346,12 @@ const Configuraciones = () => {
                             </div>
                         </div>
 
-                        {/* Grid de 3 Acciones en Tarjetas */}
+                        {/* Grid de 4 Acciones en Tarjetas */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                             gap: '20px',
-                            maxWidth: '1050px'
+                            maxWidth: '1240px'
                         }}>
                             {/* Acción 1: Eliminar Clientes Principales */}
                             <div className="glass-card glass" style={{
@@ -1539,6 +1539,87 @@ const Configuraciones = () => {
                                     }}
                                 >
                                     🔄 Restablecer Dinero a Cero
+                                </button>
+                            </div>
+
+                            {/* Acción 4: Eliminar Chats y Conversaciones en Vivo */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(168, 85, 247, 0.35)',
+                                background: 'rgba(168, 85, 247, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-25px',
+                                    right: '-25px',
+                                    width: '90px',
+                                    height: '90px',
+                                    background: 'radial-gradient(circle, rgba(168,85,247,0.18) 0%, transparent 70%)',
+                                    pointerEvents: 'none'
+                                }} />
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>💬 ⚡ 🗑️</div>
+                                    <h4 style={{ color: '#c084fc', marginBottom: '8px' }}>Eliminar Chats y En Vivo</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Elimina <strong>TODAS</strong> las conversaciones y mensajes de chat en vivo de WhatsApp, vaciando el buzón y reiniciando la memoria de SAM Bot.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿ELIMINAR TODOS LOS CHATS Y EN VIVO?',
+                                            'Esta acción eliminará de forma permanente TODOS los chats, mensajes y conversaciones en vivo de WhatsApp.\n\nTambién se reseteará la memoria conversacional de SAM Bot.\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Estás seguro de vaciar todos los chats y conversaciones en vivo definitivamente?',
+                                            'Sí, eliminar todos los chats',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
+
+                                        try {
+                                            setActionLoading(true);
+                                            const res = await configuracionService.deleteAllConversaciones();
+                                            showSuccess(res.data?.message || 'Todas las conversaciones y chats en vivo han sido eliminados.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #a855f7, #7c3aed)' : '#9ca3af',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '10px 16px',
+                                        fontWeight: '600',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6,
+                                        boxShadow: passwordDeleteClientes === 'admin1.@' ? '0 4px 14px rgba(168, 85, 247, 0.35)' : 'none',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    💬 🗑️ Eliminar Todos los Chats
                                 </button>
                             </div>
                         </div>
