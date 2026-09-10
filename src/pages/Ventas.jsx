@@ -395,7 +395,8 @@ const Ventas = () => {
       precio_plan_especial: parseFloat(formData.precio_plan_especial) || 0.0,
       plan: formData.tercera_edad ? 'TERCERA EDAD' : (formData.plan_corporativo ? 'CORPORATIVO' : formData.plan),
       fecha_firma: fechaFirmaVal,
-      estado: 'En Activación'
+      estado: 'En Activación',
+      saldo: prorrateo?.monto ? parseFloat(prorrateo.monto) : undefined
     };
     try {
       const response = await clienteService.crear(payload);
