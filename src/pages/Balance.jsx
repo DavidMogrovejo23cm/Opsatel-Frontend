@@ -744,7 +744,7 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
           <select style={IS} value={form.origen} onChange={e => handleOrigenChange(e.target.value)}>
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
-            <option value="JEP" style={OS}>🏛️ Coac JEP</option>
+            <option value="JEP" style={OS}>🏛️ COP JEP</option>
             <option value="IPTV Efectivo" style={OS}>📺 IPTV Efectivo</option>
             <option value="IPTV Pichincha" style={OS}>📺 IPTV Pichincha</option>
             <option value="IPTV JEP" style={OS}>📺 IPTV JEP</option>
@@ -755,7 +755,7 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Para / Destino (Hacia dónde va)</label>
           <select style={IS} value={form.destino} onChange={e => set('destino', e.target.value)}>
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
-            <option value="JEP" style={OS}>🏛️ Coac JEP</option>
+            <option value="JEP" style={OS}>🏛️ COP JEP</option>
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
             <option value="IPTV Efectivo" style={OS}>📺 IPTV Efectivo</option>
             <option value="IPTV Pichincha" style={OS}>📺 IPTV Pichincha</option>
@@ -1582,7 +1582,7 @@ const Balance = () => {
     const accs = {
       efectivo: { title: 'Efectivo Final (Caja)', icon: '💵', color: '#4ade80', rec: parseFloat(recBruta.efectivo || 0), salidas: 0, entradas: 0 },
       pichincha: { title: 'Banco Pichincha Final', icon: '🏦', color: '#facc15', rec: parseFloat(recBruta.pichincha || 0), salidas: 0, entradas: 0 },
-      jep: { title: 'Coac JEP Final', icon: '🏛️', color: '#fb923c', rec: parseFloat(recBruta.jep || 0), salidas: 0, entradas: 0 },
+      jep: { title: 'COP JEP Final', icon: '🏛️', color: '#fb923c', rec: parseFloat(recBruta.jep || 0), salidas: 0, entradas: 0 },
       iptv_efectivo: { title: 'IPTV Efectivo Final', icon: '📺', color: '#ec4899', rec: parseFloat(recIPTV.efectivo || 0), salidas: 0, entradas: 0 },
       iptv_pichincha: { title: 'IPTV Pichincha Final', icon: '📺', color: '#e879f9', rec: parseFloat(recIPTV.pichincha || 0), salidas: 0, entradas: 0 },
       iptv_jep: { title: 'IPTV JEP Final', icon: '📺', color: '#c084fc', rec: parseFloat(recIPTV.jep || 0), salidas: 0, entradas: 0 }
@@ -1782,12 +1782,12 @@ const Balance = () => {
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
     // Desglose por banco para las 4 cards principales (Sincronizado al unísono con saldos finales de Movimientos Internos)
-    const ingEfectivo = saldosFinalesCalculados?.efectivo?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo || 0);
-    const ingPichincha = saldosFinalesCalculados?.pichincha?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha || 0);
-    const ingJep = saldosFinalesCalculados?.jep?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.jep || 0);
+    const ingEfectivo = saldosFinalesCalculados?.efectivo?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo ?? ingresos?.bancos?.efectivo ?? 0);
+    const ingPichincha = saldosFinalesCalculados?.pichincha?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha ?? ingresos?.bancos?.pichincha ?? 0);
+    const ingJep = saldosFinalesCalculados?.jep?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.jep ?? ingresos?.bancos?.jep ?? 0);
     const totalIngresosMovs = (reportMovsInternos?.recaudacion_bruta || saldosFinalesCalculados?.efectivo)
       ? (ingEfectivo + ingPichincha + ingJep)
-      : ingresos.total;
+      : (ingresos?.total || (ingEfectivo + ingPichincha + ingJep));
 
     const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('efectivo') ? sum + v : sum, 0);
     const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('pichincha') ? sum + v : sum, 0);
@@ -1875,7 +1875,7 @@ const Balance = () => {
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: ingEfectivo, color: '#4ade80' },
               { icon: '🏦', nombre: 'Pichincha', monto: ingPichincha, color: '#facc15' },
-              { icon: '🏛️', nombre: 'Coac JEP', monto: ingJep, color: '#fb923c' }
+              { icon: '🏛️', nombre: 'COP JEP', monto: ingJep, color: '#fb923c' }
             ]}
           />
           <Card
@@ -1887,7 +1887,7 @@ const Balance = () => {
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#a855f7' },
               { icon: '🏦', nombre: 'Pichincha', monto: egPichincha, color: '#facc15' },
-              { icon: '🏛️', nombre: 'Coac JEP', monto: egJep, color: '#fb923c' }
+              { icon: '🏛️', nombre: 'COP JEP', monto: egJep, color: '#fb923c' }
             ]}
           />
           <Card
@@ -1899,7 +1899,7 @@ const Balance = () => {
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: proyEfectivo, color: '#f59e0b' },
               { icon: '🏦', nombre: 'Pichincha', monto: proyPichincha, color: '#facc15' },
-              { icon: '🏛️', nombre: 'Coac JEP', monto: proyJep, color: '#fb923c' }
+              { icon: '🏛️', nombre: 'COP JEP', monto: proyJep, color: '#fb923c' }
             ]}
           />
           <Card
@@ -1911,7 +1911,7 @@ const Balance = () => {
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#4ade80' : '#f43f5e' },
               { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#f43f5e' },
-              { icon: '🏛️', nombre: 'Coac JEP', monto: balJep, color: balJep >= 0 ? '#fb923c' : '#f43f5e' }
+              { icon: '🏛️', nombre: 'COP JEP', monto: balJep, color: balJep >= 0 ? '#fb923c' : '#f43f5e' }
             ]}
           />
         </div>
@@ -2254,7 +2254,7 @@ const Balance = () => {
               <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.pichincha || 0)}</div>
             </div>
             <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '16px 20px' }}>
-              <div style={{ color: '#6366f1', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>🏛️ Coac JEP / Guayaquil</div>
+              <div style={{ color: '#6366f1', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>🏛️ COP JEP / Guayaquil</div>
               <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(desglose_bancos?.jep || 0)}</div>
             </div>
             <div style={{ background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 16, padding: '16px 20px' }}>
@@ -2376,7 +2376,7 @@ const Balance = () => {
             sub={`Rec. ${fmt(saldosFinalesCalculados.pichincha?.rec)} - Mov. ${fmt(saldosFinalesCalculados.pichincha?.movido)}`}
           />
           <MiniBalanceCard
-            title="Coac JEP"
+            title="COP JEP"
             value={saldosFinalesCalculados.jep?.final || 0}
             icon="🏛️"
             color="#fb923c"
@@ -2496,7 +2496,7 @@ const Balance = () => {
                 <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#facc15', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.pichincha?.final)}</td>
               </tr>
               <tr style={{ background: 'rgba(251,146,60,0.12)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#fb923c' }}>🏛️ Total Coac JEP Final</td>
+                <td style={{ padding: '10px 12px', fontWeight: 900, color: '#fb923c' }}>🏛️ Total COP JEP Final</td>
                 <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#fb923c', fontSize: '0.95rem' }}>{fmt(saldosFinalesCalculados.jep?.final)}</td>
               </tr>
               <tr style={{ background: 'rgba(236,72,153,0.12)' }}>
