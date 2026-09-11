@@ -886,9 +886,35 @@ const Admin = () => {
                 <button onClick={() => setShowPagoModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
               </div>
 
-              <div style={{ padding: '0 0 12px 0', marginTop: '-8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cliente: </span>
-                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{selectedCliente?.nombre}</span>
+              <div style={{
+                padding: '0 0 12px 0',
+                marginTop: '-8px',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cliente: </span>
+                  <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{selectedCliente?.nombre}</span>
+                </div>
+                {selectedCliente?.plan && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem'
+                  }}>
+                    <span style={{ color: '#a5b4fc', fontSize: '0.72rem' }}>Plan:</span>
+                    <span style={{ color: '#ffffff', fontWeight: '600' }}>{selectedCliente?.plan}</span>
+                  </div>
+                )}
               </div>
 
               <div style={{
@@ -904,11 +930,11 @@ const Admin = () => {
                   <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldos Actuales en Sistema</h4>
 
-                    {(parseFloat(pagoData.original_internet || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
+                    {(parseFloat(pagoData.priorDebt || 0) > 0 && pagoData.cortesiaMode !== 'TOTAL') && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Deuda Arrastrada (Saldo):</span>
                         <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                          ${parseFloat(pagoData.original_internet || 0).toFixed(2)}
+                          ${parseFloat(pagoData.priorDebt || 0).toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -916,7 +942,10 @@ const Admin = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
                       <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                        ${(parseFloat(pagoData.original_internet || 0)).toFixed(2)}
+                        ${(parseFloat(pagoData.priorDebt || 0) > 0
+                          ? Math.max(0, parseFloat(pagoData.original_internet || 0) - parseFloat(pagoData.priorDebt || 0))
+                          : parseFloat(pagoData.original_internet || 0)
+                        ).toFixed(2)}
                       </span>
                     </div>
 
