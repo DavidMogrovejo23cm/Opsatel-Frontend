@@ -79,6 +79,31 @@ function MiniBalanceCard({ title, value, icon, color, sub }) {
   );
 }
 
+function MiniPlataformaCard({ title, value, icon, color, sub }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${color}33`,
+        borderLeft: `3px solid ${color}`,
+        borderRadius: 14,
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        minWidth: 0,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
+      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+        <span style={{ color, fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right' }}>{title}</span>
+      </div>
+      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'white', marginTop: 2 }}>{value}</div>
+      {sub && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+    </motion.div>
+  );
+}
+
 function Card({ title, value, icon, color, sub, bancos }) {
   return (
     <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
@@ -1916,6 +1941,31 @@ const Balance = () => {
           />
         </div>
 
+        {/* 🚀 MÉTRICAS DE PLATAFORMA (IPTV & EXTRAS) COMPACTAS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 32 }}>
+          <MiniPlataformaCard
+            title="Total Plataforma"
+            value={fmt(reportPlataforma?.sumatoria_total ?? ((report?.ingresos?.iptv?.total || 0) + (report?.ingresos?.extras?.total || 0)))}
+            icon="🚀"
+            color="#a78bfa"
+            sub="Sumatoria Total Recaudada"
+          />
+          <MiniPlataformaCard
+            title="IPTV Plus (Clientes Internet)"
+            value={fmt(reportPlataforma?.desglose_origen?.iptv_plus ?? (report?.ingresos?.iptv?.total || 0))}
+            icon="📺"
+            color="#3b82f6"
+            sub="Pantallas Extras de Clientes"
+          />
+          <MiniPlataformaCard
+            title="Clientes Extras (Solo Plataforma)"
+            value={fmt(reportPlataforma?.desglose_origen?.clientes_extras ?? (report?.ingresos?.extras?.total || 0))}
+            icon="🌍"
+            color="#10b981"
+            sub="Cuentas Plataforma Externas"
+          />
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px,1fr))', gap: 20, marginBottom: 32 }}>
           {/* Gráfica Principal */}
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -1942,52 +1992,33 @@ const Balance = () => {
           {/* Gráficas de Distribución de Gastos en Barras */}
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24 }}>
             <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700 }}>📊 Distribución de Gastos</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
-                <div style={{ width: '100%', height: '180px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={egByCat} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-                      <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
-                      <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
-                      <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={28}>
-                        {egByCat.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                        <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR MÉTODO</p>
-                <div style={{ width: '100%', height: '180px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={pieMetodo} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-                      <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
-                      <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
-                      <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={28}>
-                        {pieMetodo.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                        <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+            <div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
+              <div style={{ width: '100%', height: '180px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={egByCat} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                    <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={34}>
+                      {egByCat.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Resumen Tipo Excel - Side by Side */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
+        {/* Resumen de Ingresos */}
+        <div style={{ marginBottom: 32 }}>
           <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 18, padding: 20 }}>
             <h5 style={{ margin: '0 0 15px', color: P.ingreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
               🟢 Resumen de Ingresos <span style={{ flex: 1, height: 1, background: 'rgba(16,185,129,0.2)' }} />
             </h5>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
                 { label: '🌐 Internet', val: ingresos.internet.total, sub: `Recaudado de ${ingresos.internet.cantidad || 0} clientes` },
                 { label: '📺 IP TV', val: ingresos.iptv.total, sub: 'Servicios de televisión' },
@@ -2002,27 +2033,6 @@ const Balance = () => {
                   <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.ingreso }}>{fmt(item.val)}</div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 18, padding: 20 }}>
-            <h5 style={{ margin: '0 0 15px', color: P.egreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔴 Resumen de Egresos <span style={{ flex: 1, height: 1, background: 'rgba(244,63,94,0.2)' }} />
-            </h5>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {Object.entries(egData.detalle || {}).map(([cat, val]) => (
-                <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize' }}>{CAT_LABELS[cat] || cat}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Gasto mensual</div>
-                  </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.egreso }}>{fmt(val)}</div>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(244,63,94,0.1)', borderRadius: 12, marginTop: 5, border: '1px solid rgba(244,63,94,0.2)' }}>
-                <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>TOTAL GASTOS</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: P.egreso }}>{fmt(egData.total)}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -2122,52 +2132,7 @@ const Balance = () => {
           </>
         )}
 
-        {/* ── SECCIÓN COLCHÓN (Excel-like) ── */}
-        <SectionTitle icon="💰" text="Caja de Colchón (Reserva de Capital)" />
-        <div style={{ background: 'rgba(16,185,129,0.03)', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 20, padding: 22, marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div>
-              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>Fondo de ahorro acumulado para emergencias o inversiones futuras.</p>
-            </div>
-            <button onClick={() => setModalColchon('crear')} style={{ padding: '9px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-              ＋ Agregar Valor
-            </button>
-          </div>
 
-          <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  {['Concepto / Descripción', 'Fecha', 'Monto ($)', 'Acciones'].map((h, i) => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: i === 2 ? 'right' : 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {!report.colchon?.lista || report.colchon.lista.length === 0 ? (
-                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No hay valores registrados en el colchón.</td></tr>
-                ) : report.colchon.lista.map((c, idx) => (
-                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.descripcion}</td>
-                    <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.4)' }}>{c.fecha}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '1rem' }}>{fmt(c.monto)}</td>
-                    <td style={{ padding: '12px 16px', display: 'flex', gap: 10, justifyContent: 'flex-start' }}>
-                      <button onClick={() => setModalColchon(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>✏️</button>
-                      <button onClick={() => handleDeleteColchon(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>🗑️</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: 'rgba(16,185,129,0.15)', borderTop: '2px solid rgba(16,185,129,0.3)' }}>
-                  <td colSpan={2} style={{ padding: '16px', fontWeight: 900, fontSize: '0.95rem', letterSpacing: 1 }}>TOTAL COLCHÓN ACUMULADO</td>
-                  <td style={{ padding: '16px', textAlign: 'right', fontWeight: 950, color: P.ingreso, fontSize: '1.25rem' }}>{fmt(report.colchon?.total || 0)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
 
         {/* Historial de Clientes / Cartera */}
         <div style={{ marginTop: 32 }}>
