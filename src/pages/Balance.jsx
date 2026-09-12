@@ -1832,7 +1832,11 @@ const Balance = () => {
     const [anioStr, mesNum] = mes.split('-');
     const mesLabel = MONTH_NAMES[parseInt(mesNum, 10) - 1] + ' ' + anioStr;
 
-    const egByCat = Object.entries(egData.detalle || {}).map(([name, value]) => ({ name: CAT_LABELS[name] || name, value, color: P.cat[name] || '#94a3b8' })).filter(x => x.value > 0);
+    const egByCat = Object.entries(egData.detalle || {}).map(([name, value]) => ({
+      name: CAT_LABELS[name] || (name ? name.charAt(0).toUpperCase() + name.slice(1) : name),
+      value,
+      color: P.cat[name] || '#94a3b8'
+    })).filter(x => x.value > 0);
     const egByMetodo = egData.lista.reduce((acc, eg) => {
       acc[eg.metodo_pago] = (acc[eg.metodo_pago] || 0) + parseFloat(eg.monto);
       return acc;
@@ -2008,14 +2012,14 @@ const Balance = () => {
             </div>
             <div style={{ width: '100%', height: '250px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <BarChart data={barData} margin={{ top: 25, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                   <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} domain={[0, dataMax => (dataMax ? Math.ceil(dataMax * 1.25) : 10)]} />
                   <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
                   <Bar dataKey="total" radius={[6, 6, 0, 0]} barSize={45}>
                     {barData.map((e, i) => <Cell key={i} fill={e.fill} fillOpacity={0.9} />)}
-                    <LabelList dataKey="total" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} />
+                    <LabelList dataKey="total" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} offset={8} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -2023,24 +2027,24 @@ const Balance = () => {
           </div>
 
           {/* Gráficas de Distribución de Gastos en Barras */}
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24 }}>
-            <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700 }}>📊 Distribución de Gastos</h4>
-            <div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10, fontWeight: 700 }}>POR CATEGORÍA</p>
-              <div style={{ width: '100%', height: '180px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={egByCat} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-                    <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} />
-                    <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={34}>
-                      {egByCat.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                      <LabelList dataKey="value" position="top" fill="white" fontSize={10} fontWeight={700} formatter={fmt} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>📊 Distribución de Gastos</h4>
+              <Badge text="Por Categoría" color={P.egreso} />
+            </div>
+            <div style={{ width: '100%', height: '250px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={egByCat} margin={{ top: 25, right: 15, left: -5, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => '$' + v} domain={[0, dataMax => (dataMax ? Math.ceil(dataMax * 1.35) : 10)]} />
+                  <ReTooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={v => fmt(v)} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={38}>
+                    {egByCat.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    <LabelList dataKey="value" position="top" fill="white" fontSize={11} fontWeight={700} formatter={fmt} offset={8} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
