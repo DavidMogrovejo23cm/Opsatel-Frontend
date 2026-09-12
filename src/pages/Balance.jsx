@@ -1668,6 +1668,9 @@ const Balance = () => {
           let cnt = 0;
           res.data.forEach(c => {
             if (c.cortesia_total) return;
+            const est = String(c.estado || '').trim().toUpperCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (!['ACTIVO', 'ACTIVOS', 'JURIDICO', 'PROCESO', 'EN PROCESO'].includes(est)) return;
             const s = Number(c.saldo || 0);
             const p = Number(String(c.plus || 0).replace('$', '').replace(',', '.').trim()) || 0;
             const a = Number(String(c.adicional || 0).replace('$', '').replace(',', '.').trim()) || 0;
@@ -2133,7 +2136,7 @@ const Balance = () => {
               fontSize: '0.82rem',
               color: 'var(--text-muted)'
             }}>
-              <span>Total clientes con deuda acumulada:</span>
+              <span>Clientes con saldo (Activo / Jurídico / En Proceso):</span>
               <span style={{ fontWeight: 800, color: '#f87171', fontSize: '0.9rem' }}>
                 {morososData.cantidad} {morososData.cantidad === 1 ? 'cliente' : 'clientes'}
               </span>
