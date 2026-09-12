@@ -1519,6 +1519,7 @@ const Balance = () => {
   const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
   const [showCatModal, setShowCatModal] = useState(false); // Modal de categorías de gastos
   const [filterEgresosByMes, setFilterEgresosByMes] = useState(true); // Filtrar egresos estrictamente por mes activo
+  const [morososData, setMorososData] = useState({ total: 0, cantidad: 0 }); // Cartera pendiente total de clientes
   const [customCategorias, setCustomCategorias] = useState(() => {
     try {
       const saved = localStorage.getItem('opsatel_custom_categorias');
@@ -1653,6 +1654,35 @@ const Balance = () => {
   useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
   useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
+
+  useEffect(() => {
+    if (report && report.total_pendiente_morosos !== undefined) {
+      setMorososData({
+        total: Number(report.total_pendiente_morosos || 0),
+        cantidad: Number(report.cantidad_morosos || 0)
+      });
+    } else {
+      balanceService.historialClientes().then(res => {
+        if (res && res.data && Array.isArray(res.data)) {
+          let tot = 0;
+          let cnt = 0;
+          res.data.forEach(c => {
+            if (c.cortesia_total) return;
+            const s = Number(c.saldo || 0);
+            const p = Number(String(c.plus || 0).replace('$', '').replace(',', '.').trim()) || 0;
+            const a = Number(String(c.adicional || 0).replace('$', '').replace(',', '.').trim()) || 0;
+            const totC = Number(c.total_pago || 0);
+            const deuda = totC > 0 ? totC : Math.max(0, s + p + a);
+            if (deuda > 0) {
+              tot += deuda;
+              cnt += 1;
+            }
+          });
+          setMorososData({ total: Math.round(tot * 100) / 100, cantidad: cnt });
+        }
+      }).catch(() => {});
+    }
+  }, [report]);
 
   const handleSaveMovInterno = async data => {
     if (data.id) await balanceService.actualizarMovimientoInterno(data.id, data);
@@ -2012,27 +2042,101 @@ const Balance = () => {
           </div>
         </div>
 
-        {/* Resumen de Ingresos */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 18, padding: 20 }}>
-            <h5 style={{ margin: '0 0 15px', color: P.ingreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🟢 Resumen de Ingresos <span style={{ flex: 1, height: 1, background: 'rgba(16,185,129,0.2)' }} />
-            </h5>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              {[
-                { label: '🌐 Internet', val: ingresos.internet.total, sub: `Recaudado de ${ingresos.internet.cantidad || 0} clientes` },
-                { label: '📺 IP TV', val: ingresos.iptv.total, sub: 'Servicios de televisión' },
-                { label: '🌍 Extras', val: ingresos.extras.total, sub: 'Pagos adicionales y diversos' },
-                { label: '➕ Adicional', val: ingresos.adicional, sub: 'Otros conceptos' },
-              ].map(item => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{item.label}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.sub}</div>
+        {/* Resumen de Ingresos & Total Pendiente Morosos */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, marginBottom: 32 }}>
+          {/* Card 1: Resumen de Ingresos */}
+          <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 18, padding: 20, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <h5 style={{ margin: '0 0 15px', color: P.ingreso, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                🟢 Resumen de Ingresos <span style={{ flex: 1, height: 1, background: 'rgba(16,185,129,0.2)' }} />
+              </h5>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10 }}>
+                {[
+                  { label: '🌐 Internet', val: ingresos.internet.total, sub: `Recaudado (${ingresos.internet.cantidad || 0} cl.)` },
+                  { label: '📺 IP TV', val: ingresos.iptv.total, sub: 'Servicios de televisión' },
+                  { label: '🌍 Extras', val: ingresos.extras.total, sub: 'Pagos adicionales/diversos' },
+                  { label: '➕ Adicional', val: ingresos.adicional, sub: 'Otros conceptos' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{item.label}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.sub}</div>
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.ingreso }}>{fmt(item.val)}</div>
                   </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: P.ingreso }}>{fmt(item.val)}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Total Pendiente Morosos */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(220,38,38,0.02) 100%)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 18,
+            padding: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: -30,
+              right: -30,
+              width: 130,
+              height: 130,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(239,68,68,0.14) 0%, rgba(239,68,68,0) 70%)',
+              pointerEvents: 'none'
+            }} />
+            <div>
+              <h5 style={{ margin: '0 0 16px', color: '#ef4444', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                🔴 Cartera Pendiente <span style={{ flex: 1, height: 1, background: 'rgba(239,68,68,0.2)' }} />
+              </h5>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, padding: '0 4px' }}>
+                <div>
+                  <div style={{ fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>
+                    Total Pendiente Morosos
+                  </div>
+                  <div style={{ fontSize: '2.3rem', fontWeight: 900, color: '#ef4444', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {fmt(morososData.total)}
+                  </div>
                 </div>
-              ))}
+                <div style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 16,
+                  background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.8rem',
+                  boxShadow: '0 4px 16px rgba(239,68,68,0.15)'
+                }}>
+                  ⚠️
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: 18,
+              padding: '10px 14px',
+              borderRadius: 12,
+              background: 'rgba(239,68,68,0.06)',
+              border: '1px solid rgba(239,68,68,0.14)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.82rem',
+              color: 'var(--text-muted)'
+            }}>
+              <span>Total clientes con deuda acumulada:</span>
+              <span style={{ fontWeight: 800, color: '#f87171', fontSize: '0.9rem' }}>
+                {morososData.cantidad} {morososData.cantidad === 1 ? 'cliente' : 'clientes'}
+              </span>
             </div>
           </div>
         </div>
