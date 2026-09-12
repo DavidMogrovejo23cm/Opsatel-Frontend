@@ -22,7 +22,12 @@ const P = {
 
 const CATEGORIAS = ['operacional', 'nomina', 'proyecto', 'otro'];
 const CAT_LABELS = { operacional: '⚙️ Operacional', nomina: '👔 Nómina', proyecto: '🏗️ Proyecto', otro: '📦 Otro' };
-const METODOS = ['Efectivo', 'Pichincha', 'JEP', 'Datatfast', 'Otro'];
+const METODOS = [
+  'Efectivo', 'Pichincha', 'JEP',
+  'Efectivo IPTV', 'Pichincha IPTV', 'JEP IPTV',
+  'Efectivo PR', 'Pichincha PR', 'JEP PR',
+  'Datatfast', 'Otro'
+];
 const ESTADOS_PROY = ['En progreso', 'Completado', 'Pausado'];
 
 // Subcategorías predefinidas para proyectos (editable como texto libre)
@@ -45,6 +50,12 @@ const getAccountKey = (str) => {
     if (s.includes('pichincha')) return 'iptv_pichincha';
     if (s.includes('jep')) return 'iptv_jep';
     return 'iptv_efectivo';
+  }
+  if (s.includes('pr') || s.includes('proyecto')) {
+    if (s.includes('efectivo')) return 'proyecto_efectivo';
+    if (s.includes('pichincha')) return 'proyecto_pichincha';
+    if (s.includes('jep')) return 'proyecto_jep';
+    return 'proyecto_pichincha';
   }
   if (s.includes('efectivo')) return 'efectivo';
   if (s.includes('pichincha')) return 'pichincha';
@@ -426,7 +437,23 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Método de Pago</label>
           <select style={IS} value={form.metodo_pago} onChange={e => set('metodo_pago', e.target.value)}>
-            {METODOS.map(m => <option key={m} value={m} style={OS}>{m}</option>)}
+            <optgroup label="💼 Operacional Normal" style={OS}>
+              <option value="Efectivo" style={OS}>💵 Efectivo</option>
+              <option value="Pichincha" style={OS}>🏦 Pichincha</option>
+              <option value="JEP" style={OS}>🏛️ COP JEP</option>
+              <option value="Datatfast" style={OS}>💳 Datafast</option>
+              <option value="Otro" style={OS}>📦 Otro</option>
+            </optgroup>
+            <optgroup label="📺 IPTV / Plataforma" style={OS}>
+              <option value="Efectivo IPTV" style={OS}>📺 Efectivo IPTV</option>
+              <option value="Pichincha IPTV" style={OS}>📺 Pichincha IPTV</option>
+              <option value="JEP IPTV" style={OS}>📺 COP JEP IPTV</option>
+            </optgroup>
+            <optgroup label="🏗️ Proyectos" style={OS}>
+              <option value="Efectivo PR" style={OS}>🏗️ Efectivo PR (Proyecto)</option>
+              <option value="Pichincha PR" style={OS}>🏗️ Pichincha PR (Proyecto)</option>
+              <option value="JEP PR" style={OS}>🏗️ COP JEP PR (Proyecto)</option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -448,13 +475,20 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
 function ProyectoForm({ initial, onSave, onClose }) {
   const [form, setForm] = useState(initial || {
     nombre: '', descripcion: '', monto_total: '', monto_invertido: '0',
+    ganancia: '0', banco_ganancia: 'Pichincha',
     estado: 'En progreso', fecha_inicio: DEFAULT_MES + '-01', fecha_fin: '',
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleSubmit = async e => {
     e.preventDefault();
     if (!form.nombre || !form.monto_total) return showWarning('Completa nombre y monto total.');
-    await onSave({ ...form, monto_total: parseFloat(form.monto_total), monto_invertido: parseFloat(form.monto_invertido || 0) });
+    await onSave({
+      ...form,
+      monto_total: parseFloat(form.monto_total),
+      monto_invertido: parseFloat(form.monto_invertido || 0),
+      ganancia: parseFloat(form.ganancia || 0),
+      banco_ganancia: form.banco_ganancia || 'Pichincha'
+    });
     onClose();
   };
   return (
@@ -475,6 +509,20 @@ function ProyectoForm({ initial, onSave, onClose }) {
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Invertido hasta ahora ($)</label>
           <input style={IS} type="number" step="0.01" min="0" value={form.monto_invertido} onChange={e => set('monto_invertido', e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>💰 Ganancia del Proyecto ($)</label>
+          <input style={IS} type="number" step="0.01" min="0" value={form.ganancia ?? ''} onChange={e => set('ganancia', e.target.value)} placeholder="0.00" />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>🏦 Banco de la Ganancia</label>
+          <select style={IS} value={form.banco_ganancia || 'Pichincha'} onChange={e => set('banco_ganancia', e.target.value)}>
+            <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
+            <option value="Efectivo" style={OS}>💵 Efectivo</option>
+            <option value="JEP" style={OS}>🏛️ COP JEP</option>
+          </select>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -1611,7 +1659,10 @@ const Balance = () => {
       jep: { title: 'COP JEP Final', icon: '🏛️', color: '#fb923c', rec: parseFloat(recBruta.jep || 0), salidas: 0, entradas: 0 },
       iptv_efectivo: { title: 'IPTV Efectivo Final', icon: '📺', color: '#ec4899', rec: parseFloat(recIPTV.efectivo || 0), salidas: 0, entradas: 0 },
       iptv_pichincha: { title: 'IPTV Pichincha Final', icon: '📺', color: '#e879f9', rec: parseFloat(recIPTV.pichincha || 0), salidas: 0, entradas: 0 },
-      iptv_jep: { title: 'IPTV JEP Final', icon: '📺', color: '#c084fc', rec: parseFloat(recIPTV.jep || 0), salidas: 0, entradas: 0 }
+      iptv_jep: { title: 'IPTV JEP Final', icon: '📺', color: '#c084fc', rec: parseFloat(recIPTV.jep || 0), salidas: 0, entradas: 0 },
+      proyecto_efectivo: { title: 'PR Efectivo Final', icon: '🏗️', color: '#f59e0b', rec: parseFloat(report?.proyectos_resumen?.ingresos?.efectivo || 0), salidas: 0, entradas: 0 },
+      proyecto_pichincha: { title: 'PR Pichincha Final', icon: '🏗️', color: '#fbbf24', rec: parseFloat(report?.proyectos_resumen?.ingresos?.pichincha || 0), salidas: 0, entradas: 0 },
+      proyecto_jep: { title: 'PR COP JEP Final', icon: '🏗️', color: '#fb923c', rec: parseFloat(report?.proyectos_resumen?.ingresos?.jep || 0), salidas: 0, entradas: 0 }
     };
 
     movs.forEach(m => {
@@ -1634,7 +1685,7 @@ const Balance = () => {
     });
 
     return res;
-  }, [reportMovsInternos, reportPlataforma]);
+  }, [reportMovsInternos, reportPlataforma, report]);
 
   useEffect(() => {
     if (vista === 'mensual') {
@@ -1843,34 +1894,59 @@ const Balance = () => {
     }, {});
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
 
-    // Desglose por banco para las 4 cards principales (Sincronizado al unísono con saldos finales de Movimientos Internos)
+    // 1. Desglose Operacional Normal (Excluye IPTV y Proyectos)
     const ingEfectivo = saldosFinalesCalculados?.efectivo?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.efectivo ?? ingresos?.bancos?.efectivo ?? 0);
     const ingPichincha = saldosFinalesCalculados?.pichincha?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.pichincha ?? ingresos?.bancos?.pichincha ?? 0);
     const ingJep = saldosFinalesCalculados?.jep?.final ?? parseFloat(reportMovsInternos?.recaudacion_bruta?.jep ?? ingresos?.bancos?.jep ?? 0);
-    const totalIngresosMovs = (reportMovsInternos?.recaudacion_bruta || saldosFinalesCalculados?.efectivo)
-      ? (ingEfectivo + ingPichincha + ingJep)
-      : (ingresos?.total || (ingEfectivo + ingPichincha + ingJep));
+    const totalIngresosMovs = ingEfectivo + ingPichincha + ingJep;
 
-    const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('efectivo') ? sum + v : sum, 0);
-    const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('pichincha') ? sum + v : sum, 0);
-    const egJep = Object.entries(egByMetodo).reduce((sum, [k, v]) => k.toLowerCase().includes('jep') ? sum + v : sum, 0);
+    // Egresos operacionales puros (no IPTV, no PR)
+    const egEfectivo = Object.entries(egByMetodo).reduce((sum, [k, v]) => (!k.toLowerCase().includes('iptv') && !k.toLowerCase().includes('pr') && !k.toLowerCase().includes('proyecto') && k.toLowerCase().includes('efectivo')) ? sum + v : sum, 0);
+    const egPichincha = Object.entries(egByMetodo).reduce((sum, [k, v]) => (!k.toLowerCase().includes('iptv') && !k.toLowerCase().includes('pr') && !k.toLowerCase().includes('proyecto') && k.toLowerCase().includes('pichincha')) ? sum + v : sum, 0);
+    const egJep = Object.entries(egByMetodo).reduce((sum, [k, v]) => (!k.toLowerCase().includes('iptv') && !k.toLowerCase().includes('pr') && !k.toLowerCase().includes('proyecto') && k.toLowerCase().includes('jep')) ? sum + v : sum, 0);
+    const totalEgOperacional = egEfectivo + egPichincha + egJep;
 
-    const proyEfectivo = proyData?.bancos?.efectivo || 0;
-    const proyPichincha = proyData?.bancos?.pichincha || 0;
-    const proyJep = proyData?.bancos?.jep || 0;
+    const balEfectivo = ingEfectivo - egEfectivo;
+    const balPichincha = ingPichincha - egPichincha;
+    const balJep = ingJep - egJep;
+    const finalBalanceNeto = totalIngresosMovs - totalEgOperacional;
 
-    const balEfectivo = ingEfectivo - egEfectivo - proyEfectivo;
-    const balPichincha = ingPichincha - egPichincha - proyPichincha;
-    const balJep = ingJep - egJep - proyJep;
-    const finalBalanceNeto = (reportMovsInternos?.recaudacion_bruta)
-      ? (totalIngresosMovs - egData.total - proyData.total)
-      : balance_neto;
+    // 2. IPTV / Plataforma
+    const iptvIngEf = saldosFinalesCalculados?.iptv_efectivo?.final ?? (report?.iptv_resumen?.ingresos?.efectivo ?? (reportPlataforma?.desglose_bancos?.efectivo || 0));
+    const iptvIngPich = saldosFinalesCalculados?.iptv_pichincha?.final ?? (report?.iptv_resumen?.ingresos?.pichincha ?? (reportPlataforma?.desglose_bancos?.pichincha || 0));
+    const iptvIngJep = saldosFinalesCalculados?.iptv_jep?.final ?? (report?.iptv_resumen?.ingresos?.jep ?? (reportPlataforma?.desglose_bancos?.jep || 0));
+    const iptvTotalIng = iptvIngEf + iptvIngPich + iptvIngJep;
+
+    const iptvEgEf = Object.entries(egByMetodo).reduce((sum, [k, v]) => (k.toLowerCase().includes('iptv') && k.toLowerCase().includes('efectivo')) ? sum + v : sum, 0);
+    const iptvEgPich = Object.entries(egByMetodo).reduce((sum, [k, v]) => (k.toLowerCase().includes('iptv') && k.toLowerCase().includes('pichincha')) ? sum + v : sum, 0);
+    const iptvEgJep = Object.entries(egByMetodo).reduce((sum, [k, v]) => (k.toLowerCase().includes('iptv') && k.toLowerCase().includes('jep')) ? sum + v : sum, 0);
+    const iptvTotalEg = iptvEgEf + iptvEgPich + iptvEgJep;
+
+    const iptvBalEf = iptvIngEf - iptvEgEf;
+    const iptvBalPich = iptvIngPich - iptvEgPich;
+    const iptvBalJep = iptvIngJep - iptvEgJep;
+    const iptvFinalBal = iptvTotalIng - iptvTotalEg;
+
+    // 3. Proyectos
+    const proyIngEf = saldosFinalesCalculados?.proyecto_efectivo?.final ?? (report?.proyectos_resumen?.ingresos?.efectivo ?? 0);
+    const proyIngPich = saldosFinalesCalculados?.proyecto_pichincha?.final ?? (report?.proyectos_resumen?.ingresos?.pichincha ?? 0);
+    const proyIngJep = saldosFinalesCalculados?.proyecto_jep?.final ?? (report?.proyectos_resumen?.ingresos?.jep ?? 0);
+    const proyTotalIng = proyIngEf + proyIngPich + proyIngJep;
+
+    const proyEgEf = Object.entries(egByMetodo).reduce((sum, [k, v]) => ((k.toLowerCase().includes('pr') || k.toLowerCase().includes('proyecto')) && k.toLowerCase().includes('efectivo')) ? sum + v : sum, 0);
+    const proyEgPich = Object.entries(egByMetodo).reduce((sum, [k, v]) => ((k.toLowerCase().includes('pr') || k.toLowerCase().includes('proyecto')) && k.toLowerCase().includes('pichincha')) ? sum + v : sum, 0) + (proyData?.total || 0);
+    const proyEgJep = Object.entries(egByMetodo).reduce((sum, [k, v]) => ((k.toLowerCase().includes('pr') || k.toLowerCase().includes('proyecto')) && k.toLowerCase().includes('jep')) ? sum + v : sum, 0);
+    const proyTotalEg = proyEgEf + proyEgPich + proyEgJep;
+
+    const proyBalEf = proyIngEf - proyEgEf;
+    const proyBalPich = proyIngPich - proyEgPich;
+    const proyBalJep = proyIngJep - proyEgJep;
+    const proyFinalBal = proyTotalIng - proyTotalEg;
 
     const barData = [
-      { name: 'Ingresos', total: totalIngresosMovs, fill: P.ingreso },
-      { name: 'Egresos', total: egData.total, fill: P.egreso },
-      { name: 'Proyectos', total: proyData.total, fill: P.proyecto },
-      { name: 'Balance', total: Math.abs(finalBalanceNeto), fill: finalBalanceNeto >= 0 ? P.ingreso : P.egreso },
+      { name: 'Ingresos Op.', total: totalIngresosMovs, fill: P.ingreso },
+      { name: 'Egresos Op.', total: totalEgOperacional, fill: P.egreso },
+      { name: 'Balance Op.', total: Math.abs(finalBalanceNeto), fill: finalBalanceNeto >= 0 ? P.ingreso : P.egreso },
     ];
 
     return (
@@ -1927,13 +2003,14 @@ const Balance = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginBottom: 32 }}>
+        {/* 🏢 BLOQUE 1: OPERACIONAL (NORMAL) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
           <Card
             icon="📥"
-            title="Ingresos"
+            title="Ingresos Operacionales"
             color={P.ingreso}
             value={fmt(totalIngresosMovs)}
-            sub="Total recaudado"
+            sub="Internet y Adicionales"
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: ingEfectivo, color: '#4ade80' },
               { icon: '🏦', nombre: 'Pichincha', monto: ingPichincha, color: '#facc15' },
@@ -1942,10 +2019,10 @@ const Balance = () => {
           />
           <Card
             icon="📤"
-            title="Egresos"
+            title="Egresos Operacionales"
             color={P.egreso}
-            value={fmt(egData.total)}
-            sub="Gastos operativos"
+            value={fmt(totalEgOperacional)}
+            sub="Gastos operativos normales"
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#a855f7' },
               { icon: '🏦', nombre: 'Pichincha', monto: egPichincha, color: '#facc15' },
@@ -1953,23 +2030,11 @@ const Balance = () => {
             ]}
           />
           <Card
-            icon="🏗️"
-            title="Proyectos"
-            color={P.proyecto}
-            value={fmt(proyData.total)}
-            sub="Inversión en obras"
-            bancos={[
-              { icon: '💵', nombre: 'Efectivo', monto: proyEfectivo, color: '#f59e0b' },
-              { icon: '🏦', nombre: 'Pichincha', monto: proyPichincha, color: '#facc15' },
-              { icon: '🏛️', nombre: 'COP JEP', monto: proyJep, color: '#fb923c' }
-            ]}
-          />
-          <Card
             icon={finalBalanceNeto >= 0 ? '💰' : '⚠️'}
-            title="Balance Neto"
+            title="Balance Neto Operacional"
             color={finalBalanceNeto >= 0 ? P.ingreso : P.egreso}
             value={fmt(finalBalanceNeto)}
-            sub={finalBalanceNeto >= 0 ? 'Superávit Mensual' : 'Déficit Mensual'}
+            sub={finalBalanceNeto >= 0 ? 'Superávit Operacional' : 'Déficit Operacional'}
             bancos={[
               { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#4ade80' : '#f43f5e' },
               { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#f43f5e' },
@@ -1978,28 +2043,85 @@ const Balance = () => {
           />
         </div>
 
-        {/* 🚀 MÉTRICAS DE PLATAFORMA (IPTV & EXTRAS) COMPACTAS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 32 }}>
-          <MiniPlataformaCard
-            title="Total Plataforma"
-            value={fmt(reportPlataforma?.sumatoria_total ?? ((report?.ingresos?.iptv?.total || 0) + (report?.ingresos?.extras?.total || 0)))}
-            icon="🚀"
-            color="#a78bfa"
-            sub="Sumatoria Total Recaudada"
-          />
-          <MiniPlataformaCard
-            title="IPTV Plus (Clientes Internet)"
-            value={fmt(reportPlataforma?.desglose_origen?.iptv_plus ?? (report?.ingresos?.iptv?.total || 0))}
+        {/* 📺 BLOQUE 2: PLATAFORMA & IPTV (CARDS COMPLETAS CON BANCOS) */}
+        <SectionTitle icon="📺" text="Plataforma & IPTV (Flujo Financiero)" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
+          <Card
             icon="📺"
-            color="#3b82f6"
-            sub="Pantallas Extras de Clientes"
+            title="Ingresos IPTV"
+            color="#38bdf8"
+            value={fmt(iptvTotalIng)}
+            sub="IPTV Plus y Clientes Extras"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvIngEf, color: '#38bdf8' },
+              { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvIngPich, color: '#facc15' },
+              { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvIngJep, color: '#fb923c' }
+            ]}
           />
-          <MiniPlataformaCard
-            title="Clientes Extras (Solo Plataforma)"
-            value={fmt(reportPlataforma?.desglose_origen?.clientes_extras ?? (report?.ingresos?.extras?.total || 0))}
-            icon="🌍"
-            color="#10b981"
-            sub="Cuentas Plataforma Externas"
+          <Card
+            icon="📤"
+            title="Egresos IPTV"
+            color="#ec4899"
+            value={fmt(iptvTotalEg)}
+            sub="Gastos Plataforma / Proveedores"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvEgEf, color: '#ec4899' },
+              { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvEgPich, color: '#facc15' },
+              { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvEgJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon={iptvFinalBal >= 0 ? '💎' : '⚠️'}
+            title="Balance Neto IPTV"
+            color={iptvFinalBal >= 0 ? '#06b6d4' : '#f43f5e'}
+            value={fmt(iptvFinalBal)}
+            sub={iptvFinalBal >= 0 ? 'Superávit Plataforma' : 'Déficit Plataforma'}
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvBalEf, color: iptvBalEf >= 0 ? '#4ade80' : '#f43f5e' },
+              { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvBalPich, color: iptvBalPich >= 0 ? '#facc15' : '#f43f5e' },
+              { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvBalJep, color: iptvBalJep >= 0 ? '#fb923c' : '#f43f5e' }
+            ]}
+          />
+        </div>
+
+        {/* 🏗️ BLOQUE 3: PROYECTOS & OBRAS (CARDS COMPLETAS CON BANCOS) */}
+        <SectionTitle icon="🏗️" text="Proyectos & Obras (Flujo Financiero)" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 32 }}>
+          <Card
+            icon="💰"
+            title="Ganancias Proyectos"
+            color="#f59e0b"
+            value={fmt(proyTotalIng)}
+            sub="Ganancias generadas / registradas"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyIngEf, color: '#4ade80' },
+              { icon: '🏦', nombre: 'Pichincha PR', monto: proyIngPich, color: '#facc15' },
+              { icon: '🏛️', nombre: 'COP JEP PR', monto: proyIngJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon="🏗️"
+            title="Gastos / Inversión Proyectos"
+            color="#fb923c"
+            value={fmt(proyTotalEg)}
+            sub="Inversión en obras y materiales"
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyEgEf, color: '#fb923c' },
+              { icon: '🏦', nombre: 'Pichincha PR', monto: proyEgPich, color: '#facc15' },
+              { icon: '🏛️', nombre: 'COP JEP PR', monto: proyEgJep, color: '#fb923c' }
+            ]}
+          />
+          <Card
+            icon={proyFinalBal >= 0 ? '🏗️' : '⚠️'}
+            title="Balance Neto Proyectos"
+            color={proyFinalBal >= 0 ? '#10b981' : '#f43f5e'}
+            value={fmt(proyFinalBal)}
+            sub={proyFinalBal >= 0 ? 'Ganancia Neta Proyectos' : 'Inversión Neta en Curso'}
+            bancos={[
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyBalEf, color: proyBalEf >= 0 ? '#4ade80' : '#f43f5e' },
+              { icon: '🏦', nombre: 'Pichincha PR', monto: proyBalPich, color: proyBalPich >= 0 ? '#facc15' : '#f43f5e' },
+              { icon: '🏛️', nombre: 'COP JEP PR', monto: proyBalJep, color: proyBalJep >= 0 ? '#fb923c' : '#f43f5e' }
+            ]}
           />
         </div>
 
