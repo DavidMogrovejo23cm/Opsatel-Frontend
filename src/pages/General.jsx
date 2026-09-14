@@ -10,6 +10,7 @@ const General = () => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [fechaInstalacionFilter, setFechaInstalacionFilter] = useState('');
 
   // Actúa como el motor de edición "en vivo" (Inline Editing)
   const [editingCell, setEditingCell] = useState(null);
@@ -452,9 +453,29 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       const matchSearch = c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.cedula?.includes(searchTerm) ||
         c.id.toString().includes(searchTerm) ||
-        c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase());
+        c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        formatToDMY(c.instalation_date).toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchSearch) return false;
+
+      // Filtro progresivo por fecha de instalación
+      if (fechaInstalacionFilter.trim()) {
+        const q = fechaInstalacionFilter.trim().toLowerCase();
+        const rawDate = String(c.instalation_date || '').toLowerCase();
+        const formattedDate = formatToDMY(c.instalation_date).toLowerCase();
+
+        const qClean = q.replace(/[-/]/g, '');
+        const formattedClean = formattedDate.replace(/[-/]/g, '');
+        const rawClean = rawDate.replace(/[-/]/g, '');
+
+        const matchFormatted = formattedDate.includes(q);
+        const matchRaw = rawDate.includes(q);
+        const matchClean = qClean.length >= 2 && (formattedClean.includes(qClean) || rawClean.includes(qClean));
+
+        if (!matchFormatted && !matchRaw && !matchClean) {
+          return false;
+        }
+      }
 
       // Filtro por estado
       if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
@@ -584,6 +605,44 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <option value="PAGADO">✅ Pagados (Pendiente $0)</option>
             <option value="PENDIENTE_PAGO">⚠️ Con Deuda Pendiente</option>
           </select>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <input
+              className="input"
+              placeholder="📅 Fecha Instalación (ej: 14/09)..."
+              style={{
+                width: 'auto',
+                minWidth: '200px',
+                marginBottom: 0,
+                fontSize: '0.82rem',
+                height: '38px',
+                padding: '4px 28px 4px 10px',
+                background: 'var(--input-select-bg, #1e1b4b)',
+                color: 'var(--text-main)',
+                borderColor: fechaInstalacionFilter ? 'var(--primary, #6366f1)' : undefined
+              }}
+              value={fechaInstalacionFilter}
+              onChange={(e) => setFechaInstalacionFilter(e.target.value)}
+            />
+            {fechaInstalacionFilter && (
+              <button
+                type="button"
+                onClick={() => setFechaInstalacionFilter('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  padding: 0
+                }}
+                title="Limpiar filtro de fecha de instalación"
+              >
+                ✖
+              </button>
+            )}
+          </div>
           <input
             className="input"
             placeholder="Buscar por ID, Nombre o Cédula..."
@@ -1112,7 +1171,14 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         </div>
       )}
       <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Total: {filteredClientes.length} clientes encontrados.</span>
+        <span>
+          Total: {filteredClientes.length} clientes encontrados.
+          {fechaInstalacionFilter && (
+            <span style={{ color: '#818cf8', marginLeft: '8px', fontWeight: '500' }}>
+              (Filtro fecha inst.: "{fechaInstalacionFilter}")
+            </span>
+          )}
+        </span>
         <span>Presiona Enter para guardar / Esc para cancelar</span>
       </div>
 
