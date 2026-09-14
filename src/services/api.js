@@ -235,6 +235,8 @@ export const balanceService = {
   exportarReporteAnualExcel: (anio) => api.get(`/balance/reporte-anual-excel?anio=${anio}`, { responseType: 'blob' }),
   // Colchon (Fondo de reserva)
   listarColchon: () => api.get('/balance/colchon'),
+  resumenColchon: () => api.get('/balance/colchon/resumen'),
+  consolidarMesColchon: (mes, forzar = false) => api.post('/balance/colchon/consolidar-mes', { mes, forzar }),
   crearColchon: (data) => api.post('/balance/colchon', data),
   actualizarColchon: (id, data) => api.patch(`/balance/colchon/${id}`, data),
   eliminarColchon: (id) => api.delete(`/balance/colchon/${id}`),

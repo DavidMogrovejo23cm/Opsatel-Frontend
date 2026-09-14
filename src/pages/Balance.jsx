@@ -26,6 +26,7 @@ const METODOS = [
   'Efectivo', 'Pichincha', 'JEP',
   'Efectivo IPTV', 'Pichincha IPTV', 'JEP IPTV',
   'Efectivo PR', 'Pichincha PR', 'JEP PR',
+  'Colchón (Reserva)',
   'Datatfast', 'Otro'
 ];
 const ESTADOS_PROY = ['En progreso', 'Completado', 'Pausado'];
@@ -45,6 +46,7 @@ const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Jul
 const getAccountKey = (str) => {
   if (!str) return '';
   const s = String(str).toLowerCase().trim();
+  if (s.includes('colch') || s.includes('reserva')) return 'colchon';
   if (s.includes('iptv')) {
     if (s.includes('efectivo')) return 'iptv_efectivo';
     if (s.includes('pichincha')) return 'iptv_pichincha';
@@ -813,8 +815,16 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Origen (De dónde sale)</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>Origen (De dónde sale)</label>
+            {getSaldoForOrigen(form.origen, saldosFinales) > 0 && (
+              <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: 700 }}>
+                Disp: ${getSaldoForOrigen(form.origen, saldosFinales).toFixed(2)}
+              </span>
+            )}
+          </div>
           <select style={IS} value={form.origen} onChange={e => handleOrigenChange(e.target.value)}>
+            <option value="Colchón (Reserva)" style={OS}>🏛️ Colchón (Fondo de Reserva)</option>
             <option value="Efectivo" style={OS}>💵 Efectivo (Caja Chica)</option>
             <option value="Pichincha" style={OS}>🏦 Banco Pichincha</option>
             <option value="JEP" style={OS}>🏛️ COP JEP</option>
@@ -833,6 +843,7 @@ function MovimientoInternoForm({ initial, saldosFinales, onSave, onClose }) {
             <option value="IPTV Efectivo" style={OS}>📺 IPTV Efectivo</option>
             <option value="IPTV Pichincha" style={OS}>📺 IPTV Pichincha</option>
             <option value="IPTV JEP" style={OS}>📺 IPTV JEP</option>
+            <option value="Colchón (Reserva)" style={OS}>🏛️ Colchón (Fondo de Reserva)</option>
             <option value="Otro" style={OS}>💳 Otro / Banco</option>
           </select>
         </div>
@@ -1562,6 +1573,8 @@ const Balance = () => {
   const [modalColchon, setModalColchon] = useState(null);
   const [modalGastoFijo, setModalGastoFijo] = useState(null);
   const [modalMovInterno, setModalMovInterno] = useState(null);
+  const [resumenColchonData, setResumenColchonData] = useState(null);
+  const [consolidandoColchon, setConsolidandoColchon] = useState(false);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
   const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
@@ -1647,6 +1660,7 @@ const Balance = () => {
   const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
   const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
+  const fetchResumenColchon = useCallback(async () => { try { const r = await balanceService.resumenColchon(); setResumenColchonData(r.data); } catch (e) { } }, []);
 
   const saldosFinalesCalculados = useMemo(() => {
     const movs = reportMovsInternos?.movimientos || [];
@@ -1662,7 +1676,8 @@ const Balance = () => {
       iptv_jep: { title: 'IPTV JEP Final', icon: '📺', color: '#c084fc', rec: parseFloat(recIPTV.jep || 0), salidas: 0, entradas: 0 },
       proyecto_efectivo: { title: 'PR Efectivo Final', icon: '🏗️', color: '#f59e0b', rec: parseFloat(report?.proyectos_resumen?.ingresos?.efectivo || 0), salidas: 0, entradas: 0 },
       proyecto_pichincha: { title: 'PR Pichincha Final', icon: '🏗️', color: '#fbbf24', rec: parseFloat(report?.proyectos_resumen?.ingresos?.pichincha || 0), salidas: 0, entradas: 0 },
-      proyecto_jep: { title: 'PR COP JEP Final', icon: '🏗️', color: '#fb923c', rec: parseFloat(report?.proyectos_resumen?.ingresos?.jep || 0), salidas: 0, entradas: 0 }
+      proyecto_jep: { title: 'PR COP JEP Final', icon: '🏗️', color: '#fb923c', rec: parseFloat(report?.proyectos_resumen?.ingresos?.jep || 0), salidas: 0, entradas: 0 },
+      colchon: { title: 'Fondo de Reserva (Colchón)', icon: '🏛️', color: '#818cf8', rec: parseFloat(resumenColchonData?.total_aportes || 0), salidas: 0, entradas: 0 }
     };
 
     movs.forEach(m => {
@@ -1679,32 +1694,37 @@ const Balance = () => {
       const item = accs[k];
       res[k] = {
         ...item,
-        final: item.rec - item.salidas + item.entradas,
+        final: k === 'colchon'
+          ? (parseFloat(resumenColchonData?.saldo_disponible || (item.rec - item.salidas + item.entradas)))
+          : (item.rec - item.salidas + item.entradas),
         movido: item.salidas - item.entradas
       };
     });
 
     return res;
-  }, [reportMovsInternos, reportPlataforma, report]);
+  }, [reportMovsInternos, reportPlataforma, report, resumenColchonData]);
 
   useEffect(() => {
     if (vista === 'mensual') {
       fetchMensual();
       fetchMovsInternos();
       fetchPlataforma();
+      fetchResumenColchon();
     }
-  }, [vista, mes, fetchMensual, fetchMovsInternos, fetchPlataforma]);
+  }, [vista, mes, fetchMensual, fetchMovsInternos, fetchPlataforma, fetchResumenColchon]);
   useEffect(() => { if (vista === 'plataforma') fetchPlataforma(); }, [vista, fetchPlataforma]);
   useEffect(() => {
     if (vista === 'movimientos-internos') {
       fetchMovsInternos();
       fetchPlataforma();
+      fetchResumenColchon();
     }
-  }, [vista, mes, fetchMovsInternos, fetchPlataforma]);
+  }, [vista, mes, fetchMovsInternos, fetchPlataforma, fetchResumenColchon]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
   useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
-  useEffect(() => { fetchGastosFijos(); }, [fetchGastosFijos]);
+  useEffect(() => { if (vista === 'colchon') fetchResumenColchon(); }, [vista, fetchResumenColchon]);
+  useEffect(() => { fetchGastosFijos(); fetchResumenColchon(); }, [fetchGastosFijos, fetchResumenColchon]);
 
   useEffect(() => {
     if (report && report.total_pendiente_morosos !== undefined) {
@@ -1743,6 +1763,7 @@ const Balance = () => {
     else await balanceService.crearMovimientoInterno(data);
     fetchMovsInternos();
     fetchPlataforma();
+    fetchResumenColchon();
     showSuccess('Movimiento interno guardado correctamente');
   };
 
@@ -1752,50 +1773,52 @@ const Balance = () => {
     await balanceService.eliminarMovimientoInterno(id);
     fetchMovsInternos();
     fetchPlataforma();
+    fetchResumenColchon();
     showSuccess('Movimiento eliminado');
-  };
-
-  const handleSaveEgreso = async data => {
-    const finalFecha = data.fecha || new Date().toISOString().split('T')[0];
-    const finalMes = finalFecha.slice(0, 7);
-    const payload = {
-      ...data,
-      fecha: finalFecha,
-      mes: finalMes
-    };
-    if (data.id) await balanceService.actualizarEgreso(data.id, payload);
-    else await balanceService.crearEgreso(payload);
-    fetchEgresos();
-    if (vista === 'mensual') fetchMensual();
-  };
-  const handleDeleteEgreso = async id => {
-    const confirmado = await showConfirm('¿Eliminar egreso?', '¿Eliminar este egreso?', 'Sí, eliminar', 'Cancelar');
-    if (!confirmado) return;
-    await balanceService.eliminarEgreso(id);
-    fetchEgresos(); if (vista === 'mensual') fetchMensual();
-  };
-  const handleSaveProy = async data => {
-    if (data.id) await balanceService.actualizarProyecto(data.id, data);
-    else await balanceService.crearProyecto(data);
-    fetchProyectos();
-  };
-  const handleDeleteProy = async id => {
-    const confirmado = await showConfirm('¿Eliminar proyecto?', '¿Eliminar este proyecto y todos sus datos?', 'Sí, eliminar', 'Cancelar');
-    if (!confirmado) return;
-    await balanceService.eliminarProyecto(id);
-    fetchProyectos();
   };
 
   const handleSaveColchon = async data => {
     if (data.id) await balanceService.actualizarColchon(data.id, data);
     else await balanceService.crearColchon(data);
+    fetchResumenColchon();
     if (vista === 'mensual') fetchMensual();
+    showSuccess('Registro de colchón guardado');
   };
+
   const handleDeleteColchon = async id => {
     const confirmado = await showConfirm('¿Eliminar colchón?', '¿Eliminar este registro del colchón?', 'Sí, eliminar', 'Cancelar');
     if (!confirmado) return;
     await balanceService.eliminarColchon(id);
+    fetchResumenColchon();
     if (vista === 'mensual') fetchMensual();
+    showSuccess('Registro eliminado');
+  };
+
+  const handleConsolidarSuperavit = async (mesTarget, forzar = false) => {
+    try {
+      setConsolidandoColchon(true);
+      const res = await balanceService.consolidarMesColchon(mesTarget, forzar);
+      showSuccess(res.data.message || `Superávit del mes ${mesTarget} consolidado con éxito`);
+      fetchResumenColchon();
+      if (vista === 'mensual') fetchMensual();
+    } catch (err) {
+      const errMsg = err.response?.data?.detail || "Error al consolidar superávit al colchón";
+      if (errMsg.includes("ya fue consolidado") && !forzar) {
+        const reconfirm = await showConfirm(
+          "Superávit ya consolidado",
+          `${errMsg} ¿Deseas actualizar el registro con los valores más recientes de este mes?`,
+          "Sí, actualizar",
+          "Cancelar"
+        );
+        if (reconfirm) {
+          handleConsolidarSuperavit(mesTarget, true);
+        }
+      } else {
+        showError(errMsg);
+      }
+    } finally {
+      setConsolidandoColchon(false);
+    }
   };
 
   const handleSaveGastoFijo = async data => {
@@ -2130,6 +2153,142 @@ const Balance = () => {
             ]}
           />
         </div>
+
+        {/* 🏛️ BLOQUE 4: FONDO DE RESERVA / COLCHÓN ACUMULADO */}
+        {(() => {
+          const totalSuperavitMes = Math.round(((finalBalanceNeto || 0) + (iptvFinalBal || 0) + (proyFinalBal || 0)) * 100) / 100;
+          const yaConsolidado = resumenColchonData?.lista?.some(c => c.descripcion?.includes('Superávit Mes ' + mes));
+          const saldoColchon = resumenColchonData?.saldo_disponible ?? 0;
+
+          return (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(16,185,129,0.08) 100%)',
+              border: '1px solid rgba(99,102,241,0.25)',
+              borderRadius: 20,
+              padding: 24,
+              marginBottom: 32,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: '2rem', padding: '10px 14px', background: 'rgba(99,102,241,0.15)', borderRadius: 16, border: '1px solid rgba(99,102,241,0.3)' }}>
+                    🏛️
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      Fondo de Reserva & Colchón Financiero
+                      {yaConsolidado && <span style={{ fontSize: '0.72rem', background: '#10b98122', color: '#10b981', border: '1px solid #10b98155', borderRadius: 20, padding: '2px 10px', fontWeight: 700 }}>✓ Mes Consolidado</span>}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
+                      Los superávits netos mensuales (Operacional + IPTV + Proyectos) se transfieren a esta reserva para respaldo y liquidez de meses futuros.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => handleConsolidarSuperavit(mes, yaConsolidado)}
+                    disabled={consolidandoColchon}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: yaConsolidado 
+                        ? 'rgba(255,255,255,0.08)'
+                        : 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: consolidandoColchon ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: yaConsolidado ? 'none' : '0 4px 15px rgba(16,185,129,0.3)',
+                      opacity: consolidandoColchon ? 0.6 : 1
+                    }}
+                    title={yaConsolidado ? "Re-consolidar el superávit de este mes" : "Consolidar y transferir el superávit al Colchón"}
+                  >
+                    {consolidandoColchon ? '⏳ Procesando...' : yaConsolidado ? '🔄 Re-consolidar Mes en Colchón' : '📥 Enviar Superávit a Colchón'}
+                  </button>
+
+                  <button
+                    onClick={() => setModalMovInterno({ origen: 'Colchón (Reserva)', destino: 'Pichincha', monto: '', observacion: `Inyección de liquidez desde Colchón de Reserva a cuenta para el mes ${mes}` })}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(99,102,241,0.3)',
+                      background: 'rgba(99,102,241,0.15)',
+                      color: '#a5b4fc',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    🔄 Inyectar Fondos a Cuentas
+                  </button>
+
+                  <button
+                    onClick={() => setVista('colchon')}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'rgba(255,255,255,0.04)',
+                      color: 'white',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Ver Bitácora ➜
+                  </button>
+                </div>
+              </div>
+
+              {/* Indicadores rápidos de Reserva */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 14, padding: '14px 18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                    Saldo Disponible en Colchón
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10b981', marginTop: 4 }}>
+                    {fmt(saldoColchon)}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                    Fondo total acumulado listo para contingencias
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 14, padding: '14px 18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                    Superávit Neto Mes ({mes})
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: totalSuperavitMes >= 0 ? '#38bdf8' : '#f43f5e', marginTop: 4 }}>
+                    {fmt(totalSuperavitMes)}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                    Op: {fmt(finalBalanceNeto)} | IPTV: {fmt(iptvFinalBal)} | Proy: {fmt(proyFinalBal)}
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 14, padding: '14px 18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                    Uso de Reserva en Cuentas
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b', marginTop: 4 }}>
+                    {fmt(resumenColchonData?.total_retirado || 0)}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                    Transferido a Efectivo, Pichincha o JEP
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px,1fr))', gap: 20, marginBottom: 32 }}>
           {/* Gráfica Principal */}
@@ -2606,6 +2765,13 @@ const Balance = () => {
             icon="📺"
             color="#c084fc"
             sub={`Rec. ${fmt(saldosFinalesCalculados.iptv_jep?.rec)} - Mov. ${fmt(saldosFinalesCalculados.iptv_jep?.movido)}`}
+          />
+          <MiniBalanceCard
+            title="Fondo Reserva (Colchón)"
+            value={saldosFinalesCalculados.colchon?.final || 0}
+            icon="🏛️"
+            color="#818cf8"
+            sub={`Disponible: ${fmt(saldosFinalesCalculados.colchon?.final)}`}
           />
         </div>
 
@@ -3146,6 +3312,306 @@ const Balance = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────
+  // VISTA FONDO DE RESERVA / COLCHÓN
+  // ─────────────────────────────────────────────────────────────────
+  const renderColchon = () => {
+    const saldoDisponible = resumenColchonData?.saldo_disponible ?? 0;
+    const totalAportes = resumenColchonData?.total_aportes ?? 0;
+    const totalRetirado = resumenColchonData?.total_retirado ?? 0;
+    const listaAportes = resumenColchonData?.lista || [];
+    const movsDesde = resumenColchonData?.movimientos_desde_colchon || [];
+
+    // Calcular superávit del mes activo
+    const balOp = parseFloat(report?.balance_neto || 0);
+    const balIptv = parseFloat(report?.iptv_resumen?.balance_neto?.total || 0);
+    const balProy = parseFloat(report?.proyectos_resumen?.balance_neto?.total || 0);
+    const superavitMesActivo = Math.round((balOp + balIptv + balProy) * 100) / 100;
+    const yaConsolidadoMesActivo = listaAportes.some(c => c.descripcion?.includes(`Superávit Mes ${mes}`));
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <MonthNavBar value={mes} onChange={val => setMes(val)} />
+
+        {/* HEADER DE SECCIÓN */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(16,185,129,0.08) 100%)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 20,
+          padding: '20px 24px',
+          flexWrap: 'wrap',
+          gap: 16
+        }}>
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>🏛️</span> Fondo de Reserva & Colchón Financiero
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
+              Acumulación de superávits mensuales (Operacional + IPTV + Proyectos) y transferencias de liquidez hacia cuentas y bancos.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={fetchResumenColchon}
+              className="btn btn-secondary"
+              style={{ padding: '8px 16px', borderRadius: 12, fontSize: '0.82rem' }}
+            >
+              🔄 Refrescar
+            </button>
+            <button
+              onClick={() => handleConsolidarSuperavit(mes, yaConsolidadoMesActivo)}
+              disabled={consolidandoColchon}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 12,
+                border: 'none',
+                background: yaConsolidadoMesActivo
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: consolidandoColchon ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: yaConsolidadoMesActivo ? 'none' : '0 4px 15px rgba(16,185,129,0.3)',
+                opacity: consolidandoColchon ? 0.6 : 1
+              }}
+            >
+              {consolidandoColchon ? '⏳ Procesando...' : yaConsolidadoMesActivo ? '🔄 Re-consolidar Mes' : `📥 Consolidar Superávit de ${mes}`}
+            </button>
+            <button
+              onClick={() => setModalMovInterno({ origen: 'Colchón (Reserva)', destino: 'Pichincha', monto: '', observacion: `Inyección de liquidez desde Fondo de Reserva para ${mes}` })}
+              className="btn btn-primary"
+              style={{
+                padding: '9px 18px',
+                borderRadius: 12,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              🔄 Inyectar a Cuentas
+            </button>
+            <button
+              onClick={() => setModalColchon('crear')}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.05)',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              ➕ Aporte Manual
+            </button>
+          </div>
+        </div>
+
+        {/* 4 KPIS DESTACADOS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo Disponible Actual</span>
+              <span style={{ fontSize: '1.2rem' }}>🏛️</span>
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(saldoDisponible)}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              Fondos totales listos para contingencias o proyectos
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Superávits & Aportes Base</span>
+              <span style={{ fontSize: '1.2rem' }}>📈</span>
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(totalAportes)}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              Total de sobrantes consolidados en la historia
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Inyectado a Cuentas</span>
+              <span style={{ fontSize: '1.2rem' }}>💸</span>
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f8fafc' }}>{fmt(totalRetirado)}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              Liquidez transferida hacia Bancos o Caja Chica
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Superávit Mes ({mes})</span>
+              {yaConsolidadoMesActivo && <span style={{ fontSize: '0.65rem', background: '#10b98133', color: '#10b981', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>Consolidado</span>}
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: superavitMesActivo >= 0 ? '#38bdf8' : '#f43f5e' }}>{fmt(superavitMesActivo)}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              Op: {fmt(balOp)} | IPTV: {fmt(balIptv)} | Proy: {fmt(balProy)}
+            </div>
+          </div>
+        </div>
+
+        {/* TABLA 1: REGISTROS Y SUPERÁVITS EN EL COLCHÓN */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📋 Historial de Asientos y Superávits Acumulados
+            </h4>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {listaAportes.length} registros en total
+            </span>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Fecha</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Concepto / Descripción</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Monto Aportado</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', width: 100 }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listaAportes.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No hay registros ni superávits en el Colchón todavía.
+                    </td>
+                  </tr>
+                ) : listaAportes.map(item => {
+                  const isSuperavit = item.descripcion?.includes('Superávit Mes');
+                  return (
+                    <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="hover-row">
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {item.fecha || '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: isSuperavit ? '#38bdf8' : 'white' }}>
+                        {isSuperavit ? '📊 ' : '💰 '} {item.descripcion}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#10b981', fontSize: '0.95rem' }}>
+                        {fmt(item.monto)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => setModalColchon(item)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', marginRight: 8 }}
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteColchon(item.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                          title="Eliminar"
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {listaAportes.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: 'rgba(16,185,129,0.08)', borderTop: '2px solid rgba(16,185,129,0.3)' }}>
+                    <td colSpan={2} style={{ padding: '12px 16px', fontWeight: 800, color: '#10b981' }}>
+                      TOTAL APORTES Y SUPERÁVITS CONSOLIDADOS
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#10b981', fontSize: '1.05rem' }}>
+                      {fmt(totalAportes)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+
+        {/* TABLA 2: INYECCIONES Y RETIROS DESDE EL COLCHÓN */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              🔄 Inyecciones de Liquidez Realizadas hacia Cuentas / Bancos
+            </h4>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {movsDesde.length} transferencias registradas
+            </span>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Fecha</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Mes Afectado</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Cuenta Destino</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Concepto / Observación</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Monto Inyectado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movsDesde.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No se han realizado inyecciones de liquidez desde el Colchón todavía.
+                    </td>
+                  </tr>
+                ) : movsDesde.map(m => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="hover-row">
+                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {m.fecha || '—'}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <Badge text={m.mes || '—'} color={P.balance} />
+                    </td>
+                    <td style={{ padding: '12px 16px', fontWeight: 700, color: '#facc15' }}>
+                      {m.destino}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.7)' }}>
+                      {m.observacion || 'Inyección interna'}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#f59e0b', fontSize: '0.95rem' }}>
+                      -{fmt(m.monto)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {movsDesde.length > 0 && (
+                <tfoot>
+                  <tr style={{ background: 'rgba(245,158,11,0.08)', borderTop: '2px solid rgba(245,158,11,0.3)' }}>
+                    <td colSpan={4} style={{ padding: '12px 16px', fontWeight: 800, color: '#f59e0b' }}>
+                      TOTAL INYECTADO A CUENTAS OPERATIVAS
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '1.05rem' }}>
+                      -{fmt(totalRetirado)}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // RENDER PRINCIPAL
   // ─────────────────────────────────────────────────────────────────
   return (
@@ -3163,6 +3629,7 @@ const Balance = () => {
         <Tab id="mensual" label="Resumen Mensual" icon="📊" />
         <Tab id="plataforma" label="Plataforma (IPTV)" icon="🚀" />
         <Tab id="movimientos-internos" label="Movimientos Internos" icon="🔄" />
+        <Tab id="colchon" label="Fondo Reserva (Colchón)" icon="🏛️" />
         <Tab id="anual" label="Evolución Anual" icon="📈" />
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />
         <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
@@ -3180,6 +3647,7 @@ const Balance = () => {
               {vista === 'mensual' && renderMensual()}
               {vista === 'plataforma' && renderPlataforma()}
               {vista === 'movimientos-internos' && renderMovimientosInternos()}
+              {vista === 'colchon' && renderColchon()}
               {vista === 'anual' && renderAnual()}
               {vista === 'egresos' && renderEgresos()}
               {vista === 'gastos-fijos' && renderGastosFijos()}
