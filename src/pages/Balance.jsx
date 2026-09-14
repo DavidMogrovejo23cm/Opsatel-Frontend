@@ -115,35 +115,35 @@ function MiniPlataformaCard({ title, value, icon, color, sub }) {
   );
 }
 
-function Card({ title, value, icon, color, sub, bancos }) {
+function Card({ title, value, icon, color, sub, bancos, compact = false }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div initial={{ opacity: 0, y: compact ? 12 : 18 }} animate={{ opacity: 1, y: 0 }}
       style={{
         background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}44`,
-        borderLeft: `4px solid ${color}`, borderRadius: 16, padding: '20px 22px',
-        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+        borderLeft: `${compact ? 3 : 4}px solid ${color}`, borderRadius: compact ? 13 : 16, padding: compact ? '12px 16px' : '20px 22px',
+        display: 'flex', flexDirection: 'column', gap: compact ? 3 : 6, minWidth: 0,
+        boxShadow: compact ? '0 4px 16px rgba(0,0,0,0.12)' : '0 8px 24px rgba(0,0,0,0.15)'
       }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '1.6rem' }}>{icon}</span>
-        <span style={{ color, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{title}</span>
+        <span style={{ fontSize: compact ? '1.15rem' : '1.6rem' }}>{icon}</span>
+        <span style={{ color, fontSize: compact ? '0.68rem' : '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: compact ? 0.6 : 1 }}>{title}</span>
       </div>
-      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginTop: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{sub}</div>}
+      <div style={{ fontSize: compact ? '1.25rem' : '1.75rem', fontWeight: 800, color: 'white', marginTop: compact ? 1 : 4 }}>{value}</div>
+      {sub && <div style={{ fontSize: compact ? '0.70rem' : '0.78rem', color: 'var(--text-muted)' }}>{sub}</div>}
 
       {bancos && bancos.length > 0 && (
         <div style={{
-          marginTop: 6,
-          paddingTop: 10,
+          marginTop: compact ? 3 : 6,
+          paddingTop: compact ? 7 : 10,
           borderTop: '1px solid rgba(255,255,255,0.08)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 6
+          gap: compact ? 3 : 6
         }}>
           {bancos.map((b, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-              <span style={{ color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                <span style={{ fontSize: '0.85rem' }}>{b.icon}</span> {b.nombre}
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: compact ? '0.70rem' : '0.75rem' }}>
+              <span style={{ color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'center', gap: compact ? 4 : 6, fontWeight: 600 }}>
+                <span style={{ fontSize: compact ? '0.75rem' : '0.85rem' }}>{b.icon}</span> {b.nombre}
               </span>
               <span style={{ color: b.color || 'white', fontWeight: 800 }}>
                 {fmt(b.monto)}
@@ -2045,8 +2045,9 @@ const Balance = () => {
 
         {/* 📺 BLOQUE 2: PLATAFORMA & IPTV (CARDS COMPLETAS CON BANCOS) */}
         <SectionTitle icon="📺" text="Plataforma & IPTV (Flujo Financiero)" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 26 }}>
           <Card
+            compact
             icon="📺"
             title="Ingresos IPTV"
             color="#38bdf8"
@@ -2059,6 +2060,7 @@ const Balance = () => {
             ]}
           />
           <Card
+            compact
             icon="📤"
             title="Egresos IPTV"
             color="#ec4899"
@@ -2071,6 +2073,7 @@ const Balance = () => {
             ]}
           />
           <Card
+            compact
             icon={iptvFinalBal >= 0 ? '💎' : '⚠️'}
             title="Balance Neto IPTV"
             color={iptvFinalBal >= 0 ? '#06b6d4' : '#f43f5e'}
@@ -2086,8 +2089,9 @@ const Balance = () => {
 
         {/* 🏗️ BLOQUE 3: PROYECTOS & OBRAS (CARDS COMPLETAS CON BANCOS) */}
         <SectionTitle icon="🏗️" text="Proyectos & Obras (Flujo Financiero)" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 30 }}>
           <Card
+            compact
             icon="💰"
             title="Ganancias Proyectos"
             color="#f59e0b"
@@ -2100,6 +2104,7 @@ const Balance = () => {
             ]}
           />
           <Card
+            compact
             icon="🏗️"
             title="Gastos / Inversión Proyectos"
             color="#fb923c"
@@ -2112,6 +2117,7 @@ const Balance = () => {
             ]}
           />
           <Card
+            compact
             icon={proyFinalBal >= 0 ? '🏗️' : '⚠️'}
             title="Balance Neto Proyectos"
             color={proyFinalBal >= 0 ? '#10b981' : '#f43f5e'}
@@ -2431,10 +2437,10 @@ const Balance = () => {
         </div>
 
         {/* METRICAS PRINCIPALES */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-          <Card title="Total Plataforma" value={fmt(sumatoria_total)} icon="🚀" color="#a78bfa" sub="Sumatoria Total Recaudada" />
-          <Card title="IPTV Plus (Clientes Internet)" value={fmt(desglose_origen?.iptv_plus || 0)} icon="📺" color="#3b82f6" sub="Pantallas Extras de Clientes" />
-          <Card title="Clientes Extras (Solo Plataforma)" value={fmt(desglose_origen?.clientes_extras || 0)} icon="🌍" color="#10b981" sub="Cuentas Plataforma Externas" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+          <Card compact title="Total Plataforma" value={fmt(sumatoria_total)} icon="🚀" color="#a78bfa" sub="Sumatoria Total Recaudada" />
+          <Card compact title="IPTV Plus (Clientes Internet)" value={fmt(desglose_origen?.iptv_plus || 0)} icon="📺" color="#3b82f6" sub="Pantallas Extras de Clientes" />
+          <Card compact title="Clientes Extras (Solo Plataforma)" value={fmt(desglose_origen?.clientes_extras || 0)} icon="🌍" color="#10b981" sub="Cuentas Plataforma Externas" />
         </div>
 
         {/* DESGLOSE POR ENTIDAD BANCARIA */}

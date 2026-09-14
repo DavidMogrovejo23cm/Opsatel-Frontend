@@ -9,14 +9,15 @@ export const whatsappService = {
     }),
 
   // Programar envío automático
-  programar: (hora, mensaje, enviar_a_todos = true, fecha = null, recurrencia = "diario", dia_mes = null) =>
+  programar: (hora, mensaje, enviar_a_todos = true, fecha = null, recurrencia = "diario", dia_mes = null, filtro_clientes = "todos") =>
     api.post('/whatsapp/programar', {
       hora: hora,
       mensaje: mensaje,
       enviar_a_todos: enviar_a_todos,
       fecha: fecha,
       recurrencia: recurrencia,
-      dia_mes: dia_mes
+      dia_mes: dia_mes,
+      filtro_clientes: filtro_clientes
     }),
 
   // Obtener todas las configuraciones programadas
@@ -32,13 +33,14 @@ export const whatsappService = {
     api.patch(`/whatsapp/configuracion/${config_id}/toggle-activo`),
 
   // Actualizar configuración
-  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null, recurrencia = null, dia_mes = null) =>
+  actualizarConfiguracion: (config_id, hora, mensaje, fecha = null, recurrencia = null, dia_mes = null, filtro_clientes = null) =>
     api.patch(`/whatsapp/configuracion/${config_id}`, {
       hora: hora,
       mensaje: mensaje,
       fecha: fecha,
       recurrencia: recurrencia,
-      dia_mes: dia_mes
+      dia_mes: dia_mes,
+      filtro_clientes: filtro_clientes
     }),
 
   // Eliminar configuración
