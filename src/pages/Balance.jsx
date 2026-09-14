@@ -1777,6 +1777,47 @@ const Balance = () => {
     showSuccess('Movimiento eliminado');
   };
 
+  const handleSaveEgreso = async data => {
+    const finalFecha = data.fecha || new Date().toISOString().split('T')[0];
+    const finalMes = finalFecha.slice(0, 7);
+    const payload = {
+      ...data,
+      fecha: finalFecha,
+      mes: finalMes
+    };
+    if (data.id) await balanceService.actualizarEgreso(data.id, payload);
+    else await balanceService.crearEgreso(payload);
+    fetchEgresos();
+    if (vista === 'mensual') fetchMensual();
+    showSuccess('Egreso guardado');
+  };
+
+  const handleDeleteEgreso = async id => {
+    const confirmado = await showConfirm('¿Eliminar egreso?', '¿Eliminar este egreso?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
+    await balanceService.eliminarEgreso(id);
+    fetchEgresos();
+    if (vista === 'mensual') fetchMensual();
+    showSuccess('Egreso eliminado');
+  };
+
+  const handleSaveProy = async data => {
+    if (data.id) await balanceService.actualizarProyecto(data.id, data);
+    else await balanceService.crearProyecto(data);
+    fetchProyectos();
+    if (vista === 'mensual') fetchMensual();
+    showSuccess('Proyecto guardado');
+  };
+
+  const handleDeleteProy = async id => {
+    const confirmado = await showConfirm('¿Eliminar proyecto?', '¿Eliminar este proyecto y todos sus datos?', 'Sí, eliminar', 'Cancelar');
+    if (!confirmado) return;
+    await balanceService.eliminarProyecto(id);
+    fetchProyectos();
+    if (vista === 'mensual') fetchMensual();
+    showSuccess('Proyecto eliminado');
+  };
+
   const handleSaveColchon = async data => {
     if (data.id) await balanceService.actualizarColchon(data.id, data);
     else await balanceService.crearColchon(data);
@@ -1905,6 +1946,7 @@ const Balance = () => {
     const { ingresos, egresos: egData, proyectos: proyData, balance_neto } = report;
     const [anioStr, mesNum] = mes.split('-');
     const mesLabel = MONTH_NAMES[parseInt(mesNum, 10) - 1] + ' ' + anioStr;
+    const yaConsolidado = resumenColchonData?.lista?.some(c => c.descripcion?.includes('Superávit Mes ' + mes));
 
     const egByCat = Object.entries(egData.detalle || {}).map(([name, value]) => ({
       name: CAT_LABELS[name] || (name ? name.charAt(0).toUpperCase() + name.slice(1) : name),
@@ -2004,6 +2046,30 @@ const Balance = () => {
               }}
             >
               💸 Registrar Egreso
+            </button>
+            <button
+              onClick={() => handleConsolidarSuperavit(mes, yaConsolidado)}
+              disabled={consolidandoColchon}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 12,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: 'none',
+                background: yaConsolidado
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                cursor: consolidandoColchon ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: yaConsolidado ? 'none' : '0 4px 14px rgba(16,185,129,0.3)',
+                opacity: consolidandoColchon ? 0.7 : 1
+              }}
+              title={yaConsolidado ? "Re-consolidar el superávit de este mes" : "Consolidar y transferir el superávit al Colchón"}
+            >
+              {consolidandoColchon ? '⏳ Consolidando...' : yaConsolidado ? '🔄 Re-consolidar Mes en Colchón' : '📥 Consolidar Superávit en Colchón'}
             </button>
             <button
               onClick={() => setModalMovInterno('crear')}
@@ -2116,10 +2182,10 @@ const Balance = () => {
           <Card
             compact
             icon="💰"
-            title="Ganancias Proyectos"
+            title="Ingresos Proyectos"
             color="#f59e0b"
             value={fmt(proyTotalIng)}
-            sub="Ganancias generadas / registradas"
+            sub="Ingresos registrados del mes"
             bancos={[
               { icon: '💵', nombre: 'Efectivo PR', monto: proyIngEf, color: '#4ade80' },
               { icon: '🏦', nombre: 'Pichincha PR', monto: proyIngPich, color: '#facc15' },
@@ -2186,31 +2252,6 @@ const Balance = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => handleConsolidarSuperavit(mes, yaConsolidado)}
-                    disabled={consolidandoColchon}
-                    style={{
-                      padding: '9px 18px',
-                      borderRadius: 12,
-                      border: 'none',
-                      background: yaConsolidado 
-                        ? 'rgba(255,255,255,0.08)'
-                        : 'linear-gradient(135deg, #10b981, #059669)',
-                      color: 'white',
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      cursor: consolidandoColchon ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      boxShadow: yaConsolidado ? 'none' : '0 4px 15px rgba(16,185,129,0.3)',
-                      opacity: consolidandoColchon ? 0.6 : 1
-                    }}
-                    title={yaConsolidado ? "Re-consolidar el superávit de este mes" : "Consolidar y transferir el superávit al Colchón"}
-                  >
-                    {consolidandoColchon ? '⏳ Procesando...' : yaConsolidado ? '🔄 Re-consolidar Mes en Colchón' : '📥 Enviar Superávit a Colchón'}
-                  </button>
-
                   <button
                     onClick={() => setModalMovInterno({ origen: 'Colchón (Reserva)', destino: 'Pichincha', monto: '', observacion: `Inyección de liquidez desde Colchón de Reserva a cuenta para el mes ${mes}` })}
                     style={{
@@ -3616,12 +3657,38 @@ const Balance = () => {
   // ─────────────────────────────────────────────────────────────────
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div className="page-header-info">
           <h1>📒 Balance & Finanzas</h1>
           <p>
             Ingresos, egresos y nóminas de proyectos — reporte mensual y anual completo.
           </p>
+        </div>
+        <div
+          onClick={() => setVista('colchon')}
+          title="Ver Fondo de Reserva & Colchón Financiero"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(99,102,241,0.12) 100%)',
+            border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 14,
+            padding: '8px 16px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>🏛️</span>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: 0.5 }}>
+              Saldo en Colchón
+            </div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#10b981', lineHeight: 1.1 }}>
+              {fmt(resumenColchonData?.saldo_disponible ?? 0)}
+            </div>
+          </div>
         </div>
       </div>
 
