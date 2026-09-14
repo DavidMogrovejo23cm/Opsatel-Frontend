@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
-import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 
 
@@ -114,6 +114,10 @@ const General = () => {
   }, [showEntryPinModal, showPinModal]);
 
   const handleStartEdit = (id, col, value) => {
+    // Si el cliente está en Finiquito (fantasma), es solo lectura / texto histórico
+    const clienteActual = clientes.find(c => c.id === id);
+    if (clienteActual?.estado?.toUpperCase() === 'FINIQUITO') return;
+
     // Reglas maestras de bloqueo: No permite editar campos que el sistema genera automáticamente.
     const lockedCols = ['id', 'id_port', 'service_port', 'ip', 'mac'];
     if (lockedCols.includes(col)) return;
@@ -246,9 +250,22 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
   };
 
   const handleSaveDropdown = async (id, col, newValue) => {
-    if (newValue === clientes.find(c => c.id === id)[col]) {
+    if (newValue === clientes.find(c => c.id === id)?.[col]) {
       setEditingCell(null);
       return;
+    }
+
+    if (col === 'estado' && newValue.toLowerCase() === 'finiquito') {
+      const confirmed = await showConfirm(
+        "¿Pasar cliente a Finiquito?",
+        "El cliente pasará a ser un registro fantasma (solo historial de lectura), no se le facturará ni se enviarán mensajes, y se guardará una copia completa en Eliminados.",
+        "Sí, aplicar Finiquito",
+        "Cancelar"
+      );
+      if (!confirmed) {
+        setEditingCell(null);
+        return;
+      }
     }
 
     // Si ya está autenticado, guardar directamente sin PIN
@@ -445,6 +462,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase())) return false;
       if (statusFilter === 'JURIDICO' && c.estado?.toUpperCase() !== 'JURIDICO') return false;
       if (statusFilter === 'PENDIENTE' && !['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(c.estado?.toUpperCase())) return false;
+      if (statusFilter === 'FINIQUITO' && c.estado?.toUpperCase() !== 'FINIQUITO') return false;
 
       // Filtro por pago (Pagados vs Con Deuda Pendiente)
       const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
@@ -554,6 +572,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <option value="PROCESO">En Proceso</option>
             <option value="JURIDICO">Jurídico</option>
             <option value="PENDIENTE">Pendientes / En Activación</option>
+            <option value="FINIQUITO">👻 Finiquitos (Fantasmas)</option>
           </select>
           <select
             className="input"
@@ -670,8 +689,18 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
               </tr>
             </thead>
             <tbody>
-              {filteredClientes.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))' }}>
+              {filteredClientes.map(c => {
+                const isFiniquito = c.estado?.toUpperCase() === 'FINIQUITO';
+                return (
+                <tr 
+                  key={c.id} 
+                  style={{ 
+                    borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))',
+                    opacity: isFiniquito ? 0.65 : 1,
+                    background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
+                    transition: 'opacity 0.2s ease'
+                  }}
+                >
                   {allColumns.map(col => {
                     const isEditing = editingCell?.id === c.id && editingCell?.col === col;
                     const isId = col === 'id';
@@ -685,21 +714,21 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                         position: 'sticky',
                         left: 0,
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)'
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
                       };
                     } else if (isNombre) {
                       stickyStyle = {
                         position: 'sticky',
                         left: colWidths['id'] || 60,
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)'
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
                       };
                     } else if (isIp) {
                       stickyStyle = {
                         position: 'sticky',
                         left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                         zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : 'var(--sticky-col-bg, #131526)',
+                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)'),
                         borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                       };
                     }
@@ -708,9 +737,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       <td
                         key={col}
                         onClick={() => {
+                          if (isFiniquito) return; // Registro fantasma: solo lectura
                           if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') handleStartEdit(c.id, col, c[col]);
                         }}
                         onDoubleClick={() => {
+                          if (isFiniquito) return; // Registro fantasma: solo lectura
                           if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
                         }}
                         style={{
@@ -722,7 +753,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          cursor: col === 'id' ? 'default' : 'pointer',
+                          cursor: isFiniquito || col === 'id' ? 'default' : 'pointer',
                           borderRight: '1px solid rgba(255, 255, 255, 0.05)',
                           borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                           ...stickyStyle
@@ -747,13 +778,14 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                               onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
                               onBlur={() => setEditingCell(null)}
                             >
-                              {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO'].includes(tempValue) && (
+                              {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO', 'Finiquito', 'FINIQUITO'].includes(tempValue) && (
                                 <option value={tempValue}>{tempValue}</option>
                               )}
                               <option value="Activo">Activo</option>
                               <option value="Inactivo">Inactivo</option>
                               <option value="En Proceso">En Proceso</option>
                               <option value="Juridico">Juridico</option>
+                              <option value="Finiquito">👻 Finiquito</option>
                             </select>
                           ) : col === 'facturas' ? (
                             <select
@@ -887,6 +919,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                           <span style={{
                             color: col === 'estado' ? (
                               c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
+                                c[col]?.toUpperCase() === 'FINIQUITO' ? '#94a3b8' :
                                 ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
                                   c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
                                     ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
@@ -895,6 +928,37 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                             fontWeight: col === 'id' ? '600' : 'normal'
                           }}>
                             {(() => {
+                              if (col === 'id') {
+                                if (isFiniquito) {
+                                  return (
+                                    <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Cliente en Finiquito (Registro Fantasma)">
+                                      👻 {c.id}
+                                    </span>
+                                  );
+                                }
+                                return c.id;
+                              }
+                              if (col === 'estado') {
+                                if (isFiniquito) {
+                                  return (
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      background: 'rgba(148, 163, 184, 0.15)',
+                                      color: '#cbd5e1',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      border: '1px dashed #94a3b8'
+                                    }}>
+                                      👻 Finiquito
+                                    </span>
+                                  );
+                                }
+                                return c.estado || '-';
+                              }
                               if (col === 'total') {
                                 const totalPagado = parseFloat(c.pago_mensual || 0);
                                 return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
@@ -1041,7 +1105,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

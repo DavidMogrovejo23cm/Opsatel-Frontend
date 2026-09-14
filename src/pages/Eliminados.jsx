@@ -34,6 +34,9 @@ const Eliminados = () => {
 
   const getStatusBadge = (status) => {
     const s = String(status || '').toUpperCase();
+    if (s === 'FINIQUITO') {
+      return <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>👻 Finiquito</span>;
+    }
     if (s === 'ELIMINADO' || s === 'OK') {
       return <span style={{ color: '#4ade80', fontWeight: 'bold' }}>✅ OK</span>;
     }
@@ -95,8 +98,21 @@ const Eliminados = () => {
               ) : (
                 filtered.map((item) => (
                   <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.cliente_id}</td>
-                    <td style={{ padding: '12px' }}>{item.nombre}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold' }}>
+                      {item.estado_db === 'FINIQUITO' ? (
+                        <span title="Cliente en Finiquito" style={{ color: '#94a3b8' }}>👻 {item.cliente_id}</span>
+                      ) : (
+                        item.cliente_id
+                      )}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      {item.nombre}
+                      {item.estado_db === 'FINIQUITO' && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(148, 163, 184, 0.2)', color: '#cbd5e1' }}>
+                          Finiquito
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: '12px' }}>{item.cedula || '-'}</td>
                     <td style={{ padding: '12px' }}>{item.plan || '-'}</td>
                     <td style={{ padding: '12px', fontFamily: 'monospace' }}>{item.ip || '-'}</td>
@@ -176,6 +192,31 @@ const Eliminados = () => {
                 }}>
                   {selectedRecord.detalles_error}
                 </pre>
+              </div>
+            )}
+
+            {selectedRecord.datos_cliente && (
+              <div style={{ marginBottom: '20px', padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <h4 style={{ fontSize: '0.85rem', marginBottom: '10px', color: '#93c5fd' }}>Historial y Notas del Cliente ({selectedRecord.estado_db === 'FINIQUITO' ? 'Finiquito' : 'Eliminado'}):</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+                  <div>
+                    <p style={{ margin: '3px 0' }}><strong>Comentarios:</strong></p>
+                    <p style={{ margin: '0', color: '#e2e8f0', whiteSpace: 'pre-line', background: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
+                      {selectedRecord.datos_cliente.COMENTARIOS || selectedRecord.datos_cliente.comentarios || 'Sin comentarios'}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: '3px 0' }}><strong>Observaciones:</strong></p>
+                    <p style={{ margin: '0', color: '#e2e8f0', whiteSpace: 'pre-line', background: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
+                      {selectedRecord.datos_cliente.OBSERVACIONES || selectedRecord.datos_cliente.observaciones || 'Sin observaciones'}
+                    </p>
+                  </div>
+                </div>
+                {(selectedRecord.datos_cliente.DIRECCION || selectedRecord.datos_cliente.direccion) && (
+                  <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem' }}>
+                    <strong>Dirección:</strong> <span style={{ color: '#cbd5e1' }}>{selectedRecord.datos_cliente.DIRECCION || selectedRecord.datos_cliente.direccion}</span>
+                  </p>
+                )}
               </div>
             )}
 
