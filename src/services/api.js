@@ -231,6 +231,7 @@ export const balanceService = {
   reporteMensual: (mes) => api.get(`/balance/reporte-mensual?mes=${mes}`),
   reportePlataforma: (mes) => api.get(`/balance/reporte-plataforma?mes=${mes}`),
   reporteAnual: (anio) => api.get(`/balance/reporte-anual?anio=${anio}`),
+  getReporteArcotelPreview: (mes) => api.get(`/balance/reporte-arcotel-preview?mes=${mes}`),
   exportarReporteExcel: (mes) => api.get(`/balance/reporte-excel?mes=${mes}`, { responseType: 'blob' }),
   exportarReporteAnualExcel: (anio) => api.get(`/balance/reporte-anual-excel?anio=${anio}`, { responseType: 'blob' }),
   // Colchon (Fondo de reserva)

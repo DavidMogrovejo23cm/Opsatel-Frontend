@@ -1581,6 +1581,10 @@ const Balance = () => {
   const [showCatModal, setShowCatModal] = useState(false); // Modal de categorías de gastos
   const [filterEgresosByMes, setFilterEgresosByMes] = useState(true); // Filtrar egresos estrictamente por mes activo
   const [morososData, setMorososData] = useState({ total: 0, cantidad: 0 }); // Cartera pendiente total de clientes
+  const [reporteArcotel, setReporteArcotel] = useState(null);
+  const [reporteArcotelSubTab, setReporteArcotelSubTab] = useState('alta_velocidad');
+  const [filtroArcotel, setFiltroArcotel] = useState('');
+  const [loadingArcotel, setLoadingArcotel] = useState(false);
   const [customCategorias, setCustomCategorias] = useState(() => {
     try {
       const saved = localStorage.getItem('opsatel_custom_categorias');
@@ -1661,6 +1665,18 @@ const Balance = () => {
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
   const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
   const fetchResumenColchon = useCallback(async () => { try { const r = await balanceService.resumenColchon(); setResumenColchonData(r.data); } catch (e) { } }, []);
+  const fetchReporteArcotel = useCallback(async (targetMes = mes) => {
+    setLoadingArcotel(true);
+    try {
+      const r = await balanceService.getReporteArcotelPreview(targetMes);
+      setReporteArcotel(r.data);
+    } catch (e) {
+      console.error(e);
+      showError("Error al cargar la vista previa del reporte ARCOTEL");
+    } finally {
+      setLoadingArcotel(false);
+    }
+  }, [mes]);
 
   const saldosFinalesCalculados = useMemo(() => {
     const movs = reportMovsInternos?.movimientos || [];
@@ -1725,6 +1741,7 @@ const Balance = () => {
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
   useEffect(() => { if (vista === 'colchon') fetchResumenColchon(); }, [vista, fetchResumenColchon]);
   useEffect(() => { fetchGastosFijos(); fetchResumenColchon(); }, [fetchGastosFijos, fetchResumenColchon]);
+  useEffect(() => { if (vista === 'reporte') fetchReporteArcotel(mes); }, [vista, mes, fetchReporteArcotel]);
 
   useEffect(() => {
     if (report && report.total_pendiente_morosos !== undefined) {
@@ -3542,6 +3559,537 @@ const Balance = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────
+  // VISTA REPORTE (ARCOTEL)
+  // ─────────────────────────────────────────────────────────────────
+  const renderReporteArcotel = () => {
+    const kpis = reporteArcotel?.kpis || {};
+    const altaVelData = reporteArcotel?.cuentas_alta_velocidad || [];
+    const factData = reporteArcotel?.facturacion_clientes || [];
+    const resPlanes = reporteArcotel?.resumen_planes || [];
+
+    const q = filtroArcotel.toLowerCase().trim();
+
+    const filteredAltaVel = altaVelData.filter(item => {
+      if (!q) return true;
+      return (
+        (item["Nombre del Usuario"] || '').toLowerCase().includes(q) ||
+        (item["Dirección"] || '').toLowerCase().includes(q) ||
+        (item["Teléfono"] || '').includes(q) ||
+        (item["Parroquia"] || '').toLowerCase().includes(q) ||
+        (item["Tipo de Cliente (Residencial, Corporativo, Cibercafé)"] || '').toLowerCase().includes(q)
+      );
+    });
+
+    const filteredFact = factData.filter(item => {
+      if (!q) return true;
+      return (
+        (item["NAME"] || '').toLowerCase().includes(q) ||
+        (item["RUC / CEDULA"] || '').includes(q) ||
+        (item["DIRECTION"] || '').toLowerCase().includes(q) ||
+        (item["CEL"] || '').includes(q) ||
+        (item["PARISH"] || '').toLowerCase().includes(q) ||
+        (item["FACTURAS"] || '').toLowerCase().includes(q) ||
+        (item["PLAN"] || '').toLowerCase().includes(q)
+      );
+    });
+
+    const filteredPlanes = resPlanes.filter(item => {
+      if (!q) return true;
+      return (item["PLAN"] || '').toLowerCase().includes(q);
+    });
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* BARRA DE NAVEGACIÓN DE MES */}
+        <MonthNavBar value={mes} onChange={val => { setMes(val); fetchReporteArcotel(val); }} />
+
+        {/* HEADER DE REPORTE ARCOTEL */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 16,
+          background: 'linear-gradient(135deg, rgba(30,27,75,0.6) 0%, rgba(15,23,42,0.8) 100%)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 20,
+          padding: '20px 24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.6rem' }}>📑</span>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#c7d2fe' }}>
+                  Reporte Oficial ARCOTEL — Vista Previa
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)' }}>
+                  Período: <strong style={{ color: '#38bdf8' }}>{kpis.mes_label || mes}</strong> • Verifica los datos estructurados en tiempo real antes de descargar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => fetchReporteArcotel(mes)}
+              disabled={loadingArcotel}
+              className="btn btn-secondary"
+              style={{ padding: '9px 18px', borderRadius: 12, fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              🔄 {loadingArcotel ? 'Cargando...' : 'Refrescar'}
+            </button>
+            <button
+              onClick={handleExportar}
+              disabled={loading}
+              title="Descarga directa del archivo Excel oficial ARCOTEL"
+              style={{
+                padding: '9px 20px',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.86rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 4px 18px rgba(16,185,129,0.35)',
+                transition: 'transform 0.15s'
+              }}
+            >
+              📥 Exportar Arcotel (Excel)
+            </button>
+          </div>
+        </div>
+
+        {/* METRICAS KPI */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <Card
+            compact
+            title="Cuentas Alta Velocidad"
+            value={kpis.total_cuentas ?? 0}
+            icon="🚀"
+            color="#818cf8"
+            sub="Líneas dedicadas reportadas"
+          />
+          <Card
+            compact
+            title="Clientes con Factura"
+            value={kpis.total_facturacion ?? 0}
+            icon="📋"
+            color="#0ea5e9"
+            sub="Incluye cortesías con factura"
+          />
+          <Card
+            compact
+            title="Parroquias Cubiertas"
+            value={kpis.cant_parroquias ?? 0}
+            icon="📍"
+            color="#10b981"
+            sub={kpis.parroquias ? kpis.parroquias.slice(0, 3).join(', ') + (kpis.parroquias.length > 3 ? '...' : '') : 'Azuay - Cuenca'}
+          />
+          <Card
+            compact
+            title="Generación Estimada"
+            value={fmt(kpis.total_estimado ?? 0)}
+            icon="💵"
+            color="#facc15"
+            sub={`Recaudado: ${fmt(kpis.total_reunido ?? 0)}`}
+          />
+        </div>
+
+        {/* SUB-PESTAÑAS DE HOJAS */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            padding: '6px',
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 14,
+            border: '1px solid rgba(255,255,255,0.08)',
+            width: 'fit-content'
+          }}>
+            <button
+              onClick={() => setReporteArcotelSubTab('alta_velocidad')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                background: reporteArcotelSubTab === 'alta_velocidad' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
+                color: reporteArcotelSubTab === 'alta_velocidad' ? '#fff' : 'rgba(255,255,255,0.6)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <span>🚀</span> Cuentas Alta Velocidad ({altaVelData.length})
+            </button>
+            <button
+              onClick={() => setReporteArcotelSubTab('facturacion')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                background: reporteArcotelSubTab === 'facturacion' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'transparent',
+                color: reporteArcotelSubTab === 'facturacion' ? '#fff' : 'rgba(255,255,255,0.6)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <span>📋</span> Facturación Clientes ({factData.length})
+            </button>
+            <button
+              onClick={() => setReporteArcotelSubTab('resumen_planes')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                background: reporteArcotelSubTab === 'resumen_planes' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                color: reporteArcotelSubTab === 'resumen_planes' ? '#fff' : 'rgba(255,255,255,0.6)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <span>📊</span> Resumen por Plan ({resPlanes.length > 0 ? resPlanes.length - 1 : 0})
+            </button>
+          </div>
+
+          <div style={{ position: 'relative', width: 280 }}>
+            <input
+              type="text"
+              placeholder="🔍 Filtrar registros..."
+              value={filtroArcotel}
+              onChange={e => setFiltroArcotel(e.target.value)}
+              style={{ ...IS, padding: '8px 12px 8px 34px', fontSize: '0.82rem', borderRadius: 12 }}
+            />
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+            {filtroArcotel && (
+              <button
+                onClick={() => setFiltroArcotel('')}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* TABLA 1: CUENTAS ALTA VELOCIDAD */}
+        {reporteArcotelSubTab === 'alta_velocidad' && (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#c7d2fe', letterSpacing: 0.5 }}>
+                  REPORTE DE SERVICIO CUENTAS ALTA VELOCIDAD — ACCESO NO CONMUTADO (LÍNEAS DEDICADAS)
+                </span>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                  Velocidades reflejadas en Kbps simétricos (Up Link / Down Link) • Nivel de compartición 8:1 • Portador NEDETEL
+                </div>
+              </div>
+              <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                Mostrando {filteredAltaVel.length} de {altaVelData.length} cuentas
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto', maxHeight: 600 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: '#181830', borderBottom: '2px solid rgba(255,255,255,0.1)', position: 'sticky', top: 0, zIndex: 2 }}>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>MES</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Provincia</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cantón</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Parroquia</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nombre del Usuario</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Dirección</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Teléfono</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Usuarios</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Portador</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tipo Enlace</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right', color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Up Link (Kbps)</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right', color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Down Link (Kbps)</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tipo Cliente</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Compartición</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAltaVel.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                      }}
+                      className="hover-row"
+                    >
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#f59e0b' }}>{row["MES"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{row["Provincia"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{row["Cantón"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', fontWeight: 700, fontSize: '0.75rem' }}>
+                          {row["Parroquia"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: '#fff' }}>{row["Nombre del Usuario"]}</td>
+                      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.7)', maxWidth: 260, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={row["Dirección"]}>
+                        {row["Dirección"]}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace' }}>{row["Teléfono"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700 }}>{row["Número estimado de usuarios por cuenta"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '2px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {row["Empresa proveedora del canal (Portador)"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{row["Tipo de enlace: Cobre, Cable Coaxial, Fibra Óptica, Medio Inalámbrico"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#38bdf8', fontFamily: 'monospace' }}>
+                        {Number(row["Ancho de banda Up Link (Kbps)"]).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#38bdf8', fontFamily: 'monospace' }}>
+                        {Number(row["Ancho de banda Down Link (Kbps)"]).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.15)', color: '#34d399', fontSize: '0.74rem', fontWeight: 700 }}>
+                          {row["Tipo de Cliente (Residencial, Corporativo, Cibercafé)"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.15)', color: '#fbbf24', fontWeight: 800, fontSize: '0.74rem' }}>
+                          {row["Nivel de Compartición"]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredAltaVel.length === 0 && (
+                    <tr>
+                      <td colSpan={14} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                        No se encontraron cuentas de alta velocidad para este mes.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TABLA 2: FACTURACIÓN CLIENTES */}
+        {reporteArcotelSubTab === 'facturacion' && (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: 'rgba(14,165,233,0.08)', borderBottom: '1px solid rgba(14,165,233,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#7dd3fc', letterSpacing: 0.5 }}>
+                  FACTURACIÓN DE CLIENTES — HOJA PRINCIPAL ARCOTEL
+                </span>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                  La casilla PLAN muestra la velocidad asignada (ej. 700MB) • Incluye cortesías totales autorizadas con factura
+                </div>
+              </div>
+              <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                Mostrando {filteredFact.length} de {factData.length} registros
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto', maxHeight: 600 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: '#0e172a', borderBottom: '2px solid rgba(255,255,255,0.1)', position: 'sticky', top: 0, zIndex: 2 }}>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>ID</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>RUC / CÉDULA</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>CLIENTE</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>DIRECCIÓN</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>CELULAR</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>PARROQUIA</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#34d399', fontWeight: 800, fontSize: '0.72rem' }}>PLAN (MEGAS)</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>FACT MES</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>ESTADO</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>CONFIRMAR</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center', color: '#7dd3fc', fontWeight: 800, fontSize: '0.72rem' }}>FACTURAS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFact.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                      }}
+                      className="hover-row"
+                    >
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#a5b4fc', fontWeight: 700 }}>{row["ID"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace' }}>{row["RUC / CEDULA"]}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: '#fff' }}>
+                        {row["NAME"]}
+                        {row.es_cortesia && (
+                          <span style={{ marginLeft: 8, padding: '2px 6px', borderRadius: 4, background: 'rgba(236,72,153,0.15)', color: '#ec4899', fontSize: '0.7rem', fontWeight: 800 }}>
+                            CORTESÍA
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.7)', maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={row["DIRECTION"]}>
+                        {row["DIRECTION"]}
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace' }}>{row["CEL"]}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', fontSize: '0.75rem' }}>
+                          {row["PARISH"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 8, background: 'rgba(16,185,129,0.15)', color: '#34d399', fontWeight: 900, fontSize: '0.8rem' }}>
+                          {row["PLAN"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#38bdf8' }}>SI</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          background: row["ESTADO"] === 'Activo' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
+                          color: row["ESTADO"] === 'Activo' ? '#4ade80' : '#f87171',
+                          fontWeight: 700,
+                          fontSize: '0.72rem'
+                        }}>
+                          {row["ESTADO"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          background: row["CONFIRMAR"] === 'SÍ' ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)',
+                          color: row["CONFIRMAR"] === 'SÍ' ? '#4ade80' : '#f87171',
+                          fontWeight: 800,
+                          fontSize: '0.75rem'
+                        }}>
+                          {row["CONFIRMAR"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace' }}>
+                        {row["FACTURAS"]}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredFact.length === 0 && (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                        No se encontraron clientes facturados para este mes.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TABLA 3: RESUMEN POR PLAN */}
+        {reporteArcotelSubTab === 'resumen_planes' && (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: 'rgba(16,185,129,0.08)', borderBottom: '1px solid rgba(16,185,129,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#6ee7b7', letterSpacing: 0.5 }}>
+                  RESUMEN DE RECAUDACIÓN Y CLIENTES POR PLAN
+                </span>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                  Consolidado de clientes activos por plan, tarifas estimadas y recaudación por método de pago
+                </div>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: '#064e3b', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>PLAN</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>MEGAS</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>CLIENTES</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>PRECIO</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>GEN. ESTIMADA</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>EFECTIVO</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>PICHINCHA</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>JEP</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>TOTAL REUNIDO</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>DIFERENCIA</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>% CUMP.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPlanes.map((row, idx) => {
+                    const isTotal = String(row["PLAN"]).toUpperCase().includes("TOTAL");
+                    return (
+                      <tr
+                        key={idx}
+                        style={{
+                          borderBottom: isTotal ? '2px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.04)',
+                          background: isTotal ? 'rgba(16,185,129,0.12)' : (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'),
+                          fontWeight: isTotal ? 900 : 500
+                        }}
+                        className={isTotal ? '' : 'hover-row'}
+                      >
+                        <td style={{ padding: '12px 14px', color: isTotal ? '#10b981' : '#fff' }}>{row["PLAN"]}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#38bdf8' }}>{row["MEGAS"]}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700 }}>{row["CANTIDAD CLIENTES"]}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>{row["PRECIO PLAN"] ? fmt(row["PRECIO PLAN"]) : '—'}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>{fmt(row["GENERACION ESTIMADA"])}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#4ade80' }}>{fmt(row["EFECTIVO"])}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>{fmt(row["PICHINCHA"])}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#fb923c' }}>{fmt(row["JEP"])}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#fff' }}>{fmt(row["TOTAL REUNIDO"])}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: Number(row["DIFERENCIA"]) > 0 ? '#f87171' : '#4ade80' }}>
+                          {fmt(row["DIFERENCIA"])}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: Number(row["% CUMPLIMIENTO"]) >= 80 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
+                            color: Number(row["% CUMPLIMIENTO"]) >= 80 ? '#34d399' : '#fbbf24',
+                            fontWeight: 800,
+                            fontSize: '0.75rem'
+                          }}>
+                            {row["% CUMPLIMIENTO"]}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredPlanes.length === 0 && (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                        No hay datos de planes para mostrar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // RENDER PRINCIPAL
   // ─────────────────────────────────────────────────────────────────
   return (
@@ -3590,6 +4138,7 @@ const Balance = () => {
         <Tab id="egresos" label="Libro de Egresos" icon="📖" />
         <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
         <Tab id="proyectos" label="Proyectos & Obras" icon="🏗️" />
+        <Tab id="reporte" label="Reporte" icon="📑" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -3608,6 +4157,7 @@ const Balance = () => {
               {vista === 'egresos' && renderEgresos()}
               {vista === 'gastos-fijos' && renderGastosFijos()}
               {vista === 'proyectos' && renderProyectos()}
+              {vista === 'reporte' && renderReporteArcotel()}
             </>
           )}
         </motion.div>
