@@ -3598,6 +3598,19 @@ const Balance = () => {
       return (item["PLAN"] || '').toLowerCase().includes(q);
     });
 
+    if (loadingArcotel && !reporteArcotel) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <MonthNavBar value={mes} onChange={val => { setMes(val); fetchReporteArcotel(val); }} />
+          <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>⏳</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#c7d2fe' }}>Cargando vista previa del reporte ARCOTEL...</div>
+            <div style={{ fontSize: '0.85rem', marginTop: 6, color: 'rgba(255,255,255,0.5)' }}>Extrayendo y procesando cuentas de alta velocidad, facturación y resumen por planes</div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* BARRA DE NAVEGACIÓN DE MES */}
