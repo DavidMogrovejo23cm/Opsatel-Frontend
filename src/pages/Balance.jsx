@@ -1343,10 +1343,35 @@ function HistorialClientes({ mesTarget }) {
     c.estado && c.estado.toLowerCase() !== 'activo'
   );
 
-  const totalTarifaRecientes = filteredRecientes.reduce((acc, c) => acc + parseFloat(c.tarifa_mensual || 0), 0);
+  const getProporcional = (c) => {
+    if (c.proporcional !== undefined && c.proporcional !== null) {
+      return parseFloat(c.proporcional);
+    }
+    const tarifa = parseFloat(c.tarifa_mensual || 0);
+    if (!c.instalation_date) return tarifa;
+    try {
+      const datePart = String(c.instalation_date).trim().substring(0, 10);
+      const parts = datePart.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        if (y && m && d) {
+          const totalDays = new Date(y, m, 0).getDate();
+          const activeDays = (totalDays - d) + 1;
+          if (totalDays > 0 && activeDays >= 0 && activeDays <= totalDays) {
+            return Math.round(((tarifa / totalDays) * activeDays) * 100) / 100;
+          }
+        }
+      }
+    } catch (e) { }
+    return tarifa;
+  };
+
+  const totalTarifaRecientes = filteredRecientes.reduce((acc, c) => acc + getProporcional(c), 0);
   const pagosPorMetodo = filteredRecientes.reduce((acc, c) => {
     const metodo = (c.bank || 'Efectivo').trim() || 'Efectivo';
-    acc[metodo] = (acc[metodo] || 0) + parseFloat(c.tarifa_mensual || 0);
+    acc[metodo] = (acc[metodo] || 0) + getProporcional(c);
     return acc;
   }, {});
 
@@ -1394,7 +1419,7 @@ function HistorialClientes({ mesTarget }) {
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Contratado</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Fecha Activación</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Método Pago</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa/Mes</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Proporcional</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Deuda Actual</th>
                   </tr>
                 </thead>
@@ -1409,7 +1434,9 @@ function HistorialClientes({ mesTarget }) {
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.instalation_date || '—'}</td>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{c.bank || 'Efectivo'}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(c.tarifa_mensual)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet, fontWeight: 700 }} title={`Tarifa mensual completa: ${fmt(c.tarifa_mensual)}`}>
+                        {fmt(getProporcional(c))}
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: parseFloat(c.saldo_total || 0) > 0 ? P.egreso : P.ingreso }}>
                         {fmt(c.saldo_total)}
                       </td>
@@ -1417,7 +1444,7 @@ function HistorialClientes({ mesTarget }) {
                   ))}
                   {filteredRecientes.length > 0 && (
                     <tr style={{ background: 'rgba(255,255,255,0.03)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>Total Clientes Nuevos del Mes:</td>
+                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>Total Proporcional Nuevos del Mes:</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '0.9rem' }}>
                         {fmt(totalTarifaRecientes)}
                       </td>
