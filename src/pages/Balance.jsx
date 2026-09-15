@@ -4049,39 +4049,63 @@ const Balance = () => {
                 <tbody>
                   {filteredPlanes.map((row, idx) => {
                     const isTotal = String(row["PLAN"]).toUpperCase().includes("TOTAL");
+                    const isSinIva = String(row["PLAN"]).toUpperCase().includes("SIN IVA");
+                    const isSpecial = isTotal || isSinIva;
                     return (
                       <tr
                         key={idx}
                         style={{
-                          borderBottom: isTotal ? '2px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.04)',
-                          background: isTotal ? 'rgba(16,185,129,0.12)' : (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'),
-                          fontWeight: isTotal ? 900 : 500
+                          borderBottom: isSinIva
+                            ? '2px solid rgba(56,189,248,0.4)'
+                            : (isTotal ? '2px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.04)'),
+                          background: isSinIva
+                            ? 'rgba(56,189,248,0.08)'
+                            : (isTotal ? 'rgba(16,185,129,0.12)' : (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)')),
+                          fontWeight: isSpecial ? 900 : 500
                         }}
-                        className={isTotal ? '' : 'hover-row'}
+                        className={isSpecial ? '' : 'hover-row'}
                       >
-                        <td style={{ padding: '12px 14px', color: isTotal ? '#10b981' : '#fff' }}>{row["PLAN"]}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#38bdf8' }}>{row["MEGAS"]}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700 }}>{row["CANTIDAD CLIENTES"]}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>{row["PRECIO PLAN"] ? fmt(row["PRECIO PLAN"]) : '—'}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>{fmt(row["GENERACION ESTIMADA"])}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#4ade80' }}>{fmt(row["EFECTIVO"])}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>{fmt(row["PICHINCHA"])}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#fb923c' }}>{fmt(row["JEP"])}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#fff' }}>{fmt(row["TOTAL REUNIDO"])}</td>
+                        <td style={{ padding: '12px 14px', color: isSinIva ? '#38bdf8' : (isTotal ? '#10b981' : '#fff') }}>
+                          {row["PLAN"]}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#38bdf8' }}>{row["MEGAS"] || '—'}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700 }}>
+                          {row["CANTIDAD CLIENTES"] !== "" && row["CANTIDAD CLIENTES"] !== undefined ? row["CANTIDAD CLIENTES"] : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          {row["PRECIO PLAN"] ? fmt(row["PRECIO PLAN"]) : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: isSinIva ? '#38bdf8' : '#facc15' }}>
+                          {row["GENERACION ESTIMADA"] !== "" && row["GENERACION ESTIMADA"] !== undefined ? fmt(row["GENERACION ESTIMADA"]) : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#4ade80' }}>
+                          {row["EFECTIVO"] !== "" && row["EFECTIVO"] !== undefined ? fmt(row["EFECTIVO"]) : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>
+                          {row["PICHINCHA"] !== "" && row["PICHINCHA"] !== undefined ? fmt(row["PICHINCHA"]) : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#fb923c' }}>
+                          {row["JEP"] !== "" && row["JEP"] !== undefined ? fmt(row["JEP"]) : '—'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: isSinIva ? '#38bdf8' : '#fff' }}>
+                          {row["TOTAL REUNIDO"] !== "" && row["TOTAL REUNIDO"] !== undefined ? fmt(row["TOTAL REUNIDO"]) : '—'}
+                        </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right', color: Number(row["DIFERENCIA"]) > 0 ? '#f87171' : '#4ade80' }}>
-                          {fmt(row["DIFERENCIA"])}
+                          {row["DIFERENCIA"] !== "" && row["DIFERENCIA"] !== undefined ? fmt(row["DIFERENCIA"]) : '—'}
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            background: Number(row["% CUMPLIMIENTO"]) >= 80 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
-                            color: Number(row["% CUMPLIMIENTO"]) >= 80 ? '#34d399' : '#fbbf24',
-                            fontWeight: 800,
-                            fontSize: '0.75rem'
-                          }}>
-                            {row["% CUMPLIMIENTO"]}%
-                          </span>
+                          {row["% CUMPLIMIENTO"] !== "" && row["% CUMPLIMIENTO"] !== undefined ? (
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              background: Number(row["% CUMPLIMIENTO"]) >= 80 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
+                              color: Number(row["% CUMPLIMIENTO"]) >= 80 ? '#34d399' : '#fbbf24',
+                              fontWeight: 800,
+                              fontSize: '0.75rem'
+                            }}>
+                              {row["% CUMPLIMIENTO"]}%
+                            </span>
+                          ) : '—'}
                         </td>
                       </tr>
                     );
