@@ -1404,6 +1404,20 @@ function HistorialClientes({ mesTarget }) {
             <div style={{ marginBottom: 16 }}>
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>📋</span> Clientes Recién Activados (Nuevos este mes)
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                  background: 'rgba(14, 165, 233, 0.15)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(14, 165, 233, 0.3)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}>
+                  {filteredRecientes.length} {filteredRecientes.length === 1 ? 'cliente' : 'clientes'}
+                </span>
               </h4>
               <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                 Clientes activados recientemente durante el mes de facturación seleccionado.
@@ -1444,7 +1458,9 @@ function HistorialClientes({ mesTarget }) {
                   ))}
                   {filteredRecientes.length > 0 && (
                     <tr style={{ background: 'rgba(255,255,255,0.03)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>Total Proporcional Nuevos del Mes:</td>
+                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>
+                        Total Proporcional Nuevos del Mes ({filteredRecientes.length} {filteredRecientes.length === 1 ? 'cliente' : 'clientes'}):
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '0.9rem' }}>
                         {fmt(totalTarifaRecientes)}
                       </td>
@@ -1483,6 +1499,20 @@ function HistorialClientes({ mesTarget }) {
               <div>
                 <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span>💰</span> Cartera General (Clientes Activos)
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    {filteredActivos.length} {filteredActivos.length === 1 ? 'cliente' : 'clientes'}
+                  </span>
                 </h4>
                 <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                   Historial de deudas consolidadas y control de cartera de clientes activos.
@@ -2479,27 +2509,136 @@ const Balance = () => {
         {proyData.lista.length > 0 && (
           <>
             <SectionTitle icon="🏗️" text="Proyectos Activos" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {proyData.lista.map(p => {
                 const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
                 const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
                 return (
-                  <div key={p.id} style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 14, padding: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontWeight: 700 }}>{p.nombre}</div>
+                  <div key={p.id} style={{
+                    background: 'rgba(245,158,11,0.05)',
+                    border: '1px solid rgba(245,158,11,0.18)',
+                    borderRadius: 16,
+                    padding: '18px 20px',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>🏗️</span>
+                        <span>{p.nombre}</span>
+                      </div>
                       <Badge text={p.estado} color={ec} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 8 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Invertido:</span>
-                      <span style={{ color: P.proyecto, fontWeight: 700 }}>{fmt(p.monto_invertido)} / {fmt(p.monto_total)}</span>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Proyectado
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+                          {fmt(p.monto_total)}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'rgba(16,185,129,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Ganancia
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.ingreso }}>
+                          {fmt(p.ganancia || 0)}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Invertido
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.proyecto }}>
+                          {fmt(p.monto_invertido)}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+
+                    <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
                     </div>
-                    <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>{pct.toFixed(1)}%</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 5 }}>
+                      <span>Avance de inversión: <strong style={{ color: P.proyecto }}>{pct.toFixed(1)}%</strong></span>
+                      {p.banco_ganancia && (
+                        <span>Banco Ganancia: <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{p.banco_ganancia}</strong></span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
+
+              {/* Totales consolidados de todos los proyectos */}
+              {(() => {
+                const totalProyTotal = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.monto_total) || 0), 0);
+                const totalProyGanancia = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.ganancia) || 0), 0);
+                const totalProyInvertido = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.monto_invertido) || 0), 0);
+                const totalProyPct = totalProyTotal > 0 ? Math.min(100, (totalProyInvertido / totalProyTotal) * 100) : 0;
+
+                return (
+                  <div style={{
+                    background: 'linear-gradient(145deg, rgba(245,158,11,0.08), rgba(99,102,241,0.05))',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    borderRadius: 16,
+                    padding: '18px 20px',
+                    marginTop: 4
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '1.1rem' }}>Σ</span>
+                        <span>Total Consolidado de Proyectos ({proyData.lista.length})</span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '3px 10px',
+                        borderRadius: 20,
+                        background: 'rgba(245,158,11,0.18)',
+                        color: P.proyecto,
+                        border: '1px solid rgba(245,158,11,0.35)'
+                      }}>
+                        Avance Global: {totalProyPct.toFixed(1)}%
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                      <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Total Proyectado
+                        </div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f8fafc' }}>
+                          {fmt(totalProyTotal)}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'rgba(16,185,129,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Total Ganancia
+                        </div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.ingreso }}>
+                          {fmt(totalProyGanancia)}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ color: 'rgba(245,158,11,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                          Total Invertido
+                        </div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.proyecto }}>
+                          {fmt(totalProyInvertido)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ width: `${totalProyPct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </>
         )}
@@ -3168,6 +3307,10 @@ const Balance = () => {
                 <span style={{ color: 'var(--text-muted)' }}>Presupuesto:</span>
                 <span style={{ fontWeight: 700 }}>{fmt(p.monto_total)}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Ganancia:</span>
+                <span style={{ color: P.ingreso, fontWeight: 700 }}>{fmt(p.ganancia || 0)}</span>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 10 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Invertido:</span>
                 <span style={{ color: P.proyecto, fontWeight: 700 }}>{fmt(p.monto_invertido)}</span>
@@ -3625,6 +3768,60 @@ const Balance = () => {
       return (item["PLAN"] || '').toLowerCase().includes(q);
     });
 
+    const monthParts = mes.split('-');
+    const mNum = monthParts.length === 2 ? monthParts[1] : '09';
+    const mYear = monthParts.length === 2 ? monthParts[0] : '2026';
+    const fechaVigenciaAuto = `${mNum}/01/${mYear}`;
+    const mesNombreAuto = kpis.mes_nombre_es ? kpis.mes_nombre_es.toUpperCase() : 'SEPTIEMBRE';
+
+    const planesTarifasConfig = [
+      { nombre: "PERSONAL 100M 8:1", match: ["100", "ESTANDAR", "PERSONAL"], precio: 17.25, down: 100, up: 100, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
+      { nombre: "CONEXION ESTABLE 600M 8:1", match: ["600", "FAMILIAR"], precio: 20.54, down: 250, up: 250, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
+      { nombre: "FULL CONECTADO 650M 8:1", match: ["650", "+", "CONECTADO"], precio: 23.00, down: 300, up: 300, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
+      { nombre: "LAG CERO 700M 8:1", match: ["700", "LAG CERO"], precio: 25.00, down: 400, up: 400, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
+      { nombre: "GAMER PRO 800M 8:1", match: ["800", "GAMER"], precio: 32.20, down: 800, up: 800, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
+      { nombre: "CORP ESTABLE 850M 4:1", match: ["850", "CORP ESTABLE"], precio: 55.20, down: 850, up: 850, comp: "4:1", tipo: "CORPORATIVO", tec: "FTTH" },
+      { nombre: "CORP FULL 900M 4:1", match: ["900", "CORP FULL"], precio: 89.60, down: 900, up: 900, comp: "4:1", tipo: "CORPORATIVO", tec: "FTTH" },
+    ];
+
+    const backendTarifas = reporteArcotel?.tarifas_planes;
+    const tarifasData = (backendTarifas && backendTarifas.length > 0) ? backendTarifas : planesTarifasConfig.map(pt => {
+      let cant = 0;
+      for (const r of resPlanes) {
+        const pNom = String(r["PLAN"] || "").toUpperCase();
+        if (pNom.includes("TOTAL") || pNom.includes("SIN IVA")) continue;
+        if (pt.nombre.startsWith("CONEXION ESTABLE") && pNom.includes("+")) continue;
+        if (pt.match.some(m => pNom.includes(m))) {
+          cant = parseInt(r["CANTIDAD CLIENTES"] || 0, 10) || 0;
+          break;
+        }
+      }
+      return {
+        "MES": mesNombreAuto,
+        "CIUDAD": "CUENCA",
+        "NOMBRE COMERCIAL DEL PLAN TARIFARIO": pt.nombre,
+        "FECHA DE VIGENCIA DEL PLAN TARIFARIO": fechaVigenciaAuto,
+        "CANTIDAD ABONADOS/CLIENTES": cant,
+        "TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)": pt.tipo,
+        "TARIFA MENSUAL [USD] (incluido impuestos)": pt.precio,
+        "DOWNLINK [Mbps]": pt.down,
+        "UPLINK [Mbps]": pt.up,
+        "NIVEL DE COMPARTICIÓN [X:1]": pt.comp,
+        "TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)": pt.tec,
+        "OBSERVACIONES (Opcional)": ""
+      };
+    });
+
+    const filteredTarifas = tarifasData.filter(item => {
+      if (!q) return true;
+      return (
+        (item["NOMBRE COMERCIAL DEL PLAN TARIFARIO"] || '').toLowerCase().includes(q) ||
+        (item["TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)"] || '').toLowerCase().includes(q) ||
+        (item["TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)"] || '').toLowerCase().includes(q) ||
+        String(item["TARIFA MENSUAL [USD] (incluido impuestos)"] || '').includes(q)
+      );
+    });
+
     if (loadingArcotel && !reporteArcotel) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -3810,6 +4007,26 @@ const Balance = () => {
               }}
             >
               <span>📊</span> Resumen por Plan ({resPlanes.length > 0 ? resPlanes.length - 1 : 0})
+            </button>
+            <button
+              onClick={() => setReporteArcotelSubTab('tarifas')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                background: reporteArcotelSubTab === 'tarifas' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                color: reporteArcotelSubTab === 'tarifas' ? '#fff' : 'rgba(255,255,255,0.6)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <span>🏷️</span> Tarifas ({tarifasData.length})
             </button>
           </div>
 
@@ -4065,9 +4282,6 @@ const Balance = () => {
                     <th style={{ padding: '12px 14px', textAlign: 'center', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>CLIENTES</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>PRECIO</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>GEN. ESTIMADA</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>EFECTIVO</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>PICHINCHA</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>JEP</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>TOTAL REUNIDO</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>DIFERENCIA</th>
                     <th style={{ padding: '12px 14px', textAlign: 'center', color: '#a7f3d0', fontWeight: 800, fontSize: '0.72rem' }}>% CUMP.</th>
@@ -4105,15 +4319,6 @@ const Balance = () => {
                         <td style={{ padding: '12px 14px', textAlign: 'right', color: isSinIva ? '#38bdf8' : '#facc15' }}>
                           {row["GENERACION ESTIMADA"] !== "" && row["GENERACION ESTIMADA"] !== undefined ? fmt(row["GENERACION ESTIMADA"]) : '—'}
                         </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#4ade80' }}>
-                          {row["EFECTIVO"] !== "" && row["EFECTIVO"] !== undefined ? fmt(row["EFECTIVO"]) : '—'}
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#facc15' }}>
-                          {row["PICHINCHA"] !== "" && row["PICHINCHA"] !== undefined ? fmt(row["PICHINCHA"]) : '—'}
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#fb923c' }}>
-                          {row["JEP"] !== "" && row["JEP"] !== undefined ? fmt(row["JEP"]) : '—'}
-                        </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: isSinIva ? '#38bdf8' : '#fff' }}>
                           {row["TOTAL REUNIDO"] !== "" && row["TOTAL REUNIDO"] !== undefined ? fmt(row["TOTAL REUNIDO"]) : '—'}
                         </td>
@@ -4139,8 +4344,123 @@ const Balance = () => {
                   })}
                   {filteredPlanes.length === 0 && (
                     <tr>
-                      <td colSpan={11} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
                         No hay datos de planes para mostrar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TABLA 4: TARIFAS DE INTERNET FIJO DEDICADO */}
+        {reporteArcotelSubTab === 'tarifas' && (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: 'rgba(245,158,11,0.08)', borderBottom: '1px solid rgba(245,158,11,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fcd34d', letterSpacing: 0.5 }}>
+                  TARIFAS DE INTERNET FIJO DEDICADO
+                </span>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                  Estructura tarifaria y características técnicas oficiales de planes para reporte ARCOTEL
+                </div>
+              </div>
+              <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 8, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245,158,11,0.3)' }}>
+                {filteredTarifas.length} Planes Registrados
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  {/* FILA 1 DE ENCABEZADOS AGRUPADOS */}
+                  <tr style={{ background: '#78350f', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                    <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>MES</th>
+                    <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>CIUDAD</th>
+                    <th colSpan={2} style={{ padding: '8px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>PLAN TARIFARIO</th>
+                    <th colSpan={3} style={{ padding: '8px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>CUENTAS</th>
+                    <th colSpan={4} style={{ padding: '8px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>CARACTERISTICAS TECNICAS</th>
+                    <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', color: '#fde68a', fontWeight: 800, fontSize: '0.72rem' }}>OBSERVACIONES (Opcional)</th>
+                  </tr>
+                  {/* FILA 2 DE SUBCATEGORÍAS */}
+                  <tr style={{ background: '#92400e', borderBottom: '2px solid rgba(255,255,255,0.2)' }}>
+                    <th style={{ padding: '9px 12px', textAlign: 'left', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>NOMBRE COMERCIAL DEL PLAN TARIFARIO</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>FECHA DE VIGENCIA DEL PLAN TARIFARIO</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>CANTIDAD ABONADOS/CLIENTES</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'right', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>TARIFA MENSUAL [USD] (incluido impuestos)</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>DOWNLINK [Mbps]</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>UPLINK [Mbps]</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem' }}>NIVEL DE COMPARTICIÓN [X:1]</th>
+                    <th style={{ padding: '9px 12px', textAlign: 'center', color: '#fef3c7', fontWeight: 700, fontSize: '0.68rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTarifas.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                      }}
+                      className="hover-row"
+                    >
+                      <td style={{ padding: '11px 12px', textAlign: 'center', color: '#fbbf24', fontWeight: 700 }}>
+                        {row["MES"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', color: 'rgba(255,255,255,0.85)' }}>
+                        {row["CIUDAD"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', fontWeight: 700, color: '#fff' }}>
+                        {row["NOMBRE COMERCIAL DEL PLAN TARIFARIO"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        {row["FECHA DE VIGENCIA DEL PLAN TARIFARIO"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', fontWeight: 800, color: Number(row["CANTIDAD ABONADOS/CLIENTES"]) > 0 ? '#34d399' : 'var(--text-muted)' }}>
+                        {row["CANTIDAD ABONADOS/CLIENTES"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          background: row["TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)"] === 'CORPORATIVO' ? 'rgba(168,85,247,0.15)' : 'rgba(14,165,233,0.15)',
+                          color: row["TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)"] === 'CORPORATIVO' ? '#c084fc' : '#38bdf8',
+                          border: row["TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)"] === 'CORPORATIVO' ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(14,165,233,0.3)'
+                        }}>
+                          {row["TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 800, color: '#facc15' }}>
+                        {fmt(row["TARIFA MENSUAL [USD] (incluido impuestos)"])}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', fontWeight: 700, color: '#38bdf8' }}>
+                        {row["DOWNLINK [Mbps]"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', fontWeight: 700, color: '#38bdf8' }}>
+                        {row["UPLINK [Mbps]"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
+                        {row["NIVEL DE COMPARTICIÓN [X:1]"]}
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center' }}>
+                        <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.15)', color: '#34d399', fontWeight: 700, fontSize: '0.72rem' }}>
+                          {row["TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)"]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '11px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        {row["OBSERVACIONES (Opcional)"] || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredTarifas.length === 0 && (
+                    <tr>
+                      <td colSpan={12} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                        No hay planes tarifarios para mostrar.
                       </td>
                     </tr>
                   )}
