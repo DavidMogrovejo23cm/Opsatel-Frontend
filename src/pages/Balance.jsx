@@ -3774,43 +3774,77 @@ const Balance = () => {
     const fechaVigenciaAuto = `${mNum}/01/${mYear}`;
     const mesNombreAuto = kpis.mes_nombre_es ? kpis.mes_nombre_es.toUpperCase() : 'SEPTIEMBRE';
 
-    const planesTarifasConfig = [
-      { nombre: "PERSONAL 100M 8:1", match: ["100", "ESTANDAR", "PERSONAL"], precio: 17.25, down: 100, up: 100, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
-      { nombre: "CONEXION ESTABLE 600M 8:1", match: ["600", "FAMILIAR"], precio: 20.54, down: 250, up: 250, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
-      { nombre: "FULL CONECTADO 650M 8:1", match: ["650", "+", "CONECTADO"], precio: 23.00, down: 300, up: 300, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
-      { nombre: "LAG CERO 700M 8:1", match: ["700", "LAG CERO"], precio: 25.00, down: 400, up: 400, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
-      { nombre: "GAMER PRO 800M 8:1", match: ["800", "GAMER"], precio: 32.20, down: 800, up: 800, comp: "8:1", tipo: "RESIDENCIAL", tec: "FTTH" },
-      { nombre: "CORP ESTABLE 850M 4:1", match: ["850", "CORP ESTABLE"], precio: 55.20, down: 850, up: 850, comp: "4:1", tipo: "CORPORATIVO", tec: "FTTH" },
-      { nombre: "CORP FULL 900M 4:1", match: ["900", "CORP FULL"], precio: 89.60, down: 900, up: 900, comp: "4:1", tipo: "CORPORATIVO", tec: "FTTH" },
-    ];
-
     const backendTarifas = reporteArcotel?.tarifas_planes;
-    const tarifasData = (backendTarifas && backendTarifas.length > 0) ? backendTarifas : planesTarifasConfig.map(pt => {
-      let cant = 0;
-      for (const r of resPlanes) {
+
+    const mapComercialTarifas = {
+      "ESTANDAR": { nombre: "PERSONAL 100M 8:1", down: 100, up: 100 },
+      "100MB": { nombre: "PERSONAL 100M 8:1", down: 100, up: 100 },
+      "FAMILIAR": { nombre: "CONEXION ESTABLE 600M 8:1", down: 250, up: 250 },
+      "600MB": { nombre: "CONEXION ESTABLE 600M 8:1", down: 250, up: 250 },
+      "FAMILIAR +": { nombre: "FULL CONECTADO 650M 8:1", down: 300, up: 300 },
+      "FAMILIAR+": { nombre: "FULL CONECTADO 650M 8:1", down: 300, up: 300 },
+      "650MB": { nombre: "FULL CONECTADO 650M 8:1", down: 300, up: 300 },
+      "LAG CERO": { nombre: "LAG CERO 700M 8:1", down: 400, up: 400 },
+      "700MB": { nombre: "LAG CERO 700M 8:1", down: 400, up: 400 },
+      "GAMER PRO": { nombre: "GAMER PRO 800M 8:1", down: 800, up: 800 },
+      "800MB": { nombre: "GAMER PRO 800M 8:1", down: 800, up: 800 },
+    };
+
+    let fallbackTarifas = [];
+    if (resPlanes && resPlanes.length > 0) {
+      const validPlanes = resPlanes.filter(r => {
         const pNom = String(r["PLAN"] || "").toUpperCase();
-        if (pNom.includes("TOTAL") || pNom.includes("SIN IVA")) continue;
-        if (pt.nombre.startsWith("CONEXION ESTABLE") && pNom.includes("+")) continue;
-        if (pt.match.some(m => pNom.includes(m))) {
-          cant = parseInt(r["CANTIDAD CLIENTES"] || 0, 10) || 0;
-          break;
-        }
+        return !pNom.includes("TOTAL") && !pNom.includes("SIN IVA");
+      });
+      validPlanes.forEach(r => {
+        const pNom = String(r["PLAN"] || "").trim().toUpperCase();
+        const info = mapComercialTarifas[pNom];
+        const megasNum = parseInt(String(r["MEGAS"] || "").replace(/\D/g, ""), 10) || 100;
+        const nombreCom = info ? info.nombre : `${pNom} ${megasNum}M 8:1`;
+        const downV = info ? info.down : megasNum;
+        const upV = info ? info.up : megasNum;
+        const isCorp = nombreCom.includes("CORP") || nombreCom.includes("EMPRES");
+        fallbackTarifas.push({
+          "MES": mesNombreAuto,
+          "CIUDAD": "CUENCA",
+          "NOMBRE COMERCIAL DEL PLAN TARIFARIO": nombreCom,
+          "FECHA DE VIGENCIA DEL PLAN TARIFARIO": fechaVigenciaAuto,
+          "CANTIDAD ABONADOS/CLIENTES": parseInt(r["CANTIDAD CLIENTES"] || 0, 10) || 0,
+          "TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)": isCorp ? "CORPORATIVO" : "RESIDENCIAL",
+          "TARIFA MENSUAL [USD] (incluido impuestos)": parseFloat(r["PRECIO PLAN"] || 0),
+          "DOWNLINK [Mbps]": downV,
+          "UPLINK [Mbps]": upV,
+          "NIVEL DE COMPARTICIÓN [X:1]": isCorp ? "4:1" : "8:1",
+          "TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)": "FTTH",
+          "OBSERVACIONES (Opcional)": ""
+        });
+      });
+    }
+
+    const corpOficiales = [
+      { nombre: "CORP ESTABLE 850M 4:1", precio: 55.20, down: 850, up: 850, comp: "4:1", tipo: "CORPORATIVO" },
+      { nombre: "CORP FULL 900M 4:1", precio: 89.60, down: 900, up: 900, comp: "4:1", tipo: "CORPORATIVO" }
+    ];
+    corpOficiales.forEach(cp => {
+      if (!fallbackTarifas.some(t => t["NOMBRE COMERCIAL DEL PLAN TARIFARIO"] === cp.nombre)) {
+        fallbackTarifas.push({
+          "MES": mesNombreAuto,
+          "CIUDAD": "CUENCA",
+          "NOMBRE COMERCIAL DEL PLAN TARIFARIO": cp.nombre,
+          "FECHA DE VIGENCIA DEL PLAN TARIFARIO": fechaVigenciaAuto,
+          "CANTIDAD ABONADOS/CLIENTES": 0,
+          "TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)": cp.tipo,
+          "TARIFA MENSUAL [USD] (incluido impuestos)": cp.precio,
+          "DOWNLINK [Mbps]": cp.down,
+          "UPLINK [Mbps]": cp.up,
+          "NIVEL DE COMPARTICIÓN [X:1]": cp.comp,
+          "TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)": "FTTH",
+          "OBSERVACIONES (Opcional)": ""
+        });
       }
-      return {
-        "MES": mesNombreAuto,
-        "CIUDAD": "CUENCA",
-        "NOMBRE COMERCIAL DEL PLAN TARIFARIO": pt.nombre,
-        "FECHA DE VIGENCIA DEL PLAN TARIFARIO": fechaVigenciaAuto,
-        "CANTIDAD ABONADOS/CLIENTES": cant,
-        "TIPO (RESIDENCIAL, CORPORATIVO, CIBERCAFE)": pt.tipo,
-        "TARIFA MENSUAL [USD] (incluido impuestos)": pt.precio,
-        "DOWNLINK [Mbps]": pt.down,
-        "UPLINK [Mbps]": pt.up,
-        "NIVEL DE COMPARTICIÓN [X:1]": pt.comp,
-        "TECNOLOGÍA (ADSL, SDSL, HFC, FTTH, WIMAX, WIFI, OTROS)": pt.tec,
-        "OBSERVACIONES (Opcional)": ""
-      };
     });
+
+    const tarifasData = (backendTarifas && backendTarifas.length > 0) ? backendTarifas : fallbackTarifas;
 
     const filteredTarifas = tarifasData.filter(item => {
       if (!q) return true;
@@ -3829,7 +3863,7 @@ const Balance = () => {
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>⏳</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#c7d2fe' }}>Cargando vista previa del reporte ARCOTEL...</div>
-            <div style={{ fontSize: '0.85rem', marginTop: 6, color: 'rgba(255,255,255,0.5)' }}>Extrayendo y procesando cuentas de alta velocidad, facturación y resumen por planes</div>
+            <div style={{ fontSize: '0.85rem', marginTop: 6, color: 'rgba(255,255,255,0.5)' }}>Extrayendo y procesando reporte usuarios, facturación y resumen por planes</div>
           </div>
         </div>
       );
@@ -3905,7 +3939,7 @@ const Balance = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           <Card
             compact
-            title="Cuentas Alta Velocidad"
+            title="Reporte Usuarios"
             value={kpis.total_cuentas ?? 0}
             icon="🚀"
             color="#818cf8"
@@ -3966,7 +4000,7 @@ const Balance = () => {
                 gap: 6
               }}
             >
-              <span>🚀</span> Cuentas Alta Velocidad ({altaVelData.length})
+              <span>🚀</span> Reporte Usuarios ({altaVelData.length})
             </button>
             <button
               onClick={() => setReporteArcotelSubTab('facturacion')}
@@ -4050,20 +4084,20 @@ const Balance = () => {
           </div>
         </div>
 
-        {/* TABLA 1: CUENTAS ALTA VELOCIDAD */}
+        {/* TABLA 1: REPORTE USUARIOS */}
         {reporteArcotelSubTab === 'alta_velocidad' && (
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#c7d2fe', letterSpacing: 0.5 }}>
-                  REPORTE DE SERVICIO CUENTAS ALTA VELOCIDAD — ACCESO NO CONMUTADO (LÍNEAS DEDICADAS)
+                  REPORTE USUARIOS — ACCESO NO CONMUTADO (LÍNEAS DEDICADAS)
                 </span>
                 <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
                   Velocidades reflejadas en Kbps simétricos (Up Link / Down Link) • Nivel de compartición 8:1 • Portador NEDETEL
                 </div>
               </div>
               <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                Mostrando {filteredAltaVel.length} de {altaVelData.length} cuentas
+                Mostrando {filteredAltaVel.length} de {altaVelData.length} usuarios
               </span>
             </div>
 
@@ -4138,7 +4172,7 @@ const Balance = () => {
                   {filteredAltaVel.length === 0 && (
                     <tr>
                       <td colSpan={14} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                        No se encontraron cuentas de alta velocidad para este mes.
+                        No se encontraron usuarios para este mes.
                       </td>
                     </tr>
                   )}
