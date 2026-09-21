@@ -426,20 +426,25 @@ const Admin = () => {
 
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
-  const [statusFilter, setStatusFilter] = useState('ACTIVO');
+  const [statusFilter, setStatusFilter] = useState('TODOS');
 
   const filteredClientes = safeClientes
     .filter(c => {
-      // Filtro de estado para cobros: Solo Activos por defecto, o según búsqueda
-      if (statusFilter === 'ACTIVO' && c.estado?.toUpperCase() !== 'ACTIVO') return false;
-      if (statusFilter === 'INACTIVO' && c.estado?.toUpperCase() !== 'INACTIVO') return false;
-      if (statusFilter === 'PENDIENTE' && c.estado?.toUpperCase() !== 'PENDIENTE') return false;
-      if (statusFilter === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(c.estado?.toUpperCase())) return false;
-      if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(c.estado?.toUpperCase())) return false;
+      const estadoUpper = (c.estado || '').trim().toUpperCase();
 
-      return c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // En Pagos deben aparecer todos los estados, MENOS los que estén en Pendiente
+      if (estadoUpper === 'PENDIENTE') return false;
+
+      // Filtro opcional por estado
+      if (statusFilter === 'ACTIVO' && estadoUpper !== 'ACTIVO') return false;
+      if (statusFilter === 'INACTIVO' && estadoUpper !== 'INACTIVO') return false;
+      if (statusFilter === 'SUSPENDIDO' && estadoUpper !== 'SUSPENDIDO') return false;
+      if (statusFilter === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(estadoUpper)) return false;
+      if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(estadoUpper)) return false;
+
+      return (c.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.id?.toString().includes(searchTerm) ||
-        c.ip?.toLowerCase().includes(searchTerm.toLowerCase());
+        (c.ip || '').toLowerCase().includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => a.id - b.id);
 
@@ -477,7 +482,7 @@ const Admin = () => {
             <option value="TODOS">Todos los Estados</option>
             <option value="ACTIVO">Solo Activos</option>
             <option value="INACTIVO">Solo Inactivos</option>
-            <option value="PENDIENTE">Solo Pendientes</option>
+            <option value="SUSPENDIDO">Solo Suspendidos</option>
             <option value="JURIDICO">Solo Jurídicos</option>
             <option value="PROCESO">Solo En Proceso</option>
           </select>
