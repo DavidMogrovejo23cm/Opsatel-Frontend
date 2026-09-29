@@ -92,6 +92,7 @@ export const clienteService = {
   generarReporte: () => api.post('/clientes/reportes/generar'),
   getDashboardStats: () => api.get('/clientes/dashboard-stats'),
   getPendientesCount: () => api.get('/clientes/pendientes-count'),
+  getContador: (estado = 'TODOS') => api.get('/clientes/contador', { params: { estado } }),
   actualizarConFotos: (id, formData) => api.patch(`/clientes/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
@@ -447,6 +447,31 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
   const [pagoFilter, setPagoFilter] = useState('TODOS'); // 'TODOS', 'PAGADO', 'PENDIENTE_PAGO'
   const [selectedAction, setSelectedAction] = useState('VER'); // 'VER' o 'BORRAR'
 
+  // Contador de clientes en general según el estado
+  const statusCounts = useMemo(() => {
+    const counts = {
+      TODOS: clientes.length,
+      ACTIVO: 0,
+      INACTIVO: 0,
+      PROCESO: 0,
+      JURIDICO: 0,
+      PENDIENTE: 0,
+      FINIQUITO: 0
+    };
+
+    clientes.forEach(c => {
+      const est = (c.estado || '').trim().toUpperCase();
+      if (est === 'ACTIVO') counts.ACTIVO++;
+      else if (est === 'INACTIVO') counts.INACTIVO++;
+      else if (est === 'PROCESO' || est === 'EN PROCESO') counts.PROCESO++;
+      else if (est === 'JURIDICO' || est === 'JURÍDICO') counts.JURIDICO++;
+      else if (est === 'PENDIENTE' || est === 'EN ACTIVACIÓN' || est === 'EN ACTIVACION') counts.PENDIENTE++;
+      else if (est === 'FINIQUITO') counts.FINIQUITO++;
+    });
+
+    return counts;
+  }, [clientes]);
+
   const filteredClientes = clientes
     .filter(c => {
       // Filtro por término de búsqueda
@@ -566,8 +591,41 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', maxWidth: 'none' }}>
       <div className="page-header">
         <div className="page-header-info">
-          <h1>Vista General de Clientes</h1>
-          <p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0 }}>Vista General de Clientes</h1>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              color: 'var(--text-main, #f8fafc)',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+            }}>
+              <span style={{ fontSize: '1.05rem' }}>
+                {statusFilter === 'ACTIVO' ? '🟢' : statusFilter === 'INACTIVO' ? '🔴' : statusFilter === 'PROCESO' ? '🟡' : statusFilter === 'JURIDICO' ? '⚖️' : statusFilter === 'PENDIENTE' ? '⏳' : statusFilter === 'FINIQUITO' ? '👻' : '👥'}
+              </span>
+              <span>
+                {statusFilter === 'TODOS' && <>Total Clientes: <strong style={{ color: '#ffffff', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.TODOS.toLocaleString()}</strong></>}
+                {statusFilter === 'ACTIVO' && <>Activos: <strong style={{ color: '#34d399', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.ACTIVO.toLocaleString()}</strong></>}
+                {statusFilter === 'INACTIVO' && <>Inactivos: <strong style={{ color: '#f87171', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.INACTIVO.toLocaleString()}</strong></>}
+                {statusFilter === 'PROCESO' && <>En Proceso: <strong style={{ color: '#fbbf24', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.PROCESO.toLocaleString()}</strong></>}
+                {statusFilter === 'JURIDICO' && <>Jurídico: <strong style={{ color: '#f43f5e', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.JURIDICO.toLocaleString()}</strong></>}
+                {statusFilter === 'PENDIENTE' && <>Pendientes: <strong style={{ color: '#38bdf8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.PENDIENTE.toLocaleString()}</strong></>}
+                {statusFilter === 'FINIQUITO' && <>Finiquitos: <strong style={{ color: '#94a3b8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.FINIQUITO.toLocaleString()}</strong></>}
+              </span>
+              {(searchTerm || fechaInstalacionFilter || pagoFilter !== 'TODOS') && (
+                <span style={{ fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 'normal', marginLeft: '4px' }}>
+                  (Mostrando: <strong>{filteredClientes.length.toLocaleString()}</strong>)
+                </span>
+              )}
+            </div>
+          </div>
+          <p style={{ marginTop: '6px' }}>
             💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
@@ -583,17 +641,17 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </select>
           <select
             className="input"
-            style={{ width: 'auto', minWidth: '150px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
+            style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="TODOS">Todos los Estados</option>
-            <option value="ACTIVO">Activos</option>
-            <option value="INACTIVO">Inactivos</option>
-            <option value="PROCESO">En Proceso</option>
-            <option value="JURIDICO">Jurídico</option>
-            <option value="PENDIENTE">Pendientes / En Activación</option>
-            <option value="FINIQUITO">👻 Finiquitos (Fantasmas)</option>
+            <option value="TODOS">Todos los Estados ({statusCounts.TODOS})</option>
+            <option value="ACTIVO">Activos ({statusCounts.ACTIVO})</option>
+            <option value="INACTIVO">Inactivos ({statusCounts.INACTIVO})</option>
+            <option value="PROCESO">En Proceso ({statusCounts.PROCESO})</option>
+            <option value="JURIDICO">Jurídico ({statusCounts.JURIDICO})</option>
+            <option value="PENDIENTE">Pendientes ({statusCounts.PENDIENTE})</option>
+            <option value="FINIQUITO">👻 Finiquitos ({statusCounts.FINIQUITO})</option>
           </select>
           <select
             className="input"
