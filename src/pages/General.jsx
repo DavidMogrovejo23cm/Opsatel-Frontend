@@ -456,7 +456,9 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       PROCESO: 0,
       JURIDICO: 0,
       PENDIENTE: 0,
-      FINIQUITO: 0
+      FINIQUITO: 0,
+      CORTESIA: 0,
+      TRASLADO: 0
     };
 
     clientes.forEach(c => {
@@ -467,6 +469,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       else if (est === 'JURIDICO' || est === 'JURÍDICO') counts.JURIDICO++;
       else if (est === 'PENDIENTE' || est === 'EN ACTIVACIÓN' || est === 'EN ACTIVACION') counts.PENDIENTE++;
       else if (est === 'FINIQUITO') counts.FINIQUITO++;
+      else if (est === 'CORTESIA' || est === 'CORTESÍA') counts.CORTESIA++;
+      else if (est === 'TRASLADO') counts.TRASLADO++;
     });
 
     return counts;
@@ -509,6 +513,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       if (statusFilter === 'JURIDICO' && c.estado?.toUpperCase() !== 'JURIDICO') return false;
       if (statusFilter === 'PENDIENTE' && !['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(c.estado?.toUpperCase())) return false;
       if (statusFilter === 'FINIQUITO' && c.estado?.toUpperCase() !== 'FINIQUITO') return false;
+      if (statusFilter === 'CORTESIA' && !['CORTESIA', 'CORTESÍA'].includes(c.estado?.toUpperCase())) return false;
+      if (statusFilter === 'TRASLADO' && c.estado?.toUpperCase() !== 'TRASLADO') return false;
 
       // Filtro por pago (Pagados vs Con Deuda Pendiente)
       const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
@@ -607,7 +613,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
               boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
             }}>
               <span style={{ fontSize: '1.05rem' }}>
-                {statusFilter === 'ACTIVO' ? '🟢' : statusFilter === 'INACTIVO' ? '🔴' : statusFilter === 'PROCESO' ? '🟡' : statusFilter === 'JURIDICO' ? '⚖️' : statusFilter === 'PENDIENTE' ? '⏳' : statusFilter === 'FINIQUITO' ? '👻' : '👥'}
+                {statusFilter === 'ACTIVO' ? '🟢' : statusFilter === 'INACTIVO' ? '🔴' : statusFilter === 'PROCESO' ? '🟡' : statusFilter === 'JURIDICO' ? '⚖️' : statusFilter === 'PENDIENTE' ? '⏳' : statusFilter === 'FINIQUITO' ? '👻' : statusFilter === 'CORTESIA' ? '🎁' : statusFilter === 'TRASLADO' ? '🚚' : '👥'}
               </span>
               <span>
                 {statusFilter === 'TODOS' && <>Total Clientes: <strong style={{ color: '#ffffff', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.TODOS.toLocaleString()}</strong></>}
@@ -616,6 +622,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                 {statusFilter === 'PROCESO' && <>En Proceso: <strong style={{ color: '#fbbf24', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.PROCESO.toLocaleString()}</strong></>}
                 {statusFilter === 'JURIDICO' && <>Jurídico: <strong style={{ color: '#f43f5e', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.JURIDICO.toLocaleString()}</strong></>}
                 {statusFilter === 'PENDIENTE' && <>Pendientes: <strong style={{ color: '#38bdf8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.PENDIENTE.toLocaleString()}</strong></>}
+                {statusFilter === 'CORTESIA' && <>Cortesía: <strong style={{ color: '#ec4899', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.CORTESIA.toLocaleString()}</strong></>}
+                {statusFilter === 'TRASLADO' && <>Traslado: <strong style={{ color: '#06b6d4', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.TRASLADO.toLocaleString()}</strong></>}
                 {statusFilter === 'FINIQUITO' && <>Finiquitos: <strong style={{ color: '#94a3b8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.FINIQUITO.toLocaleString()}</strong></>}
               </span>
               {(searchTerm || fechaInstalacionFilter || pagoFilter !== 'TODOS') && (
@@ -651,6 +659,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <option value="PROCESO">En Proceso ({statusCounts.PROCESO})</option>
             <option value="JURIDICO">Jurídico ({statusCounts.JURIDICO})</option>
             <option value="PENDIENTE">Pendientes ({statusCounts.PENDIENTE})</option>
+            {statusCounts.CORTESIA > 0 && <option value="CORTESIA">🎁 Cortesía ({statusCounts.CORTESIA})</option>}
+            {statusCounts.TRASLADO > 0 && <option value="TRASLADO">🚚 Traslado ({statusCounts.TRASLADO})</option>}
             <option value="FINIQUITO">👻 Finiquitos ({statusCounts.FINIQUITO})</option>
           </select>
           <select
