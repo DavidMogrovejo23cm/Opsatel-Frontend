@@ -1642,6 +1642,7 @@ const Balance = () => {
   const [reporteArcotelSubTab, setReporteArcotelSubTab] = useState('alta_velocidad');
   const [filtroArcotel, setFiltroArcotel] = useState('');
   const [loadingArcotel, setLoadingArcotel] = useState(false);
+  const [guardandoArcotel, setGuardandoArcotel] = useState(false);
   const [customCategorias, setCustomCategorias] = useState(() => {
     try {
       const saved = localStorage.getItem('opsatel_custom_categorias');
@@ -1734,6 +1735,33 @@ const Balance = () => {
       setLoadingArcotel(false);
     }
   }, [mes]);
+
+  const handleGuardarArcotel = async () => {
+    if (!reporteArcotel) return;
+    const mesNombre = reporteArcotel.kpis?.mes_label || mes;
+    const confirmado = await showConfirm(
+      "¿Guardar y congelar reporte?",
+      `¿Deseas guardar de forma definitiva el Reporte Oficial ARCOTEL para ${mesNombre}?\n\nUna vez guardado, los valores quedarán congelados permanentemente y ya no se podrán modificar por ningún cambio en el sistema.`,
+      "Sí, guardar",
+      "Cancelar"
+    );
+    if (!confirmado) return;
+
+    setGuardandoArcotel(true);
+    try {
+      const res = await balanceService.guardarReporteArcotel({
+        mes,
+        datos: reporteArcotel
+      });
+      showSuccess(res.data.message || `Reporte de ${mesNombre} guardado correctamente.`);
+      await fetchReporteArcotel(mes);
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.detail || "Error al guardar el reporte.");
+    } finally {
+      setGuardandoArcotel(false);
+    }
+  };
 
   const saldosFinalesCalculados = useMemo(() => {
     const movs = reportMovsInternos?.movimientos || [];
@@ -3895,7 +3923,23 @@ const Balance = () => {
                   Reporte Oficial ARCOTEL — Vista Previa
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)' }}>
-                  Período: <strong style={{ color: '#38bdf8' }}>{kpis.mes_label || mes}</strong> • Verifica los datos estructurados en tiempo real antes de descargar.
+                  Período: <strong style={{ color: '#38bdf8' }}>{kpis.mes_label || mes}</strong>
+                  {reporteArcotel?.esta_guardado ? (
+                    <span style={{
+                      marginLeft: 10,
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#34d399',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      padding: '2px 10px',
+                      borderRadius: 10,
+                      fontSize: '0.74rem',
+                      fontWeight: '800'
+                    }}>
+                      🔒 Guardado / Inmutable ({reporteArcotel.fecha_guardado ? `Guardado el: ${reporteArcotel.fecha_guardado}` : 'Fijo'})
+                    </span>
+                  ) : (
+                    <span> • Verifica los datos estructurados en tiempo real antes de guardar.</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -3910,6 +3954,51 @@ const Balance = () => {
             >
               🔄 {loadingArcotel ? 'Cargando...' : 'Refrescar'}
             </button>
+
+            {reporteArcotel?.esta_guardado ? (
+              <button
+                disabled
+                title={`Este reporte fue guardado permanentemente (${reporteArcotel.fecha_guardado || ''}). Sus valores no pueden modificarse.`}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#34d399',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'default'
+                }}
+              >
+                🔒 Guardado
+              </button>
+            ) : (
+              <button
+                onClick={handleGuardarArcotel}
+                disabled={guardandoArcotel || loadingArcotel}
+                title="Guardar y congelar permanentemente los datos de este mes para que no cambien nunca"
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  border: 'none',
+                  color: 'white',
+                  cursor: (guardandoArcotel || loadingArcotel) ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.35)',
+                  transition: 'all 0.15s'
+                }}
+              >
+                💾 {guardandoArcotel ? 'Guardando...' : 'Guardar'}
+              </button>
+            )}
             <button
               onClick={handleExportar}
               disabled={loading}
