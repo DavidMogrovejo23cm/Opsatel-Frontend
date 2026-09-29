@@ -73,7 +73,7 @@ const CallCenter = () => {
         clienteService.listar(),
       ]);
       setTickets(tkRes.data || []);
-      setClientes((clRes.data || []).filter(c => c.estado?.toUpperCase() === 'ACTIVO'));
+      setClientes(clRes.data || []);
     } catch (err) {
       console.error("Error cargando Call Center:", err);
     } finally {
@@ -122,7 +122,8 @@ const CallCenter = () => {
     return clientes.filter(c =>
       (c.nombre || '').toLowerCase().includes(term) ||
       String(c.id).includes(term) ||
-      (c.celular || '').includes(term)
+      (c.celular || '').includes(term) ||
+      (c.cedula || '').includes(term)
     ).slice(0, 50);
   }, [clientes, clientSearch]);
 
@@ -544,11 +545,16 @@ const CallCenter = () => {
                                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.15)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                               >
-                                <div style={{ fontWeight: '700', fontSize: '0.82rem' }}>
-                                  #{c.id} — {c.nombre}
+                                <div style={{ fontWeight: '700', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>#{c.id} — {c.nombre}</span>
+                                  {c.estado && (
+                                    <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
+                                      {c.estado}
+                                    </span>
+                                  )}
                                 </div>
                                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                  {c.parroquia} | 📱 {c.celular} | IP: {c.ip || 'N/A'}
+                                  {c.parroquia || 'Sin sector'} | 📱 {c.celular || 'S/N'} | IP: {c.ip || 'N/A'}
                                 </div>
                               </div>
                             ))}
