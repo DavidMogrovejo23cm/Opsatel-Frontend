@@ -301,7 +301,7 @@ const Activacion = () => {
     /^(?:\d{1,3}\.){3}\d{1,3}$/.test(String(confirmTaskData.ip))
   );
   const hasOpticalPower = Number.isFinite(Number(confirmTaskData?.potencia));
-  const canAcceptActivation = hasStaticIp && hasOpticalPower && !confirming;
+  const canAcceptActivation = (hasOpticalPower || hasStaticIp || Boolean(confirmTaskData?.id)) && !confirming;
 
   // Deshacer última activación
   const handleDeshacerUltima = async (activationToUndo = null) => {
