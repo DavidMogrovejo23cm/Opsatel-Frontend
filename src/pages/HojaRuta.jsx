@@ -132,7 +132,14 @@ const HojaRuta = () => {
 
             if (dateFilter && toISODate(r.fecha) !== dateFilter) return false;
 
-            if (statusFilter !== 'TODOS' && (r.estado || '').toUpperCase() !== statusFilter) return false;
+            const isNoCompletado = (r.estado === 'No completado') || (
+                (r.estado === 'Pendiente' || r.estado === 'En proceso') &&
+                r.created_at &&
+                (Date.now() - new Date(r.created_at).getTime() > 24 * 60 * 60 * 1000)
+            );
+            const estadoActual = isNoCompletado ? 'No completado' : (r.estado || 'Pendiente');
+
+            if (statusFilter !== 'TODOS' && estadoActual.toUpperCase() !== statusFilter) return false;
 
             return true;
         });
@@ -241,6 +248,8 @@ const HojaRuta = () => {
         let nextEstado = 'Pendiente';
         if (currentEstado === 'Pendiente') nextEstado = 'En proceso';
         else if (currentEstado === 'En proceso') nextEstado = 'Realizado';
+        else if (currentEstado === 'Realizado') nextEstado = 'No completado';
+        else if (currentEstado === 'No completado') nextEstado = 'Pendiente';
         else nextEstado = 'Pendiente';
 
         try {
@@ -325,6 +334,7 @@ const HojaRuta = () => {
                             <option value="PENDIENTE">Pendiente</option>
                             <option value="EN PROCESO">En proceso</option>
                             <option value="REALIZADO">Realizado</option>
+                            <option value="NO COMPLETADO">No completado</option>
                         </select>
                         <input
                             className="input hr-search"
@@ -387,14 +397,26 @@ const HojaRuta = () => {
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.hora}</div>
                                         </td>
                                         <td>
-                                            <button
-                                                onClick={() => toggleEstado(r.id, r.estado)}
-                                                className={`status-chip ${r.estado === 'Realizado' ? 'success' : (r.estado === 'En proceso' ? 'processing' : 'pending')}`}
-                                                disabled={user.rol?.toLowerCase() !== 'administrador'}
-                                                style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
-                                            >
-                                                {r.estado}
-                                            </button>
+                                            {(() => {
+                                                const isOver24h = (r.estado === 'Pendiente' || r.estado === 'En proceso') &&
+                                                    r.created_at &&
+                                                    (Date.now() - new Date(r.created_at).getTime() > 24 * 60 * 60 * 1000);
+                                                const estadoDisplay = (r.estado === 'No completado' || isOver24h) ? 'No completado' : (r.estado || 'Pendiente');
+                                                const chipClass = estadoDisplay === 'Realizado' ? 'success' :
+                                                                  estadoDisplay === 'En proceso' ? 'processing' :
+                                                                  estadoDisplay === 'No completado' ? 'failed' : 'pending';
+                                                return (
+                                                    <button
+                                                        onClick={() => toggleEstado(r.id, estadoDisplay)}
+                                                        className={`status-chip ${chipClass}`}
+                                                        disabled={user.rol?.toLowerCase() !== 'administrador'}
+                                                        style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
+                                                        title={isOver24h ? 'Venció el plazo de 24 horas sin completarse' : ''}
+                                                    >
+                                                        {estadoDisplay}
+                                                    </button>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#fff' }}>{r.tecnico}</td>
                                         <td>
@@ -817,6 +839,7 @@ const HojaRuta = () => {
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
                 .status-chip.processing { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
                 .status-chip.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+                .status-chip.failed { background: rgba(220, 38, 38, 0.28); color: #ff1f1f; border-color: #ef4444; box-shadow: 0 0 14px rgba(239, 68, 68, 0.65); text-shadow: 0 0 6px rgba(255, 30, 30, 0.7); font-weight: 900; }
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
                 .modal-content { width: 100%; max-width: 900px; padding: 40px; border-radius: 20px; max-height: 90vh; overflow-y: auto; margin: auto; }
                 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
