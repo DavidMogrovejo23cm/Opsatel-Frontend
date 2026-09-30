@@ -39,6 +39,7 @@ const Activacion = () => {
   const [confirmTaskData, setConfirmTaskData] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [refreshStep, setRefreshStep] = useState('');
+  const [refreshingPower, setRefreshingPower] = useState(false);
 
   // Activación Masiva (Bulk)
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -324,6 +325,29 @@ const Activacion = () => {
     }
   };
 
+  // Refrescar ÚNICAMENTE Potencia Óptica (RF DB) sin reiniciar la ONT
+  const handleRefreshPowerOnly = async () => {
+    if (!confirmTaskData?.cliente_id || confirming || refreshingPower) return;
+    setRefreshingPower(true);
+    try {
+      notify('Consultando potencia óptica (dBm) a la OLT...', 'info');
+      const res = await oltService.getOntPotencia(confirmTaskData.cliente_id);
+      const power = res.data?.potencia || {};
+      const rxPower = power.rx_power ?? power.power;
+      if (rxPower !== null && rxPower !== undefined && rxPower !== '—') {
+        setConfirmTaskData(prev => ({ ...prev, potencia: rxPower }));
+        notify(`✓ Potencia óptica actualizada: ${rxPower} dBm`, 'success');
+      } else {
+        notify('La OLT aún no registra potencia óptica. Verifique que el equipo esté encendido y la fibra conectada.', 'warning');
+      }
+    } catch (err) {
+      console.error(err);
+      notify('Error al consultar potencia óptica: ' + (err.response?.data?.detail || err.message), 'error');
+    } finally {
+      setRefreshingPower(false);
+    }
+  };
+
   // Confirmar Activación (Aceptar)
   const handleConfirmAceptar = async () => {
     if (!confirmTaskData) return;
@@ -347,7 +371,7 @@ const Activacion = () => {
     /^(?:\d{1,3}\.){3}\d{1,3}$/.test(String(confirmTaskData.ip))
   );
   const hasOpticalPower = Number.isFinite(Number(confirmTaskData?.potencia));
-  const canAcceptActivation = (hasOpticalPower || hasStaticIp || Boolean(confirmTaskData?.id)) && !confirming;
+  const canAcceptActivation = (hasOpticalPower || hasStaticIp || Boolean(confirmTaskData?.id)) && !confirming && !refreshingPower;
 
   // Deshacer última activación
   const handleDeshacerUltima = async (activationToUndo = null) => {
@@ -938,24 +962,35 @@ const Activacion = () => {
                 6. 🛑Cancelar y volver a activar si se selecciono mal entre bridge y ont.
                 7. 🛑Cancelar y volver a activar si la potencia óptica es inválida o no se detecta.
                 8. 🛑Reiniciar router y volver a conectarlo en caso de no obtener ip en caso de ont verificar la Vlan en el equipo.
-                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe la IP / Potencia óptica o sale en blanco, haga clic en el botón de abajo "REFRESCAR" para forzar la reasignación.</strong>
+                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe IP, use "REFRESCAR / REINICIAR ONT". Si solo necesita actualizar la lectura de potencia óptica, haga clic en "RF DB".</strong>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <button
-                className="btn"
-                onClick={handleRefreshIp}
-                disabled={confirming}
-                style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6, cursor: confirming ? 'not-allowed' : 'pointer' }}
-              >
-                🔄 {refreshStep ? refreshStep : 'REFRESCAR / REINICIAR ONT'}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  className="btn"
+                  onClick={handleRefreshIp}
+                  disabled={confirming || refreshingPower}
+                  style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6, cursor: (confirming || refreshingPower) ? 'not-allowed' : 'pointer' }}
+                >
+                  🔄 {refreshStep ? refreshStep : 'REFRESCAR / REINICIAR ONT'}
+                </button>
+                <button
+                  className="btn"
+                  onClick={handleRefreshPowerOnly}
+                  disabled={confirming || refreshingPower}
+                  title="Consultar únicamente la potencia óptica (dBm) a la OLT sin reiniciar la ONT"
+                  style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '10px 16px', borderRadius: 6, cursor: (confirming || refreshingPower) ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+                >
+                  ⚡ {refreshingPower ? 'Consultando dB...' : 'RF DB'}
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   className="btn"
                   onClick={() => handleDeshacerUltima(confirmTaskData)}
-                  disabled={confirming || undoing}
+                  disabled={confirming || undoing || refreshingPower}
                   style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '10px 20px', borderRadius: 6 }}
                 >
                   🔴 CANCELAR
