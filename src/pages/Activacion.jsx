@@ -353,10 +353,12 @@ const Activacion = () => {
     if (!confirmTaskData) return;
     setConfirming(true);
     try {
-      await oltService.confirmTask(confirmTaskData.id);
+      const res = await oltService.confirmTask(confirmTaskData.id);
       setShowConfirmModal(false);
       setConfirmTaskData(null);
-      notify('Activación completada y confirmada con éxito.', 'success');
+      const msg = res.data?.message || 'Activación confirmada y Hoja de Ruta actualizada a Realizado.';
+      notify(msg, 'success');
+      fetchClientes();
     } catch (e) {
       console.error(e);
       notify('Error al confirmar activación.', 'error');
