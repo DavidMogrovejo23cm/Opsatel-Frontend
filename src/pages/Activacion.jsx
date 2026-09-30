@@ -38,6 +38,7 @@ const Activacion = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmTaskData, setConfirmTaskData] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [refreshStep, setRefreshStep] = useState('');
 
   // Activación Masiva (Bulk)
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -235,46 +236,91 @@ const Activacion = () => {
     registerInterval(interval);
   };
 
-  // Refrescar IP del Cliente en caliente
+  // Refrescar IP del Cliente en caliente + Reinicio de ONT en OLT
   const handleRefreshIp = async () => {
-    if (!confirmTaskData) return;
+    if (!confirmTaskData || confirming) return;
     setConfirming(true);
+    setRefreshStep('Enviando ont reset a la OLT...');
     try {
-      const [ipResult, powerResult] = await Promise.allSettled([
-        oltService.refreshIp(confirmTaskData.cliente_id),
-        oltService.getOntPotencia(confirmTaskData.cliente_id)
-      ]);
-
-      const nextData = {};
-      const messages = [];
-
-      if (ipResult.status === 'fulfilled') {
-        nextData.ip = ipResult.value.data.ip;
-        messages.push(`IP: ${ipResult.value.data.ip}`);
-      } else {
-        messages.push('IP no disponible');
+      // 1. Ejecutar ont reset en la OLT dentro de la interface GPON
+      try {
+        await oltService.resetOnt(confirmTaskData.cliente_id, {
+          gpon_port: confirmTaskData.gpon_port,
+          ont_id: confirmTaskData.ont_id
+        });
+        notify('Comando ont reset enviado. Esperando reinicio del equipo...', 'info');
+      } catch (resetErr) {
+        console.warn('Fallo en ont reset o no soportado, continuando con refresco:', resetErr);
       }
 
-      if (powerResult.status === 'fulfilled') {
-        const power = powerResult.value.data?.potencia || {};
-        const rxPower = power.rx_power ?? power.power;
-        if (rxPower !== null && rxPower !== undefined) {
-          nextData.potencia = rxPower;
-          messages.push(`RX: ${rxPower} dBm`);
-        } else {
-          messages.push('potencia aún no disponible');
+      // 2. Esperar 8 segundos a que la ONT complete el reinicio de hardware
+      for (let sec = 8; sec > 0; sec--) {
+        setRefreshStep(`Reiniciando equipo en OLT... (${sec}s)`);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      setRefreshStep('Consultando potencia e IP...');
+
+      // 3. Consultar potencia y refrescar IP con reintentos
+      let finalIp = null;
+      let finalPower = null;
+      const messages = [];
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        setRefreshStep(`Sincronizando potencia e IP (Intento ${attempt}/3)...`);
+        const [ipResult, powerResult] = await Promise.allSettled([
+          oltService.refreshIp(confirmTaskData.cliente_id),
+          oltService.getOntPotencia(confirmTaskData.cliente_id)
+        ]);
+
+        if (powerResult.status === 'fulfilled') {
+          const power = powerResult.value.data?.potencia || {};
+          const rxPower = power.rx_power ?? power.power;
+          if (rxPower !== null && rxPower !== undefined && rxPower !== '—') {
+            finalPower = rxPower;
+          }
         }
+
+        if (ipResult.status === 'fulfilled') {
+          const ipVal = ipResult.value.data?.ip;
+          if (ipVal && ipVal !== '—') {
+            finalIp = ipVal;
+          }
+        }
+
+        // Si ya obtuvimos ambos o si ya tenemos IP, no necesitamos más reintentos
+        if (finalIp && finalPower !== null) {
+          break;
+        }
+
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+
+      const nextData = {};
+      if (finalIp) {
+        nextData.ip = finalIp;
+        messages.push(`IP: ${finalIp}`);
       } else {
-        messages.push('potencia no disponible');
+        messages.push('IP aún en proceso de asignación');
+      }
+
+      if (finalPower !== null && finalPower !== undefined) {
+        nextData.potencia = finalPower;
+        messages.push(`RX: ${finalPower} dBm`);
+      } else {
+        messages.push('Potencia en calibración');
       }
 
       setConfirmTaskData(prev => ({ ...prev, ...nextData }));
-      notify(`Datos actualizados: ${messages.join(' | ')}`, 'success');
+      notify(`✓ Proceso completado: ${messages.join(' | ')}`, 'success');
     } catch (e) {
       console.error(e);
-      notify('Error al actualizar IP y potencia: ' + (e.response?.data?.detail || e.message), 'error');
+      notify('Error al refrescar y reiniciar: ' + (e.response?.data?.detail || e.message), 'error');
     } finally {
       setConfirming(false);
+      setRefreshStep('');
     }
   };
 
@@ -901,9 +947,9 @@ const Activacion = () => {
                 className="btn"
                 onClick={handleRefreshIp}
                 disabled={confirming}
-                style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6 }}
+                style={{ backgroundColor: 'rgba(56,189,248,0.12)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '10px 16px', borderRadius: 6, cursor: confirming ? 'not-allowed' : 'pointer' }}
               >
-                🔄 REFRESCAR 
+                🔄 {refreshStep ? refreshStep : 'REFRESCAR / REINICIAR ONT'}
               </button>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
