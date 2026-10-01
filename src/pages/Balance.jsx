@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, Cell, LabelList, AreaChart, Area, Legend,
   PieChart, Pie
 } from 'recharts';
-import { balanceService } from '../services/api';
+import { balanceService, clienteService } from '../services/api';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 
@@ -1829,35 +1829,40 @@ const Balance = () => {
   useEffect(() => { if (vista === 'reporte') fetchReporteArcotel(mes); }, [vista, mes, fetchReporteArcotel]);
 
   useEffect(() => {
-    if (report && report.total_pendiente_morosos !== undefined) {
-      setMorososData({
-        total: Number(report.total_pendiente_morosos || 0),
-        cantidad: Number(report.cantidad_morosos || 0)
-      });
-    } else {
-      balanceService.historialClientes().then(res => {
-        if (res && res.data && Array.isArray(res.data)) {
-          let tot = 0;
-          let cnt = 0;
-          res.data.forEach(c => {
-            if (c.cortesia_total) return;
-            const est = String(c.estado || '').trim().toUpperCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            if (!['ACTIVO', 'ACTIVOS', 'JURIDICO', 'PROCESO', 'EN PROCESO'].includes(est)) return;
-            const s = Number(c.saldo || 0);
-            const p = Number(String(c.plus || 0).replace('$', '').replace(',', '.').trim()) || 0;
-            const a = Number(String(c.adicional || 0).replace('$', '').replace(',', '.').trim()) || 0;
+    // Sincronizar cartera pendiente exactamente con los clientes activos con saldo (igual que en Dashboard)
+    clienteService.listar().then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        let tot = 0;
+        let cnt = 0;
+        res.data.forEach(c => {
+          if (c.cortesia_total) return;
+          const est = String(c.estado || '').trim().toUpperCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (est === 'ACTIVO' || est === 'ACTIVOS') {
             const totC = Number(c.total_pago || 0);
-            const deuda = totC > 0 ? totC : Math.max(0, s + p + a);
+            const s = Number(c.saldo || 0);
+            const deuda = totC > 0 ? totC : s;
             if (deuda > 0) {
               tot += deuda;
               cnt += 1;
             }
-          });
-          setMorososData({ total: Math.round(tot * 100) / 100, cantidad: cnt });
-        }
-      }).catch(() => {});
-    }
+          }
+        });
+        setMorososData({ total: Math.round(tot * 100) / 100, cantidad: cnt });
+      } else if (report && report.total_pendiente_morosos !== undefined) {
+        setMorososData({
+          total: Number(report.total_pendiente_morosos || 0),
+          cantidad: Number(report.cantidad_morosos || 0)
+        });
+      }
+    }).catch(() => {
+      if (report && report.total_pendiente_morosos !== undefined) {
+        setMorososData({
+          total: Number(report.total_pendiente_morosos || 0),
+          cantidad: Number(report.cantidad_morosos || 0)
+        });
+      }
+    });
   }, [report]);
 
   const handleSaveMovInterno = async data => {
@@ -2459,7 +2464,7 @@ const Balance = () => {
               fontSize: '0.82rem',
               color: 'var(--text-muted)'
             }}>
-              <span>Clientes con saldo (Activo / Jurídico / En Proceso):</span>
+              <span>Clientes activos con saldo pendiente:</span>
               <span style={{ fontWeight: 800, color: '#f87171', fontSize: '0.9rem' }}>
                 {morososData.cantidad} {morososData.cantidad === 1 ? 'cliente' : 'clientes'}
               </span>
