@@ -1622,6 +1622,87 @@ const Configuraciones = () => {
                                     💬 🗑️ Eliminar Todos los Chats
                                 </button>
                             </div>
+
+                            {/* Acción 5: Eliminar Balance */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(14, 165, 233, 0.35)',
+                                background: 'rgba(14, 165, 233, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-25px',
+                                    right: '-25px',
+                                    width: '90px',
+                                    height: '90px',
+                                    background: 'radial-gradient(circle, rgba(14,165,233,0.18) 0%, transparent 70%)',
+                                    pointerEvents: 'none'
+                                }} />
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>⚖️ 🗑️</div>
+                                    <h4 style={{ color: '#38bdf8', marginBottom: '8px' }}>Eliminar Balance</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Vacía y pone en <strong>$0.00</strong> todos los registros de Balance (ingresos contabilizados, egresos, proyectos, colchón y finanzas) como si nadie hubiese pagado aún. <strong>No altera ni regresa deudas a los clientes</strong>.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿ELIMINAR BALANCE?',
+                                            'Esta acción vaciará todos los registros y movimientos del módulo de Balance a $0.00.\n\nOjo: Las deudas de los clientes se mantendrán intactas (no se regresan deudas a los clientes).\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Estás seguro de eliminar y reiniciar a ceros todo el balance definitivamente?',
+                                            'Sí, eliminar balance',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
+
+                                        try {
+                                            setActionLoading(true);
+                                            const res = await configuracionService.eliminarBalance();
+                                            showSuccess(res.data?.message || 'El balance ha sido eliminado y reiniciado a $0.00 exitosamente.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : '#9ca3af',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '10px 16px',
+                                        fontWeight: '600',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6,
+                                        boxShadow: passwordDeleteClientes === 'admin1.@' ? '0 4px 14px rgba(14, 165, 233, 0.35)' : 'none',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    🗑️ Eliminar Balance
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

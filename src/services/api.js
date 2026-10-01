@@ -164,6 +164,8 @@ export const configuracionService = {
   deleteAllClientesExtras: () => api.delete('/extras/all'),
   // Restablecer todos los valores de dinero a ceros
   resetValoresDinero: () => api.post('/configuraciones/reset-dinero'),
+  // Eliminar balance (reiniciar a ceros sin afectar deudas de clientes)
+  eliminarBalance: () => api.post('/configuraciones/eliminar-balance'),
   // Eliminar todos los chats y conversaciones en vivo
   deleteAllConversaciones: () => api.delete('/whatsapp/conversaciones/all'),
   // Dias de permanencia en Administrar
