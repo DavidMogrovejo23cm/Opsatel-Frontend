@@ -2,10 +2,11 @@ import api from './api';
 
 export const whatsappService = {
   // Envío manual
-  enviarManual: (numero, mensaje) => 
+  enviarManual: (numero, mensaje, historial_id = null) => 
     api.post('/whatsapp/enviar-manual', {
       numero: numero,
-      mensaje: mensaje
+      mensaje: mensaje,
+      historial_id: historial_id
     }),
 
   // Programar envío automático
@@ -56,6 +57,10 @@ export const whatsappService = {
   // Marcar mensaje como enviado en el historial
   marcarEnviado: (historial_id) =>
     api.post(`/whatsapp/historial/${historial_id}/marcar-enviado`),
+
+  // Reintentar todos los mensajes fallidos en segundo plano
+  reintentarFallidos: () =>
+    api.post('/whatsapp/historial/reintentar-fallidos'),
 
   // Obtener estado del puente
   obtenerStatusBridge: () =>

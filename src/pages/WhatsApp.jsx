@@ -47,6 +47,7 @@ const WhatsApp = () => {
     const [filtroTipoHistorial, setFiltroTipoHistorial] = useState('todos');
     const [busquedaHistorial, setBusquedaHistorial] = useState('');
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
+    const [reintentandoFallidos, setReintentandoFallidos] = useState(false);
 
     // Administradores autorizados
     const [administradores, setAdministradores] = useState([]);
@@ -710,13 +711,40 @@ const WhatsApp = () => {
 
     const manejarEnviarMensajePendiente = async (msg) => {
         try {
-            // Enviar mensaje pendiente directamente usando la pasarela
-            await whatsappService.enviarManual(msg.numero, msg.mensaje);
+            // Enviar mensaje pendiente directamente usando la pasarela (soporta múltiples números)
+            await whatsappService.enviarManual(msg.numero, msg.mensaje, msg.id);
             await whatsappService.marcarEnviado(msg.id);
-            showSuccess('Mensaje enviado y marcado en el historial');
+            showSuccess('Mensaje enviado exitosamente a todos los números y marcado en el historial');
             cargarHistorial();
         } catch (error) {
             showError('Error al enviar mensaje pendiente: ' + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const manejarReintentarTodosFallidos = async () => {
+        const fallidosCount = historial.filter(m => m.estado === 'fallido').length;
+        if (fallidosCount === 0) {
+            showInfo('No hay mensajes fallidos para reintentar.');
+            return;
+        }
+
+        const confirmado = await showConfirm(
+            'Reintentar envíos fallidos',
+            `¿Deseas reenviar los ${fallidosCount} mensaje(s) con error? El sistema enviará el mensaje a todos los números de teléfono detectados de cada cliente.`,
+            'Sí, reintentar todos',
+            'Cancelar'
+        );
+        if (!confirmado) return;
+
+        setReintentandoFallidos(true);
+        try {
+            const res = await whatsappService.reintentarFallidos();
+            showSuccess(res.data?.message || 'Reintento completado con éxito');
+            cargarHistorial();
+        } catch (error) {
+            showError('Error reintentando mensajes: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setReintentandoFallidos(false);
         }
     };
 
@@ -2260,6 +2288,27 @@ const WhatsApp = () => {
                                         <option value="automatico">⏰ Programados</option>
                                         <option value="manual">📤 Manuales</option>
                                     </select>
+
+                                    {historial.some(m => m.estado === 'fallido') && (
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={manejarReintentarTodosFallidos}
+                                            disabled={reintentandoFallidos}
+                                            style={{
+                                                fontSize: '0.82rem',
+                                                padding: '6px 14px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                                borderColor: 'rgba(239, 68, 68, 0.4)',
+                                                color: '#fca5a5',
+                                                cursor: reintentandoFallidos ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {reintentandoFallidos ? '⏳ Reintentando todos...' : `🔄 Reintentar Todos los Fallidos (${historial.filter(m => m.estado === 'fallido').length})`}
+                                        </button>
+                                    )}
                                 </div>
 
                                 {historial.length === 0 ? (
