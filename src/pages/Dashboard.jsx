@@ -11,8 +11,10 @@ const Dashboard = () => {
     activos: 0,
     inactivos: 0,
     porActivar: 0,
-    saldoPendiente: 0,
+    saldoPendienteActivos: 0,
     saldoPendienteInactivos: 0,
+    saldoPendientePendientes: 0,
+    saldoPendienteJuridico: 0,
     recaudacionMes: 0,
     tendencia: 0 // +1 subida, -1 bajada, 0 estable
   });
@@ -129,12 +131,37 @@ const Dashboard = () => {
         if (totalThisMonth > totalLastMonth) tendencia = 1;
         else if (totalThisMonth < totalLastMonth) tendencia = -1;
 
+        const isActivo = c => {
+          const s = String(c.estado || '').trim().toUpperCase();
+          return s === 'ACTIVO' || s === 'ACTIVOS';
+        };
+        const isInactivo = c => {
+          const s = String(c.estado || '').trim().toUpperCase();
+          return s === 'INACTIVO' || s === 'INACTIVOS';
+        };
+        const isPendiente = c => {
+          const s = String(c.estado || '').trim().toUpperCase();
+          return s === 'PENDIENTE' || s === 'EN ACTIVACIÓN' || s === 'EN ACTIVACION' || s === 'POR ACTIVAR';
+        };
+        const isJuridico = c => {
+          const s = String(c.estado || '').trim().toUpperCase();
+          return s === 'JURIDICO' || s === 'JURÍDICO';
+        };
+
         const saldoPendienteActivos = clientes
-          .filter(c => c.estado?.toUpperCase() === 'ACTIVO')
+          .filter(isActivo)
           .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
 
         const saldoPendienteInactivos = clientes
-          .filter(c => c.estado?.toUpperCase() === 'INACTIVO')
+          .filter(isInactivo)
+          .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
+
+        const saldoPendientePendientes = clientes
+          .filter(isPendiente)
+          .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
+
+        const saldoPendienteJuridico = clientes
+          .filter(isJuridico)
           .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
 
         setStats({
@@ -143,8 +170,10 @@ const Dashboard = () => {
           inactivos: inactivosCount,
           porActivar: porActivarCount,
           extras: statsExtras.total_clientes,
-          saldoPendiente: saldoPendienteActivos,
-          saldoPendienteInactivos: saldoPendienteInactivos,
+          saldoPendienteActivos,
+          saldoPendienteInactivos,
+          saldoPendientePendientes,
+          saldoPendienteJuridico,
           recaudacionMes: totalThisMonth,
           tendencia
         });
@@ -187,20 +216,36 @@ const Dashboard = () => {
       onClick: () => handleShowList('Servicios Inactivos', c => c.estado?.toUpperCase() === 'INACTIVO')
     },
     {
-      title: 'Saldo Pendiente',
-      value: `$${stats.saldoPendiente.toFixed(2)}`,
+      title: 'Saldo Pendiente Activos',
+      value: `$${(stats.saldoPendienteActivos || 0).toFixed(2)}`,
       icon: '💰',
       color: '#f43f5e',
       clickable: true,
-      onClick: () => handleShowList('Clientes Activos con Saldo Pendiente', c => c.estado?.toUpperCase() === 'ACTIVO' && parseFloat(c.total_pago || 0) > 0)
+      onClick: () => handleShowList('Clientes Activos con Saldo Pendiente', c => ['ACTIVO', 'ACTIVOS'].includes((c.estado || '').trim().toUpperCase()) && parseFloat(c.total_pago || 0) > 0)
     },
     {
       title: 'Saldo Pendiente Inactivos',
-      value: `$${stats.saldoPendienteInactivos.toFixed(2)}`,
+      value: `$${(stats.saldoPendienteInactivos || 0).toFixed(2)}`,
       icon: '💸',
-      color: '#e11d48',
+      color: '#ef4444',
       clickable: true,
-      onClick: () => handleShowList('Clientes Inactivos con Saldo Pendiente', c => c.estado?.toUpperCase() === 'INACTIVO' && parseFloat(c.total_pago || 0) > 0)
+      onClick: () => handleShowList('Clientes Inactivos con Saldo Pendiente', c => ['INACTIVO', 'INACTIVOS'].includes((c.estado || '').trim().toUpperCase()) && parseFloat(c.total_pago || 0) > 0)
+    },
+    {
+      title: 'Saldo Pendiente Por Activar',
+      value: `$${(stats.saldoPendientePendientes || 0).toFixed(2)}`,
+      icon: '⏳',
+      color: '#f59e0b',
+      clickable: true,
+      onClick: () => handleShowList('Clientes Por Activar con Saldo Pendiente', c => ['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION', 'POR ACTIVAR'].includes((c.estado || '').trim().toUpperCase()) && parseFloat(c.total_pago || 0) > 0)
+    },
+    {
+      title: 'Saldo Pendiente Jurídico',
+      value: `$${(stats.saldoPendienteJuridico || 0).toFixed(2)}`,
+      icon: '⚖️',
+      color: '#ec4899',
+      clickable: true,
+      onClick: () => handleShowList('Clientes Jurídicos con Saldo Pendiente', c => ['JURIDICO', 'JURÍDICO'].includes((c.estado || '').trim().toUpperCase()) && parseFloat(c.total_pago || 0) > 0)
     },
     {
       title: 'Recaudación Mensual',
