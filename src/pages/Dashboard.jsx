@@ -9,8 +9,10 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     total: 0,
     activos: 0,
+    inactivos: 0,
     porActivar: 0,
     saldoPendiente: 0,
+    saldoPendienteInactivos: 0,
     recaudacionMes: 0,
     tendencia: 0 // +1 subida, -1 bajada, 0 estable
   });
@@ -127,13 +129,22 @@ const Dashboard = () => {
         if (totalThisMonth > totalLastMonth) tendencia = 1;
         else if (totalThisMonth < totalLastMonth) tendencia = -1;
 
+        const saldoPendienteActivos = clientes
+          .filter(c => c.estado?.toUpperCase() === 'ACTIVO')
+          .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
+
+        const saldoPendienteInactivos = clientes
+          .filter(c => c.estado?.toUpperCase() === 'INACTIVO')
+          .reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0);
+
         setStats({
           total: clientes.length,
           activos: activosCount,
           inactivos: inactivosCount,
           porActivar: porActivarCount,
           extras: statsExtras.total_clientes,
-          saldoPendiente: clientes.reduce((acc, c) => acc + (parseFloat(c.total_pago) || 0), 0),
+          saldoPendiente: saldoPendienteActivos,
+          saldoPendienteInactivos: saldoPendienteInactivos,
           recaudacionMes: totalThisMonth,
           tendencia
         });
@@ -181,7 +192,15 @@ const Dashboard = () => {
       icon: '💰',
       color: '#f43f5e',
       clickable: true,
-      onClick: () => handleShowList('Clientes con Saldo Pendiente', c => parseFloat(c.total_pago || 0) > 0)
+      onClick: () => handleShowList('Clientes Activos con Saldo Pendiente', c => c.estado?.toUpperCase() === 'ACTIVO' && parseFloat(c.total_pago || 0) > 0)
+    },
+    {
+      title: 'Saldo Pendiente Inactivos',
+      value: `$${stats.saldoPendienteInactivos.toFixed(2)}`,
+      icon: '💸',
+      color: '#e11d48',
+      clickable: true,
+      onClick: () => handleShowList('Clientes Inactivos con Saldo Pendiente', c => c.estado?.toUpperCase() === 'INACTIVO' && parseFloat(c.total_pago || 0) > 0)
     },
     {
       title: 'Recaudación Mensual',
