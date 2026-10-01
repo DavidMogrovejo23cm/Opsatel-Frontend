@@ -69,9 +69,15 @@ export const whatsappService = {
   cerrarSesionBridge: () =>
     api.post('/whatsapp/logout'),
 
-  // Difusión global masiva (opcionalmente filtrada por nodo)
-  enviarGlobal: (mensaje, nodo = null) =>
-    api.post('/whatsapp/enviar-global', { mensaje: mensaje, nodo: nodo }),
+  // Difusión global masiva (opcionalmente filtrada por nodo y estado, con protección anti-baneo)
+  enviarGlobal: (mensaje, nodo = null, estado = 'ACTIVO', delay_min = 4.0, delay_max = 7.5) =>
+    api.post('/whatsapp/enviar-global', { 
+      mensaje: mensaje, 
+      nodo: nodo, 
+      estado: estado,
+      delay_min: delay_min,
+      delay_max: delay_max
+    }),
 
   // Administradores de WhatsApp
   obtenerAdministradores: () =>

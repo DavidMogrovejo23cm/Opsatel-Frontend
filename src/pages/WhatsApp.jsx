@@ -29,6 +29,8 @@ const WhatsApp = () => {
     const [mensajeGlobal, setMensajeGlobal] = useState('');
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [nodoSeleccionado, setNodoSeleccionado] = useState('todos');
+    const [estadoSeleccionado, setEstadoSeleccionado] = useState('ACTIVO');
+    const [velocidadEnvio, setVelocidadEnvio] = useState('seguro'); // 'seguro' (4-7.5s) | 'prudente' (8-15s) | 'rapido' (2-4.5s)
     const [listaNodos, setListaNodos] = useState([]);
     const [listaClientes, setListaClientes] = useState([]);
 
@@ -136,26 +138,53 @@ const WhatsApp = () => {
         }
     };
 
-    const getClientesDestinoCount = () => {
-        const activos = listaClientes.filter(c => {
-            const isActivo = c.estado && (
-                c.estado.toUpperCase() === 'ACTIVO' || 
-                c.estado.toUpperCase() === 'ACTIVA'
-            );
+    const getClientesDestino = () => {
+        return listaClientes.filter(c => {
             const hasCelular = c.celular && String(c.celular).trim() !== '';
-            return isActivo && hasCelular;
+            if (!hasCelular) return false;
+
+            // Filtro por Estado del cliente
+            if (estadoSeleccionado !== 'TODOS') {
+                const estUpper = (c.estado || '').trim().toUpperCase();
+                if (estadoSeleccionado === 'ACTIVO') {
+                    if (estUpper !== 'ACTIVO' && estUpper !== 'ACTIVA') return false;
+                } else if (estadoSeleccionado === 'INACTIVO') {
+                    if (estUpper !== 'INACTIVO' && estUpper !== 'INACTIVA') return false;
+                } else if (estadoSeleccionado === 'SUSPENDIDO') {
+                    if (estUpper !== 'SUSPENDIDO' && estUpper !== 'SUSPENDIDA') return false;
+                } else if (estadoSeleccionado === 'PROCESO') {
+                    if (!['PROCESO', 'EN PROCESO'].includes(estUpper)) return false;
+                } else if (estadoSeleccionado === 'JURIDICO') {
+                    if (!['JURIDICO', 'JURÍDICO'].includes(estUpper)) return false;
+                } else if (estadoSeleccionado === 'PENDIENTE') {
+                    if (!['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(estUpper)) return false;
+                } else if (estadoSeleccionado === 'FINIQUITO') {
+                    if (estUpper !== 'FINIQUITO') return false;
+                } else if (estadoSeleccionado === 'CORTESIA') {
+                    if (!['CORTESIA', 'CORTESÍA'].includes(estUpper)) return false;
+                } else if (estadoSeleccionado === 'TRASLADO') {
+                    if (estUpper !== 'TRASLADO') return false;
+                } else if (estUpper !== estadoSeleccionado) {
+                    return false;
+                }
+            }
+
+            // Filtro por Nodo / Parroquia
+            if (nodoSeleccionado !== 'todos') {
+                const targetKey = normalizeLocationKey(nodoSeleccionado);
+                const nodoKey = normalizeLocationKey(c.nodo);
+                const parroquiaKey = normalizeLocationKey(c.parroquia);
+                if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) {
+                    return false;
+                }
+            }
+
+            return true;
         });
+    };
 
-        if (nodoSeleccionado === 'todos') {
-            return activos.length;
-        }
-
-        const targetKey = normalizeLocationKey(nodoSeleccionado);
-        return activos.filter(c => {
-            const nodoKey = normalizeLocationKey(c.nodo);
-            const parroquiaKey = normalizeLocationKey(c.parroquia);
-            return nodoKey.includes(targetKey) || parroquiaKey.includes(targetKey);
-        }).length;
+    const getClientesDestinoCount = () => {
+        return getClientesDestino().length;
     };
 
     const getConteoClientesProgramados = (filtro = filtroClientes) => {
@@ -715,13 +744,43 @@ const WhatsApp = () => {
         }
 
         const count = getClientesDestinoCount();
-        const descripcionDestino = nodoSeleccionado === 'todos' 
-            ? `a TODOS los clientes activos (${count} clientes)` 
-            : `a los clientes activos del nodo "${nodoSeleccionado}" (${count} clientes)`;
+        if (count === 0) {
+            showError('No se encontraron clientes con número de celular que coincidan con los filtros seleccionados (Estado y Nodo).');
+            return;
+        }
+
+        const nombresEstado = {
+            'ACTIVO': 'Activos',
+            'INACTIVO': 'Inactivos',
+            'SUSPENDIDO': 'Suspendidos',
+            'PROCESO': 'En Proceso',
+            'JURIDICO': 'Jurídicos',
+            'PENDIENTE': 'Pendientes / En Activación',
+            'FINIQUITO': 'Finiquito',
+            'CORTESIA': 'Cortesía',
+            'TRASLADO': 'Traslado',
+            'TODOS': 'de Todos los Estados'
+        };
+        const estadoLabel = nombresEstado[estadoSeleccionado] || estadoSeleccionado;
+        const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
+        const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel}`;
+
+        let delayMin = 4.0;
+        let delayMax = 7.5;
+        let ritmoTexto = '4 a 7.5 segundos (Modo Seguro)';
+        if (velocidadEnvio === 'prudente') {
+            delayMin = 8.0;
+            delayMax = 15.0;
+            ritmoTexto = '8 a 15 segundos (Modo Conservador)';
+        } else if (velocidadEnvio === 'rapido') {
+            delayMin = 2.0;
+            delayMax = 4.5;
+            ritmoTexto = '2 a 4.5 segundos (Modo Rápido)';
+        }
 
         const confirmacion1 = await showConfirm(
             '⚠️ ADVERTENCIA DE SEGURIDAD',
-            `Estás a punto de enviar un mensaje masivo ${descripcionDestino}.\n\nEsto enviará mensajes uno tras otro de forma asíncrona en segundo plano.\n\n¿Estás seguro de continuar con el envío?`,
+            `Estás a punto de enviar una difusión masiva ${descripcionDestino}.\n\n🛡️ Protección Anti-Bloqueo Activa:\nLos mensajes se enviarán en segundo plano uno por uno con una pausa aleatoria de ${ritmoTexto} entre cada destinatario para proteger tu línea de WhatsApp.\n\n¿Deseas continuar?`,
             'Continuar',
             'Cancelar'
         );
@@ -729,7 +788,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\nEste proceso NO se puede cancelar una vez iniciado.`,
+            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\n\nEste proceso se ejecutará en segundo plano (asíncrono) y podrás seguir utilizando el sistema con normalidad.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -738,8 +797,8 @@ const WhatsApp = () => {
         setEnviandoGlobal(true);
         try {
             const nodoParam = nodoSeleccionado === 'todos' ? null : nodoSeleccionado;
-            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam);
-            showSuccess('Difusión masiva iniciada en segundo plano con éxito. Puedes revisar el avance en la pestaña de Historial.');
+            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam, estadoSeleccionado, delayMin, delayMax);
+            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Puedes monitorear el progreso en el Historial.`);
             setMensajeGlobal('');
             setActiveTab('Historial');
             cargarHistorial();
@@ -1776,10 +1835,27 @@ const WhatsApp = () => {
                 {/* DIFUSIÓN MASIVA */}
                 {activeTab === 'Difusión Masiva' && (
                     <div>
-                        <h3>📢 Difusión Global / Por Nodos</h3>
+                        <h3>📢 Difusión Masiva Segmentada</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Envía un mensaje masivo a todos los clientes en estado **"Activo"**, o filtra por un nodo específico (ej. Sayausí, Baños). El proceso se ejecuta en segundo plano.
+                            Envía comunicados masivos seleccionando el <strong>Estado del Cliente</strong> (Activos, Inactivos, Suspendidos, etc.) y opcionalmente el <strong>Nodo / Parroquia</strong>. El envío cuenta con protección anti-bloqueo y se ejecuta en segundo plano.
                         </p>
+
+                        {/* Banner Informativo Anti-Baneo */}
+                        <div style={{
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '8px',
+                            padding: '12px 16px',
+                            marginBottom: '18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                        }}>
+                            <span style={{ fontSize: '1.5rem' }}>🛡️</span>
+                            <div style={{ fontSize: '0.85rem', color: '#d1fae5', lineHeight: '1.4' }}>
+                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Activa:</strong> El sistema nunca despacha ráfagas automáticas instantáneas. Los mensajes se envían uno a uno con una pausa aleatoria calculada entre cada cliente ({velocidadEnvio === 'prudente' ? '8 a 15 seg' : velocidadEnvio === 'rapido' ? '2 a 4.5 seg' : '4 a 7.5 seg'}) y texto personalizado con variables, evitando que WhatsApp detecte la actividad como spam robotizado.
+                            </div>
+                        </div>
 
                         <div style={{ 
                             background: 'rgba(239, 68, 68, 0.05)', 
@@ -1788,53 +1864,142 @@ const WhatsApp = () => {
                             borderRadius: '8px', 
                             marginBottom: '20px' 
                         }}>
-                            {/* Selector de Nodos y Parroquias (Compacto a un lado) */}
+                            {/* Panel de Filtros y Configuración */}
                             <div style={{ 
-                                marginBottom: '20px', 
-                                maxWidth: '440px', 
-                                background: 'rgba(15, 23, 42, 0.6)', 
-                                padding: '14px 16px', 
-                                borderRadius: '8px', 
-                                border: '1px solid rgba(96, 165, 250, 0.25)' 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+                                gap: '15px', 
+                                marginBottom: '20px' 
                             }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 'bold', margin: 0, fontSize: '0.88rem' }}>
-                                        🎯 Filtrar Destinatarios
+                                {/* 1. Selector de Estado */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(239, 68, 68, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#f87171', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>👥</span> Estado del Cliente
                                     </label>
-                                    <span style={{ 
-                                        fontSize: '0.8rem', 
-                                        padding: '3px 10px', 
-                                        borderRadius: '12px', 
-                                        background: 'rgba(59, 130, 246, 0.25)', 
-                                        color: '#93c5fd', 
-                                        fontWeight: 'bold' 
-                                    }}>
-                                        {getClientesDestinoCount()} Clientes Activos
-                                    </span>
+                                    <select
+                                        value={estadoSeleccionado}
+                                        onChange={(e) => setEstadoSeleccionado(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(239, 68, 68, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <option value="ACTIVO">🟢 Solo Activos</option>
+                                        <option value="INACTIVO">🔴 Solo Inactivos</option>
+                                        <option value="SUSPENDIDO">⛔ Solo Suspendidos</option>
+                                        <option value="PROCESO">🟡 Solo en Proceso</option>
+                                        <option value="JURIDICO">⚖️ Solo en Jurídico</option>
+                                        <option value="PENDIENTE">⏳ Solo Pendientes / Activación</option>
+                                        <option value="FINIQUITO">👻 Solo Finiquito</option>
+                                        <option value="CORTESIA">🎁 Solo Cortesía</option>
+                                        <option value="TRASLADO">🚚 Solo Traslado</option>
+                                        <option value="TODOS">🌐 Todos los Estados</option>
+                                    </select>
                                 </div>
 
-                                <select
-                                    value={nodoSeleccionado}
-                                    onChange={(e) => setNodoSeleccionado(e.target.value)}
-                                    style={{ 
-                                        height: '40px', 
-                                        background: '#0e1726', 
-                                        color: '#fff', 
-                                        border: '1px solid rgba(96, 165, 250, 0.4)', 
-                                        borderRadius: '6px', 
-                                        padding: '0 10px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: '500',
-                                        width: '100%'
-                                    }}
-                                >
-                                    <option value="todos">🌐 Todos los Nodos / Parroquias</option>
-                                    {listaNodos.map((nodo, i) => (
-                                        <option key={i} value={nodo}>
-                                            📍 {nodo}
-                                        </option>
-                                    ))}
-                                </select>
+                                {/* 2. Selector de Nodos y Parroquias */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(96, 165, 250, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>📍</span> Nodo / Parroquia
+                                    </label>
+                                    <select
+                                        value={nodoSeleccionado}
+                                        onChange={(e) => setNodoSeleccionado(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(96, 165, 250, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <option value="todos">🌐 Todos los Nodos / Parroquias</option>
+                                        {listaNodos.map((nodo, i) => (
+                                            <option key={i} value={nodo}>
+                                                📍 {nodo}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* 3. Selector de Ritmo Anti-Baneo */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(52, 211, 153, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#34d399', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>⏱️</span> Ritmo de Envío (Anti-Baneo)
+                                    </label>
+                                    <select
+                                        value={velocidadEnvio}
+                                        onChange={(e) => setVelocidadEnvio(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(52, 211, 153, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <option value="seguro">🛡️ Seguro (4 - 7.5 seg por cliente - Recomendado)</option>
+                                        <option value="prudente">🐢 Conservador (8 - 15 seg por cliente - Ideal bases grandes)</option>
+                                        <option value="rapido">⚡ Rápido (2 - 4.5 seg por cliente)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Resumen de Destinatarios */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'rgba(30, 41, 59, 0.6)',
+                                padding: '10px 16px',
+                                borderRadius: '6px',
+                                marginBottom: '18px',
+                                border: '1px solid rgba(255, 255, 255, 0.08)'
+                            }}>
+                                <div style={{ fontSize: '0.88rem', color: '#cbd5e1' }}>
+                                    Destinatarios según filtros actuales:
+                                </div>
+                                <span style={{ 
+                                    fontSize: '0.88rem', 
+                                    padding: '4px 12px', 
+                                    borderRadius: '12px', 
+                                    background: getClientesDestinoCount() > 0 ? 'rgba(59, 130, 246, 0.25)' : 'rgba(239, 68, 68, 0.25)', 
+                                    color: getClientesDestinoCount() > 0 ? '#93c5fd' : '#fca5a5', 
+                                    fontWeight: 'bold',
+                                    border: `1px solid ${getClientesDestinoCount() > 0 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
+                                }}>
+                                    🎯 {getClientesDestinoCount()} Destinatarios Listos
+                                </span>
                             </div>
 
                             <div className="input-group">
@@ -1849,7 +2014,7 @@ const WhatsApp = () => {
                                     className="input" 
                                     value={mensajeGlobal}
                                     onChange={e => setMensajeGlobal(e.target.value)}
-                                    placeholder="Ingresa el comunicado de corte, cobro o advertencia para los clientes seleccionados... Usa {nombre}, {saldo}, etc."
+                                    placeholder="Ingresa el comunicado de corte, cobro, reactivación o aviso para los clientes seleccionados... Usa {nombre}, {saldo}, {plan}, etc."
                                     rows="5"
                                     style={{ marginTop: '8px', fontFamily: 'monospace', borderColor: 'rgba(239,68,68,0.2)' }}
                                 />
@@ -1870,7 +2035,7 @@ const WhatsApp = () => {
                             >
                                 {!isConnected 
                                     ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
-                                    : (enviandoGlobal ? '⏳ Difundiendo en background...' : `🚀 Lanzar Difusión Masiva (${getClientesDestinoCount()} Clientes)`)
+                                    : (enviandoGlobal ? '⏳ Difundiendo en background...' : `🚀 Lanzar Difusión Masiva (${getClientesDestinoCount()} Destinatarios)`)
                                 }
                             </button>
                         </div>
@@ -1882,7 +2047,7 @@ const WhatsApp = () => {
                             borderRadius: '8px' 
                         }}>
                             <p style={{ color: '#fde047', margin: 0, fontSize: '0.85rem' }}>
-                                <strong>🚨 Doble Seguridad:</strong> Se solicitarán dos confirmaciones adicionales antes de despachar la difusión. Por favor, asegúrate de que el texto es correcto.
+                                <strong>🚨 Doble Confirmación de Seguridad:</strong> Se solicitarán dos confirmaciones adicionales antes de despachar la difusión. Los envíos se realizan de forma asíncrona en segundo plano para no interrumpir tus labores.
                             </p>
                         </div>
                     </div>

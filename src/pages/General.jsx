@@ -1143,7 +1143,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                               }
                               if (col === 'iptv_cuenta') {
                                 // Mostrar credenciales IPTV si el cliente tiene IPTV activo
-                                if (c.tv_tipo === 'IPTV' && c.iptv_user) {
+                                if ((c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user) {
                                   return (
                                     <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap' }}>
                                       <div><strong>👤</strong> {c.iptv_user}</div>
