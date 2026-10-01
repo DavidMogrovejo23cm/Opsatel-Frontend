@@ -308,7 +308,7 @@ const Admin = () => {
         const isActivo = !c.estado || c.estado.toUpperCase() === 'ACTIVO';
         return isSayausi && isActivo;
       })
-      .sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+      .sort((a, b) => (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' }));
 
     if (clientesSayausi.length === 0) {
       showWarning('No se encontraron clientes activos registrados en el nodo Sayausí.');
@@ -442,9 +442,27 @@ const Admin = () => {
       if (statusFilter === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(estadoUpper)) return false;
       if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(estadoUpper)) return false;
 
-      return (c.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.id?.toString().includes(searchTerm) ||
-        (c.ip || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const cleanSearch = searchTerm.trim().toLowerCase();
+      if (!cleanSearch) return true;
+
+      const comentarios = String(c.comentarios || c.comentario || '');
+      const cdMatch = cleanSearch.match(/^(?:caja\s+)?c\.?d\.?\s*[-:#.]?\s*(\d+)$/i);
+
+      let matchComentario = false;
+      if (cdMatch) {
+        const cdNum = parseInt(cdMatch[1], 10);
+        const cdRegex = new RegExp(`(?:^|[^a-záéíóúñ0-9])c\\.?d\\.?\\s*[-:#.]?\\s*0*${cdNum}(?!\\d)`, 'i');
+        matchComentario = cdRegex.test(comentarios);
+      } else {
+        matchComentario = comentarios.toLowerCase().includes(cleanSearch);
+      }
+
+      return (
+        (c.nombre || '').toLowerCase().includes(cleanSearch) ||
+        c.id?.toString().includes(cleanSearch) ||
+        (c.ip || '').toLowerCase().includes(cleanSearch) ||
+        matchComentario
+      );
     })
     .sort((a, b) => a.id - b.id);
 
