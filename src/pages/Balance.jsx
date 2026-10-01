@@ -2199,7 +2199,7 @@ const Balance = () => {
           <Card
             icon="📥"
             title="Ingresos Operacionales"
-            color={P.ingreso}
+            color="#10b981"
             value={fmt(totalIngresosMovs)}
             sub="Internet y Adicionales"
             bancos={[
@@ -2211,11 +2211,11 @@ const Balance = () => {
           <Card
             icon="📤"
             title="Egresos Operacionales"
-            color={P.egreso}
+            color="#ef4444"
             value={fmt(totalEgOperacional)}
             sub="Gastos operativos normales"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#a855f7' },
+              { icon: '💵', nombre: 'Efectivo', monto: egEfectivo, color: '#ef4444' },
               { icon: '🏦', nombre: 'Pichincha', monto: egPichincha, color: '#facc15' },
               { icon: '🏛️', nombre: 'COP JEP', monto: egJep, color: '#fb923c' }
             ]}
@@ -2223,13 +2223,13 @@ const Balance = () => {
           <Card
             icon={finalBalanceNeto >= 0 ? '💰' : '⚠️'}
             title="Balance Neto Operacional"
-            color={finalBalanceNeto >= 0 ? P.ingreso : P.egreso}
+            color="#a855f7"
             value={fmt(finalBalanceNeto)}
             sub={finalBalanceNeto >= 0 ? 'Superávit Operacional' : 'Déficit Operacional'}
             bancos={[
-              { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#4ade80' : '#f43f5e' },
-              { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#f43f5e' },
-              { icon: '🏛️', nombre: 'COP JEP', monto: balJep, color: balJep >= 0 ? '#fb923c' : '#f43f5e' }
+              { icon: '💵', nombre: 'Efectivo', monto: balEfectivo, color: balEfectivo >= 0 ? '#a855f7' : '#ef4444' },
+              { icon: '🏦', nombre: 'Pichincha', monto: balPichincha, color: balPichincha >= 0 ? '#facc15' : '#ef4444' },
+              { icon: '🏛️', nombre: 'COP JEP', monto: balJep, color: balJep >= 0 ? '#fb923c' : '#ef4444' }
             ]}
           />
         </div>
@@ -2241,11 +2241,11 @@ const Balance = () => {
             compact
             icon="📺"
             title="Ingresos IPTV"
-            color="#38bdf8"
+            color="#10b981"
             value={fmt(iptvTotalIng)}
             sub="IPTV Plus y Clientes Extras"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvIngEf, color: '#38bdf8' },
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvIngEf, color: '#10b981' },
               { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvIngPich, color: '#facc15' },
               { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvIngJep, color: '#fb923c' }
             ]}
@@ -2254,11 +2254,11 @@ const Balance = () => {
             compact
             icon="📤"
             title="Egresos IPTV"
-            color="#ec4899"
+            color="#ef4444"
             value={fmt(iptvTotalEg)}
             sub="Gastos Plataforma / Proveedores"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvEgEf, color: '#ec4899' },
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvEgEf, color: '#ef4444' },
               { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvEgPich, color: '#facc15' },
               { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvEgJep, color: '#fb923c' }
             ]}
@@ -2267,13 +2267,13 @@ const Balance = () => {
             compact
             icon={iptvFinalBal >= 0 ? '💎' : '⚠️'}
             title="Balance Neto IPTV"
-            color={iptvFinalBal >= 0 ? '#06b6d4' : '#f43f5e'}
+            color="#a855f7"
             value={fmt(iptvFinalBal)}
             sub={iptvFinalBal >= 0 ? 'Superávit Plataforma' : 'Déficit Plataforma'}
             bancos={[
-              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvBalEf, color: iptvBalEf >= 0 ? '#4ade80' : '#f43f5e' },
-              { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvBalPich, color: iptvBalPich >= 0 ? '#facc15' : '#f43f5e' },
-              { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvBalJep, color: iptvBalJep >= 0 ? '#fb923c' : '#f43f5e' }
+              { icon: '💵', nombre: 'Efectivo IPTV', monto: iptvBalEf, color: iptvBalEf >= 0 ? '#a855f7' : '#ef4444' },
+              { icon: '🏦', nombre: 'Pichincha IPTV', monto: iptvBalPich, color: iptvBalPich >= 0 ? '#facc15' : '#ef4444' },
+              { icon: '🏛️', nombre: 'COP JEP IPTV', monto: iptvBalJep, color: iptvBalJep >= 0 ? '#fb923c' : '#ef4444' }
             ]}
           />
         </div>
@@ -2285,11 +2285,11 @@ const Balance = () => {
             compact
             icon="💰"
             title="Ingresos Proyectos"
-            color="#f59e0b"
+            color="#10b981"
             value={fmt(proyTotalIng)}
             sub="Ingresos registrados del mes"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo PR', monto: proyIngEf, color: '#4ade80' },
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyIngEf, color: '#10b981' },
               { icon: '🏦', nombre: 'Pichincha PR', monto: proyIngPich, color: '#facc15' },
               { icon: '🏛️', nombre: 'COP JEP PR', monto: proyIngJep, color: '#fb923c' }
             ]}
@@ -2298,11 +2298,11 @@ const Balance = () => {
             compact
             icon="🏗️"
             title="Gastos / Inversión Proyectos"
-            color="#fb923c"
+            color="#ef4444"
             value={fmt(proyTotalEg)}
             sub="Inversión en obras y materiales"
             bancos={[
-              { icon: '💵', nombre: 'Efectivo PR', monto: proyEgEf, color: '#fb923c' },
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyEgEf, color: '#ef4444' },
               { icon: '🏦', nombre: 'Pichincha PR', monto: proyEgPich, color: '#facc15' },
               { icon: '🏛️', nombre: 'COP JEP PR', monto: proyEgJep, color: '#fb923c' }
             ]}
@@ -2311,13 +2311,13 @@ const Balance = () => {
             compact
             icon={proyFinalBal >= 0 ? '🏗️' : '⚠️'}
             title="Balance Neto Proyectos"
-            color={proyFinalBal >= 0 ? '#10b981' : '#f43f5e'}
+            color="#a855f7"
             value={fmt(proyFinalBal)}
             sub={proyFinalBal >= 0 ? 'Ganancia Neta Proyectos' : 'Inversión Neta en Curso'}
             bancos={[
-              { icon: '💵', nombre: 'Efectivo PR', monto: proyBalEf, color: proyBalEf >= 0 ? '#4ade80' : '#f43f5e' },
-              { icon: '🏦', nombre: 'Pichincha PR', monto: proyBalPich, color: proyBalPich >= 0 ? '#facc15' : '#f43f5e' },
-              { icon: '🏛️', nombre: 'COP JEP PR', monto: proyBalJep, color: proyBalJep >= 0 ? '#fb923c' : '#f43f5e' }
+              { icon: '💵', nombre: 'Efectivo PR', monto: proyBalEf, color: proyBalEf >= 0 ? '#a855f7' : '#ef4444' },
+              { icon: '🏦', nombre: 'Pichincha PR', monto: proyBalPich, color: proyBalPich >= 0 ? '#facc15' : '#ef4444' },
+              { icon: '🏛️', nombre: 'COP JEP PR', monto: proyBalJep, color: proyBalJep >= 0 ? '#fb923c' : '#ef4444' }
             ]}
           />
         </div>
