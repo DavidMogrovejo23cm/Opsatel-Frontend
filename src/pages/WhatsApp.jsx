@@ -30,7 +30,7 @@ const WhatsApp = () => {
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [nodoSeleccionado, setNodoSeleccionado] = useState('todos');
     const [estadoSeleccionado, setEstadoSeleccionado] = useState('ACTIVO');
-    const [velocidadEnvio, setVelocidadEnvio] = useState('seguro'); // 'seguro' (4-7.5s) | 'prudente' (8-15s) | 'rapido' (2-4.5s)
+    const [velocidadEnvio, setVelocidadEnvio] = useState('seguro'); // 'seguro' (lotes de 10, 30-120s c/u + descanso 5-10 min)
     const [listaNodos, setListaNodos] = useState([]);
     const [listaClientes, setListaClientes] = useState([]);
 
@@ -793,22 +793,32 @@ const WhatsApp = () => {
         const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
         const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel}`;
 
-        let delayMin = 4.0;
-        let delayMax = 7.5;
-        let ritmoTexto = '4 a 7.5 segundos (Modo Seguro)';
+        let delayMin = 30.0;
+        let delayMax = 120.0;
+        let batchSize = 10;
+        let batchPauseMin = 300.0; // 5 minutos
+        let batchPauseMax = 600.0; // 10 minutos
+        let ritmoTexto = 'Grupos de 10 clientes (30 a 120 seg entre mensajes) con descanso de 5 a 10 minutos entre cada grupo';
+
         if (velocidadEnvio === 'prudente') {
-            delayMin = 8.0;
-            delayMax = 15.0;
-            ritmoTexto = '8 a 15 segundos (Modo Conservador)';
-        } else if (velocidadEnvio === 'rapido') {
-            delayMin = 2.0;
-            delayMax = 4.5;
-            ritmoTexto = '2 a 4.5 segundos (Modo Rápido)';
+            delayMin = 45.0;
+            delayMax = 150.0;
+            batchSize = 8;
+            batchPauseMin = 420.0; // 7 minutos
+            batchPauseMax = 720.0; // 12 minutos
+            ritmoTexto = 'Grupos de 8 clientes (45 a 150 seg entre mensajes) con descanso de 7 a 12 minutos entre cada grupo';
+        } else if (velocidadEnvio === 'moderado') {
+            delayMin = 20.0;
+            delayMax = 60.0;
+            batchSize = 10;
+            batchPauseMin = 180.0; // 3 minutos
+            batchPauseMax = 300.0; // 5 minutos
+            ritmoTexto = 'Grupos de 10 clientes (20 a 60 seg entre mensajes) con descanso de 3 a 5 minutos entre cada grupo';
         }
 
         const confirmacion1 = await showConfirm(
             '⚠️ ADVERTENCIA DE SEGURIDAD',
-            `Estás a punto de enviar una difusión masiva ${descripcionDestino}.\n\n🛡️ Protección Anti-Bloqueo Activa:\nLos mensajes se enviarán en segundo plano uno por uno con una pausa aleatoria de ${ritmoTexto} entre cada destinatario para proteger tu línea de WhatsApp.\n\n¿Deseas continuar?`,
+            `Estás a punto de enviar una difusión masiva ${descripcionDestino}.\n\n🛡️ Protección Anti-Bloqueo Inteligente Activa:\n${ritmoTexto} para proteger tu línea de WhatsApp y evitar bloqueos por envíos masivos.\n\n¿Deseas continuar?`,
             'Continuar',
             'Cancelar'
         );
@@ -816,7 +826,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\n\nEste proceso se ejecutará en segundo plano (asíncrono) y podrás seguir utilizando el sistema con normalidad.`,
+            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\n\nEste proceso se ejecutará en segundo plano (asíncrono) en grupos de ${batchSize} clientes y podrás seguir utilizando el sistema con normalidad.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -825,8 +835,8 @@ const WhatsApp = () => {
         setEnviandoGlobal(true);
         try {
             const nodoParam = nodoSeleccionado === 'todos' ? null : nodoSeleccionado;
-            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam, estadoSeleccionado, delayMin, delayMax);
-            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Puedes monitorear el progreso en el Historial.`);
+            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam, estadoSeleccionado, delayMin, delayMax, batchSize, batchPauseMin, batchPauseMax);
+            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Se enviará en grupos de ${batchSize} clientes con pausas de 30-120s y descansos de 5-10 min.`);
             setMensajeGlobal('');
             setActiveTab('Historial');
             cargarHistorial();
@@ -1881,7 +1891,7 @@ const WhatsApp = () => {
                         }}>
                             <span style={{ fontSize: '1.5rem' }}>🛡️</span>
                             <div style={{ fontSize: '0.85rem', color: '#d1fae5', lineHeight: '1.4' }}>
-                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Activa:</strong> El sistema nunca despacha ráfagas automáticas instantáneas. Los mensajes se envían uno a uno con una pausa aleatoria calculada entre cada cliente ({velocidadEnvio === 'prudente' ? '8 a 15 seg' : velocidadEnvio === 'rapido' ? '2 a 4.5 seg' : '4 a 7.5 seg'}) y texto personalizado con variables, evitando que WhatsApp detecte la actividad como spam robotizado.
+                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Inteligente por Lotes:</strong> Los mensajes masivos se envían en grupos de 10 clientes con un intervalo aleatorio de 30 a 120 segundos entre cada cliente. Al completar cada grupo de 10, el sistema realiza una pausa de descanso de 5 a 10 minutos antes del siguiente grupo, evitando por completo patrones robotizados y previniendo sanciones o baneos de WhatsApp.
                             </div>
                         </div>
 
@@ -1996,9 +2006,9 @@ const WhatsApp = () => {
                                             width: '100%'
                                         }}
                                     >
-                                        <option value="seguro">🛡️ Seguro (4 - 7.5 seg por cliente - Recomendado)</option>
-                                        <option value="prudente">🐢 Conservador (8 - 15 seg por cliente - Ideal bases grandes)</option>
-                                        <option value="rapido">⚡ Rápido (2 - 4.5 seg por cliente)</option>
+                                        <option value="seguro">🛡️ Grupos de 10 (30-120s c/u + pausa 5-10 min) - Recomendado Anti-Baneo</option>
+                                        <option value="prudente">🐢 Ultra Seguro (Grupos de 8 / 45-150s c/u + pausa 7-12 min)</option>
+                                        <option value="moderado">⏱️ Moderado (Grupos de 10 / 20-60s c/u + pausa 3-5 min)</option>
                                     </select>
                                 </div>
                             </div>
