@@ -166,6 +166,8 @@ export const configuracionService = {
   deleteAllClientes: () => api.delete('/clientes/all'),
   // Eliminar todos los clientes extras
   deleteAllClientesExtras: () => api.delete('/extras/all'),
+  // Eliminar valores pagados de clientes extras solamente
+  resetPagosExtras: () => api.post('/configuraciones/reset-pagos-extras'),
   // Restablecer todos los valores de dinero a ceros
   resetValoresDinero: () => api.post('/configuraciones/reset-dinero'),
   // Eliminar balance (reiniciar a ceros sin afectar deudas de clientes)

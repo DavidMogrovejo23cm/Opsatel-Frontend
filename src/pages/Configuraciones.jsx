@@ -1479,6 +1479,76 @@ const Configuraciones = () => {
                                 </button>
                             </div>
 
+                            {/* Acción: Eliminar Valores Pagados de Clientes Extras Solamente */}
+                            <div className="glass-card glass" style={{
+                                border: '1px solid rgba(236, 72, 153, 0.35)',
+                                background: 'rgba(236, 72, 153, 0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '22px'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>⭐ 💳 🗑️</div>
+                                    <h4 style={{ color: '#ec4899', marginBottom: '8px' }}>Eliminar Pagos de Extras</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                        Elimina <strong>ÚNICAMENTE</strong> los valores pagados y el historial de pagos de los clientes extras. <strong>No borra ningún cliente extra</strong> ni modifica clientes principales.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn"
+                                    disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
+                                    onClick={async () => {
+                                        if (passwordDeleteClientes !== 'admin1.@') {
+                                            showError('Contraseña incorrecta');
+                                            return;
+                                        }
+                                        const c1 = await showConfirm(
+                                            '⚠️ ¿ELIMINAR VALORES PAGADOS DE EXTRAS?',
+                                            'Esta acción eliminará ÚNICAMENTE los registros y valores de pago de los clientes extras, restableciendo sus saldos.\n\nLos clientes extras NO se borrarán y los clientes principales NO serán afectados.\n\nEsta acción NO se puede deshacer.',
+                                            'Continuar',
+                                            'Cancelar'
+                                        );
+                                        if (!c1) return;
+                                        const c2 = await showConfirm(
+                                            '🚨 CONFIRMACIÓN FINAL',
+                                            '¿Confirmas eliminar definitivamente todos los pagos de clientes extras?',
+                                            'Sí, eliminar pagos extras',
+                                            'Cancelar'
+                                        );
+                                        if (!c2) return;
+
+                                        try {
+                                            setActionLoading(true);
+                                            const res = await configuracionService.resetPagosExtras();
+                                            showSuccess(res.data?.message || 'Los valores pagados de clientes extras han sido eliminados exitosamente.');
+                                            setPasswordDeleteClientes('');
+                                            fetchData();
+                                        } catch (error) {
+                                            showError('Error: ' + (error.response?.data?.detail || error.message));
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    style={{
+                                        marginTop: '20px',
+                                        width: '100%',
+                                        background: passwordDeleteClientes === 'admin1.@' ? 'linear-gradient(135deg, #ec4899, #be185d)' : '#9ca3af',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '10px 16px',
+                                        fontWeight: '600',
+                                        cursor: passwordDeleteClientes === 'admin1.@' ? 'pointer' : 'not-allowed',
+                                        opacity: passwordDeleteClientes === 'admin1.@' ? 1 : 0.6,
+                                        boxShadow: passwordDeleteClientes === 'admin1.@' ? '0 4px 14px rgba(236, 72, 153, 0.35)' : 'none',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    💳 Eliminar Pagos de Extras
+                                </button>
+                            </div>
+
                             {/* Acción 3: Restablecer Valores de Dinero a Ceros */}
                             <div className="glass-card glass" style={{
                                 border: '1px solid rgba(245, 158, 11, 0.35)',
