@@ -13,6 +13,11 @@ const ExtrasGeneral = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [showPagoModal, setShowPagoModal] = useState(false);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [uploadModo, setUploadModo] = useState('merge');
+    const [uploading, setUploading] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState(null);
     const [activeTab, setActiveTab] = useState('general'); // 'general' o 'pagos'
@@ -259,6 +264,52 @@ const ExtrasGeneral = () => {
         }
     };
 
+    const handleUploadExcel = async (e) => {
+        if (e) e.preventDefault();
+        if (!uploadFile) {
+            showError("Por favor selecciona un archivo Excel (.xlsx o .xls)");
+            return;
+        }
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append("file", uploadFile);
+            formData.append("modo", uploadModo);
+
+            const resp = await extrasService.uploadDatabase(formData);
+            showSuccess(resp.data?.message || "Base de datos de Extras importada exitosamente");
+            setShowUploadModal(false);
+            setUploadFile(null);
+            const fileInput = document.getElementById('excel-extras-input');
+            if (fileInput) fileInput.value = '';
+            fetchData();
+        } catch (err) {
+            showError(err.response?.data?.detail || "Error al subir la base de datos de extras");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDownloadExcel = async () => {
+        try {
+            setDownloading(true);
+            const resp = await extrasService.downloadDatabase();
+            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Base_Datos_Extras_General_${new Date().toISOString().split('T')[0]}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            showSuccess("Archivo Excel de Extras descargado correctamente");
+        } catch (err) {
+            showError("Error al descargar la base de datos de extras");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     const filteredMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
     return (
@@ -270,14 +321,45 @@ const ExtrasGeneral = () => {
                     <h1 style={{ fontWeight: '900', margin: 0 }}>Extras General</h1>
                     <p style={{ marginTop: '4px' }}>Control administrativo de servicios y cobranzas.</p>
                 </div>
-                <div className="page-actions">
+                <div className="page-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <input
                         className="input"
-                        style={{ width: '100%', maxWidth: '250px', marginBottom: 0 }}
+                        style={{ width: '100%', maxWidth: '220px', marginBottom: 0 }}
                         placeholder="Buscar cliente..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
+                    <button
+                        className="btn"
+                        onClick={() => setShowUploadModal(true)}
+                        style={{
+                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                        }}
+                        title="Subir archivo Excel exclusivo de Extras"
+                    >
+                        <span>📤</span> Subir Excel Extras
+                    </button>
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleDownloadExcel}
+                        disabled={downloading}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            whiteSpace: 'nowrap'
+                        }}
+                        title="Descargar base de datos actual de extras en Excel"
+                    >
+                        <span>📥</span> {downloading ? 'Descargando...' : 'Descargar Excel'}
+                    </button>
                     <button
                         className="btn btn-primary"
                         onClick={handleOpenModal}
@@ -660,6 +742,128 @@ const ExtrasGeneral = () => {
                             <button className="btn btn-secondary" onClick={() => setShowPagoModal(false)}>Cancelar</button>
                             <button className="btn btn-primary" style={{ background: '#10b981' }} onClick={handleConfirmPago}>Confirmar Pago</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: SUBIR EXCEL EXTRAS (COMPLETAMENTE SEPARADO) */}
+            {showUploadModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    zIndex: 1000, padding: '20px'
+                }}>
+                    <div className="glass-card glass" style={{ width: '100%', maxWidth: '520px', padding: '28px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '1.8rem' }}>📤</span>
+                            <h2 style={{ margin: 0, fontWeight: '900', color: '#818cf8' }}>Importar Excel Extras</h2>
+                        </div>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '16px' }}>
+                            Carga masiva de base de datos de clientes extras (Extra General / Plataforma).
+                        </p>
+
+                        <div style={{
+                            background: 'rgba(99, 102, 241, 0.1)',
+                            border: '1px solid rgba(99, 102, 241, 0.25)',
+                            borderRadius: '10px',
+                            padding: '12px 16px',
+                            marginBottom: '20px',
+                            fontSize: '0.85rem',
+                            lineHeight: '1.5',
+                            color: '#c7d2fe'
+                        }}>
+                            🔒 <b>Sección Totalmente Independiente:</b> Esta subida es <b>exclusiva</b> para Extras y no modifica ni altera en lo absoluto la base de datos principal de clientes. Cuadra automáticamente precios, estados y cuadrícula mensual (Enero a Diciembre).
+                        </div>
+
+                        <form onSubmit={handleUploadExcel}>
+                            <div className="form-group" style={{ marginBottom: '18px' }}>
+                                <label className="label" style={{ fontWeight: 'bold' }}>Archivo Excel (.xlsx o .xls)</label>
+                                <input
+                                    id="excel-extras-input"
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                                    className="input"
+                                    style={{
+                                        padding: '10px',
+                                        background: 'rgba(30, 41, 59, 0.8)',
+                                        border: '1px dashed #6366f1',
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                                {uploadFile && (
+                                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#34d399', fontWeight: 'bold' }}>
+                                        ✓ Seleccionado: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="form-group" style={{ marginBottom: '24px' }}>
+                                <label className="label" style={{ fontWeight: 'bold' }}>Modo de Importación</label>
+                                <div style={{ display: 'flex', gap: '14px', marginTop: '6px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input
+                                            type="radio"
+                                            name="modo"
+                                            value="merge"
+                                            checked={uploadModo === 'merge'}
+                                            onChange={() => setUploadModo('merge')}
+                                        />
+                                        <span>Actualizar y fusionar</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input
+                                            type="radio"
+                                            name="modo"
+                                            value="replace"
+                                            checked={uploadModo === 'replace'}
+                                            onChange={() => setUploadModo('replace')}
+                                        />
+                                        <span style={{ color: '#f87171' }}>Reemplazar completa</span>
+                                    </label>
+                                </div>
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '4px' }}>
+                                    {uploadModo === 'merge' 
+                                        ? 'Conserva los datos actuales y actualiza/agrega los clientes del archivo.' 
+                                        : '⚠️ Borra los clientes extras actuales y carga desde cero con este archivo.'}
+                                </span>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => { setShowUploadModal(false); setUploadFile(null); }}
+                                    disabled={uploading}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={uploading || !uploadFile}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <span style={{ display: 'inline-block', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', width: '16px', height: '16px', animation: 'spin 1s linear infinite' }}></span>
+                                            <span>Procesando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>🚀</span> Importar Base de Extras
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { clienteService } from '../services/api';
+import { clienteService, extrasService } from '../services/api';
 import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
 
 const SubirBD = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  // Estados para Sección Extras General (Completamente Separada)
+  const [fileExtras, setFileExtras] = useState(null);
+  const [loadingExtras, setLoadingExtras] = useState(false);
+  const [downloadingExtras, setDownloadingExtras] = useState(false);
+  const [modoExtras, setModoExtras] = useState('merge');
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -61,6 +67,52 @@ const SubirBD = () => {
       showError('Error al descargar la base de datos. Asegúrese de que el backend local esté activo.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleUploadExtras = async () => {
+    if (!fileExtras) {
+      showWarning('Por favor selecciona un archivo Excel (.xlsx o .xls) de Extras');
+      return;
+    }
+    setLoadingExtras(true);
+    const formData = new FormData();
+    formData.append('file', fileExtras);
+    formData.append('modo', modoExtras);
+
+    try {
+      const resp = await extrasService.uploadDatabase(formData);
+      showSuccess(resp.data?.message || 'Base de datos de Extras subida exitosamente');
+      setFileExtras(null);
+      const fileInput = document.getElementById('bd-extras-file-input');
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.detail || 'Error al subir la base de datos de extras';
+      showError(errMsg);
+    } finally {
+      setLoadingExtras(false);
+    }
+  };
+
+  const handleDownloadExtras = async () => {
+    setDownloadingExtras(true);
+    try {
+      const response = await extrasService.downloadDatabase();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Base_Datos_Extras_General_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showSuccess('Archivo de Extras descargado exitosamente');
+    } catch (error) {
+      console.error(error);
+      showError('Error al descargar la base de datos de extras.');
+    } finally {
+      setDownloadingExtras(false);
     }
   };
 
@@ -233,6 +285,179 @@ const SubirBD = () => {
           </button>
         </div>
 
+      </div>
+
+      {/* SECCIÓN TOTALMENTE APARTADA: CLIENTES EXTRAS / EXTRA GENERAL */}
+      <div style={{
+        maxWidth: '1100px',
+        margin: '40px auto 0 auto',
+        background: 'linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, rgba(15, 23, 42, 0.4) 100%)',
+        border: '1px solid rgba(99, 102, 241, 0.35)',
+        borderRadius: '20px',
+        padding: '32px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2.2rem' }}>📺</span>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0, color: '#a5b4fc' }}>
+                Base de Datos: Clientes Extras (Extra General / Plataforma)
+              </h2>
+              <p style={{ margin: '4px 0 0 0', color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem' }}>
+                Sección 100% independiente de la base de datos principal de clientes. Maneja cuentas IPTV/TV, estados, precios individuales y pagos mensuales.
+              </p>
+            </div>
+          </div>
+          <span style={{
+            background: 'rgba(99, 102, 241, 0.25)',
+            border: '1px solid #6366f1',
+            color: '#c7d2fe',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '0.8rem',
+            fontWeight: 'bold'
+          }}>
+            🔒 MÓDULO AISLADO EXTRAS
+          </span>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '24px',
+          marginTop: '20px'
+        }}>
+          {/* EXPORTAR EXTRAS */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between'
+          }}>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 'bold', color: '#34d399', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>📥</span> Descargar Excel Extras
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem', lineHeight: '1.5', marginBottom: '20px' }}>
+                Exporta el libro de Excel con la cuadrícula completa de Extras (Enero a Diciembre), pagos registrados, saldos, usuarios y contraseñas.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadExtras}
+              disabled={downloadingExtras}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'linear-gradient(90deg, #10b981, #059669)',
+                border: 'none',
+                borderRadius: '10px',
+                color: '#fff',
+                fontWeight: 'bold',
+                cursor: downloadingExtras ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {downloadingExtras ? 'Descargando...' : '📥 Descargar Excel Extras (.xlsx)'}
+            </button>
+          </div>
+
+          {/* IMPORTAR EXTRAS */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            padding: '24px'
+          }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 'bold', color: '#818cf8', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📤</span> Subir Excel Extras
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem', lineHeight: '1.5', marginBottom: '14px' }}>
+              Sube el archivo Excel de Extras (hoja PLATAFORMA). Cuadra precios, meses, saldos y pagos sin alterar clientes normales.
+            </p>
+
+            <div style={{
+              border: '2px dashed rgba(99, 102, 241, 0.4)',
+              borderRadius: '10px',
+              padding: '18px',
+              textAlign: 'center',
+              background: 'rgba(0,0,0,0.3)',
+              cursor: 'pointer',
+              marginBottom: '14px'
+            }}
+            onClick={() => document.getElementById('bd-extras-file-input').click()}
+            >
+              <input
+                type="file"
+                id="bd-extras-file-input"
+                accept=".xlsx, .xls"
+                style={{ display: 'none' }}
+                onChange={e => setFileExtras(e.target.files?.[0] || null)}
+              />
+              <div style={{ fontSize: '1.8rem', marginBottom: '4px' }}>📑</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: fileExtras ? '#34d399' : '#fff' }}>
+                {fileExtras ? fileExtras.name : 'Selecciona o arrastra el archivo de Extras'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                {fileExtras ? `${(fileExtras.size / 1024).toFixed(1)} KB` : 'Formato .xlsx con cuadrícula de Extras'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', fontSize: '0.82rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="modoExtras"
+                  value="merge"
+                  checked={modoExtras === 'merge'}
+                  onChange={() => setModoExtras('merge')}
+                />
+                <span>Actualizar y fusionar</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="modoExtras"
+                  value="replace"
+                  checked={modoExtras === 'replace'}
+                  onChange={() => setModoExtras('replace')}
+                />
+                <span style={{ color: '#f87171' }}>Reemplazar completa</span>
+              </label>
+            </div>
+
+            <button
+              onClick={handleUploadExtras}
+              disabled={!fileExtras || loadingExtras}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: fileExtras ? 'linear-gradient(90deg, #4f46e5, #7c3aed)' : 'rgba(255,255,255,0.05)',
+                border: 'none',
+                borderRadius: '10px',
+                color: fileExtras ? '#fff' : 'rgba(255,255,255,0.3)',
+                fontWeight: 'bold',
+                cursor: fileExtras && !loadingExtras ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {loadingExtras ? (
+                <span style={{ display: 'inline-block', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', width: '16px', height: '16px', animation: 'spin 1s linear infinite' }}></span>
+              ) : (
+                '🚀 Importar Base de Extras'
+              )}
+            </button>
+          </div>
+        </div>
       </div>
       
       <style>{`

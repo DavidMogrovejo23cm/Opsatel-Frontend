@@ -116,6 +116,10 @@ export const extrasService = {
   eliminar: (id) => api.delete(`/extras/${id}`),
   pagar: (id, data) => api.post(`/extras/${id}/pagar`, data),
   listarPagos: () => api.get('/extras/pagos/historial'),
+  uploadDatabase: (formData) => api.post('/extras/upload-db', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  downloadDatabase: () => api.get('/extras/download-db', { responseType: 'blob' }),
 };
 
 
