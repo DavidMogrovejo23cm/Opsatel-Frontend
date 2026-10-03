@@ -472,6 +472,311 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PROYECTO COMENTARIOS MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProyectoComentariosModal({ proyecto, onClose, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [texto, setTexto] = useState(proyecto.descripcion || '');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    try {
+      setGuardando(true);
+      await onSave({ ...proyecto, descripcion: texto });
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0, 0, 0, 0.78)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 10000, padding: 16
+    }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 14 }}
+        style={{
+          background: 'linear-gradient(145deg, #131526, #1e1b4b)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          borderRadius: 20,
+          width: '100%',
+          maxWidth: 580,
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.12)',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header del Modal */}
+        <div style={{
+          padding: '18px 24px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(245, 158, 11, 0.06)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.25rem'
+            }}>
+              🏗️
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: 0.3 }}>
+                {proyecto.nombre}
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600 }}>
+                Comentarios y Descripción del Proyecto
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; e.currentTarget.style.color = '#f87171'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Resumen de Métricas */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+          padding: '12px 24px',
+          background: 'rgba(0, 0, 0, 0.22)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+        }}>
+          <div>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Proyectado</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc' }}>{fmt(proyecto.monto_total)}</span>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.68rem', color: 'rgba(16, 185, 129, 0.85)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Ganancia</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: P.ingreso }}>{fmt(proyecto.ganancia || 0)}</span>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.68rem', color: 'rgba(245, 158, 11, 0.85)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Invertido</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: P.proyecto }}>{fmt(proyecto.monto_invertido)}</span>
+          </div>
+        </div>
+
+        {/* Cuerpo: Comentarios o Edición */}
+        <div style={{ padding: '20px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>📝</span> Descripción / Comentarios
+            </span>
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                style={{
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: 8,
+                  padding: '4px 10px',
+                  color: '#fbbf24',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.25)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.15)'}
+              >
+                ✏️ Editar Notas
+              </button>
+            )}
+          </div>
+
+          {isEditing ? (
+            <div>
+              <textarea
+                autoFocus
+                value={texto}
+                onChange={e => setTexto(e.target.value)}
+                placeholder="Escribe aquí los comentarios, detalles, acuerdos o notas importantes del proyecto..."
+                rows={6}
+                style={{
+                  width: '100%',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: '1px solid rgba(245, 158, 11, 0.45)',
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  color: '#fff',
+                  fontSize: '0.88rem',
+                  fontFamily: 'Outfit, sans-serif',
+                  lineHeight: 1.5,
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTexto(proyecto.descripcion || '');
+                    setIsEditing(false);
+                  }}
+                  disabled={guardando}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#e2e8f0',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGuardar}
+                  disabled={guardando}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: guardando ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)'
+                  }}
+                >
+                  {guardando ? 'Guardando...' : '💾 Guardar Notas'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.28)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: 12,
+              padding: '16px 18px',
+              minHeight: 110,
+              maxHeight: 280,
+              overflowY: 'auto'
+            }}>
+              {texto && texto.trim() ? (
+                <div style={{
+                  color: '#f1f5f9',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  {texto}
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 100,
+                  color: 'var(--text-muted)',
+                  textAlign: 'center',
+                  gap: 8
+                }}>
+                  <span style={{ fontSize: '1.6rem', opacity: 0.4 }}>📭</span>
+                  <span style={{ fontSize: '0.82rem' }}>No hay comentarios ni descripción registrados para este proyecto.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#fbbf24',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    + Agregar comentarios ahora
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '14px 24px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.2)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+            Estado: <strong style={{ color: '#fff' }}>{proyecto.estado}</strong>
+            {proyecto.fecha_inicio && <> • Inicio: {proyecto.fecha_inicio}</>}
+            {proyecto.banco_ganancia && <> • Banco: {proyecto.banco_ganancia}</>}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '7px 18px',
+              borderRadius: 10,
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#fff',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PROYECTO FORM
 // ─────────────────────────────────────────────────────────────────────────────
 function ProyectoForm({ initial, onSave, onClose }) {
@@ -1633,6 +1938,7 @@ const Balance = () => {
   const [resumenColchonData, setResumenColchonData] = useState(null);
   const [consolidandoColchon, setConsolidandoColchon] = useState(false);
   const [proyDetalle, setProyDetalle] = useState(null);   // proyecto seleccionado para detalle
+  const [proyectoComentariosModal, setProyectoComentariosModal] = useState(null); // proyecto para ver/editar comentarios
   const [filtroEgreso, setFiltroEgreso] = useState('');   // Búsqueda en egresos del mes
   const [editingFechaId, setEditingFechaId] = useState(null); // Edición inline de fecha con doble clic
   const [showCatModal, setShowCatModal] = useState(false); // Modal de categorías de gastos
@@ -2559,7 +2865,59 @@ const Balance = () => {
                         <span>🏗️</span>
                         <span>{p.nombre}</span>
                       </div>
-                      <Badge text={p.estado} color={ec} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => setProyectoComentariosModal(p)}
+                          title={p.descripcion ? "Ver comentarios y descripción del proyecto" : "Agregar comentarios / descripción al proyecto"}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.14)',
+                            borderRadius: 10,
+                            padding: '4px 10px',
+                            color: '#e2e8f0',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            fontFamily: 'Outfit, sans-serif',
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+                            e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                            e.currentTarget.style.color = '#fbbf24';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+                            e.currentTarget.style.color = '#e2e8f0';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+                          }}
+                        >
+                          <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁️</span>
+                          <span>Comentarios</span>
+                          {p.descripcion && p.descripcion.trim() && (
+                            <span
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: '50%',
+                                background: '#10b981',
+                                boxShadow: '0 0 8px #10b981'
+                              }}
+                              title="Tiene comentarios registrados"
+                            />
+                          )}
+                        </button>
+                        <Badge text={p.estado} color={ec} />
+                      </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
@@ -3331,9 +3689,31 @@ const Balance = () => {
           return (
             <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 18, padding: 22 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
                 <div style={{ fontWeight: 800, fontSize: '1rem', flex: 1 }}>{p.nombre}</div>
-                <Badge text={p.estado} color={ec} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setProyectoComentariosModal(p)}
+                    title="Ver comentarios / descripción del proyecto"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                      borderRadius: 8,
+                      padding: '3px 8px',
+                      color: '#e2e8f0',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <span>👁️</span> Comentarios
+                  </button>
+                  <Badge text={p.estado} color={ec} />
+                </div>
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12, minHeight: 24 }}>{p.descripcion || 'Sin descripción'}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
@@ -4708,6 +5088,18 @@ const Balance = () => {
       {/* Detalle de Proyecto (modal con nóminas) */}
       {proyDetalle !== null && (
         <ProyectoDetalle proyecto={proyDetalle} onClose={() => setProyDetalle(null)} />
+      )}
+
+      {/* Modal Comentarios / Descripción del Proyecto */}
+      {proyectoComentariosModal !== null && (
+        <ProyectoComentariosModal
+          proyecto={proyectoComentariosModal}
+          onClose={() => setProyectoComentariosModal(null)}
+          onSave={async (updatedProy) => {
+            await handleSaveProy(updatedProy);
+            setProyectoComentariosModal(updatedProy);
+          }}
+        />
       )}
 
       {/* Modal Colchon */}
