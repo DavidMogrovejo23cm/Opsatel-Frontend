@@ -11,6 +11,7 @@ const General = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [fechaInstalacionFilter, setFechaInstalacionFilter] = useState('');
+  const [ipFilter, setIpFilter] = useState('');
 
   // Actúa como el motor de edición "en vivo" (Inline Editing)
   const [editingCell, setEditingCell] = useState(null);
@@ -23,6 +24,9 @@ const General = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!hasDirectAccess);
   const [showEntryPinModal, setShowEntryPinModal] = useState(!hasDirectAccess);
   const [entryPinInput, setEntryPinInput] = useState('');
+
+  // Control de permisos para modificar la tabla: debe estar autenticado y tener rol autorizado o acceso directo
+  const canModifyTable = isAuthenticated && (!currentUser || ['administrador', 'secretario', 'tecnico'].includes(currentUser.rol) || currentUser.acceso_general_sin_clave);
 
   // Estados para el PIN de seguridad (legacy, solo para delete si no autenticado)
   const [showPinModal, setShowPinModal] = useState(false);
@@ -115,12 +119,19 @@ const General = () => {
   }, [showEntryPinModal, showPinModal]);
 
   const handleStartEdit = (id, col, value) => {
+    // Si el usuario no tiene permisos para modificar la tabla, no se permite editar
+    if (!canModifyTable) {
+      showWarning('No tienes permisos para modificar la tabla.');
+      return;
+    }
+
     // Si el cliente está en Finiquito (fantasma), es solo lectura / texto histórico
     const clienteActual = clientes.find(c => c.id === id);
     if (clienteActual?.estado?.toUpperCase() === 'FINIQUITO') return;
 
     // Reglas maestras de bloqueo: No permite editar campos que el sistema genera automáticamente.
-    const lockedCols = ['id', 'id_port', 'service_port', 'ip', 'mac'];
+    // 'ip' es editable para quienes tienen permiso de modificar la tabla
+    const lockedCols = ['id', 'id_port', 'service_port', 'mac'];
     if (lockedCols.includes(col)) return;
 
     if (col === 'estado' && value?.toLowerCase() === 'pendiente') return;
@@ -220,13 +231,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
   const handleSaveEdit = async (id, col) => {
     if (!editingCell) return;
 
-    const original = clientes.find(c => c.id === id)[col];
+    const original = clientes.find(c => c.id === id)?.[col];
     let valToSave = tempValue;
+    if (typeof valToSave === 'string') {
+      valToSave = valToSave.trim();
+    }
     if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
       valToSave = normalizeDateInput(tempValue);
     }
 
-    if (valToSave === original) {
+    if (valToSave === (original || '')) {
       setEditingCell(null);
       return;
     }
@@ -235,11 +249,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     if (isAuthenticated || col === 'facturas' || col === 'cod') {
       try {
         await clienteService.actualizar(id, { [col]: valToSave });
+        showSuccess(`Campo ${col.toUpperCase()} actualizado correctamente`);
         setEditingCell(null);
         fetchData();
       } catch (error) {
         console.error(error);
-        showError("Error al guardar cambio");
+        const errMsg = error.response?.data?.detail || "Error al guardar cambio";
+        showError(typeof errMsg === 'string' ? errMsg : "Error al guardar cambio");
         setEditingCell(null);
       }
       return;
@@ -478,14 +494,24 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
 
   const filteredClientes = clientes
     .filter(c => {
-      // Filtro por término de búsqueda
+      // Filtro por término de búsqueda (ID, Nombre, Cédula, Parroquia, Fecha o IP)
       const matchSearch = c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.cedula?.includes(searchTerm) ||
         c.id.toString().includes(searchTerm) ||
         c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.ip?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         formatToDMY(c.instalation_date).toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchSearch) return false;
+
+      // Filtro específico por IP
+      if (ipFilter.trim()) {
+        const targetIp = ipFilter.trim().toLowerCase();
+        const clientIp = String(c.ip || '').toLowerCase();
+        if (!clientIp.includes(targetIp)) {
+          return false;
+        }
+      }
 
       // Filtro progresivo por fecha de instalación
       if (fechaInstalacionFilter.trim()) {
@@ -626,7 +652,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                 {statusFilter === 'TRASLADO' && <>Traslado: <strong style={{ color: '#06b6d4', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.TRASLADO.toLocaleString()}</strong></>}
                 {statusFilter === 'FINIQUITO' && <>Finiquitos: <strong style={{ color: '#94a3b8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.FINIQUITO.toLocaleString()}</strong></>}
               </span>
-              {(searchTerm || fechaInstalacionFilter || pagoFilter !== 'TODOS') && (
+              {(searchTerm || fechaInstalacionFilter || ipFilter || pagoFilter !== 'TODOS') && (
                 <span style={{ fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 'normal', marginLeft: '4px' }}>
                   (Mostrando: <strong>{filteredClientes.length.toLocaleString()}</strong>)
                 </span>
@@ -711,9 +737,47 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
               </button>
             )}
           </div>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <input
+              className="input"
+              placeholder="🌐 Filtrar por IP..."
+              style={{
+                width: 'auto',
+                minWidth: '160px',
+                marginBottom: 0,
+                fontSize: '0.82rem',
+                height: '38px',
+                padding: '4px 28px 4px 10px',
+                background: 'var(--input-select-bg, #1e1b4b)',
+                color: 'var(--text-main)',
+                borderColor: ipFilter ? 'var(--primary, #6366f1)' : undefined
+              }}
+              value={ipFilter}
+              onChange={(e) => setIpFilter(e.target.value)}
+            />
+            {ipFilter && (
+              <button
+                type="button"
+                onClick={() => setIpFilter('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  padding: 0
+                }}
+                title="Limpiar filtro de IP"
+              >
+                ✖
+              </button>
+            )}
+          </div>
           <input
             className="input"
-            placeholder="Buscar por ID, Nombre o Cédula..."
+            placeholder="Buscar por ID, Nombre, Cédula o IP..."
             style={{ width: 'auto', minWidth: '220px', maxWidth: '300px', flex: 1, marginBottom: 0, fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -860,17 +924,21 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       };
                     }
 
+                    const isLockedCol = ['id', 'id_port', 'service_port', 'mac'].includes(col);
+                    const isCellEditable = !isFiniquito && canModifyTable && !isLockedCol && !(col === 'estado' && c[col]?.toLowerCase() === 'pendiente');
+
                     return (
                       <td
                         key={col}
                         onClick={() => {
-                          if (isFiniquito) return; // Registro fantasma: solo lectura
+                          if (!isCellEditable) return;
                           if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') handleStartEdit(c.id, col, c[col]);
                         }}
                         onDoubleClick={() => {
-                          if (isFiniquito) return; // Registro fantasma: solo lectura
+                          if (!isCellEditable) return;
                           if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
                         }}
+                        title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
                         style={{
                           padding: '6px 12px',
                           whiteSpace: 'nowrap',
@@ -880,7 +948,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          cursor: isFiniquito || col === 'id' ? 'default' : 'pointer',
+                          cursor: isCellEditable ? 'pointer' : 'default',
                           borderRight: '1px solid rgba(255, 255, 255, 0.05)',
                           borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                           ...stickyStyle
@@ -1027,13 +1095,15 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                               <input
                                 autoFocus
                                 className="input"
+                                placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : ''}
                                 style={{
                                   width: '100%',
                                   padding: '4px 8px',
                                   height: '28px',
                                   fontSize: '0.8rem',
                                   background: '#1e1b4b',
-                                  border: '1px solid var(--primary)'
+                                  border: '1px solid var(--primary)',
+                                  fontFamily: col === 'ip' ? 'monospace' : 'inherit'
                                 }}
                                 value={tempValue}
                                 onChange={(e) => setTempValue(e.target.value)}
@@ -1180,6 +1250,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                 );
                               }
 
+                              if (col === 'ip') {
+                                return c.ip ? (
+                                  <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '600' }} title="IP del Cliente (Doble clic para editar)">
+                                    {c.ip}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>
+                                );
+                              }
+
                               if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
                                 return formatToDMY(c[col]);
                               }
@@ -1238,12 +1318,17 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           </table>
         </div>
       )}
-      <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span>
           Total: {filteredClientes.length} clientes encontrados.
           {fechaInstalacionFilter && (
             <span style={{ color: '#818cf8', marginLeft: '8px', fontWeight: '500' }}>
               (Filtro fecha inst.: "{fechaInstalacionFilter}")
+            </span>
+          )}
+          {ipFilter && (
+            <span style={{ color: '#38bdf8', marginLeft: '8px', fontWeight: '500' }}>
+              (Filtro IP: "{ipFilter}")
             </span>
           )}
         </span>
