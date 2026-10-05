@@ -141,8 +141,17 @@ const General = () => {
     setEditingCell({ id, col });
     if (col === 'cedula_tipo') {
       setTempValue(value || 'No');
+    } else if (col === 'total') {
+      const pm = clienteActual?.pago_mensual;
+      setTempValue((pm !== undefined && pm !== null && pm !== '') ? String(pm) : '0');
+    } else if (col === 'total_pago') {
+      const saldoVal = (clienteActual?.saldo !== null && clienteActual?.saldo !== undefined) ? parseFloat(clienteActual.saldo || 0) : (clienteActual?.mantenimiento ? 10.00 : (clienteActual?.precio_plan_especial && parseFloat(clienteActual.precio_plan_especial) > 0 ? parseFloat(clienteActual.precio_plan_especial) : 0));
+      const plusVal = parseFloat(clienteActual?.plus || 0);
+      const adicVal = parseFloat(clienteActual?.adicional || 0);
+      const totalPendienteSum = (clienteActual?.total_pago !== undefined && clienteActual?.total_pago !== null) ? parseFloat(clienteActual.total_pago) : (saldoVal + plusVal + adicVal);
+      setTempValue(String(totalPendienteSum));
     } else {
-      setTempValue(value || '');
+      setTempValue(value !== undefined && value !== null ? String(value) : '');
     }
   };
 
@@ -231,7 +240,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
   const handleSaveEdit = async (id, col) => {
     if (!editingCell) return;
 
-    const original = clientes.find(c => c.id === id)?.[col];
+    const clienteActual = clientes.find(c => c.id === id);
+    let original = clienteActual?.[col];
+    if (col === 'total') original = clienteActual?.pago_mensual;
+    else if (col === 'total_pago') original = clienteActual?.total_pago;
+
     let valToSave = tempValue;
     if (typeof valToSave === 'string') {
       valToSave = valToSave.trim();
@@ -240,15 +253,35 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       valToSave = normalizeDateInput(tempValue);
     }
 
-    if (valToSave === (original || '')) {
-      setEditingCell(null);
-      return;
+    let payload = {};
+    if (col === 'total') {
+      const numVal = parseFloat(String(valToSave).replace('$', '').replace(',', '.')) || 0;
+      if (numVal === parseFloat(original || 0)) {
+        setEditingCell(null);
+        return;
+      }
+      valToSave = numVal;
+      payload = { pago_mensual: numVal, total: numVal };
+    } else if (col === 'total_pago') {
+      const numVal = parseFloat(String(valToSave).replace('$', '').replace(',', '.')) || 0;
+      if (numVal === parseFloat(original || 0)) {
+        setEditingCell(null);
+        return;
+      }
+      valToSave = numVal;
+      payload = { total_pago: numVal };
+    } else {
+      if (valToSave === (original || '')) {
+        setEditingCell(null);
+        return;
+      }
+      payload = { [col]: valToSave };
     }
 
     // Si ya está autenticado, guardar directamente sin PIN
     if (isAuthenticated || col === 'facturas' || col === 'cod') {
       try {
-        await clienteService.actualizar(id, { [col]: valToSave });
+        await clienteService.actualizar(id, payload);
         showSuccess(`Campo ${col.toUpperCase()} actualizado correctamente`);
         setEditingCell(null);
         fetchData();
@@ -261,7 +294,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       return;
     }
 
-    setPendingAction({ type: 'edit', id, col, value: valToSave });
+    setPendingAction({ type: 'edit', id, col, value: valToSave, payload });
     setShowPinModal(true);
     setPinInput('');
   };
@@ -365,7 +398,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     }
 
     try {
-      await clienteService.actualizar(id, { [col]: value });
+      const payload = action.payload || (action.col === 'total' ? { pago_mensual: action.value, total: action.value } : { [action.col]: action.value });
+      await clienteService.actualizar(id, payload);
       setEditingCell(null);
       fetchData();
     } catch (error) {
@@ -437,7 +471,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     }
 
     try {
-      await clienteService.actualizar(id, { [col]: value });
+      const payload = pendingAction.payload || (pendingAction.col === 'total' ? { pago_mensual: pendingAction.value, total: pendingAction.value } : { [pendingAction.col]: pendingAction.value });
+      await clienteService.actualizar(id, payload);
       setEditingCell(null);
       setShowPinModal(false);
       setPendingAction(null);
@@ -461,6 +496,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
 
   const [statusFilter, setStatusFilter] = useState('TODOS');
   const [pagoFilter, setPagoFilter] = useState('TODOS'); // 'TODOS', 'PAGADO', 'PENDIENTE_PAGO'
+  const [planFilter, setPlanFilter] = useState('TODOS');
   const [selectedAction, setSelectedAction] = useState('VER'); // 'VER' o 'BORRAR'
 
   // Contador de clientes en general según el estado
@@ -492,14 +528,49 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     return counts;
   }, [clientes]);
 
+  // Extraer los planes únicos (de planesList y de clientes) con conteos para el filtro
+  const { planesDisponibles, planCounts } = useMemo(() => {
+    const counts = {};
+    const setPlanes = new Map();
+
+    // 1. Agregar planes configurados formalmente
+    (planesList || []).forEach(p => {
+      if (p?.nombre && p.nombre.trim()) {
+        const norm = p.nombre.trim();
+        setPlanes.set(norm.toLowerCase(), norm);
+      }
+    });
+
+    // 2. Mapear los planes que tienen los clientes y contabilizarlos
+    clientes.forEach(c => {
+      const pName = (c.plan || '').trim();
+      if (pName) {
+        const pLower = pName.toLowerCase();
+        if (!setPlanes.has(pLower)) {
+          setPlanes.set(pLower, pName);
+        }
+        counts[pLower] = (counts[pLower] || 0) + 1;
+      } else {
+        counts['__sin_plan__'] = (counts['__sin_plan__'] || 0) + 1;
+      }
+    });
+
+    const planesArr = Array.from(setPlanes.values()).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+
+    return { planesDisponibles: planesArr, planCounts: counts };
+  }, [planesList, clientes]);
+
   const filteredClientes = clientes
     .filter(c => {
-      // Filtro por término de búsqueda (ID, Nombre, Cédula, Parroquia, Fecha o IP)
+      // Filtro por término de búsqueda (ID, Nombre, Cédula, Parroquia, Fecha, IP o Plan)
       const matchSearch = c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.cedula?.includes(searchTerm) ||
         c.id.toString().includes(searchTerm) ||
         c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.ip?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.plan || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         formatToDMY(c.instalation_date).toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchSearch) return false;
@@ -550,6 +621,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
 
       if (pagoFilter === 'PAGADO' && totalDeuda > 0) return false;
       if (pagoFilter === 'PENDIENTE_PAGO' && totalDeuda <= 0) return false;
+
+      // Filtro por Plan de Internet
+      if (planFilter !== 'TODOS') {
+        if (planFilter === 'SIN_PLAN') {
+          if (c.plan && c.plan.trim()) return false;
+        } else {
+          const cPlan = (c.plan || '').trim().toLowerCase();
+          if (cPlan !== planFilter.trim().toLowerCase()) return false;
+        }
+      }
 
       return true;
     })
@@ -652,7 +733,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                 {statusFilter === 'TRASLADO' && <>Traslado: <strong style={{ color: '#06b6d4', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.TRASLADO.toLocaleString()}</strong></>}
                 {statusFilter === 'FINIQUITO' && <>Finiquitos: <strong style={{ color: '#94a3b8', fontSize: '0.98rem', marginLeft: '4px' }}>{statusCounts.FINIQUITO.toLocaleString()}</strong></>}
               </span>
-              {(searchTerm || fechaInstalacionFilter || ipFilter || pagoFilter !== 'TODOS') && (
+              {(searchTerm || fechaInstalacionFilter || ipFilter || pagoFilter !== 'TODOS' || planFilter !== 'TODOS') && (
                 <span style={{ fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 'normal', marginLeft: '4px' }}>
                   (Mostrando: <strong>{filteredClientes.length.toLocaleString()}</strong>)
                 </span>
@@ -698,6 +779,37 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <option value="TODOS">💳 Todos los Pagos</option>
             <option value="PAGADO">✅ Pagados (Pendiente $0)</option>
             <option value="PENDIENTE_PAGO">⚠️ Con Deuda Pendiente</option>
+          </select>
+          <select
+            className="input"
+            style={{
+              width: 'auto',
+              minWidth: '175px',
+              marginBottom: 0,
+              background: 'var(--input-select-bg, #1e1b4b)',
+              color: planFilter !== 'TODOS' ? '#38bdf8' : 'var(--text-main)',
+              fontWeight: planFilter !== 'TODOS' ? '600' : 'normal',
+              fontSize: '0.82rem',
+              height: '38px',
+              padding: '4px 10px',
+              borderColor: planFilter !== 'TODOS' ? '#38bdf8' : undefined
+            }}
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            title="Filtrar por Plan de Internet"
+          >
+            <option value="TODOS">📶 Planes: Todos ({clientes.length})</option>
+            {planesDisponibles.map(planName => {
+              const count = planCounts[planName.toLowerCase()] || 0;
+              return (
+                <option key={planName} value={planName}>
+                  {planName} ({count})
+                </option>
+              );
+            })}
+            {planCounts['__sin_plan__'] > 0 && (
+              <option value="SIN_PLAN">⚠️ Sin Plan Asignado ({planCounts['__sin_plan__']})</option>
+            )}
           </select>
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <input
@@ -936,7 +1048,10 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                         }}
                         onDoubleClick={() => {
                           if (!isCellEditable) return;
-                          if (col !== 'estado') handleStartEdit(c.id, col, c[col]);
+                          if (col !== 'estado') {
+                            const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : c[col]);
+                            handleStartEdit(c.id, col, currentVal);
+                          }
                         }}
                         title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
                         style={{
@@ -1095,7 +1210,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                               <input
                                 autoFocus
                                 className="input"
-                                placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : ''}
+                                placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
                                 style={{
                                   width: '100%',
                                   padding: '4px 8px',
@@ -1189,11 +1304,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                 else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
                                 else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
                                 return (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ color: precio > 0 ? (c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#fbbf24'))) : 'var(--text-muted)', fontWeight: '600' }}>
-                                      {precio > 0 ? `$${parseFloat(precio).toFixed(2)}` : '-'}
-                                      {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontWeight: '600', color: c.plan ? 'var(--text-main, #ffffff)' : 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                      {c.plan || '-'}
                                     </span>
+                                    {precio > 0 && (
+                                      <span style={{ color: c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#38bdf8')), fontSize: '0.72rem', fontWeight: '500' }}>
+                                        ${parseFloat(precio).toFixed(2)}
+                                        {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
+                                      </span>
+                                    )}
                                   </div>
                                 );
                               }
