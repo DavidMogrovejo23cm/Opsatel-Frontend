@@ -112,7 +112,7 @@ const Admin = () => {
 
     setPagoData({
       priorDebt: priorDebt,
-      monto: isCortesiaTotal ? "0" : totalPendiente,
+      monto: isCortesiaTotal ? "0" : (parseFloat(totalPendiente) > 0 ? totalPendiente : "0"),
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI') ? 'SI' : 'NONE',
       internet_payment: isCortesiaTotal ? "0" : internetSugerido,
@@ -143,16 +143,30 @@ const Admin = () => {
   };
 
   const handleRegistrarPago = async () => {
-    if (!pagoData.monto || isNaN(pagoData.monto)) return showWarning("Ingrese un monto válido");
+    if (pagoData.monto === undefined || pagoData.monto === null || pagoData.monto === '' || isNaN(pagoData.monto)) {
+      return showWarning("Ingrese un monto válido");
+    }
+
+    const montoTotal = parseFloat(pagoData.monto || 0);
+    if (montoTotal < 0) {
+      return showWarning("El monto entregado no puede ser negativo");
+    }
 
     const noneIfEmpty = (val) => (val && String(val).trim()) ? String(val).trim() : "NONE";
 
-    const montoTotal = parseFloat(pagoData.monto || 0);
-    let resto = montoTotal;
+    const valInternet = parseFloat(pagoData.original_internet || 0);
+    const valPlus = parseFloat(pagoData.deuda_plus || 0);
+    const valAdic = parseFloat(pagoData.deuda_adicional || 0);
 
-    const deudaInternet = Math.max(0, parseFloat(pagoData.original_internet || 0));
-    const deudaPlus = parseFloat(pagoData.deuda_plus || 0);
-    const deudaAdicional = parseFloat(pagoData.deuda_adicional || 0);
+    // Deudas positivas reales a cobrar
+    const deudaInternet = Math.max(0, valInternet);
+    const deudaPlus = Math.max(0, valPlus);
+    const deudaAdicional = Math.max(0, valAdic);
+
+    // Créditos a favor disponibles (valores negativos ingresados o existentes)
+    let creditoInternet = valInternet < 0 ? Math.abs(valInternet) : 0;
+    let creditoPlus = valPlus < 0 ? Math.abs(valPlus) : 0;
+    let creditoAdic = valAdic < 0 ? Math.abs(valAdic) : 0;
 
     let abonoInternet = 0;
     let abonoPlus = 0;
@@ -163,22 +177,86 @@ const Admin = () => {
       abonoPlus = deudaPlus;
       abonoAdicional = deudaAdicional;
     } else {
-      // 1. Pagar Internet
+      let resto = montoTotal;
+
+      // 1. Pagar Internet con efectivo disponible
       abonoInternet = Math.min(resto, deudaInternet);
       resto = parseFloat((resto - abonoInternet).toFixed(2));
 
-      // 2. Pagar IPTV Plus
+      // 2. Pagar IPTV Plus con efectivo disponible
       abonoPlus = Math.min(resto, deudaPlus);
       resto = parseFloat((resto - abonoPlus).toFixed(2));
 
-      // 3. Pagar Adicional
+      // 3. Pagar Adicional con efectivo disponible
       abonoAdicional = Math.min(resto, deudaAdicional);
       resto = parseFloat((resto - abonoAdicional).toFixed(2));
 
-      // 4. Si sobra saldo (excedente), se suma a abonoInternet
+      // 4. Si sobra efectivo (excedente pagado de más), se suma a abonoInternet
       if (resto > 0) {
         abonoInternet = parseFloat((abonoInternet + resto).toFixed(2));
+        resto = 0;
       }
+    }
+
+    // Deudas que quedan pendientes después de aplicar el efectivo recibido
+    let pendienteInternet = parseFloat(Math.max(0, deudaInternet - abonoInternet).toFixed(2));
+    let pendientePlus = parseFloat(Math.max(0, deudaPlus - abonoPlus).toFixed(2));
+    let pendienteAdicional = parseFloat(Math.max(0, deudaAdicional - abonoAdicional).toFixed(2));
+
+    // Si hay créditos disponibles (saldos a favor o excedentes), se aplican a las deudas pendientes restantes
+    if (pagoData.cortesiaMode !== 'TOTAL') {
+      // 1. Crédito de Adicional amortiza Internet y Plus
+      if (creditoAdic > 0) {
+        const usoParaNet = Math.min(creditoAdic, pendienteInternet);
+        pendienteInternet = parseFloat((pendienteInternet - usoParaNet).toFixed(2));
+        creditoAdic = parseFloat((creditoAdic - usoParaNet).toFixed(2));
+
+        const usoParaPlus = Math.min(creditoAdic, pendientePlus);
+        pendientePlus = parseFloat((pendientePlus - usoParaPlus).toFixed(2));
+        creditoAdic = parseFloat((creditoAdic - usoParaPlus).toFixed(2));
+      }
+
+      // 2. Crédito de Plus amortiza Internet y Adicional
+      if (creditoPlus > 0) {
+        const usoParaNet = Math.min(creditoPlus, pendienteInternet);
+        pendienteInternet = parseFloat((pendienteInternet - usoParaNet).toFixed(2));
+        creditoPlus = parseFloat((creditoPlus - usoParaNet).toFixed(2));
+
+        const usoParaAdic = Math.min(creditoPlus, pendienteAdicional);
+        pendienteAdicional = parseFloat((pendienteAdicional - usoParaAdic).toFixed(2));
+        creditoPlus = parseFloat((creditoPlus - usoParaAdic).toFixed(2));
+      }
+
+      // 3. Crédito de Internet amortiza Plus y Adicional
+      if (creditoInternet > 0) {
+        const usoParaPlus = Math.min(creditoInternet, pendientePlus);
+        pendientePlus = parseFloat((pendientePlus - usoParaPlus).toFixed(2));
+        creditoInternet = parseFloat((creditoInternet - usoParaPlus).toFixed(2));
+
+        const usoParaAdic = Math.min(creditoInternet, pendienteAdicional);
+        pendienteAdicional = parseFloat((pendienteAdicional - usoParaAdic).toFixed(2));
+        creditoInternet = parseFloat((creditoInternet - usoParaAdic).toFixed(2));
+      }
+    }
+
+    // Calcular valores a guardar en updateAdmin antes de registrar el pago
+    // pagar() restará abonoInternet, abonoPlus y abonoAdicional
+    const nuevoSaldoAdmin = creditoInternet > 0
+      ? -creditoInternet + abonoInternet
+      : parseFloat((pendienteInternet + abonoInternet).toFixed(2));
+
+    let nuevoPlusAdmin = "0";
+    if (creditoPlus > 0) {
+      nuevoPlusAdmin = (-creditoPlus).toFixed(2);
+    } else if (pendientePlus + abonoPlus > 0) {
+      nuevoPlusAdmin = (pendientePlus + abonoPlus).toFixed(2);
+    }
+
+    let nuevoAdicAdmin = "";
+    if (creditoAdic > 0) {
+      nuevoAdicAdmin = (-creditoAdic).toFixed(2);
+    } else if (pendienteAdicional + abonoAdicional > 0) {
+      nuevoAdicAdmin = (pendienteAdicional + abonoAdicional).toFixed(2);
     }
 
     const descInternet = pagoData.cortesiaMode === 'TOTAL' ? deudaInternet : 0;
@@ -196,13 +274,13 @@ const Admin = () => {
 
       // Sincronizar deudas modificadas, comentarios, cortesía y tarifas especiales PRIMERO en el backend
       await clienteService.updateAdmin(selectedCliente.id, {
-        plus: pagoData.deuda_plus,
-        adicional: pagoData.deuda_adicional,
+        plus: nuevoPlusAdmin,
+        adicional: nuevoAdicAdmin,
         comentarios: pagoData.comentarios_edit !== undefined ? pagoData.comentarios_edit : selectedCliente.comentarios,
         cortesia_total: pagoData.cortesiaMode === 'TOTAL',
         mantenimiento: isMantenimiento,
         precio_plan_especial: isCustomPlan ? customPriceVal : 0,
-        saldo: parseFloat(pagoData.original_internet || 0)
+        saldo: nuevoSaldoAdmin
       });
 
       // Luego registrar el pago que descontará del saldo actualizado
@@ -981,24 +1059,48 @@ const Admin = () => {
                         const base = planData ? (planData.pantallas ?? 0) : 0;
                         return base + Math.round(parseFloat(pagoData.deuda_plus || 0) / 2);
                       })()} Pantallas):</span>
-                      <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                        ${parseFloat(pagoData.deuda_plus || 0).toFixed(2)}
-                      </span>
+                      {parseFloat(pagoData.deuda_plus || 0) < 0 ? (
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                          Excedente (${Math.abs(parseFloat(pagoData.deuda_plus || 0)).toFixed(2)})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                          ${parseFloat(pagoData.deuda_plus || 0).toFixed(2)}
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '6px', paddingTop: '6px' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Deuda Adicional:</span>
-                      <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-                        ${parseFloat(pagoData.deuda_adicional || 0).toFixed(2)}
-                      </span>
+                      {parseFloat(pagoData.deuda_adicional || 0) < 0 ? (
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                          Excedente (${Math.abs(parseFloat(pagoData.deuda_adicional || 0)).toFixed(2)})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                          ${parseFloat(pagoData.deuda_adicional || 0).toFixed(2)}
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 'bold' }}>
                         <span>Total Pendiente:</span>
-                        <span style={{ color: (pagoData.cortesiaMode === 'TOTAL' ? 0 : (parseFloat(pagoData.original_internet || 0) + parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0))) > 0 ? '#f87171' : '#4ade80' }}>
-                          ${(pagoData.cortesiaMode === 'TOTAL' ? 0 : (parseFloat(pagoData.original_internet || 0) + parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0))).toFixed(2)}
-                        </span>
+                        {(() => {
+                          const totVal = (pagoData.cortesiaMode === 'TOTAL' ? 0 : (parseFloat(pagoData.original_internet || 0) + parseFloat(pagoData.deuda_plus || 0) + parseFloat(pagoData.deuda_adicional || 0)));
+                          if (totVal < 0) {
+                            return (
+                              <span style={{ color: '#4ade80' }}>
+                                Excedente (${Math.abs(totVal).toFixed(2)})
+                              </span>
+                            );
+                          }
+                          return (
+                            <span style={{ color: totVal > 0 ? '#f87171' : '#4ade80' }}>
+                              ${totVal.toFixed(2)}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -1022,7 +1124,7 @@ const Admin = () => {
                           const debtAdicionalVal = parseFloat(pagoData.deuda_adicional || 0);
                           const debtPlusVal = parseFloat(val || 0);
                           const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
-                          setPagoData({ ...pagoData, deuda_plus: val, monto: newTotal });
+                          setPagoData({ ...pagoData, deuda_plus: val, monto: parseFloat(newTotal) > 0 ? newTotal : "0" });
                         }} />
                       </div>
 
@@ -1034,7 +1136,7 @@ const Admin = () => {
                           const debtPlusVal = parseFloat(pagoData.deuda_plus || 0);
                           const debtAdicionalVal = parseFloat(val || 0);
                           const newTotal = (originalInternetVal + debtPlusVal + debtAdicionalVal).toFixed(2);
-                          setPagoData({ ...pagoData, deuda_adicional: val, monto: newTotal });
+                          setPagoData({ ...pagoData, deuda_adicional: val, monto: parseFloat(newTotal) > 0 ? newTotal : "0" });
                         }} />
                       </div>
                     </div>
@@ -1064,7 +1166,7 @@ const Admin = () => {
                               setPagoData({
                                 ...pagoData,
                                 cortesiaMode: mode,
-                                monto: originalTotal,
+                                monto: parseFloat(originalTotal) > 0 ? originalTotal : "0",
                                 descuentoValue: 0,
                                 iptvDescuentoValue: 0
                               });
@@ -1097,7 +1199,7 @@ const Admin = () => {
                               isCustomPlan: false,
                               precio_plan_especial: 0,
                               original_internet: newInternetVal,
-                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : (parseFloat(newTotal) > 0 ? newTotal : "0")
                             }));
                           }}
                           style={{ width: '18px', height: '18px', accentColor: '#ec4899', cursor: 'pointer' }}
@@ -1130,7 +1232,7 @@ const Admin = () => {
                                 precio_plan_especial: 0,
                                 customPlanPriceInput: planPrice.toString(),
                                 original_internet: newInternetVal,
-                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : (parseFloat(newTotal) > 0 ? newTotal : "0")
                               }));
                             } else {
                               // Marcado: habilitar modificación de saldo
@@ -1147,7 +1249,7 @@ const Admin = () => {
                                 precio_plan_especial: currentVal,
                                 customPlanPriceInput: currentVal.toFixed(2),
                                 original_internet: newInternetVal,
-                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                                monto: prev.cortesiaMode === 'TOTAL' ? "0" : (parseFloat(newTotal) > 0 ? newTotal : "0")
                               }));
                             }
                           }}
@@ -1180,7 +1282,7 @@ const Admin = () => {
                               customPlanPriceInput: inputVal,
                               precio_plan_especial: numericVal,
                               original_internet: newInternetVal,
-                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : newTotal
+                              monto: prev.cortesiaMode === 'TOTAL' ? "0" : (parseFloat(newTotal) > 0 ? newTotal : "0")
                             }));
                           }}
                         />
