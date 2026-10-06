@@ -806,7 +806,13 @@ function ProyectoForm({ initial, onSave, onClose }) {
       </div>
       <div>
         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Descripción</label>
-        <textarea style={{ ...IS, resize: 'vertical', minHeight: 56 }} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} />
+        <textarea
+          rows={5}
+          style={{ ...IS, resize: 'vertical', minHeight: 125, lineHeight: 1.5 }}
+          value={form.descripcion}
+          onChange={e => set('descripcion', e.target.value)}
+          placeholder="Detalles o descripción del proyecto..."
+        />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
@@ -1309,7 +1315,16 @@ function ProyectoDetalle({ proyecto, onClose }) {
               <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{proyecto.nombre}</h2>
               <Badge text={proyecto.estado} color={estadoColor} />
             </div>
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{proyecto.descripcion || 'Sin descripción'}</p>
+            <p style={{
+              margin: 0,
+              color: 'var(--text-muted)',
+              fontSize: '0.85rem',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              lineHeight: 1.5
+            }}>
+              {proyecto.descripcion || 'Sin descripción'}
+            </p>
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '1.3rem', cursor: 'pointer', borderRadius: 10, padding: '6px 12px', lineHeight: 1 }}>&times;</button>
         </div>
@@ -3715,7 +3730,17 @@ const Balance = () => {
                   <Badge text={p.estado} color={ec} />
                 </div>
               </div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12, minHeight: 24 }}>{p.descripcion || 'Sin descripción'}</div>
+              <div style={{
+                fontSize: '0.82rem',
+                color: 'var(--text-muted)',
+                marginBottom: 12,
+                minHeight: 24,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                lineHeight: 1.5
+              }}>
+                {p.descripcion || 'Sin descripción'}
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Presupuesto:</span>
                 <span style={{ fontWeight: 700 }}>{fmt(p.monto_total)}</span>
