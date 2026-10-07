@@ -722,9 +722,8 @@ const ExtrasGeneral = () => {
                             <div className="form-group">
                                 <label className="label">Banco / Método</label>
                                 <select className="input" value={pagoData.metodo} onChange={e => setPagoData({...pagoData, metodo: e.target.value})} style={{ background: '#1e293b' }}>
-                                    <option value="EFECTIVO">EFECTIVO</option>
-                                    {bancosList.map(b => (
-                                        <option key={b.id} value={b.nombre}>{b.nombre}</option>
+                                    {Array.from(new Set(['EFECTIVO', ...(bancosList || []).map(b => (b.nombre || '').trim()).filter(n => n && n.toUpperCase() !== 'EFECTIVO')])).map(metodo => (
+                                        <option key={metodo} value={metodo}>{metodo}</option>
                                     ))}
                                 </select>
                             </div>
