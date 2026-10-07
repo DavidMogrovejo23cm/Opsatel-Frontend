@@ -578,64 +578,77 @@ const Ventas = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card glass"
-        style={{ position: 'relative' }}
+        className="contrato-card"
       >
-        {/* WIDGET PRORRATEO - Esquina superior derecha */}
-        {prorrateo && (
-          <div style={{
-            position: 'absolute',
-            top: '24px',
-            right: '24px',
-            background: 'rgba(129, 140, 248, 0.08)',
-            border: '1px solid rgba(129, 140, 248, 0.35)',
-            borderRadius: '14px',
-            padding: '8px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            backdropFilter: 'blur(12px)',
-            zIndex: 10
-          }}>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.55rem', color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '2px' }}>
-                Pago Inicial
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#a78bfa', lineHeight: 1 }}>
-                ${prorrateo.monto}
-              </div>
+        {/* HEADER CONTRATO */}
+        <div className="contrato-header">
+          <div className="contrato-title-wrapper">
+            <div className="contrato-title-icon">
+              <span>👥</span>
             </div>
-            <div style={{ borderLeft: '1px solid rgba(129, 140, 248, 0.25)', paddingLeft: '12px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
-                {prorrateo.activeDays} de {prorrateo.totalDays} días
-              </div>
-              <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                Plan: ${prorrateo.tarifa}/mes
-              </div>
+            <div className="contrato-title-text">
+              <h1>Registro de Nuevo Cliente</h1>
+              <p>Complete los datos requeridos</p>
             </div>
           </div>
-        )}
 
-        <h1 style={{ marginBottom: '16px', fontSize: '1.8rem' }}>Registro de Nuevo Cliente</h1>
+          {/* WIDGET PRORRATEO */}
+          {prorrateo ? (
+            <div className="contrato-prorrateo-badge">
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.55rem', color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '2px' }}>
+                  Pago Inicial
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#a78bfa', lineHeight: 1 }}>
+                  ${prorrateo.monto}
+                </div>
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(129, 140, 248, 0.25)', paddingLeft: '10px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                  {prorrateo.activeDays} de {prorrateo.totalDays} días
+                </div>
+                <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                  Plan: ${prorrateo.tarifa}/mes
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#34d399',
+              fontSize: '0.72rem',
+              fontWeight: 600
+            }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px #34d399' }}></span>
+              En línea
+            </div>
+          )}
+        </div>
 
         {/* PANEL IA: AUTOCOMPLETAR */}
-        <div style={{ marginBottom: '24px' }}>
+        <div className="contrato-smart-panel">
           <button
             type="button"
+            className="contrato-smart-trigger"
             onClick={() => setShowSmartPanel(p => !p)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: showSmartPanel ? 'rgba(167,139,250,0.15)' : 'rgba(167,139,250,0.06)',
-              border: '1px solid rgba(167,139,250,0.35)',
-              borderRadius: '12px', padding: '8px 18px', cursor: 'pointer',
-              color: '#a78bfa', fontSize: '0.82rem', fontWeight: 700,
-              transition: 'all 0.2s', letterSpacing: '0.03em'
-            }}
           >
-            <span style={{ fontSize: '1rem' }}>✨</span>
-            Autocompletar con IA
-            <span style={{ fontSize: '0.65rem', opacity: 0.6, fontWeight: 400 }}>Pega cualquier texto o datos del cliente</span>
-            <span style={{ marginLeft: '4px', opacity: 0.5 }}>{showSmartPanel ? '▲' : '▼'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '1.1rem' }}>✨</span>
+              <span>Autocompletar con IA</span>
+              <span className="contrato-smart-pill">Smart</span>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>
+                Pega cualquier texto o datos del cliente
+              </span>
+            </div>
+            <span style={{ fontSize: '0.8rem', opacity: 0.6, transform: showSmartPanel ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              ▼
+            </span>
           </button>
 
           <AnimatePresence>
@@ -646,25 +659,17 @@ const Ventas = () => {
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden' }}
               >
-                <div style={{
-                  marginTop: '12px', background: 'rgba(167,139,250,0.05)',
-                  border: '1px solid rgba(167,139,250,0.2)', borderRadius: '16px', padding: '18px'
-                }}>
-                  <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>
-                    Pega un mensaje de WhatsApp, un correo, una hoja de cálculo, o cualquier texto con los datos del cliente. La IA identificará cada campo y lo asignará automáticamente.
+                <div style={{ padding: '0 18px 18px 18px' }}>
+                  <p style={{ margin: '0 0 10px', fontSize: '0.76rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                    Pega un mensaje de WhatsApp, correo o texto con los datos del cliente. La IA identificará cada campo y lo completará automáticamente.
                   </p>
                   <textarea
                     value={smartFillText}
                     onChange={e => setSmartFillText(e.target.value)}
                     placeholder={'Ejemplo:\n"Juan Pérez, ci 0102030405, cel 0998877665, plan 30 megas, sector Sayausí, dirección calle Principal s/n..."'}
-                    rows={5}
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(167,139,250,0.25)',
-                      borderRadius: '10px', color: 'white', padding: '12px',
-                      fontFamily: 'inherit', fontSize: '0.82rem', resize: 'vertical',
-                      outline: 'none'
-                    }}
+                    rows={4}
+                    className="contrato-textarea"
+                    style={{ resize: 'vertical' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                     <button
@@ -672,7 +677,7 @@ const Ventas = () => {
                       onClick={handleSmartFill}
                       disabled={smartFillLoading || !smartFillText.trim()}
                       className="btn btn-primary"
-                      style={{ padding: '9px 22px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 20px', fontSize: '0.82rem', borderRadius: '10px' }}
                     >
                       {smartFillLoading ? '⏳ Procesando...' : '✨ Interpretar y Completar'}
                     </button>
@@ -684,361 +689,501 @@ const Ventas = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid-responsive" style={{ gap: '20px' }}>
-            <div className="input-group">
-              <label className="label">Nombre Completo (Apellidos y Nombres)</label>
-              <input className="input" name="nombre" value={formData.nombre} onChange={handleChange} required />
+          {/* SECCIÓN 1: DATOS PERSONALES Y CONTACTO */}
+          <div className="contrato-section">
+            <div className="contrato-section-header">
+              <span>🪪</span>
+              <span>DATOS PERSONALES Y CONTACTO</span>
             </div>
-            <div className="input-group">
-              <label className="label">Cédula / RUC</label>
-              <input className="input" name="cedula" value={formData.cedula} onChange={handleChange} required />
+            <div className="contrato-grid">
+              <div className="contrato-input-group">
+                <label className="contrato-label">Nombre Completo (Apellidos y Nombres) *</label>
+                <input
+                  className="contrato-input"
+                  name="nombre"
+                  placeholder="Ej. Pérez Gómez Juan Carlos"
+                  value={formData.nombre}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="contrato-grid-2">
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Cédula / RUC *</label>
+                  <input
+                    className="contrato-input"
+                    name="cedula"
+                    placeholder="0912345678"
+                    value={formData.cedula}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Celular *</label>
+                  <input
+                    className="contrato-input"
+                    name="celular"
+                    placeholder="0991234567"
+                    value={formData.celular}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="contrato-input-group">
+                <label className="contrato-label">Correo Electrónico</label>
+                <input
+                  className="contrato-input"
+                  type="email"
+                  name="correo"
+                  placeholder="cliente@ejemplo.com"
+                  value={formData.correo}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="contrato-input-group">
+                <label className="contrato-label">Dirección *</label>
+                <input
+                  className="contrato-input"
+                  name="direccion"
+                  placeholder="Calle principal, secundaria y # de casa"
+                  value={formData.direccion}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="contrato-grid-2">
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Nodo *</label>
+                  <select
+                    className="contrato-select"
+                    name="nodo"
+                    value={formData.nodo}
+                    onChange={handleChange}
+                    required
+                    style={{ appearance: 'none' }}
+                  >
+                    <option value="">Seleccione nodo</option>
+                    {nodosList.map(p => (
+                      <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Parroquia / Locación *</label>
+                  <select
+                    className="contrato-select"
+                    name="parroquia"
+                    value={formData.parroquia}
+                    onChange={handleChange}
+                    required
+                    style={{ appearance: 'none' }}
+                  >
+                    <option value="">Seleccione parroquia</option>
+                    {parroquiasList.map(p => (
+                      <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="input-group">
-              <label className="label">Celular</label>
-              <input className="input" name="celular" value={formData.celular} onChange={handleChange} required />
+          </div>
+
+          {/* SECCIÓN 2: PLAN Y SERVICIOS */}
+          <div className="contrato-section">
+            <div className="contrato-section-header">
+              <span>📡</span>
+              <span>PLAN Y SERVICIOS</span>
             </div>
-            <div className="input-group">
-              <label className="label">Correo Electrónico</label>
-              <input className="input" type="email" name="correo" value={formData.correo} onChange={handleChange} />
+            <div className="contrato-grid">
+              {!formData.tercera_edad && !formData.plan_corporativo ? (
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Plan Contratado *</label>
+                  <select
+                    className="contrato-select"
+                    name="plan"
+                    value={formData.plan}
+                    onChange={handleChange}
+                    required
+                    style={{ appearance: 'none' }}
+                  >
+                    <option value="">Seleccione plan</option>
+                    {planesList.map(p => (
+                      <option key={p.id} value={p.nombre}>{p.nombre} - ${p.precio}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Plan Contratado</label>
+                  <input
+                    className="contrato-input"
+                    name="plan"
+                    value={formData.tercera_edad ? 'TERCERA EDAD' : 'CORPORATIVO'}
+                    readOnly
+                    style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
+                  />
+                </div>
+              )}
+
+              <div className="contrato-grid-2">
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Tiempo de Contrato (meses) *</label>
+                  <input
+                    className="contrato-input"
+                    type="number"
+                    name="tiempo"
+                    value={formData.tiempo}
+                    onChange={handleChange}
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Televisión Contratada *</label>
+                  <select
+                    className="contrato-select"
+                    name="tv_tipo"
+                    value={formData.tv_tipo}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const selectedPlan = planesList.find(p => p.nombre === formData.plan);
+                      const baseScreens = val === 'IPTV' ? (selectedPlan?.pantallas || 1) : 0;
+                      setFormData({
+                        ...formData,
+                        tv_tipo: val,
+                        iptv_max_conn: baseScreens,
+                        plus: '0'
+                      });
+                    }}
+                    required
+                    style={{ appearance: 'none' }}
+                  >
+                    <option value="Ninguno">Ninguno</option>
+                    <option value="IPTV">IPTV (Televisión por Internet)</option>
+                    <option value="CATV">CATV (Televisión por Cable Coaxial)</option>
+                  </select>
+                </div>
+              </div>
+
+              {formData.tv_tipo === 'IPTV' && (
+                <div className="contrato-input-group">
+                  <label className="contrato-label">Pantallas IPTV (Adicionales)</label>
+                  <input
+                    className="contrato-input"
+                    type="number"
+                    name="iptv_max_conn"
+                    value={(() => {
+                      const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                      return Math.max(0, formData.iptv_max_conn - baseScreens);
+                    })()}
+                    onChange={(e) => {
+                      const additional = parseInt(e.target.value) || 0;
+                      const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
+                      setFormData({
+                        ...formData,
+                        iptv_max_conn: baseScreens + additional,
+                        plus: (additional * 2).toString()
+                      });
+                    }}
+                    min="0"
+                    required
+                  />
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '2px' }}>
+                    Total de pantallas: {formData.iptv_max_conn} (Base plan + Adicionales)
+                  </small>
+                </div>
+              )}
+
+              {(formData.tercera_edad || formData.plan_corporativo) && (
+                <div className="contrato-input-group">
+                  <label className="contrato-label">
+                    {formData.plan_corporativo ? 'Valor Plan Corporativo ($)' : 'Valor Plan Especial ($)'}
+                  </label>
+                  <input
+                    className="contrato-input"
+                    type="number"
+                    step="0.01"
+                    name="precio_plan_especial"
+                    value={formData.precio_plan_especial}
+                    onChange={handleChange}
+                    required
+                    placeholder="Precio mensual"
+                    style={{ border: `1px solid ${formData.plan_corporativo ? '#818cf8' : '#f59e0b'}` }}
+                  />
+                </div>
+              )}
+
+              {/* CHECKBOX TILES */}
+              <div className="contrato-checkbox-grid">
+                <label className={`contrato-checkbox-pill ${formData.tercera_edad ? 'active' : ''}`}>
+                  <input
+                    type="checkbox"
+                    name="tercera_edad"
+                    checked={formData.tercera_edad}
+                    onChange={handleChange}
+                    style={{ width: '16px', height: '16px', accentColor: '#a78bfa' }}
+                  />
+                  <span>Tercera Edad</span>
+                </label>
+
+                <label className={`contrato-checkbox-pill ${formData.plan_corporativo ? 'active' : ''}`}>
+                  <input
+                    type="checkbox"
+                    name="plan_corporativo"
+                    checked={formData.plan_corporativo}
+                    onChange={handleChange}
+                    style={{ width: '16px', height: '16px', accentColor: '#818cf8' }}
+                  />
+                  <span>Plan Corporativo</span>
+                </label>
+              </div>
+
+              {/* VIP MAINTENANCE CARD */}
+              <label className={`contrato-vip-row ${formData.mantenimiento ? 'active' : ''}`}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>🛠️</span>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#ffffff' }}>Mantenimiento VIP</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className="contrato-vip-tag">+$10.00/mes</span>
+                  <input
+                    type="checkbox"
+                    name="mantenimiento"
+                    checked={formData.mantenimiento}
+                    onChange={handleChange}
+                    style={{ width: '18px', height: '18px', accentColor: '#ec4899', cursor: 'pointer' }}
+                  />
+                </div>
+              </label>
             </div>
-            <div className="input-group" style={{ gridColumn: 'span 2' }}>
-              <label className="label">Dirección</label>
-              <input className="input" name="direccion" value={formData.direccion} onChange={handleChange} required />
+          </div>
+
+          {/* SECCIÓN 3: DIGITALIZACIÓN DE CÉDULA */}
+          <div className="contrato-section">
+            <div className="contrato-section-header">
+              <span>🪪</span>
+              <span>DIGITALIZACIÓN DE CÉDULA</span>
             </div>
-            <div className="input-group">
-              <label className="label">Nodo</label>
-              <select className="input" name="nodo" value={formData.nodo} onChange={handleChange} required style={{ appearance: 'none' }}>
-                <option value="">Seleccione nodo</option>
-                {nodosList.map(p => (
-                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div className="input-group">
-              <label className="label">Parroquia / Locación</label>
-              <select className="input" name="parroquia" value={formData.parroquia} onChange={handleChange} required style={{ appearance: 'none' }}>
-                <option value="">Seleccione parroquia</option>
-                {parroquiasList.map(p => (
-                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                ))}
-              </select>
-            </div>
-            {!formData.tercera_edad && !formData.plan_corporativo ? (
-              <div className="input-group">
-                <label className="label">Plan Contratado</label>
-                <select className="input" name="plan" value={formData.plan} onChange={handleChange} required style={{ appearance: 'none' }}>
-                  <option value="">Seleccione plan</option>
-                  {planesList.map(p => (
-                    <option key={p.id} value={p.nombre}>{p.nombre} - ${p.precio}</option>
-                  ))}
+            <div className="contrato-grid">
+              <div className="contrato-input-group">
+                <label className="contrato-label">¿Digitalizar Cédula?</label>
+                <select
+                  className="contrato-select"
+                  name="cedula_tipo"
+                  value={formData.cedula_tipo}
+                  onChange={handleChange}
+                  style={{ appearance: 'none' }}
+                >
+                  <option value="">Seleccione opción</option>
+                  <option value="Si">Si (Mandatorio imagenes)</option>
+                  <option value="No">No</option>
                 </select>
               </div>
-            ) : (
-              <div className="input-group">
-                <label className="label">Plan Contratado</label>
-                <input className="input" name="plan" value={formData.tercera_edad ? 'TERCERA EDAD' : 'CORPORATIVO'} readOnly style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }} />
-              </div>
-            )}
-            <div className="input-group">
-              <label className="label">Tiempo de Contrato </label>
-              <input className="input" type="number" name="tiempo" value={formData.tiempo} onChange={handleChange} min="0" required />
-            </div>
-            <div className="input-group">
-              <label className="label">Televisión Contratada</label>
-              <select 
-                className="input" 
-                name="tv_tipo" 
-                value={formData.tv_tipo} 
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const selectedPlan = planesList.find(p => p.nombre === formData.plan);
-                  const baseScreens = val === 'IPTV' ? (selectedPlan?.pantallas || 1) : 0;
-                  setFormData({
-                    ...formData,
-                    tv_tipo: val,
-                    iptv_max_conn: baseScreens,
-                    plus: '0'
-                  });
-                }} 
-                required 
-                style={{ appearance: 'none' }}
-              >
-                <option value="Ninguno">Ninguno</option>
-                <option value="IPTV">IPTV (Televisión por Internet)</option>
-                <option value="CATV">CATV (Televisión por Cable Coaxial)</option>
-              </select>
-            </div>
-            {formData.tv_tipo === 'IPTV' && (
-              <div className="input-group">
-                <label className="label">Pantallas IPTV (Adicionales)</label>
+
+              <div className="contrato-input-group">
+                <label className="contrato-label">Foto Cédula Frontal</label>
+                <div className="contrato-file-row">
+                  <input
+                    className="contrato-file-input"
+                    placeholder={fileFrontal ? `📎 ${fileFrontal.name || 'Frontal cargada'}` : 'Pegar o arrastrar imagen (Ctrl+V)'}
+                    onPaste={(e) => handlePaste(e, setFileFrontal, 'cedula_frontal.jpg')}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, setFileFrontal, 'cedula_frontal.jpg')}
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    className="contrato-file-btn"
+                    onClick={() => document.getElementById('file-frontal').click()}
+                  >
+                    <span>📁</span> Subir
+                  </button>
+                </div>
                 <input
-                  className="input"
-                  type="number"
-                  name="iptv_max_conn"
-                  value={(() => {
-                    const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
-                    return Math.max(0, formData.iptv_max_conn - baseScreens);
-                  })()}
-                  onChange={(e) => {
-                    const additional = parseInt(e.target.value) || 0;
-                    const baseScreens = planesList.find(p => p.nombre === formData.plan)?.pantallas || 1;
-                    setFormData({
-                      ...formData,
-                      iptv_max_conn: baseScreens + additional,
-                      plus: (additional * 2).toString()
-                    });
+                  id="file-frontal"
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    if (e.target.files[0]) {
+                      const f = await processImageFile(e.target.files[0], 'cedula_frontal.jpg');
+                      setFileFrontal(f);
+                    }
                   }}
-                  min="0"
-                  required
+                  accept="image/*"
                 />
-                <small style={{ color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Total de pantallas: {formData.iptv_max_conn} (Base plan + Adicionales)
-                </small>
+                {fileFrontal && previewFrontal && (
+                  <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.15)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
+                    <img src={previewFrontal} alt="Vista previa frontal" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '8px' }} />
+                    <button
+                      type="button"
+                      onClick={() => setFileFrontal(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+                    >✕</button>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {fileFrontal?.name || 'Imagen Pegada'}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+
+              <div className="contrato-input-group">
+                <label className="contrato-label">Foto Cédula Posterior</label>
+                <div className="contrato-file-row">
+                  <input
+                    className="contrato-file-input"
+                    placeholder={filePosterior ? `📎 ${filePosterior.name || 'Posterior cargada'}` : 'Pegar o arrastrar imagen (Ctrl+V)'}
+                    onPaste={(e) => handlePaste(e, setFilePosterior, 'cedula_posterior.jpg')}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, setFilePosterior, 'cedula_posterior.jpg')}
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    className="contrato-file-btn"
+                    onClick={() => document.getElementById('file-posterior').click()}
+                  >
+                    <span>📁</span> Subir
+                  </button>
+                </div>
                 <input
-                  type="checkbox"
-                  name="tercera_edad"
-                  checked={formData.tercera_edad}
-                  onChange={handleChange}
-                  style={{ width: '18px', height: '18px' }}
+                  id="file-posterior"
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    if (e.target.files[0]) {
+                      const f = await processImageFile(e.target.files[0], 'cedula_posterior.jpg');
+                      setFilePosterior(f);
+                    }
+                  }}
+                  accept="image/*"
                 />
-                Tercera Edad
-              </label>
-              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
-                <input
-                  type="checkbox"
-                  name="plan_corporativo"
-                  checked={formData.plan_corporativo}
-                  onChange={handleChange}
-                  style={{ width: '18px', height: '18px', accentColor: '#818cf8' }}
-                />
-                Plan Corporativo
-              </label>
-              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
-                <input
-                  type="checkbox"
-                  name="mantenimiento"
-                  checked={formData.mantenimiento}
-                  onChange={handleChange}
-                  style={{ width: '18px', height: '18px', accentColor: '#ec4899' }}
-                />
-                🛠️ Mantenimiento ($10.00/mes)
-              </label>
+                {filePosterior && previewPosterior && (
+                  <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.15)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
+                    <img src={previewPosterior} alt="Vista previa posterior" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '8px' }} />
+                    <button
+                      type="button"
+                      onClick={() => setFilePosterior(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+                    >✕</button>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {filePosterior?.name || 'Imagen Pegada'}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            {(formData.tercera_edad || formData.plan_corporativo) && (
-              <div className="input-group">
-                <label className="label">
-                  {formData.plan_corporativo ? 'Valor Plan Corporativo ($)' : 'Valor Plan Especial ($)'}
+          </div>
+
+          {/* SECCIÓN 4: GEORREFERENCIACIÓN & NOTAS */}
+          <div className="contrato-section">
+            <div className="contrato-section-header">
+              <span>📍</span>
+              <span>GEORREFERENCIACIÓN & NOTAS</span>
+            </div>
+            <div className="contrato-grid">
+              <div className="contrato-input-group">
+                <label className="contrato-label">Ubicación</label>
+                <input
+                  className="contrato-input"
+                  name="ubicacion"
+                  value={formData.ubicacion}
+                  onChange={handleChange}
+                  onPaste={(e) => {
+                    const pastedData = e.clipboardData.getData('text').trim();
+
+                    const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
+                    const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+                    const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
+
+                    let latDecimal, lngDecimal;
+
+                    const matchDD = pastedData.match(regexDD);
+                    const matchURL = pastedData.match(regexURL);
+                    const matchDMS = pastedData.match(regexDMS);
+
+                    if (matchDD) {
+                      latDecimal = parseFloat(matchDD[1]);
+                      lngDecimal = parseFloat(matchDD[2]);
+                    } else if (matchURL) {
+                      latDecimal = parseFloat(matchURL[1]);
+                      lngDecimal = parseFloat(matchURL[2]);
+                    } else if (matchDMS) {
+                      e.preventDefault();
+                      const latPart = matchDMS[1];
+                      const lngPart = matchDMS[2].replace('°', '° ');
+                      setFormData({ ...formData, ubicacion: `${latPart}, ${lngPart}` });
+                      return;
+                    }
+
+                    if (latDecimal !== undefined && lngDecimal !== undefined) {
+                      e.preventDefault();
+                      const latDMS = convertToDMS(latDecimal, "lat");
+                      const lngDMS = convertToDMS(lngDecimal, "lng");
+                      setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
+                    }
+                  }}
+                  placeholder="Lat, Long (Manual o GPS)"
+                />
+                <div className="contrato-geo-buttons">
+                  <button type="button" className="contrato-geo-btn" onClick={handleConvertManual}>
+                    <span>🔄</span> Convertir
+                  </button>
+                  <button type="button" className="contrato-geo-btn gps" onClick={handleGetGPS}>
+                    <span>📍</span> Capturar GPS
+                  </button>
+                </div>
+              </div>
+
+              <div className="contrato-input-group" style={{ marginTop: '6px' }}>
+                <label className="contrato-label" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                  <span>Comentarios</span>
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>
+                    (Ordene con un - para que sea más legible y separe con un enter para salto de línea)
+                  </span>
                 </label>
-                <input
-                  className="input"
-                  type="number"
-                  step="0.01"
-                  name="precio_plan_especial"
-                  value={formData.precio_plan_especial}
+                <textarea
+                  className="contrato-textarea"
+                  name="comentarios"
+                  value={formData.comentarios}
                   onChange={handleChange}
-                  required
-                  placeholder="Precio mensual"
-                  style={{ border: `1px solid ${formData.plan_corporativo ? '#818cf8' : '#f59e0b'}` }}
+                  placeholder="Ingrese cualquier observación o comentario relevante para el contrato..."
+                  rows="3"
                 />
               </div>
-            )}
-            <div className="input-group">
-              <label className="label">¿Digitalizar Cédula?</label>
-              <select className="input" name="cedula_tipo" value={formData.cedula_tipo} onChange={handleChange} style={{ appearance: 'none' }}>
-                <option value="">Seleccione opción</option>
-                <option value="Si">Si (Mandatorio imagenes)</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label className="label">Foto Cédula Frontal</label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  className="input"
-                  placeholder="Pegar o arrastrar imagen (Ctrl+V)"
-                  style={{ flex: 1, marginBottom: 0 }}
-                  onPaste={(e) => handlePaste(e, setFileFrontal, 'cedula_frontal.jpg')}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, setFileFrontal, 'cedula_frontal.jpg')}
-                  readOnly
-                />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
-                  onClick={() => document.getElementById('file-frontal').click()}
-                >
-                  📁 Subir
-                </button>
-              </div>
-              <input
-                id="file-frontal"
-                type="file"
-                style={{ display: 'none' }}
-                onChange={async (e) => {
-                  if (e.target.files[0]) {
-                    const f = await processImageFile(e.target.files[0], 'cedula_frontal.jpg');
-                    setFileFrontal(f);
-                  }
-                }}
-                accept="image/*"
-              />
-              {fileFrontal && previewFrontal && (
-                <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
-                  <img src={previewFrontal} alt="Vista previa frontal" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
-                  <button
-                    type="button"
-                    onClick={() => setFileFrontal(null)}
-                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
-                  >✕</button>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {fileFrontal?.name || 'Imagen Pegada'}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="input-group">
-              <label className="label">Foto Cédula Posterior</label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  className="input"
-                  placeholder="Pegar o arrastrar imagen (Ctrl+V)"
-                  style={{ flex: 1, marginBottom: 0 }}
-                  onPaste={(e) => handlePaste(e, setFilePosterior, 'cedula_posterior.jpg')}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, setFilePosterior, 'cedula_posterior.jpg')}
-                  readOnly
-                />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ whiteSpace: 'nowrap', padding: '0 15px', height: '42px' }}
-                  onClick={() => document.getElementById('file-posterior').click()}
-                >
-                  📁 Subir
-                </button>
-              </div>
-              <input
-                id="file-posterior"
-                type="file"
-                style={{ display: 'none' }}
-                onChange={async (e) => {
-                  if (e.target.files[0]) {
-                    const f = await processImageFile(e.target.files[0], 'cedula_posterior.jpg');
-                    setFilePosterior(f);
-                  }
-                }}
-                accept="image/*"
-              />
-              {filePosterior && previewPosterior && (
-                <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
-                  <img src={previewPosterior} alt="Vista previa posterior" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px' }} />
-                  <button
-                    type="button"
-                    onClick={() => setFilePosterior(null)}
-                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
-                  >✕</button>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {filePosterior?.name || 'Imagen Pegada'}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          <div className="input-group" style={{ gridColumn: 'span 2' }}>
-            <label className="label">Ubicación</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                className="input"
-                name="ubicacion"
-                value={formData.ubicacion}
-                onChange={handleChange}
-                onPaste={(e) => {
-                  const pastedData = e.clipboardData.getData('text').trim();
-
-                  // 1. Detectar coordenadas decimales: -2.930955, -79.045381
-                  const regexDD = /^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/;
-                  // 2. Extraer de URL de Google Maps: .../@-2.930955,-79.045381,15z
-                  const regexURL = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-                  // 3. Detectar DMS estándar (Google Maps): 2°55'51.4"S 79°02'43.4"W
-                  const regexDMS = /(\d+°\d+'\d+\.?\d*"[NS])\s+(\d+°\d+'\d+\.?\d*"[EW])/;
-
-                  let latDecimal, lngDecimal;
-
-                  const matchDD = pastedData.match(regexDD);
-                  const matchURL = pastedData.match(regexURL);
-                  const matchDMS = pastedData.match(regexDMS);
-
-                  if (matchDD) {
-                    latDecimal = parseFloat(matchDD[1]);
-                    lngDecimal = parseFloat(matchDD[2]);
-                  } else if (matchURL) {
-                    latDecimal = parseFloat(matchURL[1]);
-                    lngDecimal = parseFloat(matchURL[2]);
-                  } else if (matchDMS) {
-                    e.preventDefault();
-                    // Si ya es DMS, solo ajustamos el formato (coma y espacio)
-                    const latPart = matchDMS[1];
-                    const lngPart = matchDMS[2].replace('°', '° ');
-                    setFormData({ ...formData, ubicacion: `${latPart}, ${lngPart}` });
-                    return;
-                  }
-
-                  if (latDecimal !== undefined && lngDecimal !== undefined) {
-                    e.preventDefault();
-                    const latDMS = convertToDMS(latDecimal, "lat");
-                    const lngDMS = convertToDMS(lngDecimal, "lng");
-                    // Ajustar el formato: 2°55'51.44"S, 79° 2'43.37"W
-                    setFormData({ ...formData, ubicacion: `${latDMS}, ${lngDMS.replace('°', '° ')}` });
-                  }
-                }}
-                placeholder="Lat, Long (Manual o GPS)"
-                style={{ flex: 1 }}
-              />
-              <button type="button" className="btn btn-secondary" onClick={handleConvertManual} style={{ padding: '0 15px', height: '42px', fontSize: '0.8rem' }}>🔄 Convertir</button>
-              <button type="button" className="btn btn-secondary" onClick={handleGetGPS} style={{ padding: '0 15px', height: '42px' }}>📍 GPS</button>
-            </div>
-          </div>
-
-          <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
-            <label className="label">Comentarios (Ordenar con un - para que sea mas legible y separar con un enter para salto de linea)</label>
-            <textarea
-              className="input"
-              name="comentarios"
-              value={formData.comentarios}
-              onChange={handleChange}
-              placeholder="Ingrese cualquier observación o comentario relevante para el contrato..."
-              rows="3"
-              style={{ resize: 'vertical' }}
-            ></textarea>
-          </div>
+          {/* MENSAJES DE ALERTA */}
           {message && (
             <div style={{
-              padding: '16px',
+              padding: '14px 16px',
               borderRadius: '12px',
-              marginBottom: '20px',
-              background: message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              marginBottom: '16px',
+              background: message.type === 'success' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
               border: message.type === 'success' ? '1px solid #22c55e' : '1px solid #ef4444',
               color: message.type === 'success' ? '#4ade80' : '#f87171',
               whiteSpace: 'pre-line',
-              fontSize: '0.9rem',
-              lineHeight: '1.6'
+              fontSize: '0.85rem',
+              lineHeight: '1.5'
             }}>
               {message.type === 'error' ? '⚠️ ' : '✅ '}{typeof message.text === 'string' ? message.text.replace(/^(✅|⚠️)\s*/, '') : message.text}
             </div>
           )}
 
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? 'Procesando...' : 'Registrar Cliente'}
-            </button>
+          {/* BOTÓN CTA REGISTRO */}
+          <button className="contrato-submit-btn" type="submit" disabled={loading}>
+            <span>✓</span> {loading ? 'Procesando...' : 'Registrar Cliente'}
+          </button>
+          <div className="contrato-footer-note">
+            Verifique los datos ingresados antes de confirmar el registro.
           </div>
         </form>
       </motion.div>
