@@ -22,6 +22,58 @@ const P = {
 
 const CATEGORIAS = ['operacional', 'nomina', 'proyecto', 'otro'];
 const CAT_LABELS = { operacional: '⚙️ Operacional', nomina: '👔 Nómina', proyecto: '🏗️ Proyecto', otro: '📦 Otro' };
+
+const CUSTOM_COLORS = [
+  '#ec4899', '#06b6d4', '#8b5cf6', '#14b8a6', '#f43f5e',
+  '#10b981', '#f59e0b', '#3b82f6', '#a855f7', '#eab308'
+];
+
+const formatCatName = (key) => {
+  if (!key) return 'Otro';
+  return String(key)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const getCatLabel = (catKey, customCats = []) => {
+  if (!catKey) return '📦 Otro';
+  const keyStr = String(catKey).trim();
+  const keyLower = keyStr.toLowerCase();
+
+  if (CAT_LABELS[keyLower]) return CAT_LABELS[keyLower];
+
+  const custom = (customCats || []).find(c =>
+    String(c.key).toLowerCase() === keyLower ||
+    String(c.label).toLowerCase() === keyLower
+  );
+  if (custom) {
+    return `${custom.icon || '🏷️'} ${custom.label}`;
+  }
+
+  return `🏷️ ${formatCatName(keyStr)}`;
+};
+
+const getCatColor = (catKey, customCats = []) => {
+  if (!catKey) return '#94a3b8';
+  const keyStr = String(catKey).trim();
+  const keyLower = keyStr.toLowerCase();
+
+  if (P.cat[keyLower]) return P.cat[keyLower];
+
+  const custom = (customCats || []).find(c =>
+    String(c.key).toLowerCase() === keyLower ||
+    String(c.label).toLowerCase() === keyLower
+  );
+  if (custom && custom.color) return custom.color;
+
+  let hash = 0;
+  for (let i = 0; i < keyLower.length; i++) {
+    hash = keyLower.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % CUSTOM_COLORS.length;
+  return CUSTOM_COLORS[index];
+};
+
 const METODOS = [
   'Efectivo', 'Pichincha', 'JEP',
   'Efectivo IPTV', 'Pichincha IPTV', 'JEP IPTV',
@@ -238,7 +290,7 @@ function CategoriasModal({ customCategorias, onAddCategory, onRemoveCategory, on
   const customList = (customCategorias || []).map(c => ({
     key: c.key,
     label: `${c.icon || '🏷️'} ${c.label}`,
-    color: '#ec4899',
+    color: getCatColor(c.key, customCategorias),
     isBase: false
   }));
 
@@ -375,7 +427,17 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
     label: `${c.icon || '🏷️'} ${c.label}`
   }));
 
-  const categoryOptions = [...baseOptions, ...customOptions];
+  const categoryOptions = useMemo(() => {
+    const list = [...baseOptions, ...customOptions];
+    const currentCat = form.categoria || (initial && initial.categoria);
+    if (currentCat && !list.some(c => String(c.key).toLowerCase() === String(currentCat).toLowerCase())) {
+      list.push({
+        key: currentCat,
+        label: `🏷️ ${formatCatName(currentCat)}`
+      });
+    }
+    return list;
+  }, [customCategorias, form.categoria, initial]);
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1010,7 +1072,7 @@ function ColchonForm({ initial, onSave, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GASTO FIJO FORM
 // ─────────────────────────────────────────────────────────────────────────────
-function GastoFijoForm({ initial, onSave, onClose }) {
+function GastoFijoForm({ initial, customCategorias = [], onSave, onClose }) {
   const [form, setForm] = useState(initial || {
     descripcion: '', monto: '', categoria: 'operacional', metodo_pago: 'Efectivo', activo: true, notas: ''
   });
@@ -1021,6 +1083,31 @@ function GastoFijoForm({ initial, onSave, onClose }) {
     await onSave({ ...form, monto: parseFloat(form.monto) });
     onClose();
   };
+
+  const baseOptions = [
+    { key: 'operacional', label: '⚙️ Operacional' },
+    { key: 'nomina', label: '👔 Nómina' },
+    { key: 'proyecto', label: '🏗️ Proyecto' },
+    { key: 'otro', label: '📦 Otro' }
+  ];
+
+  const customOptions = (customCategorias || []).map(c => ({
+    key: c.key,
+    label: `${c.icon || '🏷️'} ${c.label}`
+  }));
+
+  const categoryOptions = useMemo(() => {
+    const list = [...baseOptions, ...customOptions];
+    const currentCat = form.categoria || (initial && initial.categoria);
+    if (currentCat && !list.some(c => String(c.key).toLowerCase() === String(currentCat).toLowerCase())) {
+      list.push({
+        key: currentCat,
+        label: `🏷️ ${formatCatName(currentCat)}`
+      });
+    }
+    return list;
+  }, [customCategorias, form.categoria, initial]);
+
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
@@ -1035,7 +1122,7 @@ function GastoFijoForm({ initial, onSave, onClose }) {
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Categoría</label>
           <select style={IS} value={form.categoria} onChange={e => set('categoria', e.target.value)}>
-            {CATEGORIAS.map(c => <option key={c} value={c} style={OS}>{CAT_LABELS[c]}</option>)}
+            {categoryOptions.map(c => <option key={c.key} value={c.key} style={OS}>{c.label}</option>)}
           </select>
         </div>
       </div>
@@ -1973,6 +2060,37 @@ const Balance = () => {
     }
   });
 
+  // Auto-sincronizar categorías encontradas en la base de datos que no estén registradas localmente
+  useEffect(() => {
+    if (egresos && egresos.length > 0) {
+      const knownKeys = new Set([
+        ...CATEGORIAS,
+        ...customCategorias.map(c => String(c.key).toLowerCase())
+      ]);
+      const newFound = [];
+      egresos.forEach(e => {
+        if (!e.categoria) return;
+        const key = String(e.categoria).trim();
+        const keyLower = key.toLowerCase();
+        if (!knownKeys.has(keyLower)) {
+          knownKeys.add(keyLower);
+          newFound.push({
+            key: key,
+            label: formatCatName(key),
+            icon: '🏷️'
+          });
+        }
+      });
+      if (newFound.length > 0) {
+        const merged = [...customCategorias, ...newFound];
+        setCustomCategorias(merged);
+        try {
+          localStorage.setItem('opsatel_custom_categorias', JSON.stringify(merged));
+        } catch (err) { }
+      }
+    }
+  }, [egresos]);
+
   const handleAddCustomCategory = (nombreCat) => {
     if (!nombreCat || !nombreCat.trim()) return null;
     const cleanName = nombreCat.trim();
@@ -2377,9 +2495,9 @@ const Balance = () => {
     const yaConsolidado = resumenColchonData?.lista?.some(c => c.descripcion?.includes('Superávit Mes ' + mes));
 
     const egByCat = Object.entries(egData.detalle || {}).map(([name, value]) => ({
-      name: CAT_LABELS[name] || (name ? name.charAt(0).toUpperCase() + name.slice(1) : name),
+      name: getCatLabel(name, customCategorias),
       value,
-      color: P.cat[name] || '#94a3b8'
+      color: getCatColor(name, customCategorias)
     })).filter(x => x.value > 0);
     const egByMetodo = egData.lista.reduce((acc, eg) => {
       acc[eg.metodo_pago] = (acc[eg.metodo_pago] || 0) + parseFloat(eg.monto);
@@ -2841,7 +2959,7 @@ const Balance = () => {
                       <td style={{ padding: '12px 16px' }}>
                         {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[eg.categoria] || eg.categoria} color={P.cat[eg.categoria] || '#94a3b8'} /></td>
+                      <td style={{ padding: '12px 16px' }}><Badge text={getCatLabel(eg.categoria, customCategorias)} color={getCatColor(eg.categoria, customCategorias)} /></td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
                       </td>
@@ -3071,7 +3189,7 @@ const Balance = () => {
                   <div key={gf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
                     <div>
                       <div style={{ fontSize: '0.87rem', fontWeight: 700 }}>{gf.descripcion}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{CAT_LABELS[gf.categoria] || gf.categoria} · {gf.metodo_pago}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{getCatLabel(gf.categoria, customCategorias)} · {gf.metodo_pago}</div>
                     </div>
                     <div style={{ fontSize: '1rem', fontWeight: 900, color: P.egreso }}>{fmt(gf.monto)}</div>
                   </div>
@@ -3580,15 +3698,49 @@ const Balance = () => {
         </div>
 
         <div className="grid-responsive" style={{ marginBottom: 12 }}>
-          {CATEGORIAS.map(cat => {
-            const total = displayEgresos.filter(e => e.categoria === cat).reduce((s, e) => s + parseFloat(e.monto || 0), 0);
-            return (
-              <div key={cat} style={{ background: `${P.cat[cat]}0a`, border: `1px solid ${P.cat[cat]}33`, borderRadius: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: P.cat[cat] }}>{CAT_LABELS[cat].toUpperCase()}</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{fmt(total)}</span>
-              </div>
-            );
-          })}
+          {(() => {
+            const seen = new Set();
+            const allCategoryKeys = [];
+
+            CATEGORIAS.forEach(c => {
+              const k = (c || '').toLowerCase().trim();
+              if (!seen.has(k)) {
+                seen.add(k);
+                allCategoryKeys.push(c);
+              }
+            });
+
+            (customCategorias || []).forEach(c => {
+              const k = (c.key || c.label || '').toLowerCase().trim();
+              if (k && !seen.has(k)) {
+                seen.add(k);
+                allCategoryKeys.push(c.key);
+              }
+            });
+
+            (displayEgresos || []).forEach(e => {
+              const raw = e.categoria || '';
+              const k = raw.toLowerCase().trim();
+              if (k && !seen.has(k)) {
+                seen.add(k);
+                allCategoryKeys.push(raw);
+              }
+            });
+
+            return allCategoryKeys.map(cat => {
+              const total = displayEgresos
+                .filter(e => String(e.categoria || '').toLowerCase().trim() === String(cat).toLowerCase().trim())
+                .reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+              const label = getCatLabel(cat, customCategorias);
+              const color = getCatColor(cat, customCategorias);
+              return (
+                <div key={cat} style={{ background: `${color}12`, border: `1px solid ${color}35`, borderRadius: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: color, letterSpacing: 0.5 }}>{label.toUpperCase()}</span>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{fmt(total)}</span>
+                </div>
+              );
+            });
+          })()}
         </div>
 
         <div style={{ overflowX: 'auto', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
@@ -3606,8 +3758,8 @@ const Balance = () => {
               ) : Object.entries(groupedEgresos).map(([cat, list]) => (
                 <React.Fragment key={cat}>
                   <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <td colSpan={7} style={{ padding: '10px 16px', color: P.cat[cat], fontWeight: 800, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}>
-                      ▶ {CAT_LABELS[cat]}
+                    <td colSpan={7} style={{ padding: '10px 16px', color: getCatColor(cat, customCategorias), fontWeight: 800, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}>
+                      ▶ {getCatLabel(cat, customCategorias)}
                     </td>
                   </tr>
                   {list.map(eg => (
@@ -3839,7 +3991,7 @@ const Balance = () => {
                     {g.descripcion}
                     {g.notas && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{g.notas}</div>}
                   </td>
-                  <td style={{ padding: '12px 16px' }}><Badge text={CAT_LABELS[g.categoria] || g.categoria} color={P.cat[g.categoria] || '#94a3b8'} /></td>
+                  <td style={{ padding: '12px 16px' }}><Badge text={getCatLabel(g.categoria, customCategorias)} color={getCatColor(g.categoria, customCategorias)} /></td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ color: g.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {(g.metodo_pago || 'Efectivo').toUpperCase()}</span>
                   </td>
@@ -5137,7 +5289,7 @@ const Balance = () => {
       {/* Modal Gasto Fijo */}
       {modalGastoFijo !== null && (
         <Modal title={modalGastoFijo === 'crear' ? '➕ Nuevo Egreso Fijo' : '✏️ Editar Egreso Fijo'} onClose={() => setModalGastoFijo(null)}>
-          <GastoFijoForm initial={modalGastoFijo !== 'crear' ? { ...modalGastoFijo } : null} onSave={handleSaveGastoFijo} onClose={() => setModalGastoFijo(null)} />
+          <GastoFijoForm initial={modalGastoFijo !== 'crear' ? { ...modalGastoFijo } : null} customCategorias={customCategorias} onSave={handleSaveGastoFijo} onClose={() => setModalGastoFijo(null)} />
         </Modal>
       )}
 
