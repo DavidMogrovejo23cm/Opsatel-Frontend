@@ -30,7 +30,10 @@ const WhatsApp = () => {
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [nodoSeleccionado, setNodoSeleccionado] = useState('todos');
     const [estadoSeleccionado, setEstadoSeleccionado] = useState('ACTIVO');
-    const [velocidadEnvio, setVelocidadEnvio] = useState('seguro'); // 'seguro' (lotes de 10, 30-120s c/u + descanso 5-10 min)
+    const [velocidadEnvio, setVelocidadEnvio] = useState('diario_20'); // 'diario_20' (20 al día intercalando horas/minutos) | 'espaciado_lento' | 'seguro' | 'prudente' | 'moderado'
+    const [desdeId, setDesdeId] = useState(''); // Continuar desde ID específico (ej. 50)
+    const [hastaId, setHastaId] = useState(''); // Límite de ID final opcional
+    const [limiteMensajes, setLimiteMensajes] = useState('20'); // Límite de mensajes a enviar en la tanda (ej. 20)
     const [listaNodos, setListaNodos] = useState([]);
     const [listaClientes, setListaClientes] = useState([]);
 
@@ -140,7 +143,7 @@ const WhatsApp = () => {
     };
 
     const getClientesDestino = () => {
-        return listaClientes.filter(c => {
+        let filtrados = listaClientes.filter(c => {
             const hasCelular = c.celular && String(c.celular).trim() !== '';
             if (!hasCelular) return false;
 
@@ -180,12 +183,58 @@ const WhatsApp = () => {
                 }
             }
 
+            // Filtro por ID inicial (Continuar desde ID X)
+            if (desdeId && !isNaN(parseInt(desdeId, 10)) && parseInt(desdeId, 10) > 0) {
+                if (parseInt(c.id, 10) < parseInt(desdeId, 10)) return false;
+            }
+
+            // Filtro por ID final
+            if (hastaId && !isNaN(parseInt(hastaId, 10)) && parseInt(hastaId, 10) > 0) {
+                if (parseInt(c.id, 10) > parseInt(hastaId, 10)) return false;
+            }
+
             return true;
         });
+
+        // Ordenar clientes por ID ascendente para envíos ordenados y predecibles
+        filtrados.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+
+        // Limitar cantidad si se especificó un límite por tanda
+        if (limiteMensajes && !isNaN(parseInt(limiteMensajes, 10)) && parseInt(limiteMensajes, 10) > 0) {
+            filtrados = filtrados.slice(0, parseInt(limiteMensajes, 10));
+        }
+
+        return filtrados;
     };
 
     const getClientesDestinoCount = () => {
         return getClientesDestino().length;
+    };
+
+    const getTotalClientesFiltradosSinLimite = () => {
+        return listaClientes.filter(c => {
+            const hasCelular = c.celular && String(c.celular).trim() !== '';
+            if (!hasCelular) return false;
+            if (estadoSeleccionado !== 'TODOS') {
+                const estUpper = (c.estado || '').trim().toUpperCase();
+                if (estadoSeleccionado === 'ACTIVO' && !['ACTIVO', 'ACTIVA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'INACTIVO' && !['INACTIVO', 'INACTIVA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'SUSPENDIDO' && !['SUSPENDIDO', 'SUSPENDIDA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'PENDIENTE' && !['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'FINIQUITO' && estUpper !== 'FINIQUITO') return false;
+                if (estadoSeleccionado === 'CORTESIA' && !['CORTESIA', 'CORTESÍA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'TRASLADO' && estUpper !== 'TRASLADO') return false;
+            }
+            if (nodoSeleccionado !== 'todos') {
+                const targetKey = normalizeLocationKey(nodoSeleccionado);
+                const nodoKey = normalizeLocationKey(c.nodo);
+                const parroquiaKey = normalizeLocationKey(c.parroquia);
+                if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) return false;
+            }
+            return true;
+        }).length;
     };
 
     const getConteoClientesProgramados = (filtro = filtroClientes) => {
@@ -771,11 +820,16 @@ const WhatsApp = () => {
             return;
         }
 
-        const count = getClientesDestinoCount();
+        const clientesSeleccionados = getClientesDestino();
+        const count = clientesSeleccionados.length;
         if (count === 0) {
-            showError('No se encontraron clientes con número de celular que coincidan con los filtros seleccionados (Estado y Nodo).');
+            showError('No se encontraron clientes con número de celular que coincidan con los filtros seleccionados (Estado, Nodo, ID inicial y Límite).');
             return;
         }
+
+        const primerCliente = clientesSeleccionados[0];
+        const ultimoCliente = clientesSeleccionados[clientesSeleccionados.length - 1];
+        const rangoIdsTexto = primerCliente && ultimoCliente ? `(IDs ${primerCliente.id} al ${ultimoCliente.id})` : '';
 
         const nombresEstado = {
             'ACTIVO': 'Activos',
@@ -791,7 +845,7 @@ const WhatsApp = () => {
         };
         const estadoLabel = nombresEstado[estadoSeleccionado] || estadoSeleccionado;
         const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
-        const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel}`;
+        const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel} ${rangoIdsTexto}`.trim();
 
         let delayMin = 30.0;
         let delayMax = 120.0;
@@ -800,25 +854,39 @@ const WhatsApp = () => {
         let batchPauseMax = 600.0; // 10 minutos
         let ritmoTexto = 'Grupos de 10 clientes (30 a 120 seg entre mensajes) con descanso de 5 a 10 minutos entre cada grupo';
 
-        if (velocidadEnvio === 'prudente') {
+        if (velocidadEnvio === 'diario_20') {
+            delayMin = 900.0; // 15 minutos
+            delayMax = 1800.0; // 30 minutos
+            batchSize = 5;
+            batchPauseMin = 1800.0; // 30 minutos
+            batchPauseMax = 3600.0; // 1 hora
+            ritmoTexto = '🗓️ Campaña Diaria Anti-Baneo: 1 mensaje cada 15 a 30 minutos a lo largo del día (Máxima Seguridad para 20-30 clientes)';
+        } else if (velocidadEnvio === 'espaciado_lento') {
+            delayMin = 180.0; // 3 minutos
+            delayMax = 360.0; // 6 minutos
+            batchSize = 5;
+            batchPauseMin = 600.0; // 10 minutos
+            batchPauseMax = 1200.0; // 20 minutos
+            ritmoTexto = '🐢 Espaciado Lento: 1 mensaje cada 3 a 6 minutos con descanso de 10 a 20 minutos cada 5 clientes';
+        } else if (velocidadEnvio === 'prudente') {
             delayMin = 45.0;
             delayMax = 150.0;
             batchSize = 8;
             batchPauseMin = 420.0; // 7 minutos
             batchPauseMax = 720.0; // 12 minutos
-            ritmoTexto = 'Grupos de 8 clientes (45 a 150 seg entre mensajes) con descanso de 7 a 12 minutos entre cada grupo';
+            ritmoTexto = '🔒 Ultra Seguro: Grupos de 8 clientes (45 a 150 seg entre mensajes) con descanso de 7 a 12 minutos';
         } else if (velocidadEnvio === 'moderado') {
             delayMin = 20.0;
             delayMax = 60.0;
             batchSize = 10;
             batchPauseMin = 180.0; // 3 minutos
             batchPauseMax = 300.0; // 5 minutos
-            ritmoTexto = 'Grupos de 10 clientes (20 a 60 seg entre mensajes) con descanso de 3 a 5 minutos entre cada grupo';
+            ritmoTexto = '⏱️ Moderado: Grupos de 10 clientes (20 a 60 seg entre mensajes) con descanso de 3 a 5 minutos';
         }
 
         const confirmacion1 = await showConfirm(
-            '⚠️ ADVERTENCIA DE SEGURIDAD',
-            `Estás a punto de enviar una difusión masiva ${descripcionDestino}.\n\n🛡️ Protección Anti-Bloqueo Inteligente Activa:\n${ritmoTexto} para proteger tu línea de WhatsApp y evitar bloqueos por envíos masivos.\n\n¿Deseas continuar?`,
+            '⚠️ ADVERTENCIA DE SEGURIDAD ANTI-BANEO',
+            `Estás a punto de despachar una difusión masiva ${descripcionDestino}.\n\n🛡️ Estrategia de Envío Seleccionada:\n${ritmoTexto}\n\n🔢 Cantidad de clientes a enviar en esta tanda: ${count}\n\n¿Deseas continuar?`,
             'Continuar',
             'Cancelar'
         );
@@ -826,7 +894,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Realmente deseas ejecutar la difusión masiva ahora ${descripcionDestino}?\n\nEste proceso se ejecutará en segundo plano (asíncrono) en grupos de ${batchSize} clientes y podrás seguir utilizando el sistema con normalidad.`,
+            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -835,8 +903,24 @@ const WhatsApp = () => {
         setEnviandoGlobal(true);
         try {
             const nodoParam = nodoSeleccionado === 'todos' ? null : nodoSeleccionado;
-            await whatsappService.enviarGlobal(mensajeGlobal, nodoParam, estadoSeleccionado, delayMin, delayMax, batchSize, batchPauseMin, batchPauseMax);
-            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Se enviará en grupos de ${batchSize} clientes con pausas de 30-120s y descansos de 5-10 min.`);
+            const desdeIdInt = desdeId && !isNaN(parseInt(desdeId, 10)) ? parseInt(desdeId, 10) : null;
+            const hastaIdInt = hastaId && !isNaN(parseInt(hastaId, 10)) ? parseInt(hastaId, 10) : null;
+            const limiteInt = limiteMensajes && !isNaN(parseInt(limiteMensajes, 10)) ? parseInt(limiteMensajes, 10) : null;
+
+            await whatsappService.enviarGlobal(
+                mensajeGlobal,
+                nodoParam,
+                estadoSeleccionado,
+                delayMin,
+                delayMax,
+                batchSize,
+                batchPauseMin,
+                batchPauseMax,
+                desdeIdInt,
+                hastaIdInt,
+                limiteInt
+            );
+            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Se procesará en segundo plano con protección anti-bloqueo.`);
             setMensajeGlobal('');
             setActiveTab('Historial');
             cargarHistorial();
@@ -1891,7 +1975,7 @@ const WhatsApp = () => {
                         }}>
                             <span style={{ fontSize: '1.5rem' }}>🛡️</span>
                             <div style={{ fontSize: '0.85rem', color: '#d1fae5', lineHeight: '1.4' }}>
-                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Inteligente por Lotes:</strong> Los mensajes masivos se envían en grupos de 10 clientes con un intervalo aleatorio de 30 a 120 segundos entre cada cliente. Al completar cada grupo de 10, el sistema realiza una pausa de descanso de 5 a 10 minutos antes del siguiente grupo, evitando por completo patrones robotizados y previniendo sanciones o baneos de WhatsApp.
+                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Inteligente y Control Diario:</strong> Ahora puedes limitar tus campañas a <strong>20 mensajes por día</strong> intercalados cada 15-30 minutos y <strong>continuar desde un ID específico</strong> (ej. retomar desde el cliente 50). Esto simula actividad humana 100% natural y minimiza al máximo el riesgo de restricciones en WhatsApp.
                             </div>
                         </div>
 
@@ -1905,7 +1989,7 @@ const WhatsApp = () => {
                             {/* Panel de Filtros y Configuración */}
                             <div style={{ 
                                 display: 'grid', 
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', 
                                 gap: '15px', 
                                 marginBottom: '20px' 
                             }}>
@@ -1981,21 +2065,100 @@ const WhatsApp = () => {
                                     </select>
                                 </div>
 
-                                {/* 3. Selector de Ritmo Anti-Baneo */}
+                                {/* 3. Continuar desde ID inicial */}
                                 <div style={{ 
                                     background: 'rgba(15, 23, 42, 0.65)', 
                                     padding: '14px 16px', 
                                     borderRadius: '8px', 
-                                    border: '1px solid rgba(52, 211, 153, 0.3)' 
+                                    border: '1px solid rgba(168, 85, 247, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#c084fc', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>🔢</span> Continuar desde ID
+                                        </span>
+                                        {desdeId && (
+                                            <span 
+                                                onClick={() => setDesdeId('')}
+                                                style={{ fontSize: '0.72rem', color: '#f87171', cursor: 'pointer', textDecoration: 'underline' }}
+                                                title="Limpiar ID inicial"
+                                            >
+                                                Limpiar
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        className="input"
+                                        placeholder="Ej: 50 (desde el 1 si está vacío)"
+                                        value={desdeId}
+                                        onChange={(e) => setDesdeId(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(168, 85, 247, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* 4. Límite de mensajes por tanda / día */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(251, 146, 60, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#fb923c', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>🎯</span> Límite por Campaña
+                                        </span>
+                                        <span style={{ fontSize: '0.72rem', color: '#fed7aa' }}>
+                                            Recomendado: 20
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        className="input"
+                                        placeholder="Ej: 20 (dejar vacío para todos)"
+                                        value={limiteMensajes}
+                                        onChange={(e) => setLimiteMensajes(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(251, 146, 60, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* 5. Selector de Ritmo Anti-Baneo */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(52, 211, 153, 0.3)',
+                                    gridColumn: '1 / -1'
                                 }}>
                                     <label className="label" style={{ color: '#34d399', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>⏱️</span> Ritmo de Envío (Anti-Baneo)
+                                        <span>⏱️</span> Estrategia de Ritmo Anti-Baneo
                                     </label>
                                     <select
                                         value={velocidadEnvio}
                                         onChange={(e) => setVelocidadEnvio(e.target.value)}
                                         style={{ 
-                                            height: '40px', 
+                                            height: '42px', 
                                             background: '#0e1726', 
                                             color: '#fff', 
                                             border: '1px solid rgba(52, 211, 153, 0.4)', 
@@ -2006,39 +2169,63 @@ const WhatsApp = () => {
                                             width: '100%'
                                         }}
                                     >
-                                        <option value="seguro">🛡️ Grupos de 10 (30-120s c/u + pausa 5-10 min) - Recomendado Anti-Baneo</option>
-                                        <option value="prudente">🐢 Ultra Seguro (Grupos de 8 / 45-150s c/u + pausa 7-12 min)</option>
-                                        <option value="moderado">⏱️ Moderado (Grupos de 10 / 20-60s c/u + pausa 3-5 min)</option>
+                                        <option value="diario_20">🗓️ Campaña Diaria Anti-Baneo: 1 mensaje cada 15 a 30 min (Máxima Seguridad para 20-30 clientes al día)</option>
+                                        <option value="espaciado_lento">🐢 Espaciado Lento: 1 mensaje cada 3 a 6 min (Pausa 10-20 min c/5 clientes)</option>
+                                        <option value="seguro">🛡️ Modo Seguro: Grupos de 10 (30-120s c/u + pausa 5-10 min)</option>
+                                        <option value="prudente">🔒 Ultra Seguro: Grupos de 8 (45-150s c/u + pausa 7-12 min)</option>
+                                        <option value="moderado">⏱️ Moderado: Grupos de 10 (20-60s c/u + pausa 3-5 min)</option>
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Resumen de Destinatarios */}
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                background: 'rgba(30, 41, 59, 0.6)',
-                                padding: '10px 16px',
-                                borderRadius: '6px',
-                                marginBottom: '18px',
-                                border: '1px solid rgba(255, 255, 255, 0.08)'
-                            }}>
-                                <div style={{ fontSize: '0.88rem', color: '#cbd5e1' }}>
-                                    Destinatarios según filtros actuales:
-                                </div>
-                                <span style={{ 
-                                    fontSize: '0.88rem', 
-                                    padding: '4px 12px', 
-                                    borderRadius: '12px', 
-                                    background: getClientesDestinoCount() > 0 ? 'rgba(59, 130, 246, 0.25)' : 'rgba(239, 68, 68, 0.25)', 
-                                    color: getClientesDestinoCount() > 0 ? '#93c5fd' : '#fca5a5', 
-                                    fontWeight: 'bold',
-                                    border: `1px solid ${getClientesDestinoCount() > 0 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
-                                }}>
-                                    🎯 {getClientesDestinoCount()} Destinatarios Listos
-                                </span>
-                            </div>
+                            {/* Resumen de Destinatarios Dinámico */}
+                            {(() => {
+                                const seleccionados = getClientesDestino();
+                                const totalCount = seleccionados.length;
+                                const totalSinLimite = getTotalClientesFiltradosSinLimite();
+                                const primer = seleccionados[0];
+                                const ultimo = seleccionados[seleccionados.length - 1];
+
+                                return (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'wrap',
+                                        gap: '10px',
+                                        background: 'rgba(30, 41, 59, 0.75)',
+                                        padding: '12px 18px',
+                                        borderRadius: '8px',
+                                        marginBottom: '18px',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                                    }}>
+                                        <div style={{ fontSize: '0.88rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <span>Destinatarios listos en esta tanda:</span>
+                                            {primer && ultimo && (
+                                                <span style={{ color: '#c084fc', background: 'rgba(168, 85, 247, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+                                                    🆔 Rango: Cliente #{primer.id} ({primer.nombre}) ➡️ #{ultimo.id} ({ultimo.nombre})
+                                                </span>
+                                            )}
+                                            {limiteMensajes && parseInt(limiteMensajes, 10) < totalSinLimite && (
+                                                <span style={{ color: '#fb923c', fontSize: '0.8rem' }}>
+                                                    (Limitado a {totalCount} de {totalSinLimite} disponibles)
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span style={{ 
+                                            fontSize: '0.88rem', 
+                                            padding: '4px 14px', 
+                                            borderRadius: '12px', 
+                                            background: totalCount > 0 ? 'rgba(59, 130, 246, 0.25)' : 'rgba(239, 68, 68, 0.25)', 
+                                            color: totalCount > 0 ? '#93c5fd' : '#fca5a5', 
+                                            fontWeight: 'bold',
+                                            border: `1px solid ${totalCount > 0 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
+                                        }}>
+                                            🎯 {totalCount} Destinatarios a Enviar
+                                        </span>
+                                    </div>
+                                );
+                            })()}
 
                             <div className="input-group">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
