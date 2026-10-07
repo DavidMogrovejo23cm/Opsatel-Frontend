@@ -56,7 +56,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh }) => {
   const menuItems = [
     { path: '/', label: 'Overview', icon: '📊', roles: ['administrador'] },
     { path: '/general', label: 'General', icon: '📋', roles: ['administrador'] },
-    { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador'] },
+    { path: '/ventas', label: 'Contrato', icon: '📝', roles: ['administrador', 'secretario'] },
     { path: '/hoja-ruta', label: 'Hoja de Ruta', icon: '🗓️', roles: ['administrador', 'tecnico'] },
     { path: '/activacion', label: 'Activación', icon: '⚡', roles: ['administrador', 'tecnico', 'instalador'] },
     { path: '/admin', label: 'Pagos', icon: '💰', roles: ['administrador'] },
