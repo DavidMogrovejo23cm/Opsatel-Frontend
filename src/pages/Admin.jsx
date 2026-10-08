@@ -114,7 +114,7 @@ const Admin = () => {
       priorDebt: priorDebt,
       monto: isCortesiaTotal ? "0" : (parseFloat(totalPendiente) > 0 ? totalPendiente : "0"),
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
-      facturas: (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI') ? 'SI' : 'NONE',
+      facturas: ((cliente.cod && String(cliente.cod).trim() !== '' && String(cliente.cod).trim().toUpperCase() !== 'NONE') || (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI')) ? 'SI' : 'NONE',
       internet_payment: isCortesiaTotal ? "0" : internetSugerido,
       app: cliente.app || '',
       payment_date: new Date().toISOString().split('T')[0],

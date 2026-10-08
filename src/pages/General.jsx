@@ -1054,12 +1054,17 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                         key={col}
                         onClick={() => {
                           if (!isCellEditable) return;
-                          if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') handleStartEdit(c.id, col, c[col]);
+                          if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
+                            const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                            const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
+                            handleStartEdit(c.id, col, currentVal);
+                          }
                         }}
                         onDoubleClick={() => {
                           if (!isCellEditable) return;
                           if (col !== 'estado') {
-                            const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : c[col]);
+                            const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                            const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col]));
                             handleStartEdit(c.id, col, currentVal);
                           }
                         }}
@@ -1381,10 +1386,12 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                               }
 
                               if (col === 'facturas') {
-                                const isSi = c.facturas && String(c.facturas).trim().toUpperCase() === 'SI';
+                                const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                                const isSi = hasCod || (c.facturas && String(c.facturas).trim().toUpperCase() === 'SI');
+                                const displayVal = isSi ? 'SI' : ((c.facturas && String(c.facturas).trim() !== '') ? c.facturas : 'NONE');
                                 return (
                                   <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
-                                    {c.facturas || '-'}
+                                    {displayVal}
                                   </span>
                                 );
                               }
