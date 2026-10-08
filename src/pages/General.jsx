@@ -347,6 +347,32 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     setPinInput('');
   };
 
+  const handleDeleteCliente = async (cliente) => {
+    if (!canModifyTable) {
+      showWarning('No tienes permisos para eliminar clientes.');
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      '¿Eliminar cliente del sistema?',
+      `¿Estás seguro de que deseas eliminar a "${cliente.nombre}" (ID: ${cliente.id}) del sistema?`,
+      'Sí, eliminar',
+      'Cancelar'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await clienteService.eliminar(cliente.id);
+      showSuccess(`Cliente "${cliente.nombre}" eliminado del sistema`);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.detail || 'Error al eliminar el cliente del sistema';
+      showError(typeof errMsg === 'string' ? errMsg : 'Error al eliminar el cliente');
+    }
+  };
+
   const handleDeleteClick = (cliente) => {
     setPendingAction({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
     if (isAuthenticated) {
@@ -761,8 +787,8 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
           >
-            <option value="VER">Acción (Ver/Ninguna)</option>
-            <option value="BORRAR">Habilitar Borrado</option>
+            <option value="VER">⚙️ Acciones...</option>
+            <option value="ELIMINAR">🗑️ Eliminar</option>
           </select>
           <select
             className="input"
@@ -979,7 +1005,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     </th>
                   );
                 })}
-                {selectedAction === 'BORRAR' && (
+                {(selectedAction === 'ELIMINAR' || selectedAction === 'BORRAR') && (
                   <th key="acciones" style={{
                     padding: '12px',
                     borderBottom: '1px solid var(--glass-border)',
@@ -987,16 +1013,16 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
-                    width: 100,
-                    minWidth: 100,
-                    maxWidth: 100,
+                    width: 110,
+                    minWidth: 110,
+                    maxWidth: 110,
                     position: 'sticky',
                     right: 0,
                     background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
                     borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                   }}>
-                    Acción
+                    Acciones
                   </th>
                 )}
               </tr>
@@ -1416,13 +1442,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       </td>
                     );
                   })}
-                  {selectedAction === 'BORRAR' && (
+                  {(selectedAction === 'ELIMINAR' || selectedAction === 'BORRAR') && (
                     <td key="acciones" style={{
                       padding: '6px 12px',
                       whiteSpace: 'nowrap',
-                      width: 100,
-                      minWidth: 100,
-                      maxWidth: 100,
+                      width: 110,
+                      minWidth: 110,
+                      maxWidth: 110,
                       textAlign: 'center',
                       position: 'sticky',
                       right: 0,
@@ -1432,28 +1458,34 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                     }}>
                       <button
-                        onClick={() => handleDeleteClick(c)}
+                        onClick={() => handleDeleteCliente(c)}
                         style={{
-                          padding: '4px 10px',
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          padding: '5px 12px',
+                          background: 'rgba(239, 68, 68, 0.18)',
+                          border: '1px solid rgba(239, 68, 68, 0.45)',
                           color: '#f87171',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.7rem',
+                          fontSize: '0.75rem',
                           fontWeight: 'bold',
-                          transition: 'all 0.2s'
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s ease'
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.background = '#ef4444';
-                          e.target.style.color = '#fff';
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.background = 'rgba(239, 68, 68, 0.15)';
-                          e.target.style.color = '#f87171';
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
+                          e.currentTarget.style.color = '#f87171';
+                          e.currentTarget.style.boxShadow = 'none';
                         }}
+                        title={`Eliminar a ${c.nombre} del sistema`}
                       >
-                        Borrar
+                        🗑️ Eliminar
                       </button>
                     </td>
                   )}
