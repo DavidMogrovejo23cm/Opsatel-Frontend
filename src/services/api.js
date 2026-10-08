@@ -320,6 +320,8 @@ export const libreqosService = {
   deleteServer:  (id)       => api.delete(`/libreqos/servers/${id}`),
   testServer:    (id)       => api.post(`/libreqos/servers/${id}/test`),
   syncServer:    (id)       => api.post(`/libreqos/servers/${id}/sync`),
+  cleanDuplicates: (id)     => api.post(`/libreqos/servers/${id}/clean-duplicates`),
+  regenerateServer: (id)    => api.post(`/libreqos/servers/${id}/regenerate`),
   // Cola de trabajos
   listJobs:      (status)   => api.get('/libreqos/jobs', { params: status ? { status } : {} }),
   retryJob:      (id)       => api.post(`/libreqos/jobs/${id}/retry`),

@@ -21,6 +21,9 @@ const Configuraciones = () => {
     const [lqSaving, setLqSaving] = useState(false);
     const [lqTesting, setLqTesting] = useState(null);
     const [lqSyncing, setLqSyncing] = useState(null);
+    const [lqCleaning, setLqCleaning] = useState(null);
+    const [lqRegenerating, setLqRegenerating] = useState(null);
+    const [lqDeleting, setLqDeleting] = useState(null);
     const [lqEditing, setLqEditing] = useState(null);
     const [selectedOltForLq, setSelectedOltForLq] = useState(null);
     const [showLqModal, setShowLqModal] = useState(false);
@@ -541,7 +544,7 @@ const Configuraciones = () => {
     };
     // ======================================
 
-    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'LibreQoS', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
 
     const fetchLqData = async () => {
         const user = configuracionService.getCurrentUser();
@@ -558,6 +561,7 @@ const Configuraciones = () => {
 
     const handleOpenLqModal = async (olt) => {
         setSelectedOltForLq(olt);
+        setLqEditing(null);
         setLqSaving(false);
         setLqTesting(null);
         setLqSyncing(null);
@@ -567,7 +571,7 @@ const Configuraciones = () => {
             const res = await libreqosService.listServers();
             const servers = Array.isArray(res.data) ? res.data : [];
             setLqServers(servers);
-            if (olt.libreqos_server_id) {
+            if (olt && olt.libreqos_server_id) {
                 existingServer = servers.find(s => s.id === olt.libreqos_server_id);
             }
         } catch (e) {
@@ -575,6 +579,7 @@ const Configuraciones = () => {
         }
 
         if (existingServer) {
+            setLqEditing(existingServer.id);
             setLqForm({
                 name: existingServer.name,
                 host: existingServer.host,
@@ -596,7 +601,58 @@ const Configuraciones = () => {
             });
         } else {
             setLqForm({
-                name: `LibreQoS-${olt.nombre}`,
+                name: olt ? `LibreQoS-${olt.nombre}` : 'LibreQoS-Servidor',
+                host: '',
+                ssh_port: 22,
+                username: 'root',
+                auth_method: 'password',
+                password: '',
+                private_key_path: '',
+                passphrase: '',
+                enabled: true,
+                ssh_timeout: 30,
+                ssh_retries: 3,
+                max_concurrent_jobs: 5,
+                libreqos_path: '/opt/libreqos',
+                libreqos_apply_cmd: 'cd /opt/libreqos && sudo python3 src/rust_integration/generate_and_apply.sh',
+                libreqos_list_cmd: 'sudo python3 /opt/libreqos/src/rust_integration/ispConfig.py --list-shaped-json',
+                suspension_download_mbps: 1,
+                suspension_upload_mbps: 1
+            });
+        }
+        setShowLqModal(true);
+    };
+
+    const handleOpenLqServerDirect = (server) => {
+        setLqEditing(server ? server.id : null);
+        setSelectedOltForLq(null);
+        setLqSaving(false);
+        setLqTesting(null);
+        setLqSyncing(null);
+
+        if (server) {
+            setLqForm({
+                name: server.name || '',
+                host: server.host || '',
+                ssh_port: server.ssh_port || 22,
+                username: server.username || 'root',
+                auth_method: server.auth_method || 'password',
+                password: '',
+                private_key_path: server.private_key_path || '',
+                passphrase: '',
+                enabled: server.enabled ?? true,
+                ssh_timeout: server.ssh_timeout || 30,
+                ssh_retries: server.ssh_retries || 3,
+                max_concurrent_jobs: server.max_concurrent_jobs || 5,
+                libreqos_path: server.libreqos_path || '/opt/libreqos',
+                libreqos_apply_cmd: server.libreqos_apply_cmd || 'cd /opt/libreqos && sudo python3 src/rust_integration/generate_and_apply.sh',
+                libreqos_list_cmd: server.libreqos_list_cmd || 'sudo python3 /opt/libreqos/src/rust_integration/ispConfig.py --list-shaped-json',
+                suspension_download_mbps: server.suspension_download_mbps || 1,
+                suspension_upload_mbps: server.suspension_upload_mbps || 1
+            });
+        } else {
+            setLqForm({
+                name: '',
                 host: '',
                 ssh_port: 22,
                 username: 'root',
@@ -619,25 +675,27 @@ const Configuraciones = () => {
     };
 
     const handleSaveLqConfig = async () => {
-        if (!selectedOltForLq) return;
         if (!lqForm.name.trim() || !lqForm.host.trim()) {
             return showWarning('El nombre y el host de LibreQoS son obligatorios.');
         }
         setLqSaving(true);
         try {
             const payload = { ...lqForm, ssh_port: parseInt(lqForm.ssh_port) || 22 };
-            let serverId = selectedOltForLq.libreqos_server_id;
+            let serverId = lqEditing || (selectedOltForLq ? selectedOltForLq.libreqos_server_id : null);
 
             if (serverId) {
                 await libreqosService.updateServer(serverId, payload);
             } else {
                 const res = await libreqosService.createServer(payload);
                 serverId = res.data.id;
-                await oltService.updateConfig(selectedOltForLq.id, { libreqos_server_id: serverId });
+                if (selectedOltForLq) {
+                    await oltService.updateConfig(selectedOltForLq.id, { libreqos_server_id: serverId });
+                }
             }
 
-            showSuccess('Configuración de LibreQoS guardada y vinculada a la OLT.');
+            showSuccess('Configuración de LibreQoS guardada exitosamente.');
             setShowLqModal(false);
+            fetchLqData();
             const oltRes = await oltService.listConfigs();
             setOltConfigs(oltRes.data?.configs || []);
         } catch (e) {
@@ -648,8 +706,7 @@ const Configuraciones = () => {
     };
 
     const handleTestLqConnection = async () => {
-        if (!selectedOltForLq) return;
-        let serverId = selectedOltForLq.libreqos_server_id;
+        let serverId = lqEditing || (selectedOltForLq ? selectedOltForLq.libreqos_server_id : null);
         if (!serverId) {
             return showWarning('Por favor, guarde la configuración primero para poder probar la conexión.');
         }
@@ -659,6 +716,7 @@ const Configuraciones = () => {
             const res = await libreqosService.testServer(serverId);
             if (res.data?.success) {
                 showSuccess(res.data.message);
+                fetchLqData();
             } else {
                 showError('Fallo de conexión: ' + res.data?.message);
             }
@@ -669,16 +727,110 @@ const Configuraciones = () => {
         }
     };
 
-    const handleSyncLqServer = async () => {
-        if (!selectedOltForLq || !selectedOltForLq.libreqos_server_id) return;
-        setLqSyncing(selectedOltForLq.libreqos_server_id);
+    const handleTestLqServerDirect = async (serverId) => {
+        if (!serverId) return;
+        setLqTesting(serverId);
         try {
-            await libreqosService.syncServer(selectedOltForLq.libreqos_server_id);
+            const res = await libreqosService.testServer(serverId);
+            if (res.data?.success) {
+                showSuccess(res.data.message || 'Conexión exitosa.');
+                fetchLqData();
+            } else {
+                showError('Fallo de conexión: ' + res.data?.message);
+            }
+        } catch (e) {
+            showError('Error de conexión: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setLqTesting(null);
+        }
+    };
+
+    const handleCleanLqDuplicates = async (server) => {
+        if (!server) return;
+        const confirm = await showConfirm(
+            `🧹 Limpiar Duplicados en ${server.name}`,
+            `Esta acción leerá ShapedDevices.csv, eliminará todas las IPs duplicadas dejando exactamente 1 entrada por cliente con su velocidad correspondiente, y recargará LibreQoS.\n\n¿Deseas continuar?`,
+            'Sí, limpiar duplicados',
+            'Cancelar'
+        );
+        if (!confirm) return;
+
+        setLqCleaning(server.id);
+        try {
+            const res = await libreqosService.cleanDuplicates(server.id);
+            if (res.data?.success) {
+                showSuccess(res.data.message || 'Limpieza completada exitosamente.');
+                fetchLqData();
+            } else {
+                showError('Error en la limpieza: ' + res.data?.message);
+            }
+        } catch (e) {
+            showError('Error al limpiar duplicados: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setLqCleaning(null);
+        }
+    };
+
+    const handleRegenerateLq = async (server) => {
+        if (!server) return;
+        const confirm = await showConfirm(
+            `🔄 Regenerar LibreQoS desde BD (${server.name})`,
+            `Esta acción volverá a escribir ShapedDevices.csv desde cero usando los clientes activos y sus planes de velocidad en la base de datos de Opsatel, y recargará LibreQoS.\n\n¿Deseas continuar?`,
+            'Sí, regenerar',
+            'Cancelar'
+        );
+        if (!confirm) return;
+
+        setLqRegenerating(server.id);
+        try {
+            const res = await libreqosService.regenerateServer(server.id);
+            if (res.data?.success) {
+                showSuccess(res.data.message || 'Regeneración completada exitosamente.');
+                fetchLqData();
+            } else {
+                showError('Error al regenerar: ' + res.data?.message);
+            }
+        } catch (e) {
+            showError('Error al regenerar: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setLqRegenerating(null);
+        }
+    };
+
+    const handleSyncLqServer = async () => {
+        let serverId = lqEditing || (selectedOltForLq ? selectedOltForLq.libreqos_server_id : null);
+        if (!serverId) return;
+        setLqSyncing(serverId);
+        try {
+            await libreqosService.syncServer(serverId);
             showSuccess('Reconciliación manual de LibreQoS iniciada en segundo plano.');
         } catch (e) {
             showError('Error al iniciar sincronización: ' + (e.response?.data?.detail || e.message));
         } finally {
             setLqSyncing(null);
+        }
+    };
+
+    const handleDeleteLqServer = async (serverId, serverName) => {
+        const confirm = await showConfirm(
+            `🗑️ Eliminar Servidor`,
+            `¿Estás seguro de eliminar la configuración del servidor "${serverName}"?`,
+            'Sí, eliminar',
+            'Cancelar'
+        );
+        if (!confirm) return;
+
+        setLqDeleting(serverId);
+        try {
+            await libreqosService.deleteServer(serverId);
+            showSuccess('Servidor LibreQoS eliminado correctamente.');
+            fetchLqData();
+            const oltRes = await oltService.listConfigs();
+            setOltConfigs(oltRes.data?.configs || []);
+        } catch (e) {
+            showError('Error al eliminar servidor: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setLqDeleting(null);
         }
     };
 
@@ -2068,6 +2220,283 @@ const Configuraciones = () => {
 
                         <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, fontSize: '0.82rem', color: '#6b7280' }}>
                             💡 <strong style={{ color: '#38bdf8' }}>Credenciales para tu OLT:</strong> Host <code style={{ color: '#f472b6' }}>172.25.0.2</code> · Puerto <code style={{ color: '#f472b6' }}>22</code> · Usuario <code style={{ color: '#f472b6' }}>root</code> · Password <code style={{ color: '#f472b6' }}>admin</code>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'LibreQoS' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                            <div>
+                                <h3 style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, color: '#38bdf8' }}>
+                                    🚀 Servidores LibreQoS (Control de Ancho de Banda)
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', maxWidth: 800, margin: 0 }}>
+                                    Administra los servidores de modelado de tráfico y control de velocidad (Shaper). Puedes limpiar duplicados de IP en <code>ShapedDevices.csv</code> o regenerar la configuración con los planes de cada cliente.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={fetchLqData}
+                                    style={{ background: 'rgba(56,189,248,0.15)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', padding: '8px 14px', fontSize: '0.85rem' }}
+                                >
+                                    🔄 Refrescar
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => handleOpenLqServerDirect(null)}
+                                    style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                                >
+                                    ➕ Registrar Servidor
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Grid de Servidores LibreQoS (Baños, Sayausí, etc.) */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
+                            gap: 20,
+                            marginBottom: 24
+                        }}>
+                            {lqServers.length === 0 ? (
+                                <div style={{
+                                    gridColumn: '1 / -1',
+                                    background: 'rgba(56,189,248,0.04)',
+                                    border: '1px dashed rgba(56,189,248,0.3)',
+                                    borderRadius: 12,
+                                    padding: 30,
+                                    textAlign: 'center',
+                                    color: 'var(--text-muted)'
+                                }}>
+                                    <div style={{ fontSize: '2rem', marginBottom: 8 }}>🌐 🔌</div>
+                                    <h4 style={{ color: '#38bdf8', marginBottom: 6 }}>No hay servidores LibreQoS registrados</h4>
+                                    <p style={{ fontSize: '0.85rem', marginBottom: 16 }}>
+                                        Registra tus servidores para Baños y Sayausí para poder gestionar el shaper y eliminar duplicados.
+                                    </p>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => handleOpenLqServerDirect(null)}
+                                        style={{ padding: '8px 20px' }}
+                                    >
+                                        ➕ Registrar Servidor LibreQoS
+                                    </button>
+                                </div>
+                            ) : (
+                                lqServers.map(server => {
+                                    // Buscar OLTs asociadas a este servidor
+                                    const linkedOlts = oltConfigs.filter(o => o.libreqos_server_id === server.id);
+                                    const isOnline = server.status === 'ONLINE';
+
+                                    return (
+                                        <div
+                                            key={server.id}
+                                            className="glass-card glass"
+                                            style={{
+                                                border: `1px solid ${isOnline ? 'rgba(34,197,94,0.3)' : 'rgba(56,189,248,0.25)'}`,
+                                                background: 'rgba(15,23,42,0.6)',
+                                                borderRadius: 14,
+                                                padding: 20,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div>
+                                                {/* Header de la tarjeta */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        <span style={{ fontSize: '1.4rem' }}>🖥️</span>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>
+                                                                {server.name}
+                                                            </h4>
+                                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                                                {server.username}@{server.host}:{server.ssh_port}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <span style={{
+                                                        padding: '4px 10px',
+                                                        borderRadius: 20,
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: 600,
+                                                        background: isOnline ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                                                        color: isOnline ? '#4ade80' : '#f87171',
+                                                        border: `1px solid ${isOnline ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`
+                                                    }}>
+                                                        {isOnline ? '● ONLINE' : server.status === 'OFFLINE' ? '○ OFFLINE' : '● ' + server.status}
+                                                    </span>
+                                                </div>
+
+                                                {/* Información de vinculación */}
+                                                <div style={{
+                                                    background: 'rgba(255,255,255,0.03)',
+                                                    border: '1px solid rgba(255,255,255,0.06)',
+                                                    borderRadius: 8,
+                                                    padding: '10px 12px',
+                                                    marginBottom: 16,
+                                                    fontSize: '0.82rem',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: 4
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ color: 'var(--text-muted)' }}>OLT / Nodos Vinculados:</span>
+                                                        <strong style={{ color: '#a78bfa' }}>
+                                                            {linkedOlts.length > 0 
+                                                                ? linkedOlts.map(o => o.nombre + (o.nodo_asociado ? ` (${o.nodo_asociado})` : '')).join(', ') 
+                                                                : 'Sin OLT asignada'}
+                                                        </strong>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ color: 'var(--text-muted)' }}>Ruta CSV:</span>
+                                                        <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
+                                                            {server.libreqos_path}/src/ShapedDevices.csv
+                                                        </span>
+                                                    </div>
+                                                    {server.last_error && (
+                                                        <div style={{ color: '#f87171', marginTop: 4, fontSize: '0.78rem' }}>
+                                                            ⚠️ Error: {server.last_error}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Botones de acción rápida */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                    {/* Botón 1: Limpiar Duplicados */}
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => handleCleanLqDuplicates(server)}
+                                                        disabled={lqCleaning === server.id}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                                                            color: '#ffffff',
+                                                            border: 'none',
+                                                            borderRadius: 8,
+                                                            padding: '9px 12px',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.82rem',
+                                                            cursor: lqCleaning === server.id ? 'not-allowed' : 'pointer',
+                                                            boxShadow: '0 2px 10px rgba(14,165,233,0.3)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: 6
+                                                        }}
+                                                        title="Elimina filas duplicadas de IPs en ShapedDevices.csv, dejando 1 sola por cliente y recargando LibreQoS"
+                                                    >
+                                                        {lqCleaning === server.id ? '⏳ Limpiando...' : '🧹 Limpiar Duplicados'}
+                                                    </button>
+
+                                                    {/* Botón 2: Regenerar desde BD */}
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => handleRegenerateLq(server)}
+                                                        disabled={lqRegenerating === server.id}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+                                                            color: '#ffffff',
+                                                            border: 'none',
+                                                            borderRadius: 8,
+                                                            padding: '9px 12px',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.82rem',
+                                                            cursor: lqRegenerating === server.id ? 'not-allowed' : 'pointer',
+                                                            boxShadow: '0 2px 10px rgba(139,92,246,0.3)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: 6
+                                                        }}
+                                                        title="Sobrescribe ShapedDevices.csv con todos los clientes activos y sus velocidades de plan desde la BD de Opsatel"
+                                                    >
+                                                        {lqRegenerating === server.id ? '⏳ Regenerando...' : '🔄 Regenerar desde BD'}
+                                                    </button>
+                                                </div>
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8 }}>
+                                                    {/* Botón 3: Test SSH */}
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        onClick={() => handleTestLqServerDirect(server.id)}
+                                                        disabled={lqTesting === server.id}
+                                                        style={{
+                                                            background: 'rgba(16,185,129,0.15)',
+                                                            color: '#34d399',
+                                                            border: '1px solid rgba(16,185,129,0.3)',
+                                                            padding: '7px 10px',
+                                                            fontSize: '0.8rem',
+                                                            borderRadius: 8
+                                                        }}
+                                                    >
+                                                        {lqTesting === server.id ? 'Probando...' : '⚡ Test SSH'}
+                                                    </button>
+
+                                                    {/* Botón 4: Editar */}
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        onClick={() => handleOpenLqServerDirect(server)}
+                                                        style={{
+                                                            background: 'rgba(255,255,255,0.06)',
+                                                            color: '#e2e8f0',
+                                                            border: '1px solid rgba(255,255,255,0.12)',
+                                                            padding: '7px 10px',
+                                                            fontSize: '0.8rem',
+                                                            borderRadius: 8
+                                                        }}
+                                                    >
+                                                        ⚙️ Configurar
+                                                    </button>
+
+                                                    {/* Botón 5: Eliminar */}
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        onClick={() => handleDeleteLqServer(server.id, server.name)}
+                                                        disabled={lqDeleting === server.id}
+                                                        style={{
+                                                            background: 'rgba(239,68,68,0.12)',
+                                                            color: '#f87171',
+                                                            border: '1px solid rgba(239,68,68,0.25)',
+                                                            padding: '7px 10px',
+                                                            fontSize: '0.8rem',
+                                                            borderRadius: 8
+                                                        }}
+                                                        title="Eliminar servidor"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* Banner Informativo */}
+                        <div style={{
+                            background: 'rgba(56,189,248,0.06)',
+                            border: '1px solid rgba(56,189,248,0.2)',
+                            borderRadius: 10,
+                            padding: '14px 18px',
+                            fontSize: '0.84rem',
+                            color: '#cbd5e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12
+                        }}>
+                            <span style={{ fontSize: '1.4rem' }}>💡</span>
+                            <div>
+                                <strong style={{ color: '#38bdf8' }}>¿Cómo funciona la limpieza de duplicados?</strong>
+                                <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>
+                                    El botón <strong>🧹 Limpiar Duplicados</strong> crea un respaldo automático en <code>ShapedDevices.csv.bak_...</code> en el servidor, elimina las entradas repetidas dejando exactamente 1 registro único por IP con sus megas correspondientes, y luego recarga el servicio ejecutando <code>sudo python3 LibreQoS.py</code>.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
