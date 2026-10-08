@@ -23,6 +23,7 @@ import Balance from './pages/Balance';
 import Asistencia from './pages/Asistencia';
 import WhatsApp from './pages/WhatsApp';
 import Eliminados from './pages/Eliminados';
+import TECdt from './pages/TECdt';
 
 function HomeRedirect() {
   const { user } = useAuth();
@@ -68,6 +69,11 @@ function App() {
             <Route path="activacion" element={
               <ProtectedRoute roles={['administrador', 'tecnico', 'instalador']}>
                 <Activacion />
+              </ProtectedRoute>
+            } />
+            <Route path="tecdt" element={
+              <ProtectedRoute roles={['tecnico']}>
+                <TECdt />
               </ProtectedRoute>
             } />
 
