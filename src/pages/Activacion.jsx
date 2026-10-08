@@ -215,6 +215,7 @@ const Activacion = () => {
               gpon_port: t.payload?.gpon_port || t.response_json?.gpon_port || '—',
               ont_id: t.payload?.ont_id || t.response_json?.ont_id || '—',
               service_port: t.response_json?.service_port || '—',
+              mac: t.response_json?.mac || t.payload?.mac || '—',
               ip: t.cliente_ip || t.response_json?.ip || t.response_json?.target_ip || '—',
               ip_dhcp: t.response_json?.dhcp_ip || t.response_json?.lease_ip || t.response_json?.lease_found?.address || '—',
               comentario: `${String(t.cliente_id).padStart(6, '0')} - ${t.cliente_nombre || 'Cliente'}`,
@@ -265,6 +266,7 @@ const Activacion = () => {
       // 3. Consultar potencia y refrescar IP con reintentos
       let finalIp = null;
       let finalPower = null;
+      let finalMac = null;
       const messages = [];
 
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -284,8 +286,12 @@ const Activacion = () => {
 
         if (ipResult.status === 'fulfilled') {
           const ipVal = ipResult.value.data?.ip;
+          const macVal = ipResult.value.data?.mac;
           if (ipVal && ipVal !== '—') {
             finalIp = ipVal;
+          }
+          if (macVal && macVal !== '—') {
+            finalMac = macVal;
           }
         }
 
@@ -305,6 +311,10 @@ const Activacion = () => {
         messages.push(`IP: ${finalIp}`);
       } else {
         messages.push('IP aún en proceso de asignación');
+      }
+
+      if (finalMac) {
+        nextData.mac = finalMac;
       }
 
       if (finalPower !== null && finalPower !== undefined) {
@@ -950,6 +960,10 @@ const Activacion = () => {
               <div style={{ padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ fontSize: 12, color: '#94a3b8' }}>IP Estática Asignada</span>
                 <div style={{ fontWeight: 600, color: '#38bdf8' }}>{confirmTaskData.ip}</div>
+              </div>
+              <div style={{ padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>MAC Router / ONT</span>
+                <div style={{ fontWeight: 600, color: '#a78bfa', fontFamily: 'monospace' }}>{confirmTaskData.mac || '—'}</div>
               </div>
             </div>
 
