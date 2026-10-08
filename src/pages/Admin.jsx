@@ -1357,7 +1357,19 @@ const Admin = () => {
                       {/* Cod */}
                       <div className="form-group" style={{ marginBottom: '8px' }}>
                         <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#a78bfa' }}>Cod Factura</label>
-                        <input className="input" style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }} value={pagoData.cod} onChange={(e) => setPagoData({ ...pagoData, cod: e.target.value })} />
+                        <input
+                          className="input"
+                          style={{ borderColor: 'rgba(167, 139, 250, 0.2)', borderRadius: '10px', height: '36px', padding: '6px' }}
+                          value={pagoData.cod}
+                          onChange={(e) => {
+                            const newCod = e.target.value;
+                            setPagoData({
+                              ...pagoData,
+                              cod: newCod,
+                              ...(newCod.trim() !== '' ? { facturas: 'SI' } : {})
+                            });
+                          }}
+                        />
                       </div>
 
                       {/* Facturas */}

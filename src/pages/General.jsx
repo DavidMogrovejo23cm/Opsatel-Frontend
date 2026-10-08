@@ -48,7 +48,7 @@ const General = () => {
     "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
     "fecha_firma", "instalation_date", "estado", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
     "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
-    "tiempo", "arrienda", "facturas", "app", "payment_date", "bank", "cod", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
+    "tiempo", "arrienda", "app", "payment_date", "bank", "cod", "facturas", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
   ];
 
   // Estado para los anchos ajustables de cada columna
@@ -60,6 +60,7 @@ const General = () => {
       else if (col === 'ip') widths[col] = 130;
       else if (col === 'celular') widths[col] = 130;
       else if (col === 'cedula') widths[col] = 110;
+      else if (col === 'cod' || col === 'facturas') widths[col] = 90;
       else widths[col] = 150;
     });
     return widths;
@@ -270,6 +271,15 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       }
       valToSave = numVal;
       payload = { total_pago: numVal };
+    } else if (col === 'cod') {
+      if (valToSave === (original || '')) {
+        setEditingCell(null);
+        return;
+      }
+      payload = { cod: valToSave };
+      if (valToSave && String(valToSave).trim() !== '') {
+        payload.facturas = 'SI';
+      }
     } else {
       if (valToSave === (original || '')) {
         setEditingCell(null);
@@ -948,7 +958,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       overflow: 'hidden',
                       ...stickyStyle
                     }}>
-                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col.replace('_', ' ')}
+                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : col.replace('_', ' ')}
 
                       {/* Control para redimensionar la columna */}
                       <div
@@ -1367,6 +1377,15 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                   <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
                                     {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
                                   </div>
+                                );
+                              }
+
+                              if (col === 'facturas') {
+                                const isSi = c.facturas && String(c.facturas).trim().toUpperCase() === 'SI';
+                                return (
+                                  <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
+                                    {c.facturas || '-'}
+                                  </span>
                                 );
                               }
 
