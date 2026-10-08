@@ -66,6 +66,7 @@ export const clienteService = {
   eliminar: (id) => api.delete(`/clientes/${id}`),
   borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
   suspenderServicio: (id) => api.post(`/clientes/${id}/suspender-mikrotik`),
+  reactivarServicio: (id) => api.post(`/clientes/${id}/reactivar-mikrotik`),
   uploadCedula: (id, formData) => api.post(`/clientes/${id}/upload-cedula`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -180,6 +181,7 @@ export const configuracionService = {
   // Suspensión de servicio por fecha de corte
   getSuspensionCorteConfig: () => api.get('/configuraciones/suspension-corte'),
   setSuspensionCorteConfig: (data) => api.put('/configuraciones/suspension-corte', data),
+  ejecutarCorteManual: () => api.post('/configuraciones/suspension-corte/ejecutar-corte-manual'),
   // Clientes exentos de corte (Excepciones)
   getExentosCorte: () => api.get('/configuraciones/clientes-exentos-corte'),
   addExentoCorte: (id) => api.post(`/configuraciones/clientes-exentos-corte/${id}`),

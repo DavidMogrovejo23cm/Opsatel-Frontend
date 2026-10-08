@@ -83,6 +83,7 @@ const Configuraciones = () => {
     const [diasSaving, setDiasSaving] = useState(false);
     const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true });
     const [suspensionSaving, setSuspensionSaving] = useState(false);
+    const [executingCorteManual, setExecutingCorteManual] = useState(false);
     const [exentosCorte, setExentosCorte] = useState([]);
     const [exentosLoading, setExentosLoading] = useState(false);
     const [allClientes, setAllClientes] = useState([]);
@@ -939,6 +940,19 @@ const Configuraciones = () => {
         }
     };
 
+    const handleEjecutarCorteManual = async () => {
+        if (!window.confirm("¿Estás seguro de que deseas ejecutar el corte masivo de morosos en MikroTik en este momento?")) return;
+        setExecutingCorteManual(true);
+        try {
+            const res = await configuracionService.ejecutarCorteManual();
+            showSuccess(res.data?.message || 'Corte masivo en MikroTik ejecutado con éxito');
+        } catch (error) {
+            showError('Error al ejecutar corte manual: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setExecutingCorteManual(false);
+        }
+    };
+
     const handleAddExento = async () => {
         if (!selectedClienteExentoId) return showWarning('Seleccione un cliente para agregar a la lista de excepciones');
         try {
@@ -1424,14 +1438,34 @@ const Configuraciones = () => {
                                     </select>
                                 </div>
 
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleSaveSuspensionConfig}
-                                    disabled={suspensionSaving}
-                                    style={{ padding: '10px 24px', background: '#ef4444', border: 'none', width: '100%', fontWeight: 'bold' }}
-                                >
-                                    {suspensionSaving ? '⏳ Guardando...' : '💾 Guardar Configuración de Suspensión'}
-                                </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={handleSaveSuspensionConfig}
+                                        disabled={suspensionSaving}
+                                        style={{ padding: '10px 24px', background: '#ef4444', border: 'none', width: '100%', fontWeight: 'bold' }}
+                                    >
+                                        {suspensionSaving ? '⏳ Guardando...' : '💾 Guardar Configuración de Suspensión'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="btn"
+                                        onClick={handleEjecutarCorteManual}
+                                        disabled={executingCorteManual}
+                                        style={{
+                                            padding: '8px 16px',
+                                            background: 'rgba(239, 68, 68, 0.15)',
+                                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                                            color: '#fca5a5',
+                                            width: '100%',
+                                            fontSize: '0.82rem',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        {executingCorteManual ? '⏳ Ejecutando corte en MikroTik...' : '⚡ Ejecutar Corte en MikroTik Ahora'}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Card para Lista de Excepciones de Corte (Clientes Exentos) */}

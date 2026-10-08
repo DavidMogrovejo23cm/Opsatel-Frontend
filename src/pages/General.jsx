@@ -355,7 +355,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
 
     const confirmed = await showConfirm(
       '¿Eliminar cliente del sistema?',
-      `¿Estás seguro de que deseas eliminar a "${cliente.nombre}" (ID: ${cliente.id}) del sistema?`,
+      `¿Estás seguro de que deseas eliminar a "${cliente.nombre}" (ID: ${cliente.id}) únicamente del sistema? (No afectará equipos externos).`,
       'Sí, eliminar',
       'Cancelar'
     );
@@ -373,16 +373,31 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
     }
   };
 
-  const handleDeleteClick = (cliente) => {
+  const handleDeleteCompleto = async (cliente) => {
+    if (!canModifyTable) {
+      showWarning('No tienes permisos para borrar clientes de todos los sistemas.');
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      '💥 ¿Borrar de TODOS los sistemas?',
+      `¿Estás seguro de borrar a "${cliente.nombre}" (ID: ${cliente.id}) de OLT, MikroTik, LibreQoS, XUI y Base de Datos? Esta acción es definitiva.`,
+      'Sí, Borrar Todo',
+      'Cancelar'
+    );
+
+    if (!confirmed) return;
+
     setPendingAction({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
     if (isAuthenticated) {
-      // Ya autenticado, ejecutar directamente
       executePendingActionDirect({ type: 'delete', id: cliente.id, nombre: cliente.nombre });
     } else {
       setShowPinModal(true);
       setPinInput('');
     }
   };
+
+  const handleDeleteClick = handleDeleteCompleto;
 
   // Ejecutar acción directamente (sin PIN, ya autenticado)
   const executePendingActionDirect = async (action) => {
@@ -393,10 +408,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       setDeletionProgress({
         status: 'processing',
         olt: 'PENDIENTE',
+        mikrotik: 'PENDIENTE',
         xui: 'PENDIENTE',
         libreqos: 'PENDIENTE',
         database: 'PENDIENTE',
-        message: 'Iniciando proceso de eliminación completa...'
+        message: 'Iniciando proceso de borrado completo (OLT, MikroTik, XUI, LibreQoS, Base de Datos)...'
       });
 
       try {
@@ -405,10 +421,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         setDeletionProgress({
           status: 'success',
           olt: response.data.olt,
+          mikrotik: response.data.mikrotik,
           xui: response.data.xui,
           libreqos: response.data.libreqos,
           database: response.data.database,
-          message: '¡El cliente ha sido eliminado exitosamente de todos los sistemas!'
+          message: '¡El cliente ha sido borrado exitosamente de todos los sistemas!'
         });
         
         setPendingAction(null);
@@ -417,11 +434,12 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         console.error(error);
         const errDetail = error.response?.data?.detail || {};
         const failedStage = errDetail.stage || 'database';
-        const errMsg = errDetail.message || 'Error inesperado durante la eliminación';
+        const errMsg = errDetail.message || 'Error inesperado durante el borrado';
 
         setDeletionProgress(prev => ({
           status: 'error',
           olt: failedStage === 'olt' ? 'ERROR' : (prev?.olt || 'PENDIENTE'),
+          mikrotik: failedStage === 'mikrotik' ? 'ERROR' : (prev?.mikrotik || 'PENDIENTE'),
           xui: failedStage === 'xui' ? 'ERROR' : (prev?.xui || 'PENDIENTE'),
           libreqos: failedStage === 'libreqos' ? 'ERROR' : (prev?.libreqos || 'PENDIENTE'),
           database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
@@ -462,10 +480,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       setDeletionProgress({
         status: 'processing',
         olt: 'PENDIENTE',
+        mikrotik: 'PENDIENTE',
         xui: 'PENDIENTE',
         libreqos: 'PENDIENTE',
         database: 'PENDIENTE',
-        message: 'Iniciando proceso de eliminación completa...'
+        message: 'Iniciando proceso de borrado completo (OLT, MikroTik, XUI, LibreQoS, Base de Datos)...'
       });
 
       try {
@@ -475,10 +494,11 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         setDeletionProgress({
           status: 'success',
           olt: response.data.olt,
+          mikrotik: response.data.mikrotik,
           xui: response.data.xui,
           libreqos: response.data.libreqos,
           database: response.data.database,
-          message: '¡El cliente ha sido eliminado exitosamente de todos los sistemas!'
+          message: '¡El cliente ha sido borrado exitosamente de todos los sistemas!'
         });
         
         setPendingAction(null);
@@ -488,12 +508,12 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         console.error(error);
         const errDetail = error.response?.data?.detail || {};
         const failedStage = errDetail.stage || 'database';
-        const errMsg = errDetail.message || 'Error inesperado durante la eliminación';
+        const errMsg = errDetail.message || 'Error inesperado durante el borrado';
 
-        // Mapear qué etapas fallaron en el progress display
         setDeletionProgress(prev => ({
           status: 'error',
           olt: failedStage === 'olt' ? 'ERROR' : (prev?.olt || 'PENDIENTE'),
+          mikrotik: failedStage === 'mikrotik' ? 'ERROR' : (prev?.mikrotik || 'PENDIENTE'),
           xui: failedStage === 'xui' ? 'ERROR' : (prev?.xui || 'PENDIENTE'),
           libreqos: failedStage === 'libreqos' ? 'ERROR' : (prev?.libreqos || 'PENDIENTE'),
           database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
@@ -783,12 +803,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
         <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="input"
-            style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
+            style={{ width: 'auto', minWidth: '190px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
           >
             <option value="VER">⚙️ Acciones...</option>
-            <option value="ELIMINAR">🗑️ Eliminar</option>
+            <option value="ELIMINAR">🗑️ Eliminar (Solo Sistema)</option>
+            <option value="BORRAR">💥 Borrar (Todo: OLT, MikroTik, XUI, LibreQoS)</option>
           </select>
           <select
             className="input"
@@ -1005,24 +1026,44 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                     </th>
                   );
                 })}
-                {(selectedAction === 'ELIMINAR' || selectedAction === 'BORRAR') && (
-                  <th key="acciones" style={{
+                {selectedAction === 'ELIMINAR' && (
+                  <th key="acciones-eliminar" style={{
                     padding: '12px',
                     borderBottom: '1px solid var(--glass-border)',
                     borderRight: '1px solid var(--glass-border)',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
-                    width: 110,
-                    minWidth: 110,
-                    maxWidth: 110,
+                    width: 120,
+                    minWidth: 120,
+                    maxWidth: 120,
                     position: 'sticky',
                     right: 0,
                     background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
                     borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
                   }}>
-                    Acciones
+                    Acción (Eliminar)
+                  </th>
+                )}
+                {selectedAction === 'BORRAR' && (
+                  <th key="acciones-borrar" style={{
+                    padding: '12px',
+                    borderBottom: '1px solid var(--glass-border)',
+                    borderRight: '1px solid var(--glass-border)',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    width: 130,
+                    minWidth: 130,
+                    maxWidth: 130,
+                    position: 'sticky',
+                    right: 0,
+                    background: 'var(--sticky-col-bg, #131526)',
+                    zIndex: 22,
+                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                  }}>
+                    Acción (Borrar Todo)
                   </th>
                 )}
               </tr>
@@ -1442,13 +1483,13 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                       </td>
                     );
                   })}
-                  {(selectedAction === 'ELIMINAR' || selectedAction === 'BORRAR') && (
-                    <td key="acciones" style={{
+                  {selectedAction === 'ELIMINAR' && (
+                    <td key="acciones-eliminar" style={{
                       padding: '6px 12px',
                       whiteSpace: 'nowrap',
-                      width: 110,
-                      minWidth: 110,
-                      maxWidth: 110,
+                      width: 120,
+                      minWidth: 120,
+                      maxWidth: 120,
                       textAlign: 'center',
                       position: 'sticky',
                       right: 0,
@@ -1483,9 +1524,56 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                           e.currentTarget.style.color = '#f87171';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
-                        title={`Eliminar a ${c.nombre} del sistema`}
+                        title={`Eliminar a ${c.nombre} únicamente del sistema`}
                       >
                         🗑️ Eliminar
+                      </button>
+                    </td>
+                  )}
+                  {selectedAction === 'BORRAR' && (
+                    <td key="acciones-borrar" style={{
+                      padding: '6px 12px',
+                      whiteSpace: 'nowrap',
+                      width: 130,
+                      minWidth: 130,
+                      maxWidth: 130,
+                      textAlign: 'center',
+                      position: 'sticky',
+                      right: 0,
+                      background: '#131526',
+                      zIndex: 12,
+                      borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                    }}>
+                      <button
+                        onClick={() => handleDeleteCompleto(c)}
+                        style={{
+                          padding: '5px 12px',
+                          background: 'rgba(220, 38, 38, 0.25)',
+                          border: '1px solid #ef4444',
+                          color: '#fca5a5',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#dc2626';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.boxShadow = '0 2px 10px rgba(220, 38, 38, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
+                          e.currentTarget.style.color = '#fca5a5';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        title={`Borrar a ${c.nombre} de OLT, MikroTik, LibreQoS, XUI y Sistema`}
+                      >
+                        💥 Borrar Todo
                       </button>
                     </td>
                   )}
@@ -1586,25 +1674,31 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>2. Configuración OLT</span>
+                <span>2. Configuración OLT (Huawei)</span>
                 <span style={{ fontWeight: 'bold', color: deletionProgress.olt === 'PENDIENTE' ? '#fbbf24' : deletionProgress.olt === 'ERROR' ? '#f87171' : deletionProgress.olt === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
                   {deletionProgress.olt === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.olt === 'ERROR' ? '❌ Falló' : deletionProgress.olt === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>3. Configuración IPTV (XUI)</span>
+                <span>3. MikroTik (DHCP Lease)</span>
+                <span style={{ fontWeight: 'bold', color: deletionProgress.mikrotik === 'PENDIENTE' ? '#fbbf24' : deletionProgress.mikrotik === 'ERROR' ? '#f87171' : deletionProgress.mikrotik === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
+                  {deletionProgress.mikrotik === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.mikrotik === 'ERROR' ? '❌ Falló' : deletionProgress.mikrotik === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>4. Configuración IPTV (XUI)</span>
                 <span style={{ fontWeight: 'bold', color: deletionProgress.xui === 'PENDIENTE' ? '#fbbf24' : deletionProgress.xui === 'ERROR' ? '#f87171' : deletionProgress.xui === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
                   {deletionProgress.xui === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.xui === 'ERROR' ? '❌ Falló' : deletionProgress.xui === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>4. Cola de QoS (LibreQoS)</span>
+                <span>5. Cola de QoS (LibreQoS)</span>
                 <span style={{ fontWeight: 'bold', color: deletionProgress.libreqos === 'PENDIENTE' ? '#fbbf24' : deletionProgress.libreqos === 'ERROR' ? '#f87171' : deletionProgress.libreqos === 'OMITIDO' ? '#94a3b8' : '#4ade80' }}>
                   {deletionProgress.libreqos === 'PENDIENTE' ? '⏳ Procesando' : deletionProgress.libreqos === 'ERROR' ? '❌ Falló' : deletionProgress.libreqos === 'OMITIDO' ? '⚪ Omitido' : '✅ Removido'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>5. Base de Datos Local</span>
+                <span>6. Base de Datos Local</span>
                 <span style={{ fontWeight: 'bold', color: deletionProgress.database === 'PENDIENTE' ? '#94a3b8' : deletionProgress.database === 'ERROR' ? '#f87171' : '#4ade80' }}>
                   {deletionProgress.database === 'PENDIENTE' ? '⏳ Esperando' : deletionProgress.database === 'ERROR' ? '❌ Falló' : '✅ Eliminado'}
                 </span>
