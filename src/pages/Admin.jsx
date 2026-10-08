@@ -505,6 +505,14 @@ const Admin = () => {
   const safeClientes = Array.isArray(clientes) ? clientes : [];
 
   const [statusFilter, setStatusFilter] = useState('TODOS');
+  const [planFilter, setPlanFilter] = useState('TODOS');
+
+  const availablePlans = React.useMemo(() => {
+    const set = new Set();
+    planesList.forEach(p => { if (p.nombre && p.nombre.trim()) set.add(p.nombre.trim()); });
+    safeClientes.forEach(c => { if (c.plan && c.plan.trim()) set.add(c.plan.trim()); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [planesList, safeClientes]);
 
   const filteredClientes = safeClientes
     .filter(c => {
@@ -519,6 +527,13 @@ const Admin = () => {
       if (statusFilter === 'SUSPENDIDO' && estadoUpper !== 'SUSPENDIDO') return false;
       if (statusFilter === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(estadoUpper)) return false;
       if (statusFilter === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(estadoUpper)) return false;
+
+      // Filtro opcional por plan
+      if (planFilter !== 'TODOS') {
+        const clientePlan = (c.plan || '').trim().toLowerCase();
+        const selectedPlan = planFilter.trim().toLowerCase();
+        if (clientePlan !== selectedPlan) return false;
+      }
 
       const cleanSearch = searchTerm.trim().toLowerCase();
       if (!cleanSearch) return true;
@@ -581,6 +596,18 @@ const Admin = () => {
             <option value="SUSPENDIDO">Solo Suspendidos</option>
             <option value="JURIDICO">Solo Jurídicos</option>
             <option value="PROCESO">Solo En Proceso</option>
+          </select>
+
+          <select
+            className="input"
+            style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+          >
+            <option value="TODOS">Todos los Planes</option>
+            {availablePlans.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
           </select>
 
           <input
