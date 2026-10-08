@@ -322,6 +322,8 @@ export const libreqosService = {
   syncServer:    (id)       => api.post(`/libreqos/servers/${id}/sync`),
   cleanDuplicates: (id)     => api.post(`/libreqos/servers/${id}/clean-duplicates`),
   regenerateServer: (id)    => api.post(`/libreqos/servers/${id}/regenerate`),
+  addCustomIp: (id, data)   => api.post(`/libreqos/servers/${id}/add-custom-ip`, data),
+  syncMissingClients: (id)  => api.post(`/libreqos/servers/${id}/sync-missing-clients`),
   // Cola de trabajos
   listJobs:      (status)   => api.get('/libreqos/jobs', { params: status ? { status } : {} }),
   retryJob:      (id)       => api.post(`/libreqos/jobs/${id}/retry`),

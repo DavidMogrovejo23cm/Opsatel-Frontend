@@ -37,6 +37,13 @@ const Configuraciones = () => {
         suspension_download_mbps: 1, suspension_upload_mbps: 1
     });
 
+    // Custom IP Modal States (IPs sueltas)
+    const [showCustomIpModal, setShowCustomIpModal] = useState(false);
+    const [selectedServerForCustomIp, setSelectedServerForCustomIp] = useState(null);
+    const [customIpForm, setCustomIpForm] = useState({ ip: '', name: '', download_mbps: 100, upload_mbps: 50 });
+    const [customIpSaving, setCustomIpSaving] = useState(false);
+    const [syncingMissing, setSyncingMissing] = useState(null);
+
     // MikroTik Configuration Modal States
     const [selectedOltForMt, setSelectedOltForMt] = useState(null);
     const [showMtModal, setShowMtModal] = useState(false);
@@ -839,6 +846,73 @@ const Configuraciones = () => {
             await libreqosService.retryJob(jobId);
             fetchLqData();
         } catch (e) { showError('Error: ' + (e.response?.data?.detail || e.message)); }
+    };
+
+    const handleOpenCustomIpModal = (server) => {
+        setSelectedServerForCustomIp(server);
+        setCustomIpForm({ ip: '', name: '', download_mbps: 100, upload_mbps: 50 });
+        setCustomIpSaving(false);
+        setShowCustomIpModal(true);
+    };
+
+    const handleCustomIpChange = (ipVal) => {
+        const cleanIp = ipVal.trim();
+        const matched = allClientes.find(c => (c.ip || '').trim() === cleanIp);
+        if (matched) {
+            const planObj = planes.find(p => p.nombre === matched.plan);
+            const megas = planObj ? planObj.megas : 100;
+            setCustomIpForm({
+                ip: ipVal,
+                name: matched.nombre || `Cliente_${matched.id}`,
+                download_mbps: megas,
+                upload_mbps: Math.max(2, Math.floor(megas / 2))
+            });
+        } else {
+            setCustomIpForm(prev => ({ ...prev, ip: ipVal }));
+        }
+    };
+
+    const handleSaveCustomIp = async () => {
+        if (!selectedServerForCustomIp) return;
+        if (!customIpForm.ip.trim()) return showWarning('Ingresa una dirección IP válida.');
+        setCustomIpSaving(true);
+        try {
+            const res = await libreqosService.addCustomIp(selectedServerForCustomIp.id, {
+                ip: customIpForm.ip.trim(),
+                name: customIpForm.name.trim() || undefined,
+                download_mbps: parseInt(customIpForm.download_mbps) || 100,
+                upload_mbps: parseInt(customIpForm.upload_mbps) || 50
+            });
+            if (res.data?.success) {
+                showSuccess(res.data.message || 'IP agregada correctamente a LibreQoS.');
+                setShowCustomIpModal(false);
+                fetchLqData();
+            } else {
+                showError('Fallo al agregar IP: ' + res.data?.message);
+            }
+        } catch (e) {
+            showError('Error al agregar IP: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setCustomIpSaving(false);
+        }
+    };
+
+    const handleSyncMissingClients = async (server) => {
+        if (!server) return;
+        setSyncingMissing(server.id);
+        try {
+            const res = await libreqosService.syncMissingClients(server.id);
+            if (res.data?.success) {
+                showSuccess(res.data.message);
+                fetchLqData();
+            } else {
+                showError('Error: ' + res.data?.message);
+            }
+        } catch (e) {
+            showError('Error al sincronizar clientes faltantes: ' + (e.response?.data?.detail || e.message));
+        } finally {
+            setSyncingMissing(null);
+        }
     };
 
     const handleSaveDiasPermanencia = async () => {
@@ -2393,7 +2467,33 @@ const Configuraciones = () => {
                                                         {lqCleaning === server.id ? '⏳ Limpiando...' : '🧹 Limpiar Duplicados'}
                                                     </button>
 
-                                                    {/* Botón 2: Regenerar desde BD */}
+                                                    {/* Botón 2: Añadir IPs Sueltas */}
+                                                    <button
+                                                        className="btn"
+                                                        onClick={() => handleOpenCustomIpModal(server)}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                            color: '#ffffff',
+                                                            border: 'none',
+                                                            borderRadius: 8,
+                                                            padding: '9px 12px',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.82rem',
+                                                            cursor: 'pointer',
+                                                            boxShadow: '0 2px 10px rgba(16,185,129,0.3)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: 6
+                                                        }}
+                                                        title="Añadir una IP suelta individual o sincronizar clientes faltantes"
+                                                    >
+                                                        ➕ Añadir IPs Sueltas
+                                                    </button>
+                                                </div>
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                    {/* Botón 3: Regenerar desde BD */}
                                                     <button
                                                         className="btn"
                                                         onClick={() => handleRegenerateLq(server)}
@@ -2417,10 +2517,32 @@ const Configuraciones = () => {
                                                     >
                                                         {lqRegenerating === server.id ? '⏳ Regenerando...' : '🔄 Regenerar desde BD'}
                                                     </button>
+
+                                                    {/* Botón 4: Sincronizar faltantes */}
+                                                    <button
+                                                        className="btn btn-secondary"
+                                                        onClick={() => handleSyncMissingClients(server)}
+                                                        disabled={syncingMissing === server.id}
+                                                        style={{
+                                                            background: 'rgba(56,189,248,0.12)',
+                                                            color: '#38bdf8',
+                                                            border: '1px solid rgba(56,189,248,0.3)',
+                                                            padding: '9px 12px',
+                                                            fontSize: '0.82rem',
+                                                            borderRadius: 8,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: 6
+                                                        }}
+                                                        title="Agrega las IPs de la BD que falten sin tocar las existentes"
+                                                    >
+                                                        {syncingMissing === server.id ? '⏳ Sincronizando...' : '📥 Sincronizar Faltantes'}
+                                                    </button>
                                                 </div>
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8 }}>
-                                                    {/* Botón 3: Test SSH */}
+                                                    {/* Botón 5: Test SSH */}
                                                     <button
                                                         className="btn btn-secondary"
                                                         onClick={() => handleTestLqServerDirect(server.id)}
@@ -2437,7 +2559,7 @@ const Configuraciones = () => {
                                                         {lqTesting === server.id ? 'Probando...' : '⚡ Test SSH'}
                                                     </button>
 
-                                                    {/* Botón 4: Editar */}
+                                                    {/* Botón 6: Editar */}
                                                     <button
                                                         className="btn btn-secondary"
                                                         onClick={() => handleOpenLqServerDirect(server)}
@@ -2453,7 +2575,7 @@ const Configuraciones = () => {
                                                         ⚙️ Configurar
                                                     </button>
 
-                                                    {/* Botón 5: Eliminar */}
+                                                    {/* Botón 7: Eliminar */}
                                                     <button
                                                         className="btn btn-secondary"
                                                         onClick={() => handleDeleteLqServer(server.id, server.name)}
@@ -2492,10 +2614,94 @@ const Configuraciones = () => {
                         }}>
                             <span style={{ fontSize: '1.4rem' }}>💡</span>
                             <div>
-                                <strong style={{ color: '#38bdf8' }}>¿Cómo funciona la limpieza de duplicados?</strong>
+                                <strong style={{ color: '#38bdf8' }}>Gestión Inteligente de IPs y Duplicados:</strong>
                                 <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>
-                                    El botón <strong>🧹 Limpiar Duplicados</strong> crea un respaldo automático en <code>ShapedDevices.csv.bak_...</code> en el servidor, elimina las entradas repetidas dejando exactamente 1 registro único por IP con sus megas correspondientes, y luego recarga el servicio ejecutando <code>sudo python3 LibreQoS.py</code>.
+                                    • <strong>🧹 Limpiar Duplicados:</strong> Elimina las repeticiones, sincroniza los planes con la BD y conserva intactas las IPs libres o externas.<br />
+                                    • <strong>➕ Añadir IPs Sueltas:</strong> Permite ingresar cualquier IP manual o cliente individual con su velocidad de bajada/subida.<br />
+                                    • <strong>📥 Sincronizar Faltantes:</strong> Añade todas las IPs de clientes activos de la BD que aún no figuren en el shaper.
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal emergente para Añadir IPs Sueltas */}
+                {showCustomIpModal && selectedServerForCustomIp && (
+                    <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                        <div className="modal" style={{ background: '#1e293b', border: '1px solid rgba(16,185,129,0.3)', padding: 24, borderRadius: 12, width: '480px', maxWidth: '95%' }}>
+                            <h3 style={{ color: '#fff', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                ➕ Añadir IP Suelta a: {selectedServerForCustomIp.name}
+                            </h3>
+                            <p style={{ fontSize: '0.84rem', color: '#94a3b8', marginBottom: 18 }}>
+                                Ingresa la IP. Si la IP pertenece a un cliente registrado en Opsatel, se autocompletará su nombre y su plan de megas automáticamente.
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label" style={{ color: '#cbd5e1' }}>Dirección IPv4</label>
+                                    <input
+                                        className="input"
+                                        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#38bdf8', fontWeight: 600 }}
+                                        value={customIpForm.ip}
+                                        onChange={e => handleCustomIpChange(e.target.value)}
+                                        placeholder="Ej. 172.16.3.2"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div className="input-group" style={{ margin: 0 }}>
+                                    <label className="label" style={{ color: '#cbd5e1' }}>Nombre / Dispositivo</label>
+                                    <input
+                                        className="input"
+                                        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+                                        value={customIpForm.name}
+                                        onChange={e => setCustomIpForm({ ...customIpForm, name: e.target.value })}
+                                        placeholder="Ej. JUAN PEREZ o Antena AP"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ color: '#cbd5e1' }}>Megas Bajada ↓ (Mbps)</label>
+                                        <input
+                                            type="number"
+                                            className="input"
+                                            style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+                                            value={customIpForm.download_mbps}
+                                            onChange={e => setCustomIpForm({ ...customIpForm, download_mbps: e.target.value })}
+                                            placeholder="100"
+                                        />
+                                    </div>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ color: '#cbd5e1' }}>Megas Subida ↑ (Mbps)</label>
+                                        <input
+                                            type="number"
+                                            className="input"
+                                            style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+                                            value={customIpForm.upload_mbps}
+                                            onChange={e => setCustomIpForm({ ...customIpForm, upload_mbps: e.target.value })}
+                                            placeholder="50"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowCustomIpModal(false)}
+                                    style={{ color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleSaveCustomIp}
+                                    disabled={customIpSaving}
+                                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', fontWeight: 600 }}
+                                >
+                                    {customIpSaving ? 'Guardando...' : '➕ Añadir a LibreQoS'}
+                                </button>
                             </div>
                         </div>
                     </div>
