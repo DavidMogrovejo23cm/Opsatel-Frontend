@@ -168,6 +168,7 @@ const HojaRuta = () => {
             ubicacion_cliente: client.ubicacion || client.direccion || '',
             celular_cliente: client.celular || '',
             parroquia: client.parroquia || '',
+            ubicacion_caja: client.nap || client.caja_nap || client.ubicacion_caja || formData.ubicacion_caja || '',
             actividad: modalSource === 'CLIENTE' ? 'INSTALACION' : 'ACTIVIDAD'
         });
         setShowClientList(false);
@@ -455,13 +456,13 @@ const HojaRuta = () => {
                                             })()}
                                         </td>
                                         <td>
-                                            <div style={{ fontSize: '0.75rem' }}>{r.parroquia}</div>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{r.parroquia}</div>
                                             {r.ubicacion_cliente ? (
                                                 <a
                                                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.ubicacion_cliente)}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    style={{ fontSize: '0.65rem', color: '#60a5fa', textDecoration: 'none', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                    style={{ fontSize: '0.65rem', color: '#60a5fa', textDecoration: 'none', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}
                                                     title="Abrir en Google Maps"
                                                 >
                                                     📍 {r.ubicacion_cliente}
@@ -469,6 +470,46 @@ const HojaRuta = () => {
                                             ) : (
                                                 <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>—</div>
                                             )}
+                                            {(() => {
+                                                const napName = r.ubicacion_caja || clientes.find(c => c.id === r.cliente_id)?.nap || clientes.find(c => c.id === r.cliente_id)?.caja_nap;
+                                                if (!napName) return null;
+                                                const cajaObj = cajasNap.find(c => c.nombre?.trim().toUpperCase() === napName?.trim().toUpperCase());
+                                                const ubiCaja = cajaObj?.ubicacion;
+                                                return (
+                                                    <div style={{
+                                                        marginTop: '6px',
+                                                        padding: '4px 8px',
+                                                        background: 'rgba(56, 189, 248, 0.08)',
+                                                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.68rem',
+                                                        color: '#38bdf8',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: '2px',
+                                                        maxWidth: '260px'
+                                                    }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                                                            <span>📦</span>
+                                                            <span>{napName}</span>
+                                                        </div>
+                                                        {ubiCaja && (
+                                                            <div style={{ 
+                                                                fontSize: '0.64rem', 
+                                                                color: '#cbd5e1', 
+                                                                display: 'flex', 
+                                                                alignItems: 'center', 
+                                                                gap: '3px',
+                                                                wordBreak: 'break-word',
+                                                                lineHeight: '1.2'
+                                                            }}>
+                                                                <span style={{ color: '#38bdf8' }}>📍</span>
+                                                                <span>{ubiCaja}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td>
                                             <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -726,6 +767,18 @@ const HojaRuta = () => {
                                                     <option value={formData.ubicacion_caja}>{formData.ubicacion_caja}</option>
                                                 )}
                                             </select>
+                                            {(() => {
+                                                if (!formData.ubicacion_caja) return null;
+                                                const selCaja = cajasNap.find(c => c.nombre?.trim().toUpperCase() === formData.ubicacion_caja?.trim().toUpperCase());
+                                                if (selCaja?.ubicacion) {
+                                                    return (
+                                                        <div style={{ fontSize: '0.72rem', color: '#38bdf8', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            📍 <strong>Ubicación NAP:</strong> {selCaja.ubicacion}
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     </div>
 
