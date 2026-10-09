@@ -41,6 +41,11 @@ const Activacion = () => {
   const [refreshStep, setRefreshStep] = useState('');
   const [refreshingPower, setRefreshingPower] = useState(false);
 
+  // Modal de Red y Contraseña (WiFi) Post-Aceptar
+  const [showWifiModal, setShowWifiModal] = useState(false);
+  const [wifiData, setWifiData] = useState({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+  const [savingWifi, setSavingWifi] = useState(false);
+
   // Activación Masiva (Bulk)
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkProvisionType, setBulkProvisionType] = useState('ont');
@@ -362,19 +367,56 @@ const Activacion = () => {
   const handleConfirmAceptar = async () => {
     if (!confirmTaskData) return;
     setConfirming(true);
+    const targetClienteId = confirmTaskData.cliente_id;
+    const targetClienteNombre = confirmTaskData.comentario || `Cliente #${targetClienteId}`;
     try {
       const res = await oltService.confirmTask(confirmTaskData.id);
       setShowConfirmModal(false);
       setConfirmTaskData(null);
       const msg = res.data?.message || 'Activación confirmada y Hoja de Ruta actualizada a Realizado.';
       notify(msg, 'success');
-      fetchClientes();
+      
+      // Abrir inmediatamente modal para ingresar red y contraseña
+      setWifiData({
+        clienteId: targetClienteId,
+        clienteNombre: targetClienteNombre,
+        red: '',
+        clave: ''
+      });
+      setShowWifiModal(true);
     } catch (e) {
       console.error(e);
       notify('Error al confirmar activación.', 'error');
     } finally {
       setConfirming(false);
     }
+  };
+
+  const handleSaveWifi = async () => {
+    if (!wifiData.clienteId) return;
+    setSavingWifi(true);
+    try {
+      const payload = {
+        red: wifiData.red?.trim() || '',
+        clave: wifiData.clave?.trim() || ''
+      };
+      await clienteService.actualizar(wifiData.clienteId, payload);
+      notify('✓ Red y contraseña guardadas correctamente. Reflejado en General.', 'success');
+      setShowWifiModal(false);
+      setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+      fetchClientes();
+    } catch (e) {
+      console.error(e);
+      notify('Error al guardar red y contraseña: ' + (e.response?.data?.detail || e.message), 'error');
+    } finally {
+      setSavingWifi(false);
+    }
+  };
+
+  const handleSkipWifi = () => {
+    setShowWifiModal(false);
+    setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+    fetchClientes();
   };
 
   const hasStaticIp = Boolean(
@@ -1022,6 +1064,129 @@ const Activacion = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Ingreso de Red y Contraseña (WiFi) */}
+      {showWifiModal && (
+        <div className="modal-overlay" style={{ zIndex: 11000 }}>
+          <div className="modal" style={{ width: '480px', maxWidth: '92%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📶 Ingrese Red y Contraseña
+              </h3>
+              <button
+                onClick={handleSkipWifi}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer' }}
+                title="Cerrar / Omitir"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
+              Ingrese las credenciales WiFi del cliente. Los datos se guardarán automáticamente y se reflejarán en la vista <strong>General</strong>.
+            </p>
+
+            {wifiData.clienteNombre && (
+              <div style={{
+                padding: '10px 14px',
+                background: 'rgba(56, 189, 248, 0.08)',
+                border: '1px solid rgba(56, 189, 248, 0.2)',
+                borderRadius: '8px',
+                marginBottom: '18px',
+                fontSize: '13px',
+                color: '#e2e8f0'
+              }}>
+                👤 <strong>Cliente:</strong> {wifiData.clienteNombre}
+              </div>
+            )}
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveWifi(); }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Nombre de Red (SSID / WiFi)
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ej: OPSATEL_FAMILIA_PEREZ"
+                  value={wifiData.red}
+                  onChange={(e) => setWifiData(prev => ({ ...prev, red: e.target.value }))}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 6,
+                    color: '#fff',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Contraseña (Clave WiFi)
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ej: Opsatel2026*"
+                  value={wifiData.clave}
+                  onChange={(e) => setWifiData(prev => ({ ...prev, clave: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 6,
+                    color: '#fff',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleSkipWifi}
+                  disabled={savingWifi}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    color: '#cbd5e1',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '9px 18px',
+                    borderRadius: 6,
+                    cursor: savingWifi ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Omitir
+                </button>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={savingWifi}
+                  style={{
+                    backgroundColor: '#2ecc71',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '9px 22px',
+                    borderRadius: 6,
+                    fontWeight: 'bold',
+                    cursor: savingWifi ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {savingWifi ? 'Guardando...' : '💾 Guardar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
