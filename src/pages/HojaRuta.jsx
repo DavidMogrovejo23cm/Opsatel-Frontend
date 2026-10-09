@@ -720,7 +720,7 @@ const HojaRuta = () => {
                                             >
                                                 <option value="">Seleccione una Caja NAP...</option>
                                                 {cajasNap.map(c => (
-                                                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                                                    <option key={c.id} value={c.nombre}>{c.nombre}{c.ubicacion ? ` (${c.ubicacion})` : ''}</option>
                                                 ))}
                                                 {formData.ubicacion_caja && !cajasNap.some(c => c.nombre === formData.ubicacion_caja) && (
                                                     <option value={formData.ubicacion_caja}>{formData.ubicacion_caja}</option>

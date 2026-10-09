@@ -163,6 +163,7 @@ export const configuracionService = {
   getCajasNap: () => api.get('/configuraciones/cajas-nap'),
   crearCajaNap: (data) => api.post('/configuraciones/cajas-nap', data),
   actualizarCajaNap: (id, data) => api.patch(`/configuraciones/cajas-nap/${id}`, data),
+  eliminarCajaNap: (id) => api.delete(`/configuraciones/cajas-nap/${id}`),
   // Eliminar todos los clientes principales
   deleteAllClientes: () => api.delete('/clientes/all'),
   // Eliminar todos los clientes extras

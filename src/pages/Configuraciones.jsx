@@ -75,7 +75,7 @@ const Configuraciones = () => {
     const [isEditingPuerto, setIsEditingPuerto] = useState(null);
     const [newParroquia, setNewParroquia] = useState({ nombre: '' });
     const [isEditingParroquia, setIsEditingParroquia] = useState(null);
-    const [newCajaNap, setNewCajaNap] = useState({ nombre: '' });
+    const [newCajaNap, setNewCajaNap] = useState({ nombre: '', nodo_id: null, ubicacion: '' });
     const [isEditingCajaNap, setIsEditingCajaNap] = useState(null);
     const [passwordDeleteClientes, setPasswordDeleteClientes] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
@@ -290,7 +290,7 @@ const Configuraciones = () => {
                     await configuracionService.crearCajaNap(newCajaNap);
                     showSuccess('Caja NAP creada');
                 }
-                setNewCajaNap({ nombre: '' });
+                setNewCajaNap({ nombre: '', nodo_id: null, ubicacion: '' });
                 setIsEditingCajaNap(null);
             }
             fetchData();
@@ -381,7 +381,7 @@ const Configuraciones = () => {
 
     const handleEditCajaNap = (caja) => {
         setIsEditingCajaNap(caja.id);
-        setNewCajaNap({ nombre: caja.nombre, nodo_id: caja.nodo_id || null });
+        setNewCajaNap({ nombre: caja.nombre, nodo_id: caja.nodo_id || null, ubicacion: caja.ubicacion || '' });
         setActiveTab('Cajas NAP');
     };
 
@@ -991,7 +991,7 @@ const Configuraciones = () => {
                     <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>
                         {columns.map(col => (
                             <th key={col} style={{ padding: '12px' }}>
-                                {col === 'nodo_id' ? 'Nodo / Zona' : col === 'acceso_general_sin_clave' ? 'ACCESO GENERAL' : col.toUpperCase()}
+                                {col === 'nodo_id' ? 'Nodo / Zona' : col === 'nodo_nombre' ? 'NODO / ZONA' : col === 'ubicacion' ? 'UBICACIÓN' : col === 'acceso_general_sin_clave' ? 'ACCESO GENERAL' : col.toUpperCase()}
                             </th>
                         ))}
                         <th style={{ padding: '12px' }}>Acciones</th>
@@ -1004,6 +1004,10 @@ const Configuraciones = () => {
                                 <td key={col} style={{ padding: '12px' }}>
                                     {col === 'nodo_id' 
                                         ? (nodos.find(p => p.id === row[col])?.nombre || <span style={{ color: '#ef4444' }}>⚠️ SIN ASIGNAR</span>) 
+                                        : col === 'nodo_nombre'
+                                        ? (row[col] || <span style={{ color: '#ef4444' }}>⚠️ SIN ASIGNAR</span>)
+                                        : col === 'ubicacion'
+                                        ? (row[col] || <span style={{ color: 'var(--text-muted)' }}>-</span>)
                                         : col === 'acceso_general_sin_clave'
                                         ? (row[col] 
                                             ? <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 600 }}>🔓 Sin Clave (Modificable)</span>
@@ -1147,12 +1151,16 @@ const Configuraciones = () => {
                                     ))}
                                 </select>
                             </div>
+                            <div className="input-group" style={{ margin: 0, minWidth: '240px' }}>
+                                <label className="label">Ubicación / Referencia</label>
+                                <input className="input" style={{ margin: 0 }} value={newCajaNap.ubicacion || ''} onChange={e => setNewCajaNap({ ...newCajaNap, ubicacion: e.target.value })} placeholder="Ej. Av. Principal y Sucre / Poste 12" />
+                            </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Cajas NAP')}>{isEditingCajaNap ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingCajaNap && (
-                                <button className="btn btn-secondary" onClick={() => { setIsEditingCajaNap(null); setNewCajaNap({ nombre: '', nodo_id: null }); }}>Cancelar</button>
+                                <button className="btn btn-secondary" onClick={() => { setIsEditingCajaNap(null); setNewCajaNap({ nombre: '', nodo_id: null, ubicacion: '' }); }}>Cancelar</button>
                             )}
                         </div>
-                        {renderTable(cajasNap, ['id', 'nombre', 'nodo_nombre'], 'Cajas NAP')}
+                        {renderTable(cajasNap, ['id', 'nombre', 'nodo_nombre', 'ubicacion'], 'Cajas NAP')}
                     </div>
                 )}
 

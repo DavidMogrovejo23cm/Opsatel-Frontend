@@ -510,7 +510,7 @@ const Tecnica = () => {
                       ? cajasNapList.filter(c => c.nodo_id === nodoObj.id)
                       : cajasNapList;
                     return cajasFiltradas.map(c => (
-                      <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                      <option key={c.id} value={c.nombre}>{c.nombre}{c.ubicacion ? ` (${c.ubicacion})` : ''}</option>
                     ));
                   })()}
                   {formData.nap && !cajasNapList.some(c => c.nombre === formData.nap) && (
