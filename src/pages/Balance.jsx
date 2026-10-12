@@ -407,6 +407,23 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  // Tipo de gasto: Internet (operacional/proyecto) vs IPTV (plataforma).
+  // Se persiste en metodo_pago con el sufijo "IPTV" (ej: "Pichincha IPTV"), que es
+  // lo que el backend usa para separar contablemente los egresos de IPTV.
+  const esIptv = /iptv/i.test(form.metodo_pago || '');
+  const metodoBase = String(form.metodo_pago || 'Efectivo').replace(/\s*iptv\s*/ig, ' ').trim() || 'Efectivo';
+  const BANCOS_IPTV = ['Efectivo', 'Pichincha', 'JEP'];
+
+  const setTipoGasto = (tipo) => {
+    if (tipo === 'iptv') {
+      const base = BANCOS_IPTV.includes(metodoBase) ? metodoBase : 'Efectivo';
+      set('metodo_pago', `${base} IPTV`);
+    } else {
+      set('metodo_pago', metodoBase);
+    }
+  };
+  const setMetodoBase = (base) => set('metodo_pago', esIptv ? `${base} IPTV` : base);
+
   const handleSubmit = async e => {
     e.preventDefault();
     if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
@@ -483,6 +500,13 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
           <input style={IS} type="number" step="0.01" min="0" value={form.monto} onChange={e => set('monto', e.target.value)} required />
         </div>
       </div>
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>🧾 Tipo de Gasto</label>
+        <select style={IS} value={esIptv ? 'iptv' : 'internet'} onChange={e => setTipoGasto(e.target.value)}>
+          <option value="internet" style={OS}>🌐 Gasto Internet</option>
+          <option value="iptv" style={OS}>📺 Gasto IPTV</option>
+        </select>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>📅 Fecha del Gasto</label>
@@ -500,25 +524,28 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
         </div>
         <div>
           <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Método de Pago</label>
-          <select style={IS} value={form.metodo_pago} onChange={e => set('metodo_pago', e.target.value)}>
-            <optgroup label="💼 Operacional Normal" style={OS}>
-              <option value="Efectivo" style={OS}>💵 Efectivo</option>
-              <option value="Pichincha" style={OS}>🏦 Pichincha</option>
-              <option value="JEP" style={OS}>🏛️ COP JEP</option>
-              <option value="Datatfast" style={OS}>💳 Datafast</option>
-              <option value="Otro" style={OS}>📦 Otro</option>
-            </optgroup>
-            <optgroup label="📺 IPTV / Plataforma" style={OS}>
-              <option value="Efectivo IPTV" style={OS}>📺 Efectivo IPTV</option>
-              <option value="Pichincha IPTV" style={OS}>📺 Pichincha IPTV</option>
-              <option value="JEP IPTV" style={OS}>📺 COP JEP IPTV</option>
-            </optgroup>
-            <optgroup label="🏗️ Proyectos" style={OS}>
-              <option value="Efectivo PR" style={OS}>🏗️ Efectivo PR (Proyecto)</option>
-              <option value="Pichincha PR" style={OS}>🏗️ Pichincha PR (Proyecto)</option>
-              <option value="JEP PR" style={OS}>🏗️ COP JEP PR (Proyecto)</option>
-            </optgroup>
-          </select>
+          {esIptv ? (
+            <select style={IS} value={metodoBase} onChange={e => setMetodoBase(e.target.value)}>
+              <option value="Efectivo" style={OS}>📺 Efectivo IPTV</option>
+              <option value="Pichincha" style={OS}>📺 Pichincha IPTV</option>
+              <option value="JEP" style={OS}>📺 COP JEP IPTV</option>
+            </select>
+          ) : (
+            <select style={IS} value={form.metodo_pago} onChange={e => setMetodoBase(e.target.value)}>
+              <optgroup label="💼 Operacional Normal" style={OS}>
+                <option value="Efectivo" style={OS}>💵 Efectivo</option>
+                <option value="Pichincha" style={OS}>🏦 Pichincha</option>
+                <option value="JEP" style={OS}>🏛️ COP JEP</option>
+                <option value="Datatfast" style={OS}>💳 Datafast</option>
+                <option value="Otro" style={OS}>📦 Otro</option>
+              </optgroup>
+              <optgroup label="🏗️ Proyectos" style={OS}>
+                <option value="Efectivo PR" style={OS}>🏗️ Efectivo PR (Proyecto)</option>
+                <option value="Pichincha PR" style={OS}>🏗️ Pichincha PR (Proyecto)</option>
+                <option value="JEP PR" style={OS}>🏗️ COP JEP PR (Proyecto)</option>
+              </optgroup>
+            </select>
+          )}
         </div>
       </div>
       <div>
