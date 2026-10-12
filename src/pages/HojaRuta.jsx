@@ -494,18 +494,25 @@ const HojaRuta = () => {
                                                             <span>{napName}</span>
                                                         </div>
                                                         {ubiCaja && (
-                                                            <div style={{ 
-                                                                fontSize: '0.64rem', 
-                                                                color: '#cbd5e1', 
-                                                                display: 'flex', 
-                                                                alignItems: 'center', 
-                                                                gap: '3px',
-                                                                wordBreak: 'break-word',
-                                                                lineHeight: '1.2'
-                                                            }}>
+                                                            <a
+                                                                href={/^https?:\/\//i.test(ubiCaja.trim()) ? ubiCaja.trim() : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubiCaja)}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                title="Abrir ubicación de la caja en Google Maps"
+                                                                style={{ 
+                                                                    fontSize: '0.64rem', 
+                                                                    color: '#60a5fa', 
+                                                                    textDecoration: 'none',
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    gap: '3px',
+                                                                    wordBreak: 'break-word',
+                                                                    lineHeight: '1.2'
+                                                                }}
+                                                            >
                                                                 <span style={{ color: '#38bdf8' }}>📍</span>
                                                                 <span>{ubiCaja}</span>
-                                                            </div>
+                                                            </a>
                                                         )}
                                                     </div>
                                                 );

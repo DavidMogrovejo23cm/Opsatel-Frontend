@@ -1,0 +1,356 @@
+/* ═══════════════════════════════════════════════════════════════
+   OPSATEL — CAPA RESPONSIVE MÓVIL / TABLET
+   • Solo aplica a <= 1024px (escritorio intacto).
+   • La página "Contrato" (/ventas → data-page="ventas") queda EXCLUIDA.
+   • Se carga después de index.css y usa mayor especificidad que las
+     reglas globales con !important de index.css.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Evita zoom/scroll lateral de toda la app en móvil */
+@media (max-width: 1024px) {
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  main[data-page]:not([data-page="ventas"]) {
+    max-width: 100vw;
+    overflow-x: hidden;
+    overflow-x: clip;
+    box-sizing: border-box;
+  }
+
+  main[data-page]:not([data-page="ventas"]) * {
+    box-sizing: border-box;
+  }
+
+  main[data-page]:not([data-page="ventas"]) img,
+  main[data-page]:not([data-page="ventas"]) video,
+  main[data-page]:not([data-page="ventas"]) canvas,
+  main[data-page]:not([data-page="ventas"]) svg:not(.recharts-surface) {
+    max-width: 100%;
+  }
+
+  /* Tarjetas principales de cada página: sin ancho fijo */
+  main[data-page]:not([data-page="ventas"]) .glass-card,
+  main[data-page]:not([data-page="ventas"]) .glass {
+    max-width: 100% !important;
+  }
+
+  /* Elementos con ancho inline nunca deben desbordar la pantalla */
+  main[data-page]:not([data-page="ventas"]) div[style*="width"],
+  main[data-page]:not([data-page="ventas"]) section[style*="width"],
+  main[data-page]:not([data-page="ventas"]) form[style*="width"] {
+    max-width: 100%;
+  }
+
+  /* Los hijos flex pueden encogerse (evita desbordes por min-content) */
+  main[data-page]:not([data-page="ventas"]) div[style*="display: flex"] > * {
+    min-width: 0;
+  }
+}
+
+/* ───────────────────────── TABLET / MÓVIL ≤ 768px ───────────────────────── */
+@media (max-width: 768px) {
+  /* Encabezados de página y barras superiores */
+  main[data-page]:not([data-page="ventas"]) .page-header,
+  main[data-page]:not([data-page="ventas"]) .page-top-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) h1 {
+    font-size: 1.45rem !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  /* Barras de herramientas / filtros: ocupan todo el ancho y se acomodan en columna */
+  main[data-page]:not([data-page="ventas"]) .page-actions,
+  main[data-page]:not([data-page="ventas"]) .top-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .page-actions > *,
+  main[data-page]:not([data-page="ventas"]) .top-actions > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .page-actions input,
+  main[data-page]:not([data-page="ventas"]) .page-actions select,
+  main[data-page]:not([data-page="ventas"]) .top-actions input,
+  main[data-page]:not([data-page="ventas"]) .top-actions select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Filas flex en línea: permitir salto de línea en vez de desbordar
+     (se excluyen celdas de tabla y la vista de chat de WhatsApp) */
+  main[data-page]:not([data-page="ventas"]):not([data-page="whatsapp"]) div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]) {
+    flex-wrap: wrap;
+  }
+
+  /* Controles de formulario cómodos al tacto (16px evita el zoom de iOS) */
+  main[data-page]:not([data-page="ventas"]) input:not([type="checkbox"]):not([type="radio"]),
+  main[data-page]:not([data-page="ventas"]) select,
+  main[data-page]:not([data-page="ventas"]) textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+    max-width: 100%;
+  }
+
+  main[data-page]:not([data-page="ventas"]) input[type="checkbox"],
+  main[data-page]:not([data-page="ventas"]) input[type="radio"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  main[data-page]:not([data-page="ventas"]) button {
+    min-height: 38px;
+    touch-action: manipulation;
+  }
+
+  /* Botones: ancho natural dentro de tablas y celdas; ancho completo en acciones */
+  main[data-page]:not([data-page="ventas"]) .btn {
+    width: auto !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .page-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .top-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .modal-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .modal-content form .btn {
+    width: 100% !important;
+  }
+
+  /* ── Tablas: scroll horizontal natural, sin columnas fijas ── */
+  main[data-page]:not([data-page="ventas"]) .table-container,
+  main[data-page]:not([data-page="ventas"]) div:has(> table) {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .table-container {
+    max-height: 70vh !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) table {
+    min-width: max-content !important;
+  }
+
+  /* Las columnas "pegadas" a la izquierda ocupaban media pantalla: se liberan */
+  main[data-page]:not([data-page="ventas"]) th[style*="sticky"],
+  main[data-page]:not([data-page="ventas"]) td[style*="sticky"] {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    box-shadow: none !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) th,
+  main[data-page]:not([data-page="ventas"]) td {
+    padding: 10px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* ── Modales: a pantalla casi completa y con scroll interno ── */
+  main[data-page]:not([data-page="ventas"]) .modal-overlay,
+  main[data-page]:not([data-page="ventas"]) div[style*="position: fixed"][style*="inset"],
+  main[data-page]:not([data-page="ventas"]) div[style*="position: fixed"][style*="top: 0"] {
+    padding: 10px 8px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    align-items: flex-start !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .modal-content,
+  main[data-page]:not([data-page="ventas"]) .modal,
+  main[data-page]:not([data-page="ventas"]) .glass-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    margin: 0 auto !important;
+    padding: 18px 14px !important;
+    border-radius: 18px !important;
+    overflow-y: visible !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .modal-header {
+    gap: 10px;
+    margin-bottom: 14px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .modal-header h2 {
+    font-size: 1.1rem !important;
+    word-break: break-word;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .modal-actions {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+  }
+
+  /* Listas desplegables (selector de clientes, etc.) */
+  main[data-page]:not([data-page="ventas"]) .client-list {
+    max-height: 40vh !important;
+  }
+
+  /* Gráficas */
+  main[data-page]:not([data-page="ventas"]) .recharts-responsive-container {
+    max-width: 100% !important;
+  }
+
+  /* ══════════ HOJA DE RUTA: tabla → tarjetas ══════════ */
+  main[data-page="hoja-ruta"] .hr-main-container {
+    padding: 12px !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table-container {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table {
+    display: block !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    white-space: normal !important;
+    border-spacing: 0 !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table thead {
+    display: none !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table tbody {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table tr.glass-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td::before {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 3px;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(1)::before { content: ''; display: none; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(2)::before { content: 'F. Pedido'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(3)::before { content: 'Programación'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(4)::before { content: 'Estado'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(5)::before { content: 'Técnico'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(6)::before { content: 'Cliente'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(7)::before { content: 'Ubicación'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(8)::before { content: 'Actividad'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(9)::before { content: 'Observaciones'; }
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(10)::before { content: ''; display: none; }
+
+  /* Campos largos a todo el ancho de la tarjeta */
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(6),
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(7),
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(9),
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(10) {
+    grid-column: 1 / -1;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(1) {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(7) div[style*="max-width"],
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(9) div[style*="max-width"] {
+    max-width: 100% !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td:nth-child(10) > div {
+    justify-content: flex-start !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table td button {
+    min-height: 38px;
+  }
+
+  main[data-page="hoja-ruta"] .hr-header {
+    margin-bottom: 16px !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-title {
+    white-space: normal !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-date-filter {
+    height: auto !important;
+    min-height: 42px;
+  }
+
+  main[data-page="hoja-ruta"] .hr-date-filter input {
+    flex: 1;
+    width: auto !important;
+  }
+}
+
+/* ───────────────────────── MÓVIL PEQUEÑO ≤ 480px ───────────────────────── */
+@media (max-width: 480px) {
+  main[data-page]:not([data-page="ventas"]) .glass-card {
+    padding: 12px 10px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .modal-content,
+  main[data-page]:not([data-page="ventas"]) .modal,
+  main[data-page]:not([data-page="ventas"]) .glass-modal {
+    padding: 14px 12px !important;
+    border-radius: 14px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) th,
+  main[data-page]:not([data-page="ventas"]) td {
+    padding: 8px 8px !important;
+    font-size: 0.76rem !important;
+  }
+
+  main[data-page="hoja-ruta"] .hr-table tr.glass-row {
+    grid-template-columns: 1fr;
+  }
+}

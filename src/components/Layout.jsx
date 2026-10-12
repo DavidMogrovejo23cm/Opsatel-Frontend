@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const location = useLocation();
+  const pageKey = (location.pathname.split('/')[1] || 'overview').toLowerCase();
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
@@ -21,7 +23,7 @@ const Layout = () => {
 
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} onRefresh={handleRefresh} />
       
-      <main style={{ 
+      <main data-page={pageKey} style={{ 
         marginLeft: 'var(--sidebar-width)', 
         padding: '36px 48px', 
         width: 'calc(100% - var(--sidebar-width))',
