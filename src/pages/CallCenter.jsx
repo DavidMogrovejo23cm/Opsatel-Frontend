@@ -53,9 +53,18 @@ const CallCenter = () => {
   const [editingId, setEditingId]   = useState(null);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [obsModalTicket, setObsModalTicket] = useState(null);
+  const [copiedObs, setCopiedObs] = useState(false);
   const clientRef = useRef(null);
 
   const user = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
+
+  const handleCopyObs = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedObs(true);
+    setTimeout(() => setCopiedObs(false), 2000);
+  };
 
   const initialForm = {
     cliente_nombre: '', ip: '', direccion: '',
@@ -362,9 +371,71 @@ const CallCenter = () => {
                       </div>
                     </td>
                     <td style={{ padding: '14px 8px', minWidth: '220px', maxWidth: '260px' }}>
-                      <div className="preserve-breaks" style={{ fontSize: '0.73rem', color: 'var(--text-main)', lineHeight: '1.5' }}>
-                        {t.observacion_revision || '-'}
-                      </div>
+                      {(() => {
+                        const obs = (t.observacion_revision || '').trim();
+                        if (!obs) {
+                          return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                        }
+                        const isLong = obs.length > 100 || obs.split('\n').length > 3;
+                        return (
+                          <div>
+                            <div
+                              className="preserve-breaks"
+                              style={{
+                                fontSize: '0.73rem',
+                                color: 'var(--text-main)',
+                                lineHeight: '1.5',
+                                ...(isLong ? {
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  wordBreak: 'break-word',
+                                  cursor: 'pointer',
+                                } : {
+                                  wordBreak: 'break-word',
+                                })
+                              }}
+                              onClick={isLong ? () => setObsModalTicket(t) : undefined}
+                              title={isLong ? "Clic para ver la información completa" : undefined}
+                            >
+                              {obs}
+                            </div>
+                            {isLong && (
+                              <button
+                                type="button"
+                                onClick={() => setObsModalTicket(t)}
+                                style={{
+                                  background: 'rgba(139, 92, 246, 0.12)',
+                                  border: '1px solid rgba(139, 92, 246, 0.25)',
+                                  color: '#a78bfa',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  marginTop: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.25)';
+                                  e.currentTarget.style.color = '#c4b5fd';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)';
+                                  e.currentTarget.style.color = '#a78bfa';
+                                }}
+                              >
+                                Ver más 👁️
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
                         <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '5px' }}>
                           🕐 {t.fecha_cambio_estado}
@@ -719,6 +790,263 @@ const CallCenter = () => {
                   </div>
                 </form>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL DE DETALLE COMPLETO DE OBSERVACIÓN ── */}
+      <AnimatePresence>
+        {obsModalTicket && (
+          <motion.div
+            className="modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1050,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px',
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) setObsModalTicket(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              style={{
+                width: '100%', maxWidth: '680px',
+                maxHeight: '90vh',
+                background: 'linear-gradient(145deg, #181236 0%, #1c1545 60%, #120e2e 100%)',
+                borderRadius: '24px',
+                border: '1px solid rgba(139,92,246,0.3)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '20px 24px',
+                background: 'linear-gradient(90deg, rgba(236,72,153,0.12), rgba(139,92,246,0.15))',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '12px',
+                    background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem'
+                  }}>
+                    📋
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#fff' }}>
+                      Detalle de Observación / Revisión
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Ticket #{obsModalTicket.id} • {obsModalTicket.cliente_nombre || 'Cliente'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setObsModalTicket(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.7)', width: '34px', height: '34px', borderRadius: '10px',
+                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.color = '#ef4444'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '22px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Metadatos del Ticket */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px',
+                  background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.06)'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Cliente Solicitante
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', marginTop: '3px' }}>
+                      {obsModalTicket.cliente_nombre || '-'}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#a78bfa', marginTop: '2px' }}>
+                      {obsModalTicket.telefono ? `📞 ${obsModalTicket.telefono}` : ''}
+                      {obsModalTicket.ip ? ` • IP: ${obsModalTicket.ip}` : ''}
+                    </div>
+                    {obsModalTicket.direccion && (
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
+                        📍 {obsModalTicket.direccion}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Estado del Ticket
+                    </div>
+                    <div style={{ marginTop: '5px' }}>
+                      <EstadoBadge estado={obsModalTicket.estado} />
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                      A cargo: <strong style={{ color: '#e2e8f0' }}>{obsModalTicket.a_cargo || 'Sin asignar'}</strong>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Registro & Tiempos
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#ec4899', fontWeight: '700', marginTop: '3px' }}>
+                      📅 {obsModalTicket.fecha_ingreso ? formatToDMY(obsModalTicket.fecha_ingreso) : '-'}
+                      {obsModalTicket.fecha_ingreso && (
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>
+                          {new Date(obsModalTicket.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                    {obsModalTicket.registrado_por && (
+                      <div style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
+                        Por: {obsModalTicket.registrado_por}
+                      </div>
+                    )}
+                    {obsModalTicket.fecha_cambio_estado && obsModalTicket.estado !== 'PENDIENTE' && (
+                      <div style={{ fontSize: '0.68rem', color: '#38bdf8', marginTop: '4px' }}>
+                        🕐 Actualizado: {obsModalTicket.fecha_cambio_estado}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Problema Reportado */}
+                {obsModalTicket.problema && (
+                  <div style={{
+                    background: 'rgba(245, 158, 11, 0.05)',
+                    padding: '12px 16px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    <div style={{ fontSize: '0.66rem', textTransform: 'uppercase', color: '#fbbf24', fontWeight: '800', letterSpacing: '0.08em', marginBottom: '5px' }}>
+                      ⚠️ Problema / Motivo del Soporte
+                    </div>
+                    <div className="preserve-breaks" style={{ fontSize: '0.8rem', color: '#e2e8f0', lineHeight: '1.5' }}>
+                      {obsModalTicket.problema}
+                    </div>
+                  </div>
+                )}
+
+                {/* Observación de Revisión (Completa) */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: '#a78bfa', fontWeight: '800', letterSpacing: '0.08em' }}>
+                      🔍 Observación y Solución de Revisión
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>
+                        {(obsModalTicket.observacion_revision || '').length} caracteres
+                      </span>
+                      {obsModalTicket.observacion_revision && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyObs(obsModalTicket.observacion_revision)}
+                          style={{
+                            background: copiedObs ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
+                            border: `1px solid ${copiedObs ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.12)'}`,
+                            color: copiedObs ? '#34d399' : '#c4b5fd',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.68rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {copiedObs ? '✓ ¡Copiado!' : '📋 Copiar'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="preserve-breaks" style={{
+                    background: 'rgba(10, 8, 25, 0.65)',
+                    padding: '18px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                    fontSize: '0.86rem',
+                    lineHeight: '1.65',
+                    color: '#f8fafc',
+                    maxHeight: '340px',
+                    overflowY: 'auto',
+                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}>
+                    {obsModalTicket.observacion_revision || 'Sin observaciones registradas.'}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Actions Footer */}
+              <div style={{
+                padding: '16px 24px',
+                background: 'rgba(0,0,0,0.25)',
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                display: 'flex', justifyContent: 'flex-end', gap: '10px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = obsModalTicket;
+                    setObsModalTicket(null);
+                    handleOpenModal(t);
+                  }}
+                  className="btn"
+                  style={{
+                    background: 'rgba(139,92,246,0.15)',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    color: '#c4b5fd',
+                    fontSize: '0.8rem',
+                    fontWeight: '700'
+                  }}
+                >
+                  ⚙️ Gestionar Ticket
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setObsModalTicket(null)}
+                  className="btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    minWidth: '100px'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+
             </motion.div>
           </motion.div>
         )}
