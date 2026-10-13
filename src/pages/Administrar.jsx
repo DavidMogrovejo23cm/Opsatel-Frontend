@@ -186,6 +186,43 @@ const Administrar = () => {
     }
   };
 
+  const handleMigrarCliente = async (cliente) => {
+    const saldoDisplay = parseFloat(cliente.saldo ?? 0).toFixed(2);
+    const confirmado = await showConfirm(
+      '🔄 ¿Migrar Cliente?',
+      `¿Desea iniciar la migración de <b>${cliente.nombre}</b> (ID: ${cliente.id})?<br/><br/>
+      <div style="text-align: left; font-size: 0.82rem; line-height: 1.6; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); padding: 12px; border-radius: 10px;">
+        <div style="margin-bottom: 6px; color: #4ade80;">
+          ✅ <b>Finanzas e ID Intactos:</b> Su ID (${cliente.id}), historial de pagos, saldo ($${saldoDisplay}) y facturación NO se tocarán.
+        </div>
+        <div style="margin-bottom: 6px; color: #f87171;">
+          🗑️ <b>Desconexión de Red:</b> Se retirará de la OLT (SP / ONT), se borrará su lease DHCP en MikroTik y se eliminará el shaper en LibreQoS.
+        </div>
+        <div style="color: #38bdf8;">
+          ⚡ <b>Nuevo Estado:</b> Pasará a <b>"En Activación"</b> listo para ser configurado en su nuevo puerto o equipo.
+        </div>
+      </div>`,
+      'Sí, Iniciar Migración',
+      'Cancelar',
+      'warning'
+    );
+
+    if (confirmado) {
+      try {
+        setDeleteMessage({ type: 'info', text: `🔄 Ejecutando migración para "${cliente.nombre}"...` });
+        const res = await clienteService.migrar(cliente.id);
+        showSuccess(res.data?.message || `Cliente "${cliente.nombre}" migrado correctamente.`);
+        setDeleteMessage({ type: 'success', text: res.data?.message });
+        fetchData();
+      } catch (err) {
+        const detail = err.response?.data?.detail;
+        const msg = typeof detail === 'string' ? detail : (detail?.message || 'Error al migrar el cliente.');
+        showError(`Error en migración: ${msg}`);
+        setDeleteMessage({ type: 'error', text: `Error en migración: ${msg}` });
+      }
+    }
+  };
+
   const saveEdit = async () => {
     if (!editData.nombre?.trim() || !editData.cedula?.trim() || !editData.celular?.trim()) {
       return showWarning('Los campos Nombre, Cédula y Celular son obligatorios.');
@@ -538,6 +575,24 @@ const Administrar = () => {
                               🗑️ Borrar OLT
                             </button>
                           )}
+                          <button
+                            className="btn btn-secondary"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '0.75rem',
+                              background: 'rgba(168,85,247,0.12)',
+                              border: '1px solid rgba(168,85,247,0.4)',
+                              color: '#c084fc',
+                              cursor: 'pointer',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              transition: 'all 0.2s'
+                            }}
+                            title="Migrar cliente (Desprovisionar de OLT, MikroTik y LibreQoS pasando a En Activación con finanzas intactas)"
+                            onClick={() => handleMigrarCliente(c)}
+                          >
+                            🔄 Migrar
+                          </button>
                           {(!c.service_port && !c.id_port) && (
                             <button
                               className="btn btn-secondary"

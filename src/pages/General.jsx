@@ -397,6 +397,40 @@ const General = () => {
     }
   };
 
+  const handleMigrarCliente = async (cliente) => {
+    if (!canModifyTable) {
+      showWarning('No tienes permisos para migrar clientes.');
+      return;
+    }
+
+    const saldoDisplay = parseFloat(cliente.saldo ?? 0).toFixed(2);
+    const confirmed = await showConfirm(
+      '🔄 ¿Migrar Cliente?',
+      `¿Deseas iniciar la migración de <b>${cliente.nombre}</b> (ID: ${cliente.id})?<br/><br/>
+      <div style="text-align: left; font-size: 0.85rem; line-height: 1.6; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); padding: 12px; border-radius: 8px;">
+        <p style="margin: 0 0 6px 0; color: #4ade80;">✅ <b>Finanzas e ID Intactos:</b> Su ID (${cliente.id}), historial de pagos, saldo ($${saldoDisplay}) y facturas NO se tocarán ni modificarán.</p>
+        <p style="margin: 0 0 6px 0; color: #f87171;">🗑️ <b>Desconexión de Red:</b> Se retirará de la OLT, se borrará su lease DHCP de MikroTik y su shaper en LibreQoS.</p>
+        <p style="margin: 0; color: #38bdf8;">⚡ <b>Nuevo Estado:</b> Pasará a <b>"En Activación"</b> listo para ser configurado en su nuevo puerto o equipo.</p>
+      </div>`,
+      'Sí, Migrar Cliente',
+      'Cancelar',
+      'question'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      showToast('Ejecutando migración en OLT, MikroTik y LibreQoS...', 'info', 4000);
+      const res = await clienteService.migrar(cliente.id);
+      showSuccess(res.data?.message || 'Cliente migrado exitosamente.');
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.detail || 'Error al ejecutar la migración del cliente';
+      showError(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+    }
+  };
+
   const handleDeleteClick = handleDeleteCompleto;
 
   // Ejecutar acción directamente (sin PIN, ya autenticado)
@@ -808,6 +842,7 @@ const General = () => {
             onChange={(e) => setSelectedAction(e.target.value)}
           >
             <option value="VER">⚙️ Acciones...</option>
+            <option value="MIGRAR">🔄 Migrar (OLT, MikroTik, LibreQoS → Activación)</option>
             <option value="ELIMINAR">🗑️ Eliminar (Solo Sistema)</option>
             <option value="BORRAR">💥 Borrar (Todo: OLT, MikroTik, XUI, LibreQoS)</option>
           </select>
@@ -1026,6 +1061,26 @@ const General = () => {
                     </th>
                   );
                 })}
+                {selectedAction === 'MIGRAR' && (
+                  <th key="acciones-migrar" style={{
+                    padding: '12px',
+                    borderBottom: '1px solid var(--glass-border)',
+                    borderRight: '1px solid var(--glass-border)',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    width: 130,
+                    minWidth: 130,
+                    maxWidth: 130,
+                    position: 'sticky',
+                    right: 0,
+                    background: 'var(--sticky-col-bg, #131526)',
+                    zIndex: 22,
+                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                  }}>
+                    Acción (Migrar)
+                  </th>
+                )}
                 {selectedAction === 'ELIMINAR' && (
                   <th key="acciones-eliminar" style={{
                     padding: '12px',
@@ -1513,6 +1568,53 @@ const General = () => {
                         </td>
                       );
                     })}
+                    {selectedAction === 'MIGRAR' && (
+                      <td key="acciones-migrar" style={{
+                        padding: '6px 12px',
+                        whiteSpace: 'nowrap',
+                        width: 130,
+                        minWidth: 130,
+                        maxWidth: 130,
+                        textAlign: 'center',
+                        position: 'sticky',
+                        right: 0,
+                        background: '#131526',
+                        zIndex: 12,
+                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                      }}>
+                        <button
+                          onClick={() => handleMigrarCliente(c)}
+                          style={{
+                            padding: '5px 12px',
+                            background: 'rgba(168, 85, 247, 0.25)',
+                            border: '1px solid #a855f7',
+                            color: '#d8b4fe',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#a855f7';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.boxShadow = '0 2px 10px rgba(168, 85, 247, 0.5)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(168, 85, 247, 0.25)';
+                            e.currentTarget.style.color = '#d8b4fe';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                          title={`Migrar a ${c.nombre}: Desprovisionar de OLT, MikroTik y LibreQoS pasando a En Activación (Finanzas intactas)`}
+                        >
+                          🔄 Migrar
+                        </button>
+                      </td>
+                    )}
                     {selectedAction === 'ELIMINAR' && (
                       <td key="acciones-eliminar" style={{
                         padding: '6px 12px',
