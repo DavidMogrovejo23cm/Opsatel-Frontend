@@ -1755,6 +1755,7 @@ function HistorialClientes({ mesTarget }) {
   };
 
   const filtered = clientes.filter(c =>
+    (c.id && String(c.id).toLowerCase().includes(filtro.toLowerCase())) ||
     c.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
     (c.nodo && c.nodo.toLowerCase().includes(filtro.toLowerCase())) ||
     (c.plan && c.plan.toLowerCase().includes(filtro.toLowerCase()))
@@ -1763,7 +1764,8 @@ function HistorialClientes({ mesTarget }) {
   const filteredActivos = filtered.filter(c => {
     const isActivo = !c.estado || c.estado.toLowerCase() === 'activo';
     const isNew = c.instalation_date && c.instalation_date.startsWith(mesTarget);
-    const matchesCartera = c.nombre.toLowerCase().includes(filtroCartera.toLowerCase());
+    const matchesCartera = c.nombre.toLowerCase().includes(filtroCartera.toLowerCase()) ||
+      (c.id && String(c.id).toLowerCase().includes(filtroCartera.toLowerCase()));
     return isActivo && !isNew && matchesCartera;
   });
 
@@ -1819,7 +1821,7 @@ function HistorialClientes({ mesTarget }) {
         <div style={{ position: 'relative', width: 300 }}>
           <input
             type="text"
-            placeholder="🔍 Buscar cliente, nodo o plan..."
+            placeholder="🔍 Buscar por ID, cliente, nodo o plan..."
             value={filtro}
             onChange={e => setFiltro(e.target.value)}
             style={{ ...IS, padding: '10px 14px 10px 36px' }}
@@ -1862,6 +1864,7 @@ function HistorialClientes({ mesTarget }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem', width: 60 }}>ID</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Plan Contratado</th>
@@ -1877,6 +1880,7 @@ function HistorialClientes({ mesTarget }) {
                       borderBottom: '1px solid rgba(255,255,255,0.03)',
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
                     }} className="hover-row">
+                      <td style={{ padding: '12px 16px', fontWeight: 700, color: '#38bdf8' }}>{c.id || '—'}</td>
                       <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.plan || '—'}</td>
@@ -1892,7 +1896,7 @@ function HistorialClientes({ mesTarget }) {
                   ))}
                   {filteredRecientes.length > 0 && (
                     <tr style={{ background: 'rgba(255,255,255,0.03)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                      <td colSpan={5} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>
+                      <td colSpan={6} style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'left' }}>
                         Total Proporcional Nuevos del Mes ({filteredRecientes.length} {filteredRecientes.length === 1 ? 'cliente' : 'clientes'}):
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: P.ingreso, fontSize: '0.9rem' }}>
@@ -1905,7 +1909,7 @@ function HistorialClientes({ mesTarget }) {
                   )}
                   {filteredRecientes.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                         ✨ No hay clientes activados recientemente en este mes.
                       </td>
                     </tr>
@@ -1955,7 +1959,7 @@ function HistorialClientes({ mesTarget }) {
               <div style={{ position: 'relative', width: 260 }}>
                 <input
                   type="text"
-                  placeholder="🔍 Buscar cliente por nombre..."
+                  placeholder="🔍 Buscar cliente por ID o nombre..."
                   value={filtroCartera}
                   onChange={e => setFiltroCartera(e.target.value)}
                   style={{ ...IS, padding: '8px 12px 8px 32px', fontSize: '0.8rem' }}
@@ -1968,6 +1972,7 @@ function HistorialClientes({ mesTarget }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#131326', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem', width: 60 }}>ID</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Cliente</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Nodo</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Tarifa/Mes</th>
@@ -1988,6 +1993,7 @@ function HistorialClientes({ mesTarget }) {
                         borderBottom: '1px solid rgba(255,255,255,0.03)',
                         background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
                       }} className="hover-row">
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#34d399' }}>{c.id || '—'}</td>
                         <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.nombre}</td>
                         <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>{c.nodo || '—'}</td>
                         <td style={{ padding: '12px 16px', textAlign: 'right', color: P.internet }}>{fmt(tarifa)}</td>
@@ -2027,7 +2033,7 @@ function HistorialClientes({ mesTarget }) {
                   })}
                   {filteredActivos.length === 0 && (
                     <tr>
-                      <td colSpan={4 + months.length} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                      <td colSpan={5 + months.length} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
                         No se encontraron clientes activos.
                       </td>
                     </tr>
