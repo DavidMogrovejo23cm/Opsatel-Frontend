@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService, libreqosService, asistenciaService } from '../services/api';
 import { motion } from 'framer-motion';
-import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 
 
 import { useAuth } from '../context/AuthContext';
