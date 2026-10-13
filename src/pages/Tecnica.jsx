@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 
@@ -12,7 +12,7 @@ const Tecnica = () => {
     puerto: '', ont: '', servicio: '', breach: '',
     id_port: '', service_port: '', ip: '',
     dispositivo: '', potencia: '', nap: '',
-    ubicacion: '', tecnico: '', activador: '',
+    ubicacion: '', tecnico: '', activador: 'sistema',
     red: '', clave: '',
     plus: '0',
     iptv_activar: false,
@@ -29,6 +29,7 @@ const Tecnica = () => {
   const [puertosList, setPuertosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
   const [cajasNapList, setCajasNapList] = useState([]);
+  const [hojasRutaList, setHojasRutaList] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -38,16 +39,18 @@ const Tecnica = () => {
         c.estado?.toUpperCase() === 'PENDIENTE'
       ).sort((a, b) => a.id - b.id));
 
-      const [paRes, puRes, plRes, cnRes] = await Promise.all([
+      const [paRes, puRes, plRes, cnRes, hrRes] = await Promise.all([
         configuracionService.getNodos(),
         configuracionService.getPuertos(),
         configuracionService.getPlanes(),
-        configuracionService.getCajasNap().catch(() => ({ data: [] }))
+        configuracionService.getCajasNap().catch(() => ({ data: [] })),
+        hojaRutaService.listar().catch(() => ({ data: [] }))
       ]);
       setNodosList(paRes.data);
       setPuertosList(puRes.data);
       setPlanesList(plRes.data);
       setCajasNapList(cnRes.data);
+      setHojasRutaList(hrRes.data || []);
     } catch (error) {
       console.error("Error fetching data", error);
     }
@@ -126,13 +129,22 @@ const Tecnica = () => {
       generatedUser += nameParts[0].toLowerCase();
     }
 
+    // Buscar técnico responsable asignado en Hoja de Ruta para este cliente
+    const hrCliente = (hojasRutaList || []).find(h =>
+      h.cliente_id === cliente.id ||
+      (h.nombre_cliente && cliente.nombre && h.nombre_cliente.trim().toLowerCase() === cliente.nombre.trim().toLowerCase())
+    );
+    const currentUser = configuracionService.getCurrentUser() || {};
+    const tecnicoAuto = hrCliente?.tecnico || cliente.tecnico || (currentUser.rol === 'tecnico' ? currentUser.username : '');
+
     setFormData({
       mac: '',
       puerto: '', ont: '', servicio: '', breach: '',
       id_port: '', service_port: '', ip: '',
       dispositivo: '', potencia: '', nap: '',
       ubicacion: cliente.ubicacion || '',
-      tecnico: '', activador: '',
+      tecnico: tecnicoAuto,
+      activador: 'sistema',
       red: '', clave: '',
       plus: cliente.plus || '0',
       iptv_activar: hasIptv,
@@ -531,12 +543,27 @@ const Tecnica = () => {
 
               <div className="input-group">
                 <label className="label">Técnico</label>
-                <input className="input" name="tecnico" value={formData.tecnico} onChange={handleChange} required />
+                <input
+                  className="input"
+                  name="tecnico"
+                  value={formData.tecnico}
+                  onChange={handleChange}
+                  required
+                  placeholder="Cuenta del técnico asignado"
+                />
               </div>
 
               <div className="input-group">
                 <label className="label">Activador</label>
-                <input className="input" name="activador" value={formData.activador} onChange={handleChange} required />
+                <input
+                  className="input"
+                  name="activador"
+                  value={formData.activador || 'sistema'}
+                  onChange={handleChange}
+                  readOnly
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#38bdf8', fontWeight: 'bold', cursor: 'not-allowed' }}
+                  title="El activador se asigna automáticamente como sistema"
+                />
               </div>
 
               <div className="input-group">

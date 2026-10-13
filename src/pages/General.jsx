@@ -46,7 +46,7 @@ const General = () => {
   // Definición de las columnas del sistema
   const allColumns = [
     "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
-    "fecha_firma", "instalation_date", "estado", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "breach", "id_port", "service_port",
+    "fecha_firma", "instalation_date", "estado", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "bridge", "id_port", "service_port",
     "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
     "tiempo", "arrienda", "app", "payment_date", "bank", "cod", "facturas", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
   ];
@@ -156,49 +156,49 @@ const General = () => {
     }
   };
 
-const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
-  return new Promise((resolve) => {
-    if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth || height > maxWidth) {
-          if (width > height) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else {
-            width = Math.round((width * maxWidth) / height);
-            height = maxWidth;
+  const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
           }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return resolve(file);
-            const compressedFile = new File([blob], file.name || 'cedula.jpg', {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            resolve(compressedFile);
-          },
-          'image/jpeg',
-          quality
-        );
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return resolve(file);
+              const compressedFile = new File([blob], file.name || 'cedula.jpg', {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = event.target.result;
       };
-      img.onerror = () => resolve(file);
-      img.src = event.target.result;
-    };
-    reader.onerror = () => resolve(file);
-    reader.readAsDataURL(file);
-  });
-};
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
     try {
@@ -417,7 +417,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
 
       try {
         const response = await clienteService.eliminarCompletamente(id, { pin: '1234566' });
-        
+
         setDeletionProgress({
           status: 'success',
           olt: response.data.olt,
@@ -427,7 +427,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           database: response.data.database,
           message: '¡El cliente ha sido borrado exitosamente de todos los sistemas!'
         });
-        
+
         setPendingAction(null);
         fetchData();
       } catch (error) {
@@ -445,7 +445,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
           message: `Fallo en etapa [${failedStage.toUpperCase()}]: ${errMsg}`
         }));
-        
+
         setPendingAction(null);
       }
       return;
@@ -490,7 +490,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
       try {
         // Enviar borrado total al backend con validación del PIN
         const response = await clienteService.eliminarCompletamente(id, { pin: originalPin });
-        
+
         setDeletionProgress({
           status: 'success',
           olt: response.data.olt,
@@ -500,7 +500,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           database: response.data.database,
           message: '¡El cliente ha sido borrado exitosamente de todos los sistemas!'
         });
-        
+
         setPendingAction(null);
         setPinInput('');
         fetchData();
@@ -519,7 +519,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
           database: failedStage === 'database' ? 'ERROR' : (prev?.database || 'PENDIENTE'),
           message: `Fallo en etapa [${failedStage.toUpperCase()}]: ${errMsg}`
         }));
-        
+
         setPendingAction(null);
         setPinInput('');
       }
@@ -1072,227 +1072,90 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
               {filteredClientes.map(c => {
                 const isFiniquito = c.estado?.toUpperCase() === 'FINIQUITO';
                 return (
-                <tr 
-                  key={c.id} 
-                  style={{ 
-                    borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))',
-                    opacity: isFiniquito ? 0.65 : 1,
-                    background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
-                    transition: 'opacity 0.2s ease'
-                  }}
-                >
-                  {allColumns.map(col => {
-                    const isEditing = editingCell?.id === c.id && editingCell?.col === col;
-                    const isId = col === 'id';
-                    const isNombre = col === 'nombre';
-                    const isIp = col === 'ip';
+                  <tr
+                    key={c.id}
+                    style={{
+                      borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))',
+                      opacity: isFiniquito ? 0.65 : 1,
+                      background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
+                      transition: 'opacity 0.2s ease'
+                    }}
+                  >
+                    {allColumns.map(col => {
+                      const isEditing = editingCell?.id === c.id && editingCell?.col === col;
+                      const isId = col === 'id';
+                      const isNombre = col === 'nombre';
+                      const isIp = col === 'ip';
 
-                    // Posiciones sticky para ID, Nombre e IP
-                    let stickyStyle = {};
-                    if (isId) {
-                      stickyStyle = {
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
-                      };
-                    } else if (isNombre) {
-                      stickyStyle = {
-                        position: 'sticky',
-                        left: colWidths['id'] || 60,
-                        zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
-                      };
-                    } else if (isIp) {
-                      stickyStyle = {
-                        position: 'sticky',
-                        left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
-                        zIndex: 12,
-                        background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)'),
-                        borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
-                      };
-                    }
+                      // Posiciones sticky para ID, Nombre e IP
+                      let stickyStyle = {};
+                      if (isId) {
+                        stickyStyle = {
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 12,
+                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
+                        };
+                      } else if (isNombre) {
+                        stickyStyle = {
+                          position: 'sticky',
+                          left: colWidths['id'] || 60,
+                          zIndex: 12,
+                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
+                        };
+                      } else if (isIp) {
+                        stickyStyle = {
+                          position: 'sticky',
+                          left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
+                          zIndex: 12,
+                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)'),
+                          borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                        };
+                      }
 
-                    const isLockedCol = ['id', 'id_port', 'service_port', 'mac'].includes(col);
-                    const isCellEditable = !isFiniquito && canModifyTable && !isLockedCol && !(col === 'estado' && c[col]?.toLowerCase() === 'pendiente');
+                      const isLockedCol = ['id', 'id_port', 'service_port', 'mac'].includes(col);
+                      const isCellEditable = !isFiniquito && canModifyTable && !isLockedCol && !(col === 'estado' && c[col]?.toLowerCase() === 'pendiente');
 
-                    return (
-                      <td
-                        key={col}
-                        onClick={() => {
-                          if (!isCellEditable) return;
-                          if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
-                            const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                            const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
-                            handleStartEdit(c.id, col, currentVal);
-                          }
-                        }}
-                        onDoubleClick={() => {
-                          if (!isCellEditable) return;
-                          if (col !== 'estado') {
-                            const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                            const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col]));
-                            handleStartEdit(c.id, col, currentVal);
-                          }
-                        }}
-                        title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
-                        style={{
-                          padding: '6px 12px',
-                          whiteSpace: 'nowrap',
-                          width: colWidths[col] || 150,
-                          minWidth: colWidths[col] || 150,
-                          maxWidth: colWidths[col] || 150,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          cursor: isCellEditable ? 'pointer' : 'default',
-                          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                          ...stickyStyle
-                        }}
-                      >
-                        {isEditing ? (
-                          col === 'estado' ? (
-                            <select
-                              autoFocus
-                              className="input"
-                              style={{
-                                width: '100%',
-                                padding: '4px 8px',
-                                height: '28px',
-                                fontSize: '0.8rem',
-                                background: '#1e1b4b',
-                                border: '1px solid var(--primary)',
-                                outline: 'none',
-                                appearance: 'none'
-                              }}
-                              value={tempValue}
-                              onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
-                              onBlur={() => setEditingCell(null)}
-                            >
-                              {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO', 'Finiquito', 'FINIQUITO'].includes(tempValue) && (
-                                <option value={tempValue}>{tempValue}</option>
-                              )}
-                              <option value="Activo">Activo</option>
-                              <option value="Inactivo">Inactivo</option>
-                              <option value="En Proceso">En Proceso</option>
-                              <option value="Juridico">Juridico</option>
-                              <option value="Finiquito">👻 Finiquito</option>
-                            </select>
-                          ) : col === 'facturas' ? (
-                            <select
-                              autoFocus
-                              className="input"
-                              style={{
-                                width: '100%',
-                                padding: '4px 8px',
-                                height: '28px',
-                                fontSize: '0.8rem',
-                                background: '#1e1b4b',
-                                border: '1px solid var(--primary)',
-                                outline: 'none'
-                              }}
-                              value={tempValue || 'NONE'}
-                              onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
-                              onBlur={() => setEditingCell(null)}
-                            >
-                              <option value="NONE">NONE</option>
-                              <option value="SI">SI</option>
-                            </select>
-                          ) : (
-                            col === 'plan' ? (
+                      return (
+                        <td
+                          key={col}
+                          onClick={() => {
+                            if (!isCellEditable) return;
+                            if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
+                              const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                              const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
+                              handleStartEdit(c.id, col, currentVal);
+                            }
+                          }}
+                          onDoubleClick={() => {
+                            if (!isCellEditable) return;
+                            if (col !== 'estado') {
+                              const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                              const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col]));
+                              handleStartEdit(c.id, col, currentVal);
+                            }
+                          }}
+                          title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
+                          style={{
+                            padding: '6px 12px',
+                            whiteSpace: 'nowrap',
+                            width: colWidths[col] || 150,
+                            minWidth: colWidths[col] || 150,
+                            maxWidth: colWidths[col] || 150,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                            cursor: isCellEditable ? 'pointer' : 'default',
+                            borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            ...stickyStyle
+                          }}
+                        >
+                          {isEditing ? (
+                            col === 'estado' ? (
                               <select
-                                className="input"
-                                style={{ width: '100%', padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
-                                value={tempValue}
-                                onChange={(e) => {
-                                  setTempValue(e.target.value);
-                                  handleSaveDropdown(c.id, col, e.target.value);
-                                }}
-                                onBlur={() => setEditingCell(null)}
-                                autoFocus
-                              >
-                                <option value="">- Seleccionar -</option>
-                                {planesList.map(p => (
-                                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                                ))}
-                              </select>
-                            ) : col === 'cedula_tipo' ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
-                                <select
-                                  className="input"
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px 6px',
-                                    height: '28px',
-                                    fontSize: '0.78rem',
-                                    background: '#1e1b4b',
-                                    border: '1px solid var(--primary)',
-                                    color: (tempValue === 'Si' || tempValue === 'SI') ? '#4ade80' : '#ffffff',
-                                    fontWeight: 'bold'
-                                  }}
-                                  value={(tempValue === 'Si' || tempValue === 'SI') ? 'Si' : 'No'}
-                                  onChange={async (e) => {
-                                    const val = e.target.value;
-                                    setTempValue(val);
-                                    try {
-                                      await clienteService.actualizar(c.id, { cedula_tipo: val });
-                                      showSuccess(`Cédula cambiada a: ${val}`);
-                                      fetchData();
-                                    } catch (err) {
-                                      showError('Error al guardar estado de cédula');
-                                    }
-                                  }}
-                                  autoFocus
-                                >
-                                  <option value="No">No</option>
-                                  <option value="Si">Si</option>
-                                </select>
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
-                                    {fileFrontal ? '✅ Front.' : '📸 Front.'}
-                                    <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
-                                  </label>
-                                  <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
-                                    {filePosterior ? '✅ Post.' : '📸 Post.'}
-                                    <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
-                                  </label>
-                                </div>
-                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                                  {(fileFrontal || filePosterior) && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-primary"
-                                      disabled={uploadingCedula}
-                                      onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
-                                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                      title="Subir Fotos Seleccionadas"
-                                    >
-                                      {uploadingCedula ? '⏳' : 'Subir Fotos'}
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingCell(null);
-                                      setFileFrontal(null);
-                                      setFilePosterior(null);
-                                      setTempValue('');
-                                    }}
-                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                    title="Cerrar"
-                                  >
-                                    ❌ Cerrar
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <input
                                 autoFocus
                                 className="input"
-                                placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
                                 style={{
                                   width: '100%',
                                   padding: '4px 8px',
@@ -1300,284 +1163,451 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
                                   fontSize: '0.8rem',
                                   background: '#1e1b4b',
                                   border: '1px solid var(--primary)',
-                                  fontFamily: col === 'ip' ? 'monospace' : 'inherit'
+                                  outline: 'none',
+                                  appearance: 'none'
                                 }}
                                 value={tempValue}
-                                onChange={(e) => setTempValue(e.target.value)}
-                                onBlur={() => handleSaveEdit(c.id, col)}
-                                onKeyDown={(e) => handleKeyDown(e, c.id, col)}
-                              />
+                                onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                                onBlur={() => setEditingCell(null)}
+                              >
+                                {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO', 'Finiquito', 'FINIQUITO'].includes(tempValue) && (
+                                  <option value={tempValue}>{tempValue}</option>
+                                )}
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Juridico">Juridico</option>
+                                <option value="Finiquito">👻 Finiquito</option>
+                              </select>
+                            ) : col === 'facturas' ? (
+                              <select
+                                autoFocus
+                                className="input"
+                                style={{
+                                  width: '100%',
+                                  padding: '4px 8px',
+                                  height: '28px',
+                                  fontSize: '0.8rem',
+                                  background: '#1e1b4b',
+                                  border: '1px solid var(--primary)',
+                                  outline: 'none'
+                                }}
+                                value={tempValue || 'NONE'}
+                                onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                                onBlur={() => setEditingCell(null)}
+                              >
+                                <option value="NONE">NONE</option>
+                                <option value="SI">SI</option>
+                              </select>
+                            ) : (
+                              col === 'plan' ? (
+                                <select
+                                  className="input"
+                                  style={{ width: '100%', padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
+                                  value={tempValue}
+                                  onChange={(e) => {
+                                    setTempValue(e.target.value);
+                                    handleSaveDropdown(c.id, col, e.target.value);
+                                  }}
+                                  onBlur={() => setEditingCell(null)}
+                                  autoFocus
+                                >
+                                  <option value="">- Seleccionar -</option>
+                                  {planesList.map(p => (
+                                    <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                                  ))}
+                                </select>
+                              ) : col === 'cedula_tipo' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    className="input"
+                                    style={{
+                                      width: '100%',
+                                      padding: '4px 6px',
+                                      height: '28px',
+                                      fontSize: '0.78rem',
+                                      background: '#1e1b4b',
+                                      border: '1px solid var(--primary)',
+                                      color: (tempValue === 'Si' || tempValue === 'SI') ? '#4ade80' : '#ffffff',
+                                      fontWeight: 'bold'
+                                    }}
+                                    value={(tempValue === 'Si' || tempValue === 'SI') ? 'Si' : 'No'}
+                                    onChange={async (e) => {
+                                      const val = e.target.value;
+                                      setTempValue(val);
+                                      try {
+                                        await clienteService.actualizar(c.id, { cedula_tipo: val });
+                                        showSuccess(`Cédula cambiada a: ${val}`);
+                                        fetchData();
+                                      } catch (err) {
+                                        showError('Error al guardar estado de cédula');
+                                      }
+                                    }}
+                                    autoFocus
+                                  >
+                                    <option value="No">No</option>
+                                    <option value="Si">Si</option>
+                                  </select>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
+                                      {fileFrontal ? '✅ Front.' : '📸 Front.'}
+                                      <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                                    </label>
+                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
+                                      {filePosterior ? '✅ Post.' : '📸 Post.'}
+                                      <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                                    </label>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                                    {(fileFrontal || filePosterior) && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        disabled={uploadingCedula}
+                                        onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                        title="Subir Fotos Seleccionadas"
+                                      >
+                                        {uploadingCedula ? '⏳' : 'Subir Fotos'}
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCell(null);
+                                        setFileFrontal(null);
+                                        setFilePosterior(null);
+                                        setTempValue('');
+                                      }}
+                                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                      title="Cerrar"
+                                    >
+                                      ❌ Cerrar
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <input
+                                  autoFocus
+                                  className="input"
+                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
+                                  style={{
+                                    width: '100%',
+                                    padding: '4px 8px',
+                                    height: '28px',
+                                    fontSize: '0.8rem',
+                                    background: '#1e1b4b',
+                                    border: '1px solid var(--primary)',
+                                    fontFamily: col === 'ip' ? 'monospace' : 'inherit'
+                                  }}
+                                  value={tempValue}
+                                  onChange={(e) => setTempValue(e.target.value)}
+                                  onBlur={() => handleSaveEdit(c.id, col)}
+                                  onKeyDown={(e) => handleKeyDown(e, c.id, col)}
+                                />
+                              )
                             )
-                          )
-                        ) : (
-                          <span style={{
-                            color: col === 'estado' ? (
-                              c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
-                                c[col]?.toUpperCase() === 'FINIQUITO' ? '#94a3b8' :
-                                ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
-                                  c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
-                                    ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
-                                      c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
-                            ) : 'inherit',
-                            fontWeight: col === 'id' ? '600' : 'normal'
-                          }}>
-                            {(() => {
-                              if (col === 'id') {
-                                if (isFiniquito) {
+                          ) : (
+                            <span style={{
+                              color: col === 'estado' ? (
+                                c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
+                                  c[col]?.toUpperCase() === 'FINIQUITO' ? '#94a3b8' :
+                                    ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
+                                      c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
+                                        ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
+                                          c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
+                              ) : 'inherit',
+                              fontWeight: col === 'id' ? '600' : 'normal'
+                            }}>
+                              {(() => {
+                                if (col === 'id') {
+                                  if (isFiniquito) {
+                                    return (
+                                      <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Cliente en Finiquito (Registro Fantasma)">
+                                        👻 {c.id}
+                                      </span>
+                                    );
+                                  }
+                                  return c.id;
+                                }
+                                if (col === 'estado') {
+                                  if (isFiniquito) {
+                                    return (
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        background: 'rgba(148, 163, 184, 0.15)',
+                                        color: '#cbd5e1',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        border: '1px dashed #94a3b8'
+                                      }}>
+                                        👻 Finiquito
+                                      </span>
+                                    );
+                                  }
+                                  return c.estado || '-';
+                                }
+                                if (col === 'total') {
+                                  const totalPagado = parseFloat(c.pago_mensual || 0);
+                                  return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
+                                }
+                                if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
+                                  const valPagado = c[col];
+                                  const hasValue = valPagado && parseFloat(valPagado) > 0;
+                                  return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
+                                }
+                                if (col === 'total_pago') {
+                                  const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
+                                  const plusVal = parseFloat(c.plus || 0);
+                                  const adicVal = parseFloat(c.adicional || 0);
+                                  const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
+                                  return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
+                                }
+                                if (col === 'cedula_tipo') {
+                                  const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
+                                  const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
+                                  const displayVal = isSi ? 'Si' : 'No';
                                   return (
-                                    <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Cliente en Finiquito (Registro Fantasma)">
-                                      👻 {c.id}
+                                    <span style={{ color: isSi ? '#4ade80' : '#94a3b8', fontWeight: 'bold' }}>
+                                      {displayVal}
                                     </span>
                                   );
                                 }
-                                return c.id;
-                              }
-                              if (col === 'estado') {
-                                if (isFiniquito) {
+                                if (col === 'plan') {
+                                  let precio = 0; let isSpecial = false; let isPromo = false;
+                                  if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
+                                  else if (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; isPromo = true; }
+                                  else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
+                                  else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
                                   return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <span style={{ fontWeight: '600', color: c.plan ? 'var(--text-main, #ffffff)' : 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                        {c.plan || '-'}
+                                      </span>
+                                      {precio > 0 && (
+                                        <span style={{ color: c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#38bdf8')), fontSize: '0.72rem', fontWeight: '500' }}>
+                                          ${parseFloat(precio).toFixed(2)}
+                                          {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                if (col === 'fotos_cedula') {
+                                  return <div style={{ display: 'flex', gap: '8px' }}>
+                                    {c.cedula_frontal && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
+                                    {c.cedula_posterior && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
+                                    {!c.cedula_frontal && !c.cedula_posterior && '-'}
+                                  </div>;
+                                }
+                                if (col === 'observaciones') {
+                                  return (
+                                    <div style={{ fontStyle: 'italic', opacity: 0.8, color: '#a78bfa', whiteSpace: 'pre-line' }}>
+                                      {c.observaciones ? c.observaciones.split('/').join('\n') : '-'}
+                                    </div>
+                                  );
+                                }
+                                if (col === 'iptv_cuenta') {
+                                  // Mostrar credenciales IPTV si el cliente tiene IPTV activo
+                                  if ((c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user) {
+                                    return (
+                                      <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap' }}>
+                                        <div><strong>👤</strong> {c.iptv_user}</div>
+                                        <div><strong>🔑</strong> {c.iptv_pass}</div>
+                                        {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
+                                      </div>
+                                    );
+                                  } else if (c.tv_tipo === 'CATV') {
+                                    return <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>;
+                                  }
+                                  return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                }
+                                if (col === 'ubicacion_cliente') {
+                                  // Mostrar ubicacion: primero del contrato, sino la dirección
+                                  const ubicacion = c.ubicacion || c.direccion || null;
+                                  if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                  return (
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                      title={ubicacion}
+                                    >
+                                      📍 {ubicacion.length > 30 ? ubicacion.substring(0, 30) + '...' : ubicacion}
+                                    </a>
+                                  );
+                                }
+                                if (col === 'comentarios') {
+                                  return (
+                                    <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
+                                      {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
+                                    </div>
+                                  );
+                                }
+
+                                if (col === 'facturas') {
+                                  const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                                  const isSi = hasCod || (c.facturas && String(c.facturas).trim().toUpperCase() === 'SI');
+                                  const displayVal = isSi ? 'SI' : ((c.facturas && String(c.facturas).trim() !== '') ? c.facturas : 'NONE');
+                                  return (
+                                    <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
+                                      {displayVal}
+                                    </span>
+                                  );
+                                }
+
+                                if (col === 'ip') {
+                                  return c.ip ? (
+                                    <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '600' }} title="IP del Cliente (Doble clic para editar)">
+                                      {c.ip}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>
+                                  );
+                                }
+
+                                if (col === 'tecnico') {
+                                  return c.tecnico ? (
+                                    <span style={{ fontWeight: '500', color: '#38bdf8' }} title="Técnico responsable del servicio">
+                                      👨‍🔧 {c.tecnico}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                  );
+                                }
+
+                                if (col === 'activador') {
+                                  return c.activador ? (
                                     <span style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       gap: '4px',
                                       padding: '2px 8px',
-                                      borderRadius: '12px',
-                                      background: 'rgba(148, 163, 184, 0.15)',
-                                      color: '#cbd5e1',
+                                      borderRadius: '8px',
+                                      background: 'rgba(56, 189, 248, 0.1)',
+                                      color: '#38bdf8',
                                       fontSize: '0.75rem',
-                                      fontWeight: 'bold',
-                                      border: '1px dashed #94a3b8'
-                                    }}>
-                                      👻 Finiquito
+                                      fontWeight: '600'
+                                    }} title="Activador del servicio">
+                                      🤖 {c.activador}
                                     </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)' }}>-</span>
                                   );
                                 }
-                                return c.estado || '-';
-                              }
-                              if (col === 'total') {
-                                const totalPagado = parseFloat(c.pago_mensual || 0);
-                                return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
-                              }
-                              if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
-                                const valPagado = c[col];
-                                const hasValue = valPagado && parseFloat(valPagado) > 0;
-                                return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
-                              }
-                              if (col === 'total_pago') {
-                                const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
-                                const plusVal = parseFloat(c.plus || 0);
-                                const adicVal = parseFloat(c.adicional || 0);
-                                const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
-                                return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
-                              }
-                              if (col === 'cedula_tipo') {
-                                 const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
-                                 const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
-                                 const displayVal = isSi ? 'Si' : 'No';
-                                 return (
-                                   <span style={{ color: isSi ? '#4ade80' : '#94a3b8', fontWeight: 'bold' }}>
-                                     {displayVal}
-                                   </span>
-                                 );
-                               }
-                              if (col === 'plan') {
-                                let precio = 0; let isSpecial = false; let isPromo = false;
-                                if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
-                                else if (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; isPromo = true; }
-                                else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
-                                else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
-                                return (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontWeight: '600', color: c.plan ? 'var(--text-main, #ffffff)' : 'var(--text-muted)', fontSize: '0.78rem' }}>
-                                      {c.plan || '-'}
-                                    </span>
-                                    {precio > 0 && (
-                                      <span style={{ color: c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#38bdf8')), fontSize: '0.72rem', fontWeight: '500' }}>
-                                        ${parseFloat(precio).toFixed(2)}
-                                        {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              if (col === 'fotos_cedula') {
-                                return <div style={{ display: 'flex', gap: '8px' }}>
-                                  {c.cedula_frontal && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
-                                  {c.cedula_posterior && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
-                                  {!c.cedula_frontal && !c.cedula_posterior && '-'}
-                                </div>;
-                              }
-                              if (col === 'observaciones') {
-                                return (
-                                  <div style={{ fontStyle: 'italic', opacity: 0.8, color: '#a78bfa', whiteSpace: 'pre-line' }}>
-                                    {c.observaciones ? c.observaciones.split('/').join('\n') : '-'}
-                                  </div>
-                                );
-                              }
-                              if (col === 'iptv_cuenta') {
-                                // Mostrar credenciales IPTV si el cliente tiene IPTV activo
-                                if ((c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user) {
-                                  return (
-                                    <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap' }}>
-                                      <div><strong>👤</strong> {c.iptv_user}</div>
-                                      <div><strong>🔑</strong> {c.iptv_pass}</div>
-                                      {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
-                                    </div>
-                                  );
-                                } else if (c.tv_tipo === 'CATV') {
-                                  return <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>;
+
+                                if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
+                                  return formatToDMY(c[col]);
                                 }
-                                return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-                              }
-                              if (col === 'ubicacion_cliente') {
-                                // Mostrar ubicacion: primero del contrato, sino la dirección
-                                const ubicacion = c.ubicacion || c.direccion || null;
-                                if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-                                return (
-                                  <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                    title={ubicacion}
-                                  >
-                                    📍 {ubicacion.length > 30 ? ubicacion.substring(0, 30) + '...' : ubicacion}
-                                  </a>
-                                );
-                              }
-                              if (col === 'comentarios') {
-                                return (
-                                  <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
-                                    {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
-                                  </div>
-                                );
-                              }
-
-                              if (col === 'facturas') {
-                                const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                                const isSi = hasCod || (c.facturas && String(c.facturas).trim().toUpperCase() === 'SI');
-                                const displayVal = isSi ? 'SI' : ((c.facturas && String(c.facturas).trim() !== '') ? c.facturas : 'NONE');
-                                return (
-                                  <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
-                                    {displayVal}
-                                  </span>
-                                );
-                              }
-
-                              if (col === 'ip') {
-                                return c.ip ? (
-                                  <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '600' }} title="IP del Cliente (Doble clic para editar)">
-                                    {c.ip}
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>
-                                );
-                              }
-
-                              if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
-                                return formatToDMY(c[col]);
-                              }
-                              return c[col] !== undefined ? String(c[col] || '-') : '-';
-                            })()}
-                          </span>
-                        )}
+                                return c[col] !== undefined ? String(c[col] || '-') : '-';
+                              })()}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    {selectedAction === 'ELIMINAR' && (
+                      <td key="acciones-eliminar" style={{
+                        padding: '6px 12px',
+                        whiteSpace: 'nowrap',
+                        width: 120,
+                        minWidth: 120,
+                        maxWidth: 120,
+                        textAlign: 'center',
+                        position: 'sticky',
+                        right: 0,
+                        background: '#131526',
+                        zIndex: 12,
+                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                      }}>
+                        <button
+                          onClick={() => handleDeleteCliente(c)}
+                          style={{
+                            padding: '5px 12px',
+                            background: 'rgba(239, 68, 68, 0.18)',
+                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                            color: '#f87171',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#ef4444';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
+                            e.currentTarget.style.color = '#f87171';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                          title={`Eliminar a ${c.nombre} únicamente del sistema`}
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </td>
-                    );
-                  })}
-                  {selectedAction === 'ELIMINAR' && (
-                    <td key="acciones-eliminar" style={{
-                      padding: '6px 12px',
-                      whiteSpace: 'nowrap',
-                      width: 120,
-                      minWidth: 120,
-                      maxWidth: 120,
-                      textAlign: 'center',
-                      position: 'sticky',
-                      right: 0,
-                      background: '#131526',
-                      zIndex: 12,
-                      borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                    }}>
-                      <button
-                        onClick={() => handleDeleteCliente(c)}
-                        style={{
-                          padding: '5px 12px',
-                          background: 'rgba(239, 68, 68, 0.18)',
-                          border: '1px solid rgba(239, 68, 68, 0.45)',
-                          color: '#f87171',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#ef4444';
-                          e.currentTarget.style.color = '#ffffff';
-                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
-                          e.currentTarget.style.color = '#f87171';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                        title={`Eliminar a ${c.nombre} únicamente del sistema`}
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </td>
-                  )}
-                  {selectedAction === 'BORRAR' && (
-                    <td key="acciones-borrar" style={{
-                      padding: '6px 12px',
-                      whiteSpace: 'nowrap',
-                      width: 130,
-                      minWidth: 130,
-                      maxWidth: 130,
-                      textAlign: 'center',
-                      position: 'sticky',
-                      right: 0,
-                      background: '#131526',
-                      zIndex: 12,
-                      borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                    }}>
-                      <button
-                        onClick={() => handleDeleteCompleto(c)}
-                        style={{
-                          padding: '5px 12px',
-                          background: 'rgba(220, 38, 38, 0.25)',
-                          border: '1px solid #ef4444',
-                          color: '#fca5a5',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#dc2626';
-                          e.currentTarget.style.color = '#ffffff';
-                          e.currentTarget.style.boxShadow = '0 2px 10px rgba(220, 38, 38, 0.5)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
-                          e.currentTarget.style.color = '#fca5a5';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                        title={`Borrar a ${c.nombre} de OLT, MikroTik, LibreQoS, XUI y Sistema`}
-                      >
-                        💥 Borrar Todo
-                      </button>
-                    </td>
-                  )}
-                </tr>
+                    )}
+                    {selectedAction === 'BORRAR' && (
+                      <td key="acciones-borrar" style={{
+                        padding: '6px 12px',
+                        whiteSpace: 'nowrap',
+                        width: 130,
+                        minWidth: 130,
+                        maxWidth: 130,
+                        textAlign: 'center',
+                        position: 'sticky',
+                        right: 0,
+                        background: '#131526',
+                        zIndex: 12,
+                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                      }}>
+                        <button
+                          onClick={() => handleDeleteCompleto(c)}
+                          style={{
+                            padding: '5px 12px',
+                            background: 'rgba(220, 38, 38, 0.25)',
+                            border: '1px solid #ef4444',
+                            color: '#fca5a5',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#dc2626';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.boxShadow = '0 2px 10px rgba(220, 38, 38, 0.5)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
+                            e.currentTarget.style.color = '#fca5a5';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                          title={`Borrar a ${c.nombre} de OLT, MikroTik, LibreQoS, XUI y Sistema`}
+                        >
+                          💥 Borrar Todo
+                        </button>
+                      </td>
+                    )}
+                  </tr>
                 );
               })}
             </tbody>
@@ -1665,7 +1695,7 @@ const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
             <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span>🗑️</span> Eliminando Cliente
             </h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>1. Creación de Respaldo</span>
