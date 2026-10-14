@@ -422,17 +422,23 @@ const HojaRuta = () => {
                                         <td style={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#fff' }}>{r.tecnico}</td>
                                         <td>
                                             <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{r.nombre_cliente}</div>
-                                            {r.celular_cliente ? (
-                                                <a
-                                                    href={`https://wa.me/${r.celular_cliente.replace(/[^0-9]/g, '')}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{ fontSize: '0.7rem', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                    title="Abrir en WhatsApp"
-                                                >
-                                                    📱 {r.celular_cliente}
-                                                </a>
-                                            ) : (
+                                            {r.celular_cliente ? (() => {
+                                                const firstPart = String(r.celular_cliente).split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+/i)[0] || '';
+                                                let clean = firstPart.replace(/\D/g, '');
+                                                if (clean.startsWith('09') && clean.length === 10) clean = '593' + clean.slice(1);
+                                                else if (clean.startsWith('9') && clean.length === 9) clean = '593' + clean;
+                                                return (
+                                                    <a
+                                                        href={`https://wa.me/${clean}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ fontSize: '0.7rem', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                        title="Abrir en WhatsApp"
+                                                    >
+                                                        📱 {r.celular_cliente}
+                                                    </a>
+                                                );
+                                            })() : (
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</div>
                                             )}
                                             {(() => {

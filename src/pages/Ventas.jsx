@@ -59,8 +59,10 @@ const Ventas = () => {
 
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
+  const [fileFachada, setFileFachada] = useState(null);
   const [previewFrontal, setPreviewFrontal] = useState(null);
   const [previewPosterior, setPreviewPosterior] = useState(null);
+  const [previewFachada, setPreviewFachada] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -91,43 +93,60 @@ const Ventas = () => {
     }
   }, [filePosterior]);
 
-  const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
+  useEffect(() => {
+    if (fileFachada) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewFachada(reader.result);
+      reader.readAsDataURL(fileFachada);
+    } else {
+      setPreviewFachada(null);
+    }
+  }, [fileFachada]);
+
+  const compressImage = (file, maxWidth = 2048, quality = 0.88) => {
     return new Promise((resolve) => {
       if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > maxWidth || height > maxWidth) {
-            if (width > height) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            } else {
-              width = Math.round((width * maxWidth) / height);
-              height = maxWidth;
+          const attemptCompress = (wMax, qual) => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > wMax || height > wMax) {
+              if (width > height) {
+                height = Math.round((height * wMax) / width);
+                width = wMax;
+              } else {
+                width = Math.round((width * wMax) / height);
+                height = wMax;
+              }
             }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) return resolve(file);
-              const rawName = file.name || 'cedula.jpg';
-              const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
-              const compressedFile = new File([blob], `${baseName}.jpg`, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-              });
-              resolve(compressedFile);
-            },
-            'image/jpeg',
-            quality
-          );
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return resolve(file);
+                // Si la imagen comprimida supera 1.5 MB (1,572,864 bytes), reducir dimensiones/calidad de forma adaptativa
+                if (blob.size > 1.5 * 1024 * 1024 && qual > 0.45) {
+                  return attemptCompress(Math.round(wMax * 0.85), qual - 0.12);
+                }
+                const rawName = file.name || 'foto.jpg';
+                const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
+                const compressedFile = new File([blob], `${baseName}.jpg`, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              },
+              'image/jpeg',
+              qual
+            );
+          };
+          attemptCompress(maxWidth, quality);
         };
         img.onerror = () => resolve(file);
         img.src = event.target.result;
@@ -185,6 +204,10 @@ const Ventas = () => {
 
     const baseFile = file instanceof File ? file : new File([file], fileName, { type: mimeType });
     const compressed = await compressImage(baseFile);
+    if (compressed && compressed.size > 1.6 * 1024 * 1024) {
+      setMessage({ type: 'error', text: `La imagen "${fileName}" supera el límite máximo permitido de 1.5 MB.` });
+      return null;
+    }
     return compressed;
   };
 
@@ -444,7 +467,7 @@ const Ventas = () => {
       const clienteId = response.data.id;
 
       // Subir fotos si existen
-      if (fileFrontal || filePosterior) {
+      if (fileFrontal || filePosterior || fileFachada) {
         try {
           const uploadData = new FormData();
           if (fileFrontal) {
@@ -457,6 +480,11 @@ const Ventas = () => {
             const name = compPost.name && compPost.name.includes('.') ? compPost.name : 'posterior.jpg';
             uploadData.append('posterior', compPost, name);
           }
+          if (fileFachada) {
+            const compFach = await compressImage(fileFachada);
+            const name = compFach.name && compFach.name.includes('.') ? compFach.name : 'fachada.jpg';
+            uploadData.append('fachada', compFach, name);
+          }
           await clienteService.uploadCedula(clienteId, uploadData);
         } catch (uploadError) {
           // Si falla la subida de fotos, eliminar el cliente para no dejar registros huérfanos
@@ -466,7 +494,7 @@ const Ventas = () => {
             ? detail
             : Array.isArray(detail)
               ? detail.map(d => `${d.loc?.join('.') ?? ''}: ${d.msg}`).join(' | ')
-              : 'Error al subir las fotos de la cédula. El cliente no fue registrado.';
+              : 'Error al subir las fotos. El cliente no fue registrado.';
           setMessage({ type: 'error', text: errText });
           return;
         }
@@ -504,6 +532,7 @@ const Ventas = () => {
       });
       setFileFrontal(null);
       setFilePosterior(null);
+      setFileFachada(null);
     } catch (error) {
       // Parsear y mostrar el error exacto retornado por el backend
       const detail = error.response?.data?.detail;
@@ -1075,6 +1104,55 @@ const Ventas = () => {
                     >✕</button>
                     <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {filePosterior?.name || 'Imagen Pegada'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="contrato-input-group">
+                <label className="contrato-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Subir foto de la fachada</span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 'normal' }}>Opcional (Máx 1.5MB)</span>
+                </label>
+                <div className="contrato-file-row">
+                  <input
+                    className="contrato-file-input"
+                    placeholder={fileFachada ? `📎 ${fileFachada.name || 'Fachada cargada'}` : 'Pegar o arrastrar imagen de fachada (Ctrl+V)'}
+                    onPaste={(e) => handlePaste(e, setFileFachada, 'foto_fachada.jpg')}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, setFileFachada, 'foto_fachada.jpg')}
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    className="contrato-file-btn"
+                    onClick={() => document.getElementById('file-fachada').click()}
+                  >
+                    <span>📁</span> Subir
+                  </button>
+                </div>
+                <input
+                  id="file-fachada"
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    if (e.target.files[0]) {
+                      const f = await processImageFile(e.target.files[0], 'foto_fachada.jpg');
+                      setFileFachada(f);
+                    }
+                  }}
+                  accept="image/*"
+                />
+                {fileFachada && previewFachada && (
+                  <div style={{ position: 'relative', marginTop: '10px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.15)', padding: '4px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
+                    <img src={previewFachada} alt="Vista previa fachada" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '8px' }} />
+                    <button
+                      type="button"
+                      onClick={() => setFileFachada(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+                    >✕</button>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: '4px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {fileFachada?.name || 'Fachada'}
                     </div>
                   </div>
                 )}

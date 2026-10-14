@@ -86,16 +86,18 @@ const TECdt = () => {
     });
   }, [clientes, searchTerm, napFilter]);
 
-  // Normalizar enlace de WhatsApp para números de Ecuador u otros
+  // Normalizar enlace de WhatsApp para números de Ecuador u otros (usa el primer número si hay varios)
   const getWhatsAppLink = (rawNumber) => {
     if (!rawNumber) return null;
-    let clean = String(rawNumber).replace(/\D/g, '');
+    const parts = String(rawNumber).split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+/i);
+    const first = (parts[0] || '').trim();
+    let clean = first.replace(/\D/g, '');
     if (clean.startsWith('09') && clean.length === 10) {
       clean = '593' + clean.slice(1);
     } else if (clean.startsWith('9') && clean.length === 9) {
       clean = '593' + clean;
     }
-    return `https://wa.me/${clean}`;
+    return clean ? `https://wa.me/${clean}` : null;
   };
 
   return (

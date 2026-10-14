@@ -142,6 +142,30 @@ const WhatsApp = () => {
         }
     };
 
+    // Extraer únicamente el PRIMER número de WhatsApp válido de una cadena con uno o múltiples teléfonos
+    const getPrimerNumeroWhatsApp = (raw) => {
+        if (!raw) return '';
+        const str = String(raw).trim();
+        const partes = str.split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+|\s+e\s+|\s+and\s+|\s+or\s+|\s*-\s*/i).map(p => p.trim()).filter(Boolean);
+        for (const parte of partes) {
+            const digitos = parte.replace(/\D/g, '');
+            if (digitos.length >= 8 && digitos.length <= 15) {
+                if (digitos.startsWith('0') && digitos.length === 10) {
+                    return '593' + digitos.substring(1);
+                }
+                if (digitos.startsWith('593') && digitos.length === 12) {
+                    return digitos;
+                }
+                if (digitos.length === 9 && digitos.startsWith('9')) {
+                    return '593' + digitos;
+                }
+                return digitos;
+            }
+        }
+        const digitsOnly = str.replace(/\D/g, '');
+        return digitsOnly || '';
+    };
+
     const getClientesDestino = () => {
         let filtrados = listaClientes.filter(c => {
             const hasCelular = c.celular && String(c.celular).trim() !== '';
@@ -196,15 +220,39 @@ const WhatsApp = () => {
             return true;
         });
 
+        // Deduplicar clientes para que nunca se repita ni se envíe doble vez al mismo cliente:
+        // Se deduplica por: ID, Cédula (si existe) y Primer número válido de WhatsApp
+        const deduplicados = [];
+        const seenIds = new Set();
+        const seenCedulas = new Set();
+        const seenNumeros = new Set();
+
+        for (const c of filtrados) {
+            if (!c || seenIds.has(c.id)) continue;
+
+            const primerNum = getPrimerNumeroWhatsApp(c.celular);
+            if (!primerNum) continue;
+
+            const ced = String(c.cedula || '').trim().toLowerCase();
+            if (ced && seenCedulas.has(ced)) continue;
+
+            if (seenNumeros.has(primerNum)) continue;
+
+            seenIds.add(c.id);
+            if (ced) seenCedulas.add(ced);
+            seenNumeros.add(primerNum);
+            deduplicados.push(c);
+        }
+
         // Ordenar clientes por ID ascendente para envíos ordenados y predecibles
-        filtrados.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+        deduplicados.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
 
         // Limitar cantidad si se especificó un límite por tanda
         if (limiteMensajes && !isNaN(parseInt(limiteMensajes, 10)) && parseInt(limiteMensajes, 10) > 0) {
-            filtrados = filtrados.slice(0, parseInt(limiteMensajes, 10));
+            return deduplicados.slice(0, parseInt(limiteMensajes, 10));
         }
 
-        return filtrados;
+        return deduplicados;
     };
 
     const getClientesDestinoCount = () => {
@@ -212,7 +260,7 @@ const WhatsApp = () => {
     };
 
     const getTotalClientesFiltradosSinLimite = () => {
-        return listaClientes.filter(c => {
+        const filtrados = listaClientes.filter(c => {
             const hasCelular = c.celular && String(c.celular).trim() !== '';
             if (!hasCelular) return false;
             if (estadoSeleccionado !== 'TODOS') {
@@ -234,7 +282,29 @@ const WhatsApp = () => {
                 if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) return false;
             }
             return true;
-        }).length;
+        });
+
+        // Deduplicar para reflejar el conteo real exacto
+        const seenIds = new Set();
+        const seenCedulas = new Set();
+        const seenNumeros = new Set();
+        let conteo = 0;
+
+        for (const c of filtrados) {
+            if (!c || seenIds.has(c.id)) continue;
+            const primerNum = getPrimerNumeroWhatsApp(c.celular);
+            if (!primerNum) continue;
+            const ced = String(c.cedula || '').trim().toLowerCase();
+            if (ced && seenCedulas.has(ced)) continue;
+            if (seenNumeros.has(primerNum)) continue;
+
+            seenIds.add(c.id);
+            if (ced) seenCedulas.add(ced);
+            seenNumeros.add(primerNum);
+            conteo++;
+        }
+
+        return conteo;
     };
 
     const getConteoClientesProgramados = (filtro = filtroClientes) => {
@@ -247,12 +317,32 @@ const WhatsApp = () => {
             return isActivo && hasCelular;
         });
 
-        if (filtro === 'deuda') {
-            return activos.filter(c => parseFloat(c.saldo || 0) > 0).length;
-        } else if (filtro === 'al_dia' || filtro === 'pago' || filtro === 'sin_deuda') {
-            return activos.filter(c => parseFloat(c.saldo || 0) <= 0).length;
+        // Deduplicar clientes activos para el conteo de la programación
+        const seenIds = new Set();
+        const seenCedulas = new Set();
+        const seenNumeros = new Set();
+        const unicos = [];
+
+        for (const c of activos) {
+            if (!c || seenIds.has(c.id)) continue;
+            const primerNum = getPrimerNumeroWhatsApp(c.celular);
+            if (!primerNum) continue;
+            const ced = String(c.cedula || '').trim().toLowerCase();
+            if (ced && seenCedulas.has(ced)) continue;
+            if (seenNumeros.has(primerNum)) continue;
+
+            seenIds.add(c.id);
+            if (ced) seenCedulas.add(ced);
+            seenNumeros.add(primerNum);
+            unicos.push(c);
         }
-        return activos.length;
+
+        if (filtro === 'deuda') {
+            return unicos.filter(c => parseFloat(c.saldo || 0) > 0).length;
+        } else if (filtro === 'al_dia' || filtro === 'pago' || filtro === 'sin_deuda') {
+            return unicos.filter(c => parseFloat(c.saldo || 0) <= 0).length;
+        }
+        return unicos.length;
     };
 
     const renderDestinoBadge = (filtro) => {

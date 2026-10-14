@@ -453,7 +453,7 @@ const Administrar = () => {
                             <option value="No">Digitalizada: No</option>
                             <option value="Si">Digitalizada: Si</option>
                           </select>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(editData.cedula_frontal || editData.cedula_posterior) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(editData.cedula_frontal || editData.cedula_posterior || editData.foto_fachada) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
                         </div>
                       </td>
                       <td style={cellStyle}>
@@ -495,7 +495,7 @@ const Administrar = () => {
                       <td style={cellStyle}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <span style={{ color: c.cedula_tipo === 'Si' ? '#4ade80' : '#94a3b8', fontSize: '0.75rem' }}>Digitalizada: {c.cedula_tipo || 'No'}</span>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(c.cedula_frontal || c.cedula_posterior) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{(c.cedula_frontal || c.cedula_posterior || c.foto_fachada) ? '✅ Fotos OK' : '❌ Sin fotos'}</span>
                         </div>
                       </td>
                       <td style={cellStyle}>
@@ -547,6 +547,7 @@ const Administrar = () => {
                                 cedula_tipo: c.cedula_tipo || '',
                                 cedula_frontal: c.cedula_frontal || null,
                                 cedula_posterior: c.cedula_posterior || null,
+                                foto_fachada: c.foto_fachada || null,
                                 mantenimiento: !!c.mantenimiento
                               });
                             }}>✏️ Editar</button>

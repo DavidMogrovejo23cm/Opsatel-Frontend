@@ -70,6 +70,9 @@ export const clienteService = {
   uploadCedula: (id, formData) => api.post(`/clientes/${id}/upload-cedula`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  uploadFachada: (id, formData) => api.post(`/clientes/${id}/upload-fachada`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   migrar: (id) => api.post(`/clientes/${id}/migrar`),
   pasarActivacion: (id) => api.patch(`/clientes/${id}/pasar-a-activacion`),
   activar: (id, data) => api.patch(`/clientes/${id}/configuracion-tecnica`, data),

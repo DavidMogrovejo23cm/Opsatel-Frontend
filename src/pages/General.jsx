@@ -41,7 +41,18 @@ const General = () => {
   const [planesList, setPlanesList] = useState([]);
   const [fileFrontal, setFileFrontal] = useState(null);
   const [filePosterior, setFilePosterior] = useState(null);
+  const [fileFachada, setFileFachada] = useState(null);
   const [uploadingCedula, setUploadingCedula] = useState(false);
+
+  // Estados para modal de gestión y subida de fotos (Frontal, Posterior, Fachada)
+  const [selectedPhotoClient, setSelectedPhotoClient] = useState(null);
+  const [modalFileFrontal, setModalFileFrontal] = useState(null);
+  const [modalFilePosterior, setModalFilePosterior] = useState(null);
+  const [modalFileFachada, setModalFileFachada] = useState(null);
+  const [modalPreviewFrontal, setModalPreviewFrontal] = useState(null);
+  const [modalPreviewPosterior, setModalPreviewPosterior] = useState(null);
+  const [modalPreviewFachada, setModalPreviewFachada] = useState(null);
+  const [modalUploading, setModalUploading] = useState(false);
 
   // Definición de las columnas del sistema
   const allColumns = [
@@ -60,6 +71,7 @@ const General = () => {
       else if (col === 'ip') widths[col] = 130;
       else if (col === 'celular') widths[col] = 130;
       else if (col === 'cedula') widths[col] = 110;
+      else if (col === 'fotos_cedula') widths[col] = 185;
       else if (col === 'cod' || col === 'facturas') widths[col] = 90;
       else widths[col] = 150;
     });
@@ -151,46 +163,87 @@ const General = () => {
       const adicVal = parseFloat(clienteActual?.adicional || 0);
       const totalPendienteSum = (clienteActual?.total_pago !== undefined && clienteActual?.total_pago !== null) ? parseFloat(clienteActual.total_pago) : (saldoVal + plusVal + adicVal);
       setTempValue(String(totalPendienteSum));
+    } else if (col === 'ubicacion_cliente') {
+      setTempValue(clienteActual?.ubicacion !== undefined && clienteActual?.ubicacion !== null ? String(clienteActual.ubicacion) : (clienteActual?.direccion || ''));
     } else {
       setTempValue(value !== undefined && value !== null ? String(value) : '');
     }
   };
 
-  const compressImage = (file, maxWidth = 1600, quality = 0.82) => {
+  useEffect(() => {
+    if (modalFileFrontal) {
+      const reader = new FileReader();
+      reader.onloadend = () => setModalPreviewFrontal(reader.result);
+      reader.readAsDataURL(modalFileFrontal);
+    } else {
+      setModalPreviewFrontal(null);
+    }
+  }, [modalFileFrontal]);
+
+  useEffect(() => {
+    if (modalFilePosterior) {
+      const reader = new FileReader();
+      reader.onloadend = () => setModalPreviewPosterior(reader.result);
+      reader.readAsDataURL(modalFilePosterior);
+    } else {
+      setModalPreviewPosterior(null);
+    }
+  }, [modalFilePosterior]);
+
+  useEffect(() => {
+    if (modalFileFachada) {
+      const reader = new FileReader();
+      reader.onloadend = () => setModalPreviewFachada(reader.result);
+      reader.readAsDataURL(modalFileFachada);
+    } else {
+      setModalPreviewFachada(null);
+    }
+  }, [modalFileFachada]);
+
+  const compressImage = (file, maxWidth = 2048, quality = 0.88) => {
     return new Promise((resolve) => {
       if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > maxWidth || height > maxWidth) {
-            if (width > height) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            } else {
-              width = Math.round((width * maxWidth) / height);
-              height = maxWidth;
+          const attemptCompress = (wMax, qual) => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > wMax || height > wMax) {
+              if (width > height) {
+                height = Math.round((height * wMax) / width);
+                width = wMax;
+              } else {
+                width = Math.round((width * wMax) / height);
+                height = wMax;
+              }
             }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) return resolve(file);
-              const compressedFile = new File([blob], file.name || 'cedula.jpg', {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-              });
-              resolve(compressedFile);
-            },
-            'image/jpeg',
-            quality
-          );
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return resolve(file);
+                // Asegurar que ninguna foto supere 1.5 MB (1,572,864 bytes)
+                if (blob.size > 1.5 * 1024 * 1024 && qual > 0.45) {
+                  return attemptCompress(Math.round(wMax * 0.85), qual - 0.12);
+                }
+                const rawName = file.name || 'foto.jpg';
+                const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
+                const compressedFile = new File([blob], `${baseName}.jpg`, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              },
+              'image/jpeg',
+              qual
+            );
+          };
+          attemptCompress(maxWidth, quality);
         };
         img.onerror = () => resolve(file);
         img.src = event.target.result;
@@ -200,27 +253,162 @@ const General = () => {
     });
   };
 
-  const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost) => {
+  const processModalImage = async (itemOrFile, defaultName = 'foto.jpg') => {
+    if (!itemOrFile) return null;
+    let file = null;
+    let mimeType = 'image/jpeg';
+    let fileName = defaultName;
+
+    if (itemOrFile instanceof File) {
+      file = itemOrFile;
+      mimeType = file.type || 'image/jpeg';
+      fileName = file.name || defaultName;
+    } else if (itemOrFile instanceof Blob) {
+      file = itemOrFile;
+      mimeType = file.type || 'image/jpeg';
+    } else if (typeof itemOrFile === 'string') {
+      const str = itemOrFile.trim();
+      if (str.startsWith('data:image/')) {
+        try {
+          const arr = str.split(',');
+          const mimeMatch = arr[0].match(/:(.*?);/);
+          mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          file = new Blob([u8arr], { type: mimeType });
+        } catch (err) {
+          console.error("Error al procesar data URL:", err);
+          return null;
+        }
+      }
+    }
+
+    if (!file) return null;
+    const baseFile = file instanceof File ? file : new File([file], fileName, { type: mimeType });
+    const compressed = await compressImage(baseFile);
+    if (compressed && compressed.size > 1.6 * 1024 * 1024) {
+      showError('La imagen supera el límite máximo permitido de 1.5 MB.');
+      return null;
+    }
+    return compressed;
+  };
+
+  const handleModalPaste = async (e, setFile, defaultName) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) {
+          const processed = await processModalImage(file, defaultName);
+          if (processed) {
+            setFile(processed);
+            return;
+          }
+        }
+      }
+    }
+
+    const items = clipboardData.items;
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1 || item.kind === 'file') {
+          const blob = item.getAsFile();
+          if (blob) {
+            const processed = await processModalImage(blob, defaultName);
+            if (processed) {
+              setFile(processed);
+              return;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const openPhotoModal = (cliente) => {
+    setSelectedPhotoClient(cliente);
+    setModalFileFrontal(null);
+    setModalFilePosterior(null);
+    setModalFileFachada(null);
+    setModalPreviewFrontal(null);
+    setModalPreviewPosterior(null);
+    setModalPreviewFachada(null);
+  };
+
+  const handleSaveModalPhotos = async () => {
+    if (!selectedPhotoClient) return;
+    if (!modalFileFrontal && !modalFilePosterior && !modalFileFachada) {
+      showWarning('Selecciona o pega al menos una foto antes de guardar.');
+      return;
+    }
+
+    try {
+      setModalUploading(true);
+      const uploadData = new FormData();
+      if (modalFileFrontal) {
+        const compFront = await compressImage(modalFileFrontal);
+        uploadData.append('frontal', compFront, compFront.name || 'frontal.jpg');
+      }
+      if (modalFilePosterior) {
+        const compPost = await compressImage(modalFilePosterior);
+        uploadData.append('posterior', compPost, compPost.name || 'posterior.jpg');
+      }
+      if (modalFileFachada) {
+        const compFach = await compressImage(modalFileFachada);
+        uploadData.append('fachada', compFach, compFach.name || 'fachada.jpg');
+      }
+
+      await clienteService.uploadCedula(selectedPhotoClient.id, uploadData);
+      showSuccess('Fotos actualizadas correctamente');
+      setSelectedPhotoClient(null);
+      setModalFileFrontal(null);
+      setModalFilePosterior(null);
+      setModalFileFachada(null);
+      fetchData();
+    } catch (err) {
+      showError('Error al subir fotos: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setModalUploading(false);
+    }
+  };
+
+  const handleSaveCedulaTipo = async (id, newCedulaTipo, fileFront, filePost, fileFach) => {
     try {
       setUploadingCedula(true);
 
       const targetClient = clientes.find(c => c.id === id);
-      const hasExistingPhoto = targetClient && ((targetClient.cedula_frontal && targetClient.cedula_frontal.trim() !== '') || (targetClient.cedula_posterior && targetClient.cedula_posterior.trim() !== ''));
-      const hasNewPhoto = !!(fileFront || filePost);
+      const hasExistingPhoto = targetClient && (
+        (targetClient.cedula_frontal && targetClient.cedula_frontal.trim() !== '') ||
+        (targetClient.cedula_posterior && targetClient.cedula_posterior.trim() !== '') ||
+        (targetClient.foto_fachada && targetClient.foto_fachada.trim() !== '')
+      );
+      const hasNewPhoto = !!(fileFront || filePost || fileFach);
 
       const finalCedulaTipo = (hasExistingPhoto || hasNewPhoto) ? 'Si' : (newCedulaTipo || 'No');
 
       await clienteService.actualizar(id, { cedula_tipo: finalCedulaTipo });
 
-      if (fileFront || filePost) {
+      if (fileFront || filePost || fileFach) {
         const uploadData = new FormData();
         if (fileFront) {
           const compFront = await compressImage(fileFront);
-          uploadData.append('frontal', compFront);
+          uploadData.append('frontal', compFront, compFront.name || 'frontal.jpg');
         }
         if (filePost) {
           const compPost = await compressImage(filePost);
-          uploadData.append('posterior', compPost);
+          uploadData.append('posterior', compPost, compPost.name || 'posterior.jpg');
+        }
+        if (fileFach) {
+          const compFach = await compressImage(fileFach);
+          uploadData.append('fachada', compFach, compFach.name || 'fachada.jpg');
         }
         await clienteService.uploadCedula(id, uploadData);
       }
@@ -229,6 +417,7 @@ const General = () => {
       setEditingCell(null);
       setFileFrontal(null);
       setFilePosterior(null);
+      setFileFachada(null);
       fetchData();
     } catch (error) {
       console.error(error);
@@ -280,6 +469,13 @@ const General = () => {
       if (valToSave && String(valToSave).trim() !== '') {
         payload.facturas = 'SI';
       }
+    } else if (col === 'ubicacion_cliente') {
+      const origUbicacion = clienteActual?.ubicacion || clienteActual?.direccion || '';
+      if (valToSave === origUbicacion) {
+        setEditingCell(null);
+        return;
+      }
+      payload = { ubicacion: valToSave };
     } else {
       if (valToSave === (original || '')) {
         setEditingCell(null);
@@ -1176,6 +1372,9 @@ const General = () => {
                           key={col}
                           onClick={() => {
                             if (!isCellEditable) return;
+                            if (col === 'fotos_cedula') {
+                              return;
+                            }
                             if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
                               const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
                               const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
@@ -1184,6 +1383,10 @@ const General = () => {
                           }}
                           onDoubleClick={() => {
                             if (!isCellEditable) return;
+                            if (col === 'fotos_cedula') {
+                              openPhotoModal(c);
+                              return;
+                            }
                             if (col !== 'estado') {
                               const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
                               const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col]));
@@ -1306,20 +1509,24 @@ const General = () => {
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
                                       {fileFrontal ? '✅ Front.' : '📸 Front.'}
-                                      <input type="file" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
                                     </label>
                                     <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
                                       {filePosterior ? '✅ Post.' : '📸 Post.'}
-                                      <input type="file" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                                    </label>
+                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFachada ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFachada ? '#000' : '#fff' }}>
+                                      {fileFachada ? '✅ Fachada' : '📸 Fachada'}
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFileFachada(e.target.files[0])} />
                                     </label>
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                                    {(fileFrontal || filePosterior) && (
+                                    {(fileFrontal || filePosterior || fileFachada) && (
                                       <button
                                         type="button"
                                         className="btn btn-primary"
                                         disabled={uploadingCedula}
-                                        onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior)}
+                                        onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior, fileFachada)}
                                         style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                                         title="Subir Fotos Seleccionadas"
                                       >
@@ -1334,6 +1541,7 @@ const General = () => {
                                         setEditingCell(null);
                                         setFileFrontal(null);
                                         setFilePosterior(null);
+                                        setFileFachada(null);
                                         setTempValue('');
                                       }}
                                       style={{ padding: '4px 8px', fontSize: '0.75rem' }}
@@ -1347,7 +1555,7 @@ const General = () => {
                                 <input
                                   autoFocus
                                   className="input"
-                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
+                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : col === 'ubicacion_cliente' ? 'Ej: -2.89, -79.00 o Google Maps' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
                                   style={{
                                     width: '100%',
                                     padding: '4px 8px',
@@ -1425,7 +1633,7 @@ const General = () => {
                                   return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
                                 }
                                 if (col === 'cedula_tipo') {
-                                  const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
+                                  const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '') || (c.foto_fachada && String(c.foto_fachada).trim() !== '');
                                   const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
                                   const displayVal = isSi ? 'Si' : 'No';
                                   return (
@@ -1455,11 +1663,43 @@ const General = () => {
                                   );
                                 }
                                 if (col === 'fotos_cedula') {
-                                  return <div style={{ display: 'flex', gap: '8px' }}>
-                                    {c.cedula_frontal && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Front.</a>}
-                                    {c.cedula_posterior && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>Post.</a>}
-                                    {!c.cedula_frontal && !c.cedula_posterior && '-'}
-                                  </div>;
+                                  const hasFront = !!(c.cedula_frontal && String(c.cedula_frontal).trim() !== '');
+                                  const hasPost = !!(c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
+                                  const hasFachada = !!(c.foto_fachada && String(c.foto_fachada).trim() !== '');
+
+                                  return (
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        {hasFront && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Front.</a>}
+                                        {hasPost && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Post.</a>}
+                                        {hasFachada && <a href={c.foto_fachada} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#38bdf8', fontWeight: 'bold' }}>fot.fachada</a>}
+                                        {!hasFront && !hasPost && !hasFachada && <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                      </div>
+                                      {canModifyTable && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openPhotoModal(c);
+                                          }}
+                                          style={{
+                                            background: 'rgba(99, 102, 241, 0.2)',
+                                            border: '1px solid rgba(99, 102, 241, 0.4)',
+                                            color: '#c7d2fe',
+                                            padding: '2px 6px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                          title="Subir o gestionar fotos de cédula y fachada"
+                                        >
+                                          📷 Subir
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
                                 }
                                 if (col === 'observaciones') {
                                   return (
@@ -1488,15 +1728,18 @@ const General = () => {
                                   const ubicacion = c.ubicacion || c.direccion || null;
                                   if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
                                   return (
-                                    <a
-                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                      title={ubicacion}
-                                    >
-                                      📍 {ubicacion.length > 30 ? ubicacion.substring(0, 30) + '...' : ubicacion}
-                                    </a>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', maxWidth: '100%', overflow: 'hidden' }}>
+                                      <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                        title={`Abrir en Google Maps: ${ubicacion} (Doble clic en la celda para editar)`}
+                                      >
+                                        📍 {ubicacion.length > 25 ? ubicacion.substring(0, 25) + '...' : ubicacion}
+                                      </a>
+                                    </div>
                                   );
                                 }
                                 if (col === 'comentarios') {
@@ -1862,6 +2105,256 @@ const General = () => {
                 Entendido
               </button>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* MODAL DE GESTIÓN Y SUBIDA DE FOTOS (CÉDULA Y FACHADA) */}
+      {selectedPhotoClient && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            if (!modalUploading) {
+              setSelectedPhotoClient(null);
+              setModalFileFrontal(null);
+              setModalFilePosterior(null);
+              setModalFileFachada(null);
+            }
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#131722',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '780px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📸</span> Fotografías del Contrato
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedPhotoClient.nombre}</strong> (ID: {selectedPhotoClient.id}) • Máx 1.5 MB por foto
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!modalUploading) {
+                    setSelectedPhotoClient(null);
+                    setModalFileFrontal(null);
+                    setModalFilePosterior(null);
+                    setModalFileFachada(null);
+                  }
+                }}
+                disabled={modalUploading}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '4px 8px'
+                }}
+              >✕</button>
+            </div>
+
+            {/* Grid de 3 Fotos: Frontal, Posterior, Fachada */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {/* 1. Cédula Frontal */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#60a5fa' }}>
+                  🪪 Cédula Frontal
+                </div>
+                <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '6px', marginBottom: '10px' }}>
+                  {modalPreviewFrontal ? (
+                    <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+                      <img src={modalPreviewFrontal} alt="Preview Frontal" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '6px' }} />
+                      <button
+                        type="button"
+                        onClick={() => setModalFileFrontal(null)}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '20px', height: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' }}
+                      >✕</button>
+                    </div>
+                  ) : selectedPhotoClient.cedula_frontal ? (
+                    <div style={{ textAlign: 'center' }}>
+                      <img src={selectedPhotoClient.cedula_frontal} alt="Actual Frontal" style={{ maxWidth: '100%', maxHeight: '90px', borderRadius: '6px', opacity: 0.8 }} />
+                      <div style={{ marginTop: '4px' }}>
+                        <a href={selectedPhotoClient.cedula_frontal} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: '#60a5fa', textDecoration: 'underline' }}>Ver original</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Sin foto actual</span>
+                  )}
+                </div>
+                <input
+                  placeholder="Pegar (Ctrl+V) o arrastrar"
+                  onPaste={(e) => handleModalPaste(e, setModalFileFrontal, 'cedula_frontal.jpg')}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files?.[0]) processModalImage(e.dataTransfer.files[0], 'cedula_frontal.jpg').then(f => f && setModalFileFrontal(f));
+                  }}
+                  readOnly
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '0.72rem', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#cbd5e1', marginBottom: '8px', textAlign: 'center' }}
+                />
+                <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '0.75rem', textAlign: 'center', cursor: 'pointer', display: 'block', borderRadius: '6px' }}>
+                  📁 {modalFileFrontal ? 'Cambiar Foto' : 'Seleccionar Foto'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const f = await processModalImage(e.target.files[0], 'cedula_frontal.jpg');
+                      if (f) setModalFileFrontal(f);
+                    }
+                  }} />
+                </label>
+              </div>
+
+              {/* 2. Cédula Posterior */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#60a5fa' }}>
+                  🪪 Cédula Posterior
+                </div>
+                <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '6px', marginBottom: '10px' }}>
+                  {modalPreviewPosterior ? (
+                    <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+                      <img src={modalPreviewPosterior} alt="Preview Posterior" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '6px' }} />
+                      <button
+                        type="button"
+                        onClick={() => setModalFilePosterior(null)}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '20px', height: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' }}
+                      >✕</button>
+                    </div>
+                  ) : selectedPhotoClient.cedula_posterior ? (
+                    <div style={{ textAlign: 'center' }}>
+                      <img src={selectedPhotoClient.cedula_posterior} alt="Actual Posterior" style={{ maxWidth: '100%', maxHeight: '90px', borderRadius: '6px', opacity: 0.8 }} />
+                      <div style={{ marginTop: '4px' }}>
+                        <a href={selectedPhotoClient.cedula_posterior} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: '#60a5fa', textDecoration: 'underline' }}>Ver original</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Sin foto actual</span>
+                  )}
+                </div>
+                <input
+                  placeholder="Pegar (Ctrl+V) o arrastrar"
+                  onPaste={(e) => handleModalPaste(e, setModalFilePosterior, 'cedula_posterior.jpg')}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files?.[0]) processModalImage(e.dataTransfer.files[0], 'cedula_posterior.jpg').then(f => f && setModalFilePosterior(f));
+                  }}
+                  readOnly
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '0.72rem', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#cbd5e1', marginBottom: '8px', textAlign: 'center' }}
+                />
+                <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '0.75rem', textAlign: 'center', cursor: 'pointer', display: 'block', borderRadius: '6px' }}>
+                  📁 {modalFilePosterior ? 'Cambiar Foto' : 'Seleccionar Foto'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const f = await processModalImage(e.target.files[0], 'cedula_posterior.jpg');
+                      if (f) setModalFilePosterior(f);
+                    }
+                  }} />
+                </label>
+              </div>
+
+              {/* 3. Foto Fachada */}
+              <div style={{ background: 'rgba(56, 189, 248, 0.04)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#38bdf8' }}>
+                  🏠 Foto de la Fachada
+                </div>
+                <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '6px', marginBottom: '10px' }}>
+                  {modalPreviewFachada ? (
+                    <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+                      <img src={modalPreviewFachada} alt="Preview Fachada" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '6px' }} />
+                      <button
+                        type="button"
+                        onClick={() => setModalFileFachada(null)}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '20px', height: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' }}
+                      >✕</button>
+                    </div>
+                  ) : selectedPhotoClient.foto_fachada ? (
+                    <div style={{ textAlign: 'center' }}>
+                      <img src={selectedPhotoClient.foto_fachada} alt="Actual Fachada" style={{ maxWidth: '100%', maxHeight: '90px', borderRadius: '6px', opacity: 0.8 }} />
+                      <div style={{ marginTop: '4px' }}>
+                        <a href={selectedPhotoClient.foto_fachada} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: '#38bdf8', textDecoration: 'underline' }}>Ver fot.fachada</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Sin foto de fachada</span>
+                  )}
+                </div>
+                <input
+                  placeholder="Pegar (Ctrl+V) o arrastrar"
+                  onPaste={(e) => handleModalPaste(e, setModalFileFachada, 'foto_fachada.jpg')}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files?.[0]) processModalImage(e.dataTransfer.files[0], 'foto_fachada.jpg').then(f => f && setModalFileFachada(f));
+                  }}
+                  readOnly
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '0.72rem', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#cbd5e1', marginBottom: '8px', textAlign: 'center' }}
+                />
+                <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '0.75rem', textAlign: 'center', cursor: 'pointer', display: 'block', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
+                  📁 {modalFileFachada ? 'Cambiar Fachada' : 'Seleccionar Fachada'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const f = await processModalImage(e.target.files[0], 'foto_fachada.jpg');
+                      if (f) setModalFileFachada(f);
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={modalUploading}
+                onClick={() => {
+                  setSelectedPhotoClient(null);
+                  setModalFileFrontal(null);
+                  setModalFilePosterior(null);
+                  setModalFileFachada(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={modalUploading || (!modalFileFrontal && !modalFilePosterior && !modalFileFachada)}
+                onClick={handleSaveModalPhotos}
+                style={{ minWidth: '130px' }}
+              >
+                {modalUploading ? '⏳ Guardando...' : '💾 Guardar Fotos'}
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
