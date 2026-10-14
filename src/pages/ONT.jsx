@@ -7,7 +7,7 @@ const ClientCard = ({ c }) => {
   const [lines, setLines] = useState({
     ont: c.ont || '',
     servicio: c.servicio || '',
-    breach: c.breach || ''
+    breach: c.breach || c.bridge || ''
   });
   const [generating, setGenerating] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved, error
@@ -16,12 +16,13 @@ const ClientCard = ({ c }) => {
     if (!c.puerto || !c.nodo || !newMac) return;
     setGenerating(true);
     try {
+      const bridgeVal = c.breach || c.bridge || '';
       const res = await clienteService.getNextTecnicoValues(
         c.nodo,
         c.puerto,
         newMac,
         c.nombre,
-        !!(c.breach && c.breach.trim().length > 0 && c.breach.toUpperCase() !== 'NONE'),
+        !!(bridgeVal && bridgeVal.trim().length > 0 && bridgeVal.toUpperCase() !== 'NONE'),
         c.id
       );
       
@@ -40,6 +41,7 @@ const ClientCard = ({ c }) => {
         ont: newLines.ont,
         servicio: newLines.servicio,
         breach: newLines.breach,
+        bridge: newLines.breach,
         id_port: res.data.id_port,
         service_port: res.data.service_port,
         ip: res.data.ip

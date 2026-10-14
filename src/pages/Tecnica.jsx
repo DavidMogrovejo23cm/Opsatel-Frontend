@@ -69,7 +69,8 @@ const Tecnica = () => {
       try {
         await clienteService.actualizar(selectedCliente.id, {
           ...formData,
-          breach: hasBreach ? formData.breach : 'NONE'
+          breach: hasBreach ? formData.breach : 'NONE',
+          bridge: hasBreach ? formData.breach : 'NONE'
         });
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
@@ -111,7 +112,8 @@ const Tecnica = () => {
 
   const handleSelect = (cliente) => {
     setSelectedCliente(cliente);
-    setHasBreach(false);
+    const bridgeVal = cliente.bridge || cliente.breach || '';
+    setHasBreach(!!(bridgeVal && bridgeVal !== 'NONE' && bridgeVal.trim().length > 0));
     setEditUbicacion(false);
 
     const planBase = planesList.find(p => p.nombre === cliente.plan);

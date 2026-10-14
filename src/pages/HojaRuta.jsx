@@ -16,6 +16,7 @@ const HojaRuta = () => {
     const [showObsModal, setShowObsModal] = useState(false);
     const [showAdminObsModal, setShowAdminObsModal] = useState(false);
     const [adminObsText, setAdminObsText] = useState('');
+    const [previewFoto, setPreviewFoto] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
@@ -77,7 +78,7 @@ const HojaRuta = () => {
 
     // Bloquear scroll del fondo cuando el modal está abierto
     useEffect(() => {
-        if (showModal || showObsModal || showAdminObsModal) {
+        if (showModal || showObsModal || showAdminObsModal || previewFoto) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -85,7 +86,18 @@ const HojaRuta = () => {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [showModal, showObsModal, showAdminObsModal]);
+    }, [showModal, showObsModal, showAdminObsModal, previewFoto]);
+
+    // Cerrar modal de foto con Escape
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && previewFoto) {
+                setPreviewFoto(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [previewFoto]);
 
     const activatedClients = useMemo(() => {
         if (!Array.isArray(clientes)) return [];
@@ -189,7 +201,8 @@ const HojaRuta = () => {
     const handleEdit = (r) => {
         setEditingId(r.id);
         setFormData({ ...r });
-        const fullClient = clientes.find(c => c.id === r.cliente_id);
+        const fullClient = (r.cliente_id ? clientes.find(c => c.id === r.cliente_id) : null) ||
+            (r.nombre_cliente ? clientes.find(c => c.nombre && c.nombre.trim().toLowerCase() === r.nombre_cliente.trim().toLowerCase()) : null);
         setSelectedClient(fullClient || { nombre: r.nombre_cliente, id: r.cliente_id });
         setModalSource(r.cliente_id ? 'CLIENTE' : 'GENERAL');
         setShowModal(true);
@@ -523,6 +536,66 @@ const HojaRuta = () => {
                                                     </div>
                                                 );
                                             })()}
+
+                                            {/* FOTO DE LA FACHADA (SOLO SI TIENE EL CLIENTE) */}
+                                            {(() => {
+                                                const clientObj = (r.cliente_id ? clientes.find(c => c.id === r.cliente_id) : null) ||
+                                                    (r.nombre_cliente ? clientes.find(c => c.nombre && c.nombre.trim().toLowerCase() === r.nombre_cliente.trim().toLowerCase()) : null);
+                                                const rawFoto = (r.foto_fachada && String(r.foto_fachada).trim() !== '')
+                                                    ? r.foto_fachada
+                                                    : (clientObj?.foto_fachada && String(clientObj.foto_fachada).trim() !== '' ? clientObj.foto_fachada : null);
+
+                                                if (!rawFoto) return null;
+                                                const fotoUrl = rawFoto.startsWith('http') || rawFoto.startsWith('data:') || rawFoto.startsWith('/') ? rawFoto : `/${rawFoto}`;
+
+                                                return (
+                                                    <div style={{ marginTop: '6px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreviewFoto({
+                                                                url: fotoUrl,
+                                                                cliente: r.nombre_cliente || clientObj?.nombre || 'Cliente',
+                                                                direccion: r.ubicacion_cliente || clientObj?.ubicacion || r.parroquia || ''
+                                                            })}
+                                                            className="btn-fachada-chip"
+                                                            title="Clic para ver foto de fachada ampliada"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                padding: '4px 8px',
+                                                                background: 'rgba(56, 189, 248, 0.12)',
+                                                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                                                borderRadius: '8px',
+                                                                color: '#38bdf8',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.68rem',
+                                                                fontWeight: 700,
+                                                                transition: 'all 0.2s ease',
+                                                                textDecoration: 'none',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                                                            }}
+                                                        >
+                                                            <img 
+                                                                src={fotoUrl} 
+                                                                alt="Fachada" 
+                                                                style={{ 
+                                                                    width: '28px', 
+                                                                    height: '28px', 
+                                                                    borderRadius: '4px', 
+                                                                    objectFit: 'cover',
+                                                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                                                    flexShrink: 0
+                                                                }} 
+                                                            />
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                                                                <span>🏠 Foto Fachada</span>
+                                                                <span style={{ fontSize: '0.58rem', color: '#94a3b8', fontWeight: 400 }}>Clic para ampliar</span>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td>
                                             <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -669,6 +742,46 @@ const HojaRuta = () => {
                                                         <p style={{ fontSize: '0.7rem' }}>Sin comentarios registrados</p>
                                                     </div>
                                                 )}
+                                                {selectedClient.foto_fachada && (
+                                                    <div style={{ marginTop: '8px' }}>
+                                                        <label style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Foto de la Fachada</label>
+                                                        <div style={{ marginTop: '4px' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const fUrl = selectedClient.foto_fachada.startsWith('http') || selectedClient.foto_fachada.startsWith('/') ? selectedClient.foto_fachada : `/${selectedClient.foto_fachada}`;
+                                                                    setPreviewFoto({
+                                                                        url: fUrl,
+                                                                        cliente: selectedClient.nombre,
+                                                                        direccion: selectedClient.ubicacion || selectedClient.direccion || ''
+                                                                    });
+                                                                }}
+                                                                style={{
+                                                                    background: 'rgba(56, 189, 248, 0.08)',
+                                                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                                                    borderRadius: '8px',
+                                                                    padding: '6px 10px',
+                                                                    cursor: 'pointer',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '8px',
+                                                                    color: '#38bdf8'
+                                                                }}
+                                                                title="Clic para ampliar foto de fachada"
+                                                            >
+                                                                <img 
+                                                                    src={selectedClient.foto_fachada.startsWith('http') || selectedClient.foto_fachada.startsWith('/') ? selectedClient.foto_fachada : `/${selectedClient.foto_fachada}`}
+                                                                    alt="Fachada"
+                                                                    style={{ width: '40px', height: '40px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.2)', objectFit: 'cover' }}
+                                                                />
+                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                                                                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>🏠 Ver Fachada</span>
+                                                                    <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Clic para ampliar</span>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                             );
                                         })() : editingId ? (
@@ -798,6 +911,37 @@ const HojaRuta = () => {
                                     <div className="input-group">
                                         <label className="label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dirección Física Exacta</label>
                                         <input className="input" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }} value={formData.ubicacion_cliente} onChange={e => setFormData({ ...formData, ubicacion_cliente: e.target.value })} />
+                                        {selectedClient?.foto_fachada && (
+                                            <div style={{ marginTop: '6px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const fUrl = selectedClient.foto_fachada.startsWith('http') || selectedClient.foto_fachada.startsWith('/') ? selectedClient.foto_fachada : `/${selectedClient.foto_fachada}`;
+                                                        setPreviewFoto({
+                                                            url: fUrl,
+                                                            cliente: formData.nombre_cliente || selectedClient.nombre,
+                                                            direccion: formData.ubicacion_cliente || selectedClient.ubicacion || ''
+                                                        });
+                                                    }}
+                                                    className="btn-fachada-chip"
+                                                    style={{
+                                                        background: 'rgba(56, 189, 248, 0.12)',
+                                                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                                                        borderRadius: '6px',
+                                                        padding: '4px 10px',
+                                                        fontSize: '0.72rem',
+                                                        fontWeight: 700,
+                                                        color: '#38bdf8',
+                                                        cursor: 'pointer',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px'
+                                                    }}
+                                                >
+                                                    <span>🏠 Ver Foto de Fachada del Cliente</span>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="input-group">
@@ -886,7 +1030,142 @@ const HojaRuta = () => {
                 )}
             </AnimatePresence>
 
+            {/* MODAL PREVISUALIZACIÓN FOTO DE FACHADA */}
+            <AnimatePresence>
+                {previewFoto && (
+                    <div 
+                        className="modal-overlay" 
+                        onClick={() => setPreviewFoto(null)}
+                        style={{ zIndex: 10000, background: 'rgba(2, 6, 23, 0.92)', backdropFilter: 'blur(10px)', padding: '20px' }}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.92, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            exit={{ scale: 0.92, opacity: 0 }} 
+                            onClick={(e) => e.stopPropagation()} 
+                            className="modal-content glass" 
+                            style={{ 
+                                maxWidth: '850px', 
+                                width: '100%', 
+                                padding: '24px', 
+                                borderRadius: '20px', 
+                                maxHeight: '92vh', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '16px',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.15)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>🏠</span> Foto de la Fachada
+                                    </h2>
+                                    {previewFoto.cliente && (
+                                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginTop: '4px' }}>
+                                            {previewFoto.cliente}
+                                        </div>
+                                    )}
+                                    {previewFoto.direccion && (
+                                        <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                            <span>📍</span> {previewFoto.direccion}
+                                        </div>
+                                    )}
+                                </div>
+                                <button 
+                                    onClick={() => setPreviewFoto(null)} 
+                                    className="close-btn" 
+                                    style={{ 
+                                        background: 'rgba(255,255,255,0.06)', 
+                                        border: '1px solid rgba(255,255,255,0.1)', 
+                                        color: 'white', 
+                                        fontSize: '1.4rem', 
+                                        cursor: 'pointer',
+                                        borderRadius: '50%',
+                                        width: '36px',
+                                        height: '36px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: 1
+                                    }}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+
+                            <div style={{ 
+                                flex: 1, 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center', 
+                                background: 'rgba(0, 0, 0, 0.4)', 
+                                borderRadius: '14px', 
+                                padding: '12px',
+                                minHeight: '260px',
+                                maxHeight: '65vh',
+                                overflow: 'hidden',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                            }}>
+                                <img 
+                                    src={previewFoto.url} 
+                                    alt={`Fachada de ${previewFoto.cliente || 'cliente'}`} 
+                                    style={{ 
+                                        maxWidth: '100%', 
+                                        maxHeight: '62vh', 
+                                        objectFit: 'contain', 
+                                        borderRadius: '10px',
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                                    }} 
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '8px' }}>
+                                <a 
+                                    href={previewFoto.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    style={{ 
+                                        fontSize: '0.8rem', 
+                                        color: '#38bdf8', 
+                                        textDecoration: 'none', 
+                                        display: 'inline-flex', 
+                                        alignItems: 'center', 
+                                        gap: '6px',
+                                        fontWeight: 600,
+                                        padding: '6px 12px',
+                                        background: 'rgba(56, 189, 248, 0.1)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(56, 189, 248, 0.25)'
+                                    }}
+                                >
+                                    <span>↗️</span> Abrir imagen completa / Descargar
+                                </a>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setPreviewFoto(null)} 
+                                    className="btn btn-primary" 
+                                    style={{ padding: '8px 24px', fontSize: '0.85rem' }}
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <style>{`
+                .btn-fachada-chip {
+                    transition: all 0.2s ease;
+                }
+                .btn-fachada-chip:hover {
+                    background: rgba(56, 189, 248, 0.22) !important;
+                    border-color: rgba(56, 189, 248, 0.6) !important;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
+                }
                 .hr-main-container { width: 100%; padding: 24px; box-sizing: border-box; }
                 .hr-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; gap: 20px; flex-wrap: wrap; }
                 .hr-header-info { flex: 0 0 auto; min-width: 240px; }

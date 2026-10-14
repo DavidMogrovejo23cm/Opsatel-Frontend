@@ -73,6 +73,7 @@ const General = () => {
       else if (col === 'cedula') widths[col] = 110;
       else if (col === 'fotos_cedula') widths[col] = 185;
       else if (col === 'cod' || col === 'facturas') widths[col] = 90;
+      else if (col === 'bridge') widths[col] = 160;
       else widths[col] = 150;
     });
     return widths;
@@ -103,7 +104,11 @@ const General = () => {
   const fetchData = async () => {
     try {
       const response = await clienteService.listar();
-      setClientes(response.data);
+      const mapped = (response.data || []).map(c => ({
+        ...c,
+        bridge: (c.bridge !== undefined && c.bridge !== null && c.bridge !== '') ? c.bridge : (c.breach || '')
+      }));
+      setClientes(mapped);
       if (response.data.length > 0) {
         console.log("DEBUG PRIMER CLIENTE:", response.data[0]);
       }
@@ -165,6 +170,9 @@ const General = () => {
       setTempValue(String(totalPendienteSum));
     } else if (col === 'ubicacion_cliente') {
       setTempValue(clienteActual?.ubicacion !== undefined && clienteActual?.ubicacion !== null ? String(clienteActual.ubicacion) : (clienteActual?.direccion || ''));
+    } else if (col === 'bridge') {
+      const bridgeVal = (clienteActual?.bridge !== undefined && clienteActual?.bridge !== null) ? clienteActual.bridge : (clienteActual?.breach || '');
+      setTempValue(bridgeVal !== undefined && bridgeVal !== null ? String(bridgeVal) : '');
     } else {
       setTempValue(value !== undefined && value !== null ? String(value) : '');
     }
@@ -434,6 +442,7 @@ const General = () => {
     let original = clienteActual?.[col];
     if (col === 'total') original = clienteActual?.pago_mensual;
     else if (col === 'total_pago') original = clienteActual?.total_pago;
+    else if (col === 'bridge') original = (clienteActual?.bridge !== undefined && clienteActual?.bridge !== null) ? clienteActual.bridge : clienteActual?.breach;
 
     let valToSave = tempValue;
     if (typeof valToSave === 'string') {
@@ -476,6 +485,12 @@ const General = () => {
         return;
       }
       payload = { ubicacion: valToSave };
+    } else if (col === 'bridge') {
+      if (valToSave === (original || '')) {
+        setEditingCell(null);
+        return;
+      }
+      payload = { breach: valToSave, bridge: valToSave };
     } else {
       if (valToSave === (original || '')) {
         setEditingCell(null);
@@ -682,7 +697,7 @@ const General = () => {
     }
 
     try {
-      const payload = action.payload || (action.col === 'total' ? { pago_mensual: action.value, total: action.value } : { [action.col]: action.value });
+      const payload = action.payload || (action.col === 'total' ? { pago_mensual: action.value, total: action.value } : action.col === 'bridge' ? { breach: action.value, bridge: action.value } : { [action.col]: action.value });
       await clienteService.actualizar(id, payload);
       setEditingCell(null);
       fetchData();
@@ -757,7 +772,7 @@ const General = () => {
     }
 
     try {
-      const payload = pendingAction.payload || (pendingAction.col === 'total' ? { pago_mensual: pendingAction.value, total: pendingAction.value } : { [pendingAction.col]: pendingAction.value });
+      const payload = pendingAction.payload || (pendingAction.col === 'total' ? { pago_mensual: pendingAction.value, total: pendingAction.value } : pendingAction.col === 'bridge' ? { breach: pendingAction.value, bridge: pendingAction.value } : { [pendingAction.col]: pendingAction.value });
       await clienteService.actualizar(id, payload);
       setEditingCell(null);
       setShowPinModal(false);
@@ -1236,7 +1251,7 @@ const General = () => {
                       overflow: 'hidden',
                       ...stickyStyle
                     }}>
-                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : col.replace('_', ' ')}
+                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : (col === 'bridge' || col === 'breach') ? 'BRIDGE' : col.replace('_', ' ')}
 
                       {/* Control para redimensionar la columna */}
                       <div
@@ -1389,7 +1404,7 @@ const General = () => {
                             }
                             if (col !== 'estado') {
                               const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                              const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col]));
+                              const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : (col === 'bridge' ? (c.bridge ?? c.breach) : c[col])));
                               handleStartEdit(c.id, col, currentVal);
                             }
                           }}
@@ -1555,7 +1570,7 @@ const General = () => {
                                 <input
                                   autoFocus
                                   className="input"
-                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : col === 'ubicacion_cliente' ? 'Ej: -2.89, -79.00 o Google Maps' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
+                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : col === 'ubicacion_cliente' ? 'Ej: -2.89, -79.00 o Google Maps' : col === 'bridge' ? 'Comando Bridge' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
                                   style={{
                                     width: '100%',
                                     padding: '4px 8px',
@@ -1804,7 +1819,21 @@ const General = () => {
                                 if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
                                   return formatToDMY(c[col]);
                                 }
-                                return c[col] !== undefined ? String(c[col] || '-') : '-';
+
+                                if (col === 'bridge' || col === 'breach') {
+                                  const bridgeVal = (c.bridge !== undefined && c.bridge !== null && c.bridge !== '') ? c.bridge : c.breach;
+                                  if (!bridgeVal || bridgeVal === 'NONE' || String(bridgeVal).trim() === '') {
+                                    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                  }
+                                  return (
+                                    <span style={{ fontFamily: 'monospace', color: '#fb923c', fontSize: '0.75rem', fontWeight: '500' }} title={bridgeVal}>
+                                      {bridgeVal}
+                                    </span>
+                                  );
+                                }
+
+                                const cellVal = c[col] !== undefined ? c[col] : (col === 'bridge' ? c.breach : undefined);
+                                return (cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '') ? String(cellVal) : '-';
                               })()}
                             </span>
                           )}
