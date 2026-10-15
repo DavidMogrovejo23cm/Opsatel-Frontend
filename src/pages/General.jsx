@@ -74,6 +74,7 @@ const General = () => {
       else if (col === 'fotos_cedula') widths[col] = 185;
       else if (col === 'cod' || col === 'facturas') widths[col] = 90;
       else if (col === 'bridge') widths[col] = 160;
+      else if (col === 'mac') widths[col] = 280;
       else widths[col] = 150;
     });
     return widths;
@@ -1828,6 +1829,26 @@ const General = () => {
                                   return (
                                     <span style={{ fontFamily: 'monospace', color: '#fb923c', fontSize: '0.75rem', fontWeight: '500' }} title={bridgeVal}>
                                       {bridgeVal}
+                                    </span>
+                                  );
+                                }
+
+                                if (col === 'mac') {
+                                  if (!c.mac || String(c.mac).trim() === '') {
+                                    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                  }
+                                  return (
+                                    <span style={{
+                                      fontFamily: 'monospace',
+                                      fontSize: '0.78rem',
+                                      color: '#a5b4fc',
+                                      background: 'rgba(99, 102, 241, 0.08)',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      letterSpacing: '0.3px',
+                                      display: 'inline-block'
+                                    }} title={c.mac}>
+                                      {c.mac}
                                     </span>
                                   );
                                 }

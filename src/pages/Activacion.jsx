@@ -1020,7 +1020,7 @@ const Activacion = () => {
                 6. 🛑Cancelar y volver a activar si se selecciono mal entre bridge y ont.
                 7. 🛑Cancelar y volver a activar si la potencia óptica es inválida o no se detecta.
                 8. 🛑Reiniciar router y volver a conectarlo en caso de no obtener ip en caso de ont verificar la Vlan en el equipo.
-                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe IP, use "REFRESCAR / REINICIAR ONT". Si solo necesita actualizar la lectura de potencia óptica, haga clic en "RF DB".</strong>
+                <strong style={{ color: '#38bdf8' }}>💡 Nota: Si el equipo no recibe IP, use "REFRESCAR / REINICIAR ONT". Si solo necesita actualizar la lectura de potencia óptica, haga clic en "REFRESCAR POTENCIA".</strong>
               </div>
             </div>
 
@@ -1041,7 +1041,7 @@ const Activacion = () => {
                   title="Consultar únicamente la potencia óptica (dBm) a la OLT sin reiniciar la ONT"
                   style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '10px 16px', borderRadius: 6, cursor: (confirming || refreshingPower) ? 'not-allowed' : 'pointer', fontWeight: 600 }}
                 >
-                  ⚡ {refreshingPower ? 'Consultando dB...' : 'RF DB'}
+                  ⚡ {refreshingPower ? 'Consultando Potencia...' : 'REFRESCAR POTENCIA'}
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
