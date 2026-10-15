@@ -41,10 +41,16 @@ const Activacion = () => {
   const [refreshStep, setRefreshStep] = useState('');
   const [refreshingPower, setRefreshingPower] = useState(false);
 
-  // Modal de Red y Contraseña (WiFi) Post-Aceptar
+  // Modal de Red, Contraseña y Fotos de Equipos Post-Activación
   const [showWifiModal, setShowWifiModal] = useState(false);
+  const [wifiStep, setWifiStep] = useState(1); // 1: Red y Contraseña, 2: Fotos de Equipos
   const [wifiData, setWifiData] = useState({ clienteId: null, clienteNombre: '', red: '', clave: '' });
   const [savingWifi, setSavingWifi] = useState(false);
+  const [deviceOntFile, setDeviceOntFile] = useState(null);
+  const [deviceRouterFile, setDeviceRouterFile] = useState(null);
+  const [deviceOntPreview, setDeviceOntPreview] = useState(null);
+  const [deviceRouterPreview, setDeviceRouterPreview] = useState(null);
+  const [savingDevicePhotos, setSavingDevicePhotos] = useState(false);
 
   // Activación Masiva (Bulk)
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -376,7 +382,12 @@ const Activacion = () => {
       const msg = res.data?.message || 'Activación confirmada y Hoja de Ruta actualizada a Realizado.';
       notify(msg, 'success');
       
-      // Abrir inmediatamente modal para ingresar red y contraseña
+      // Abrir inmediatamente modal para ingresar red, contraseña y fotos de equipos
+      setWifiStep(1);
+      setDeviceOntFile(null);
+      setDeviceRouterFile(null);
+      setDeviceOntPreview(null);
+      setDeviceRouterPreview(null);
       setWifiData({
         clienteId: targetClienteId,
         clienteNombre: targetClienteNombre,
@@ -392,7 +403,160 @@ const Activacion = () => {
     }
   };
 
-  const handleSaveWifi = async () => {
+  useEffect(() => {
+    if (deviceOntFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => setDeviceOntPreview(reader.result);
+      reader.readAsDataURL(deviceOntFile);
+    } else {
+      setDeviceOntPreview(null);
+    }
+  }, [deviceOntFile]);
+
+  useEffect(() => {
+    if (deviceRouterFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => setDeviceRouterPreview(reader.result);
+      reader.readAsDataURL(deviceRouterFile);
+    } else {
+      setDeviceRouterPreview(null);
+    }
+  }, [deviceRouterFile]);
+
+  const compressDeviceImage = (file, maxWidth = 2048, quality = 0.88) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const attemptCompress = (wMax, qual) => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > wMax || height > wMax) {
+              if (width > height) {
+                height = Math.round((height * wMax) / width);
+                width = wMax;
+              } else {
+                width = Math.round((width * wMax) / height);
+                height = wMax;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return resolve(file);
+                // Asegurar que ninguna foto supere 1.5 MB (1,572,864 bytes)
+                if (blob.size > 1.5 * 1024 * 1024 && qual > 0.45) {
+                  return attemptCompress(Math.round(wMax * 0.85), qual - 0.12);
+                }
+                const rawName = file.name || 'foto.jpg';
+                const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
+                const compressedFile = new File([blob], `${baseName}.jpg`, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              },
+              'image/jpeg',
+              qual
+            );
+          };
+          attemptCompress(maxWidth, quality);
+        };
+        img.onerror = () => resolve(file);
+        img.src = event.target.result;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const processDeviceImage = async (itemOrFile, defaultName = 'foto.jpg') => {
+    if (!itemOrFile) return null;
+    let file = null;
+    let mimeType = 'image/jpeg';
+    let fileName = defaultName;
+
+    if (itemOrFile instanceof File) {
+      file = itemOrFile;
+      mimeType = file.type || 'image/jpeg';
+      fileName = file.name || defaultName;
+    } else if (itemOrFile instanceof Blob) {
+      file = itemOrFile;
+      mimeType = file.type || 'image/jpeg';
+    } else if (typeof itemOrFile === 'string') {
+      const str = itemOrFile.trim();
+      if (str.startsWith('data:image/')) {
+        try {
+          const arr = str.split(',');
+          const mimeMatch = arr[0].match(/:(.*?);/);
+          mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          file = new Blob([u8arr], { type: mimeType });
+        } catch (err) {
+          console.error("Error al procesar data URL:", err);
+          return null;
+        }
+      }
+    }
+
+    if (!file) return null;
+    const baseFile = file instanceof File ? file : new File([file], fileName, { type: mimeType });
+    const compressed = await compressDeviceImage(baseFile);
+    if (compressed && compressed.size > 1.55 * 1024 * 1024) {
+      notify('La foto supera el límite máximo permitido de 1.5 MB.', 'error');
+      return null;
+    }
+    return compressed;
+  };
+
+  const handleDevicePaste = async (e, setFile, defaultName) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) {
+          const processed = await processDeviceImage(file, defaultName);
+          if (processed) {
+            setFile(processed);
+            return;
+          }
+        }
+      }
+    }
+
+    const items = clipboardData.items;
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1 || item.kind === 'file') {
+          const blob = item.getAsFile();
+          if (blob) {
+            const processed = await processDeviceImage(blob, defaultName);
+            if (processed) {
+              setFile(processed);
+              return;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const handleSaveWifi = async (advanceToPhotos = true) => {
     if (!wifiData.clienteId) return;
     setSavingWifi(true);
     try {
@@ -400,11 +564,15 @@ const Activacion = () => {
         red: wifiData.red?.trim() || '',
         clave: wifiData.clave?.trim() || ''
       };
-      await clienteService.actualizar(wifiData.clienteId, payload);
-      notify('✓ Red y contraseña guardadas correctamente. Reflejado en General.', 'success');
-      setShowWifiModal(false);
-      setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '' });
-      fetchClientes();
+      if (payload.red || payload.clave) {
+        await clienteService.actualizar(wifiData.clienteId, payload);
+        notify('✓ Red y contraseña guardadas correctamente.', 'success');
+      }
+      if (advanceToPhotos) {
+        setWifiStep(2);
+      } else {
+        closePostActivationModal();
+      }
     } catch (e) {
       console.error(e);
       notify('Error al guardar red y contraseña: ' + (e.response?.data?.detail || e.message), 'error');
@@ -413,9 +581,45 @@ const Activacion = () => {
     }
   };
 
-  const handleSkipWifi = () => {
+  const handleSkipWifiToPhotos = () => {
+    setWifiStep(2);
+  };
+
+  const handleSaveDevicePhotos = async () => {
+    if (!wifiData.clienteId) return;
+    if (!deviceOntFile && !deviceRouterFile) {
+      notify('No seleccionó ninguna foto. Presione "Omitir Fotos" si desea terminar.', 'info');
+      return;
+    }
+    setSavingDevicePhotos(true);
+    try {
+      const formData = new FormData();
+      if (deviceOntFile) {
+        formData.append('equipo_ont', deviceOntFile, deviceOntFile.name || 'ont.jpg');
+      }
+      if (deviceRouterFile) {
+        formData.append('equipo_router', deviceRouterFile, deviceRouterFile.name || 'router.jpg');
+      }
+
+      await clienteService.uploadDispositivo(wifiData.clienteId, formData);
+      notify('✓ Fotos de equipos guardadas correctamente en General (Dispositivo).', 'success');
+      closePostActivationModal();
+    } catch (e) {
+      console.error(e);
+      notify('Error al guardar fotos de equipos: ' + (e.response?.data?.detail || e.message), 'error');
+    } finally {
+      setSavingDevicePhotos(false);
+    }
+  };
+
+  const closePostActivationModal = () => {
     setShowWifiModal(false);
+    setWifiStep(1);
     setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+    setDeviceOntFile(null);
+    setDeviceRouterFile(null);
+    setDeviceOntPreview(null);
+    setDeviceRouterPreview(null);
     fetchClientes();
   };
 
@@ -1068,25 +1272,28 @@ const Activacion = () => {
         </div>
       )}
 
-      {/* Modal de Ingreso de Red y Contraseña (WiFi) */}
+      {/* Modal de Ingreso de Red, Contraseña y Fotos de Equipos (Post-Activación) */}
       {showWifiModal && (
         <div className="modal-overlay" style={{ zIndex: 11000 }}>
-          <div className="modal" style={{ width: '480px', maxWidth: '92%', padding: '24px' }}>
+          <div className="modal" style={{ width: wifiStep === 2 ? '680px' : '480px', maxWidth: '94%', padding: '24px', transition: 'width 0.3s ease' }}>
+            {/* Cabecera */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📶 Ingrese Red y Contraseña
+              <h3 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.15rem' }}>
+                {wifiStep === 1 ? '📶 Ingrese Red y Contraseña (Paso 1 de 2)' : '📷 Fotos de Equipos (Paso 2 de 2 - Opcional)'}
               </h3>
               <button
-                onClick={handleSkipWifi}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer' }}
-                title="Cerrar / Omitir"
+                onClick={closePostActivationModal}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer', padding: '2px 6px' }}
+                title="Cerrar / Finalizar"
               >
                 ✕
               </button>
             </div>
 
             <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
-              Ingrese las credenciales WiFi del cliente. Los datos se guardarán automáticamente y se reflejarán en la vista <strong>General</strong>.
+              {wifiStep === 1
+                ? 'Ingrese las credenciales WiFi del cliente. A continuación podrá subir opcionalmente las fotos de los equipos instalados.'
+                : 'Suba las fotos de los equipos instalados (Bridge/ONT y Router). Se guardarán en el campo Dispositivo de General (máximo 1.5 MB por foto).'}
             </p>
 
             {wifiData.clienteNombre && (
@@ -1097,96 +1304,403 @@ const Activacion = () => {
                 borderRadius: '8px',
                 marginBottom: '18px',
                 fontSize: '13px',
-                color: '#e2e8f0'
+                color: '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
               }}>
-                👤 <strong>Cliente:</strong> {wifiData.clienteNombre}
+                <span>👤 <strong>Cliente:</strong> {wifiData.clienteNombre}</span>
+                <span style={{ fontSize: '11px', color: '#38bdf8', background: 'rgba(56,189,248,0.15)', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>
+                  Paso {wifiStep} de 2
+                </span>
               </div>
             )}
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveWifi(); }}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
-                  Nombre de Red (SSID / WiFi)
-                </label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Ej: OPSATEL_FAMILIA_PEREZ"
-                  value={wifiData.red}
-                  onChange={(e) => setWifiData(prev => ({ ...prev, red: e.target.value }))}
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: '#1e293b',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    color: '#fff',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
+            {/* PASO 1: RED Y CONTRASEÑA */}
+            {wifiStep === 1 && (
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveWifi(true); }}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
+                    Nombre de Red (SSID / WiFi)
+                  </label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ej: OPSATEL_FAMILIA_PEREZ"
+                    value={wifiData.red}
+                    onChange={(e) => setWifiData(prev => ({ ...prev, red: e.target.value }))}
+                    autoFocus
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
-                  Contraseña (Clave WiFi)
-                </label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Ej: Opsatel2026*"
-                  value={wifiData.clave}
-                  onChange={(e) => setWifiData(prev => ({ ...prev, clave: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: '#1e293b',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    color: '#fff',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
+                    Contraseña (Clave WiFi)
+                  </label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ej: Opsatel2026*"
+                    value={wifiData.clave}
+                    onChange={(e) => setWifiData(prev => ({ ...prev, clave: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleSkipWifi}
-                  disabled={savingWifi}
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.06)',
-                    color: '#cbd5e1',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: '9px 18px',
-                    borderRadius: 6,
-                    cursor: savingWifi ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Omitir
-                </button>
-                <button
-                  type="submit"
-                  className="btn primary"
-                  disabled={savingWifi}
-                  style={{
-                    backgroundColor: '#2ecc71',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '9px 22px',
-                    borderRadius: 6,
-                    fontWeight: 'bold',
-                    cursor: savingWifi ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}
-                >
-                  {savingWifi ? 'Guardando...' : '💾 Guardar'}
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleSkipWifiToPhotos}
+                    disabled={savingWifi}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      color: '#cbd5e1',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      padding: '9px 16px',
+                      borderRadius: 6,
+                      cursor: savingWifi ? 'not-allowed' : 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    Omitir Clave e ir a Fotos ➔
+                  </button>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => handleSaveWifi(false)}
+                      disabled={savingWifi}
+                      title="Guardar red/clave y finalizar sin subir fotos"
+                      style={{
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        padding: '9px 16px',
+                        borderRadius: 6,
+                        cursor: savingWifi ? 'not-allowed' : 'pointer',
+                        fontSize: '13px'
+                      }}
+                    >
+                      Guardar y Salir
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      disabled={savingWifi}
+                      style={{
+                        backgroundColor: '#2ecc71',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '9px 20px',
+                        borderRadius: 6,
+                        fontWeight: 'bold',
+                        cursor: savingWifi ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: '13px'
+                      }}
+                    >
+                      {savingWifi ? 'Guardando...' : 'Continuar a Fotos ➔'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* PASO 2: SUBIR FOTOS DE EQUIPOS (BRIDGE/ONT Y ROUTER) */}
+            {wifiStep === 2 && (
+              <div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: 16,
+                  marginBottom: 24
+                }}>
+                  {/* FOTO 1: EQUIPO BRIDGE / ONT */}
+                  <div
+                    onPaste={(e) => handleDevicePaste(e, setDeviceOntFile, 'equipo_ont.jpg')}
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      borderRadius: 10,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        🔌 Equipo Bridge / ONT
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>Opcional</span>
+                    </div>
+
+                    <div style={{
+                      minHeight: 140,
+                      background: 'rgba(0,0,0,0.3)',
+                      borderRadius: 8,
+                      border: '1px dashed rgba(255,255,255,0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 10,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {deviceOntPreview ? (
+                        <div style={{ width: '100%', textAlign: 'center' }}>
+                          <img
+                            src={deviceOntPreview}
+                            alt="Equipo Bridge/ONT"
+                            style={{ maxWidth: '100%', maxHeight: 130, borderRadius: 6, objectFit: 'contain' }}
+                          />
+                          <div style={{ marginTop: 6, fontSize: '11px', color: '#cbd5e1' }}>
+                            {deviceOntFile?.name} ({((deviceOntFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setDeviceOntFile(null); setDeviceOntPreview(null); }}
+                            style={{
+                              position: 'absolute',
+                              top: 6,
+                              right: 6,
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: 22,
+                              height: 22,
+                              cursor: 'pointer',
+                              fontSize: 12,
+                              fontWeight: 'bold'
+                            }}
+                            title="Quitar foto"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <label style={{
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                          width: '100%',
+                          padding: '16px 8px'
+                        }}>
+                          <span style={{ fontSize: 28 }}>📸</span>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8' }}>
+                            Subir Foto Equipo Bridge / ONT
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            Clic, arrastre o pegue con Ctrl+V (máx. 1.5 MB)
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const processed = await processDeviceImage(file, 'equipo_ont.jpg');
+                                if (processed) setDeviceOntFile(processed);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* FOTO 2: ROUTER */}
+                  <div
+                    onPaste={(e) => handleDevicePaste(e, setDeviceRouterFile, 'router.jpg')}
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(168, 85, 247, 0.25)',
+                      borderRadius: 10,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#c084fc', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        📡 Router
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>Opcional</span>
+                    </div>
+
+                    <div style={{
+                      minHeight: 140,
+                      background: 'rgba(0,0,0,0.3)',
+                      borderRadius: 8,
+                      border: '1px dashed rgba(255,255,255,0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 10,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {deviceRouterPreview ? (
+                        <div style={{ width: '100%', textAlign: 'center' }}>
+                          <img
+                            src={deviceRouterPreview}
+                            alt="Router"
+                            style={{ maxWidth: '100%', maxHeight: 130, borderRadius: 6, objectFit: 'contain' }}
+                          />
+                          <div style={{ marginTop: 6, fontSize: '11px', color: '#cbd5e1' }}>
+                            {deviceRouterFile?.name} ({((deviceRouterFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setDeviceRouterFile(null); setDeviceRouterPreview(null); }}
+                            style={{
+                              position: 'absolute',
+                              top: 6,
+                              right: 6,
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: 22,
+                              height: 22,
+                              cursor: 'pointer',
+                              fontSize: 12,
+                              fontWeight: 'bold'
+                            }}
+                            title="Quitar foto"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <label style={{
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                          width: '100%',
+                          padding: '16px 8px'
+                        }}>
+                          <span style={{ fontSize: 28 }}>📡</span>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#c084fc' }}>
+                            Subir Foto Router
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            Clic, arrastre o pegue con Ctrl+V (máx. 1.5 MB)
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const processed = await processDeviceImage(file, 'router.jpg');
+                                if (processed) setDeviceRouterFile(processed);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones de acción Paso 2 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setWifiStep(1)}
+                    disabled={savingDevicePhotos}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      color: '#cbd5e1',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      padding: '9px 16px',
+                      borderRadius: 6,
+                      cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    ⬅ Volver a Red y Clave
+                  </button>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={closePostActivationModal}
+                      disabled={savingDevicePhotos}
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.06)',
+                        color: '#94a3b8',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        padding: '9px 18px',
+                        borderRadius: 6,
+                        cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
+                        fontSize: '13px'
+                      }}
+                    >
+                      Omitir Fotos / Finalizar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={handleSaveDevicePhotos}
+                      disabled={savingDevicePhotos || (!deviceOntFile && !deviceRouterFile)}
+                      style={{
+                        backgroundColor: '#2ecc71',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '9px 22px',
+                        borderRadius: 6,
+                        fontWeight: 'bold',
+                        cursor: (savingDevicePhotos || (!deviceOntFile && !deviceRouterFile)) ? 'not-allowed' : 'pointer',
+                        opacity: (!deviceOntFile && !deviceRouterFile) ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: '13px'
+                      }}
+                    >
+                      {savingDevicePhotos ? 'Guardando Fotos...' : '💾 Guardar Equipos'}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}

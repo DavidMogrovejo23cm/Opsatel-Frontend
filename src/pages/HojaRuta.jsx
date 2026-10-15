@@ -24,6 +24,13 @@ const HojaRuta = () => {
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [modalSource, setModalSource] = useState('CLIENTE'); // 'CLIENTE' o 'GENERAL'
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
+    const [copiedId, setCopiedId] = useState(null);
+    const [collapsedSections, setCollapsedSections] = useState({});
+
+    const toggleSection = (id, section) => {
+        const key = `${id}_${section}`;
+        setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    };
 
     const initialForm = {
         fecha: new Date().toISOString().split('T')[0],
@@ -370,7 +377,8 @@ const HojaRuta = () => {
                 </div>
 
                 {loading ? <p>Cargando datos...</p> : (
-                    <div className="hr-table-container">
+                    <>
+                        <div className="hr-table-container hr-desktop-view">
                         <table className="hr-table">
                             <thead>
                                 <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem', textAlign: 'left', opacity: 0.8 }}>
@@ -641,6 +649,426 @@ const HojaRuta = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* VISTA MÓVIL: Tarjetas adaptadas al diseño de celular solicitado */}
+                    <div className="hr-mobile-view">
+                        {sortedRegistros.length === 0 ? (
+                            <div className="hr-mobile-empty">
+                                <span>📋</span>
+                                <p>No se encontraron actividades con los filtros actuales</p>
+                            </div>
+                        ) : (
+                            sortedRegistros.map(r => {
+                                const clientObj = (r.cliente_id ? clientes.find(c => c.id === r.cliente_id) : null) ||
+                                    (r.nombre_cliente ? clientes.find(c => c.nombre && c.nombre.trim().toLowerCase() === r.nombre_cliente.trim().toLowerCase()) : null);
+
+                                const isOver24h = (r.estado === 'Pendiente' || r.estado === 'En proceso') &&
+                                    r.created_at &&
+                                    (Date.now() - new Date(r.created_at).getTime() > 24 * 60 * 60 * 1000);
+                                const estadoDisplay = (r.estado === 'No completado' || isOver24h) ? 'No completado' : (r.estado || 'Pendiente');
+                                const chipClass = estadoDisplay === 'Realizado' ? 'success' :
+                                                  estadoDisplay === 'En proceso' ? 'processing' :
+                                                  estadoDisplay === 'No completado' ? 'failed' : 'pending';
+
+                                const rawFoto = (r.foto_fachada && String(r.foto_fachada).trim() !== '')
+                                    ? r.foto_fachada
+                                    : (clientObj?.foto_fachada && String(clientObj.foto_fachada).trim() !== '' ? clientObj.foto_fachada : null);
+                                const fotoUrl = rawFoto ? (rawFoto.startsWith('http') || rawFoto.startsWith('data:') || rawFoto.startsWith('/') ? rawFoto : `/${rawFoto}`) : null;
+
+                                const rawPhone = r.celular_cliente || clientObj?.celular || '';
+                                const firstPhonePart = String(rawPhone).split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+/i)[0] || '';
+                                let cleanPhone = firstPhonePart.replace(/\D/g, '');
+                                if (cleanPhone.startsWith('09') && cleanPhone.length === 10) cleanPhone = '593' + cleanPhone.slice(1);
+                                else if (cleanPhone.startsWith('9') && cleanPhone.length === 9) cleanPhone = '593' + cleanPhone;
+
+                                let actIcon = '🛠️';
+                                const actLower = (r.actividad || '').toLowerCase();
+                                if (actLower.includes('instalac')) actIcon = '🛠️';
+                                else if (actLower.includes('migrac')) actIcon = '🔄';
+                                else if (actLower.includes('reparac') || actLower.includes('revision')) actIcon = '🔧';
+                                else if (actLower.includes('retir')) actIcon = '📦';
+
+                                const sectorDisplay = r.parroquia 
+                                    ? (r.parroquia.toLowerCase().includes('sector') ? r.parroquia : `Sector ${r.parroquia}`) 
+                                    : (clientObj?.parroquia ? `Sector ${clientObj.parroquia}` : 'Sector Sin Asignar');
+
+                                const planPrecio = clientObj?.pago_mensual ? `$${clientObj.pago_mensual}` : (clientObj?.plan ? clientObj.plan : '$25');
+                                const planDetalle = clientObj?.tv_tipo === 'IPTV' 
+                                    ? 'IPTV incluido' 
+                                    : clientObj?.tv_tipo === 'CATV' 
+                                    ? 'CATV incluido' 
+                                    : (clientObj?.plan ? clientObj.plan : 'Internet fibra');
+
+                                const numClienteDisplay = rawPhone || (r.cliente_id ? `#${r.cliente_id}` : `ID-${r.id}`);
+
+                                const ubicacionTitle = r.parroquia ? (r.parroquia.includes('Ecuador') ? r.parroquia : `${r.parroquia}, Ecuador`) : (r.ubicacion_cliente || 'Ubicación registrada');
+                                const ubicacionSubtitle = r.ubicacion_cliente || '';
+
+                                const napName = r.ubicacion_caja || clientObj?.nap || clientObj?.caja_nap;
+                                const cajaObj = napName ? cajasNap.find(c => c.nombre?.trim().toUpperCase() === napName?.trim().toUpperCase()) : null;
+                                const ubiCaja = cajaObj?.ubicacion;
+
+                                return (
+                                    <div key={r.id} className="hr-mobile-card">
+                                        {/* HEADER */}
+                                        <div className="hr-mc-header">
+                                            <div className="hr-mc-avatar-info">
+                                                <div className="hr-mc-avatar">
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                        <circle cx="12" cy="7" r="4" />
+                                                    </svg>
+                                                </div>
+                                                <div className="hr-mc-title-group">
+                                                    <h3 className="hr-mc-name">{r.nombre_cliente || 'SIN NOMBRE'}</h3>
+                                                    <div className="hr-mc-subtitle">
+                                                        <span>{actIcon} {r.actividad || 'Actividad'}</span>
+                                                        <span>•</span>
+                                                        <span>{sectorDisplay}</span>
+                                                        {r.tecnico && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="hr-mc-tech">{r.tecnico}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => toggleEstado(r.id, estadoDisplay)}
+                                                className={`status-chip ${chipClass} hr-mc-status-chip`}
+                                                disabled={user.rol?.toLowerCase() !== 'administrador'}
+                                                style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
+                                                title={user.rol?.toLowerCase() === 'administrador' ? 'Clic para cambiar estado' : estadoDisplay}
+                                            >
+                                                <span className="hr-mc-dot" />
+                                                {estadoDisplay}
+                                            </button>
+                                        </div>
+
+                                        {/* 3-COLUMN METRICS */}
+                                        <div className="hr-mc-grid-3">
+                                            <div className="hr-mc-box">
+                                                <div className="hr-mc-box-label">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                                    </svg>
+                                                    <span>Fecha</span>
+                                                </div>
+                                                <div className="hr-mc-box-val">{formatToDMY(r.fecha)}</div>
+                                                <div className="hr-mc-box-sub">{r.hora || '08:00'}</div>
+                                            </div>
+
+                                            <div className="hr-mc-box">
+                                                <div className="hr-mc-box-label">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <circle cx="12" cy="12" r="9"/>
+                                                        <path d="M12 6v12M15 9.5a3.5 3.5 0 0 0-5 0 3 3 0 0 0 2 3 3.5 3.5 0 0 1-2 5"/>
+                                                    </svg>
+                                                    <span>Plan</span>
+                                                </div>
+                                                <div className="hr-mc-box-val">{planPrecio}</div>
+                                                <div className="hr-mc-box-sub" title={planDetalle}>{planDetalle}</div>
+                                            </div>
+
+                                            <div className="hr-mc-box">
+                                                <div className="hr-mc-box-label">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                                                        <line x1="12" y1="18" x2="12.01" y2="18"/>
+                                                    </svg>
+                                                    <span>N° Cliente</span>
+                                                </div>
+                                                <div className="hr-mc-box-val hr-mc-val-copy">
+                                                    <span className="hr-mc-phone-text" title={numClienteDisplay}>{numClienteDisplay}</span>
+                                                    <button
+                                                        type="button"
+                                                        className="hr-mc-copy-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigator.clipboard?.writeText(String(numClienteDisplay));
+                                                            setCopiedId(r.id);
+                                                            setTimeout(() => setCopiedId(null), 1800);
+                                                        }}
+                                                        title="Copiar número"
+                                                    >
+                                                        {copiedId === r.id ? (
+                                                            <span style={{ color: '#4ade80', fontSize: '0.75rem', fontWeight: 700 }}>✓</span>
+                                                        ) : (
+                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* ROW TELÉFONO / LLAMAR */}
+                                        <div className="hr-mc-action-row">
+                                            <div className="hr-mc-row-left">
+                                                <div className="hr-mc-row-icon">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                                    </svg>
+                                                </div>
+                                                <div className="hr-mc-row-text">
+                                                    <span className="hr-mc-row-label">Teléfono</span>
+                                                    <span className="hr-mc-row-value">{rawPhone || 'Sin número'}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {cleanPhone ? (
+                                                    <>
+                                                        <a
+                                                            href={`https://wa.me/${cleanPhone}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="hr-mc-btn-wa"
+                                                            title="WhatsApp"
+                                                        >
+                                                            💬
+                                                        </a>
+                                                        <a
+                                                            href={`tel:${cleanPhone}`}
+                                                            className="hr-mc-btn-call"
+                                                        >
+                                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                                                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/>
+                                                            </svg>
+                                                            Llamar
+                                                        </a>
+                                                    </>
+                                                ) : (
+                                                    <span className="hr-mc-btn-disabled">Sin teléfono</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ROW UBICACIÓN / VER EN MAPS */}
+                                        <div className="hr-mc-action-row">
+                                            <div className="hr-mc-row-left">
+                                                <div className="hr-mc-row-icon">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                                        <circle cx="12" cy="10" r="3"/>
+                                                    </svg>
+                                                </div>
+                                                <div className="hr-mc-row-text">
+                                                    <span className="hr-mc-row-label">Ubicación</span>
+                                                    <span className="hr-mc-row-value">{ubicacionTitle}</span>
+                                                    {ubicacionSubtitle && (
+                                                        <span className="hr-mc-row-sub">{ubicacionSubtitle}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.ubicacion_cliente || r.parroquia || '')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="hr-mc-btn-maps"
+                                            >
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                                                    <line x1="8" y1="2" x2="8" y2="18"/>
+                                                    <line x1="16" y1="6" x2="16" y2="22"/>
+                                                </svg>
+                                                Ver en Maps
+                                                <span style={{ fontSize: '1rem', marginLeft: '2px', lineHeight: 1 }}>›</span>
+                                            </a>
+                                        </div>
+
+                                        {/* NAP / CAJA INFO IF PRESENT */}
+                                        {napName && (
+                                            <div className="hr-mc-nap-badge">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span>📦</span>
+                                                    <strong>Caja NAP:</strong>
+                                                    <span>{napName}</span>
+                                                </div>
+                                                {ubiCaja && (
+                                                    <a
+                                                        href={/^https?:\/\//i.test(ubiCaja.trim()) ? ubiCaja.trim() : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubiCaja)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="hr-mc-nap-link"
+                                                    >
+                                                        📍 Ver Ubicación de Caja
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* IPTV CREDENTIALS IF PRESENT */}
+                                        {clientObj && clientObj.tv_tipo === 'IPTV' && clientObj.iptv_user && (
+                                            <div className="hr-mc-iptv-badge">
+                                                <span>📺</span>
+                                                <span><strong>IPTV:</strong> {clientObj.iptv_user} / {clientObj.iptv_pass}</span>
+                                            </div>
+                                        )}
+
+                                        {/* OBSERVACIONES GENERALES */}
+                                        <div className="hr-mc-section-card">
+                                            <div
+                                                className="hr-mc-sec-header"
+                                                onClick={() => toggleSection(r.id, 'obs')}
+                                            >
+                                                <div className="hr-mc-sec-left">
+                                                    <div className="hr-mc-row-icon sm">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                            <polyline points="14 2 14 8 20 8"/>
+                                                            <line x1="16" y1="13" x2="8" y2="13"/>
+                                                            <line x1="16" y1="17" x2="8" y2="17"/>
+                                                        </svg>
+                                                    </div>
+                                                    <span className="hr-mc-sec-title">Observaciones</span>
+                                                </div>
+                                                <svg
+                                                    width="16"
+                                                    height="16"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="#94a3b8"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    style={{
+                                                        transform: collapsedSections[`${r.id}_obs`] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                                        transition: 'transform 0.2s ease'
+                                                    }}
+                                                >
+                                                    <polyline points="6 9 12 15 18 9"/>
+                                                </svg>
+                                            </div>
+                                            {!collapsedSections[`${r.id}_obs`] && (
+                                                <div className="hr-mc-sec-body">
+                                                    {r.observacion || 'Sin observaciones registradas.'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* OBSERVACIONES DEL TÉCNICO */}
+                                        <div className="hr-mc-section-card">
+                                            <div
+                                                className="hr-mc-sec-header"
+                                                onClick={() => toggleSection(r.id, 'obs_tec')}
+                                            >
+                                                <div className="hr-mc-sec-left">
+                                                    <div className="hr-mc-row-icon sm">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                            <circle cx="12" cy="7" r="4" />
+                                                        </svg>
+                                                    </div>
+                                                    <span className="hr-mc-sec-title">Observaciones del técnico</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <button
+                                                        type="button"
+                                                        className="hr-mc-edit-obs-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenObs(r);
+                                                        }}
+                                                        title="Editar observación del técnico"
+                                                    >
+                                                        ✎ {user.rol?.toLowerCase() === 'tecnico' ? 'Editar' : 'Gestionar'}
+                                                    </button>
+                                                    <svg
+                                                        width="16"
+                                                        height="16"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="#94a3b8"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        style={{
+                                                            transform: collapsedSections[`${r.id}_obs_tec`] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                                            transition: 'transform 0.2s ease'
+                                                        }}
+                                                    >
+                                                        <polyline points="6 9 12 15 18 9"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            {!collapsedSections[`${r.id}_obs_tec`] && (
+                                                <div className="hr-mc-sec-body tech">
+                                                    {r.observacion_tecnico || 'Sin observaciones técnicas registradas.'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* FOTO FACHADA */}
+                                        {fotoUrl && (
+                                            <div
+                                                className="hr-mc-photo-card"
+                                                onClick={() => setPreviewFoto({
+                                                    url: fotoUrl,
+                                                    cliente: r.nombre_cliente || clientObj?.nombre || 'Cliente',
+                                                    direccion: r.ubicacion_cliente || clientObj?.ubicacion || r.parroquia || ''
+                                                })}
+                                            >
+                                                <img src={fotoUrl} alt="Fachada" className="hr-mc-photo-img" />
+                                                <div className="hr-mc-photo-badge">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                        <polyline points="21 15 16 10 5 21"/>
+                                                    </svg>
+                                                    <span>Ver fachada</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="hr-mc-photo-expand"
+                                                    title="Ampliar foto"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPreviewFoto({
+                                                            url: fotoUrl,
+                                                            cliente: r.nombre_cliente || clientObj?.nombre || 'Cliente',
+                                                            direccion: r.ubicacion_cliente || clientObj?.ubicacion || r.parroquia || ''
+                                                        });
+                                                    }}
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="15 3 21 3 21 9"/>
+                                                        <polyline points="9 21 3 21 3 15"/>
+                                                        <line x1="21" y1="3" x2="14" y2="10"/>
+                                                        <line x1="3" y1="21" x2="10" y2="14"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ACCIONES DE ADMINISTRADOR */}
+                                        {user.rol?.toLowerCase() === 'administrador' && (
+                                            <div className="hr-mc-admin-footer">
+                                                <button
+                                                    onClick={() => handleEdit(r)}
+                                                    className="hr-mc-admin-btn edit"
+                                                >
+                                                    ✏️ Editar Registro
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(r.id)}
+                                                    className="hr-mc-admin-btn delete"
+                                                >
+                                                    🗑️ Eliminar
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                    </>
                 )}
             </motion.div>
 
@@ -1179,6 +1607,522 @@ const HojaRuta = () => {
                 .hr-table-container { overflow-x: auto; border-radius: 15px; width: 100%; }
                 .hr-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 1100px; }
                 .hr-table td { vertical-align: middle; padding: 12px 10px; }
+
+                .hr-desktop-view { display: block; width: 100%; }
+                .hr-mobile-view { display: none; }
+
+                @media (max-width: 768px) {
+                    .hr-desktop-view { display: none !important; }
+                    .hr-mobile-view { display: flex !important; flex-direction: column !important; gap: 16px !important; width: 100% !important; padding-bottom: 24px; }
+                }
+
+                /* ===================================================
+                   HOJA DE RUTA - TARJETAS MÓVILES (CELULAR)
+                =================================================== */
+                .hr-mobile-card {
+                    background: #0d121f;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius: 20px;
+                    padding: 16px;
+                    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    box-sizing: border-box;
+                    width: 100%;
+                    transition: transform 0.2s ease, border-color 0.2s ease;
+                }
+
+                .hr-mc-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+
+                .hr-mc-avatar-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .hr-mc-avatar {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 50%;
+                    background: rgba(37, 99, 235, 0.16);
+                    border: 1px solid rgba(59, 130, 246, 0.32);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                .hr-mc-title-group {
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 0;
+                }
+
+                .hr-mc-name {
+                    margin: 0;
+                    font-size: 1.02rem;
+                    font-weight: 800;
+                    color: #ffffff;
+                    text-transform: uppercase;
+                    letter-spacing: 0.01em;
+                    line-height: 1.25;
+                    word-break: break-word;
+                }
+
+                .hr-mc-subtitle {
+                    display: flex;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    font-size: 0.78rem;
+                    color: #94a3b8;
+                    margin-top: 3px;
+                    font-weight: 500;
+                }
+
+                .hr-mc-tech {
+                    color: #60a5fa;
+                    font-weight: 600;
+                }
+
+                .hr-mc-status-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 14px !important;
+                    border-radius: 9999px !important;
+                    font-size: 0.75rem !important;
+                    font-weight: 700 !important;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                }
+
+                .hr-mc-dot {
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    background: currentColor;
+                    box-shadow: 0 0 8px currentColor;
+                    display: inline-block;
+                }
+
+                .hr-mc-grid-3 {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 8px;
+                    margin-top: 4px;
+                }
+
+                .hr-mc-box {
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    border-radius: 14px;
+                    padding: 10px 8px;
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 0;
+                }
+
+                .hr-mc-box-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    font-size: 0.7rem;
+                    color: #94a3b8;
+                    font-weight: 500;
+                }
+
+                .hr-mc-box-val {
+                    font-size: 0.88rem;
+                    font-weight: 800;
+                    color: #ffffff;
+                    margin-top: 4px;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .hr-mc-box-sub {
+                    font-size: 0.72rem;
+                    color: #94a3b8;
+                    margin-top: 2px;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .hr-mc-val-copy {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 4px;
+                }
+
+                .hr-mc-phone-text {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: 0.82rem;
+                }
+
+                .hr-mc-copy-btn {
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    padding: 2px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    color: #94a3b8;
+                    transition: transform 0.15s ease;
+                }
+
+                .hr-mc-copy-btn:active {
+                    transform: scale(0.85);
+                }
+
+                .hr-mc-action-row {
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    border-radius: 14px;
+                    padding: 10px 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                }
+
+                .hr-mc-row-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .hr-mc-row-icon {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    background: rgba(37, 99, 235, 0.18);
+                    border: 1px solid rgba(59, 130, 246, 0.28);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    color: #60a5fa;
+                }
+
+                .hr-mc-row-icon.sm {
+                    width: 30px;
+                    height: 30px;
+                }
+
+                .hr-mc-row-text {
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 0;
+                }
+
+                .hr-mc-row-label {
+                    font-size: 0.68rem;
+                    color: #94a3b8;
+                    font-weight: 500;
+                }
+
+                .hr-mc-row-value {
+                    font-size: 0.92rem;
+                    font-weight: 700;
+                    color: #ffffff;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    line-height: 1.25;
+                }
+
+                .hr-mc-row-sub {
+                    font-size: 0.72rem;
+                    color: #94a3b8;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    margin-top: 1px;
+                }
+
+                .hr-mc-btn-call {
+                    background: #2563eb;
+                    color: #ffffff !important;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    border-radius: 9999px;
+                    padding: 8px 18px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    text-decoration: none;
+                    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+                    border: none;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                    transition: transform 0.15s ease, background 0.15s ease;
+                }
+
+                .hr-mc-btn-call:active {
+                    transform: scale(0.96);
+                    background: #1d4ed8;
+                }
+
+                .hr-mc-btn-wa {
+                    background: rgba(37, 211, 102, 0.15);
+                    border: 1px solid rgba(37, 211, 102, 0.35);
+                    color: #25d366 !important;
+                    font-size: 0.95rem;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-decoration: none;
+                    flex-shrink: 0;
+                }
+
+                .hr-mc-btn-disabled {
+                    font-size: 0.75rem;
+                    color: #64748b;
+                    padding: 6px 12px;
+                }
+
+                .hr-mc-btn-maps {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    color: #e2e8f0 !important;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    border-radius: 9999px;
+                    padding: 7px 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    text-decoration: none;
+                    flex-shrink: 0;
+                    transition: background 0.15s ease;
+                }
+
+                .hr-mc-btn-maps:active {
+                    background: rgba(255, 255, 255, 0.1);
+                }
+
+                .hr-mc-nap-badge {
+                    background: rgba(56, 189, 248, 0.08);
+                    border: 1px solid rgba(56, 189, 248, 0.22);
+                    border-radius: 12px;
+                    padding: 8px 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    font-size: 0.74rem;
+                    color: #38bdf8;
+                }
+
+                .hr-mc-nap-link {
+                    color: #60a5fa !important;
+                    text-decoration: none;
+                    font-weight: 600;
+                }
+
+                .hr-mc-iptv-badge {
+                    background: rgba(129, 140, 248, 0.08);
+                    border: 1px solid rgba(129, 140, 248, 0.22);
+                    border-radius: 12px;
+                    padding: 8px 12px;
+                    font-size: 0.74rem;
+                    color: #a5b4fc;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .hr-mc-section-card {
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    border-radius: 14px;
+                    padding: 12px 14px;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .hr-mc-sec-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    cursor: pointer;
+                    user-select: none;
+                }
+
+                .hr-mc-sec-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .hr-mc-sec-title {
+                    font-size: 0.88rem;
+                    font-weight: 700;
+                    color: #ffffff;
+                }
+
+                .hr-mc-sec-body {
+                    margin-top: 10px;
+                    font-size: 0.82rem;
+                    color: #cbd5e1;
+                    line-height: 1.45;
+                    white-space: pre-line;
+                    padding-left: 40px;
+                    word-break: break-word;
+                }
+
+                .hr-mc-sec-body.tech {
+                    color: #a7f3d0;
+                }
+
+                .hr-mc-edit-obs-btn {
+                    background: rgba(129, 140, 248, 0.15);
+                    border: 1px solid rgba(129, 140, 248, 0.35);
+                    color: #c7d2fe;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    padding: 3px 8px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: background 0.15s ease;
+                }
+
+                .hr-mc-edit-obs-btn:active {
+                    background: rgba(129, 140, 248, 0.3);
+                }
+
+                .hr-mc-photo-card {
+                    position: relative;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    height: 200px;
+                    width: 100%;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    background: #090d16;
+                    cursor: pointer;
+                }
+
+                .hr-mc-photo-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    display: block;
+                    transition: transform 0.3s ease;
+                }
+
+                .hr-mc-photo-card:hover .hr-mc-photo-img {
+                    transform: scale(1.03);
+                }
+
+                .hr-mc-photo-badge {
+                    position: absolute;
+                    top: 10px;
+                    left: 10px;
+                    background: rgba(15, 23, 42, 0.75);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    border-radius: 9999px;
+                    padding: 5px 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.74rem;
+                    font-weight: 700;
+                    color: #ffffff;
+                }
+
+                .hr-mc-photo-expand {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    width: 34px;
+                    height: 34px;
+                    background: rgba(15, 23, 42, 0.75);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #ffffff;
+                    cursor: pointer;
+                    border: none;
+                    transition: background 0.15s ease;
+                }
+
+                .hr-mc-photo-expand:active {
+                    background: rgba(30, 41, 59, 0.9);
+                }
+
+                .hr-mc-admin-footer {
+                    display: flex;
+                    gap: 8px;
+                    padding-top: 4px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                }
+
+                .hr-mc-admin-btn {
+                    flex: 1;
+                    padding: 8px 12px;
+                    border-radius: 10px;
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    border: 1px solid;
+                    transition: all 0.2s ease;
+                }
+
+                .hr-mc-admin-btn.edit {
+                    background: rgba(59, 130, 246, 0.1);
+                    border-color: rgba(59, 130, 246, 0.3);
+                    color: #93c5fd;
+                }
+
+                .hr-mc-admin-btn.delete {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-color: rgba(239, 68, 68, 0.3);
+                    color: #fca5a5;
+                }
+
+                .hr-mobile-empty {
+                    text-align: center;
+                    padding: 40px 20px;
+                    background: rgba(255, 255, 255, 0.02);
+                    border: 1px dashed rgba(255, 255, 255, 0.1);
+                    border-radius: 16px;
+                    color: #94a3b8;
+                    font-size: 0.9rem;
+                }
+
+                .hr-mobile-empty span {
+                    font-size: 2rem;
+                    display: block;
+                    margin-bottom: 8px;
+                }
 
                 .status-chip { border: 1px solid; padding: 4px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; transition: 0.3s; }
                 .status-chip.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }

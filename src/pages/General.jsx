@@ -54,6 +54,16 @@ const General = () => {
   const [modalPreviewFachada, setModalPreviewFachada] = useState(null);
   const [modalUploading, setModalUploading] = useState(false);
 
+  // Estados para modal de fotos de equipos (Bridge/ONT y Router - Dispositivo)
+  const [selectedDeviceClient, setSelectedDeviceClient] = useState(null);
+  const [deviceModalOntFile, setDeviceModalOntFile] = useState(null);
+  const [deviceModalRouterFile, setDeviceModalRouterFile] = useState(null);
+  const [deviceModalOntPreview, setDeviceModalOntPreview] = useState(null);
+  const [deviceModalRouterPreview, setDeviceModalRouterPreview] = useState(null);
+  const [deviceModalRemoveOnt, setDeviceModalRemoveOnt] = useState(false);
+  const [deviceModalRemoveRouter, setDeviceModalRemoveRouter] = useState(false);
+  const [deviceModalUploading, setDeviceModalUploading] = useState(false);
+
   // Definición de las columnas del sistema
   const allColumns = [
     "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
@@ -74,6 +84,7 @@ const General = () => {
       else if (col === 'fotos_cedula') widths[col] = 185;
       else if (col === 'cod' || col === 'facturas') widths[col] = 90;
       else if (col === 'bridge') widths[col] = 160;
+      else if (col === 'dispositivo') widths[col] = 190;
       else if (col === 'mac') widths[col] = 280;
       else widths[col] = 150;
     });
@@ -208,6 +219,26 @@ const General = () => {
       setModalPreviewFachada(null);
     }
   }, [modalFileFachada]);
+
+  useEffect(() => {
+    if (deviceModalOntFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => setDeviceModalOntPreview(reader.result);
+      reader.readAsDataURL(deviceModalOntFile);
+    } else {
+      setDeviceModalOntPreview(null);
+    }
+  }, [deviceModalOntFile]);
+
+  useEffect(() => {
+    if (deviceModalRouterFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => setDeviceModalRouterPreview(reader.result);
+      reader.readAsDataURL(deviceModalRouterFile);
+    } else {
+      setDeviceModalRouterPreview(null);
+    }
+  }, [deviceModalRouterFile]);
 
   const compressImage = (file, maxWidth = 2048, quality = 0.88) => {
     return new Promise((resolve) => {
@@ -386,6 +417,82 @@ const General = () => {
       showError('Error al subir fotos: ' + (err.response?.data?.detail || err.message));
     } finally {
       setModalUploading(false);
+    }
+  };
+
+  const getClientDevicePhotos = (cliente) => {
+    if (!cliente || !cliente.dispositivo) return { ont: null, router: null, texto: '' };
+    if (typeof cliente.dispositivo === 'object') return cliente.dispositivo;
+    const str = String(cliente.dispositivo).trim();
+    if (str.startsWith('{') && str.endsWith('}')) {
+      try { return JSON.parse(str); } catch (e) { return { ont: null, router: null, texto: str }; }
+    }
+    return { ont: null, router: null, texto: str };
+  };
+
+  const openDevicePhotoModal = (cliente) => {
+    setSelectedDeviceClient(cliente);
+    setDeviceModalOntFile(null);
+    setDeviceModalRouterFile(null);
+    setDeviceModalOntPreview(null);
+    setDeviceModalRouterPreview(null);
+    setDeviceModalRemoveOnt(false);
+    setDeviceModalRemoveRouter(false);
+  };
+
+  const closeDevicePhotoModal = () => {
+    setSelectedDeviceClient(null);
+    setDeviceModalOntFile(null);
+    setDeviceModalRouterFile(null);
+    setDeviceModalOntPreview(null);
+    setDeviceModalRouterPreview(null);
+    setDeviceModalRemoveOnt(false);
+    setDeviceModalRemoveRouter(false);
+  };
+
+  const handleSaveDeviceModalPhotos = async () => {
+    if (!selectedDeviceClient) return;
+    if (!deviceModalOntFile && !deviceModalRouterFile && !deviceModalRemoveOnt && !deviceModalRemoveRouter) {
+      showWarning('No se realizaron cambios en las fotos de equipos.');
+      return;
+    }
+
+    try {
+      setDeviceModalUploading(true);
+      const uploadData = new FormData();
+      if (deviceModalOntFile) {
+        const compOnt = await compressImage(deviceModalOntFile);
+        if (compOnt && compOnt.size > 1.6 * 1024 * 1024) {
+          showError('La foto de Equipo Bridge/ONT supera el límite de 1.5 MB.');
+          setDeviceModalUploading(false);
+          return;
+        }
+        uploadData.append('equipo_ont', compOnt, compOnt.name || 'ont.jpg');
+      }
+      if (deviceModalRouterFile) {
+        const compRouter = await compressImage(deviceModalRouterFile);
+        if (compRouter && compRouter.size > 1.6 * 1024 * 1024) {
+          showError('La foto de Router supera el límite de 1.5 MB.');
+          setDeviceModalUploading(false);
+          return;
+        }
+        uploadData.append('equipo_router', compRouter, compRouter.name || 'router.jpg');
+      }
+      if (deviceModalRemoveOnt) {
+        uploadData.append('remove_ont', 'true');
+      }
+      if (deviceModalRemoveRouter) {
+        uploadData.append('remove_router', 'true');
+      }
+
+      await clienteService.uploadDispositivo(selectedDeviceClient.id, uploadData);
+      showSuccess('Fotos de equipos actualizadas correctamente en General.');
+      closeDevicePhotoModal();
+      fetchData();
+    } catch (err) {
+      showError('Error al guardar fotos de equipos: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeviceModalUploading(false);
     }
   };
 
@@ -1388,7 +1495,7 @@ const General = () => {
                           key={col}
                           onClick={() => {
                             if (!isCellEditable) return;
-                            if (col === 'fotos_cedula') {
+                            if (col === 'fotos_cedula' || col === 'dispositivo') {
                               return;
                             }
                             if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
@@ -1401,6 +1508,10 @@ const General = () => {
                             if (!isCellEditable) return;
                             if (col === 'fotos_cedula') {
                               openPhotoModal(c);
+                              return;
+                            }
+                            if (col === 'dispositivo') {
+                              openDevicePhotoModal(c);
                               return;
                             }
                             if (col !== 'estado') {
@@ -1712,6 +1823,98 @@ const General = () => {
                                           title="Subir o gestionar fotos de cédula y fachada"
                                         >
                                           📷 Subir
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                if (col === 'dispositivo') {
+                                  const dispInfo = getClientDevicePhotos(c);
+                                  const hasOnt = !!(dispInfo?.ont && String(dispInfo.ont).trim() !== '');
+                                  const hasRouter = !!(dispInfo?.router && String(dispInfo.router).trim() !== '');
+                                  const extraText = dispInfo?.texto;
+
+                                  return (
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        {hasOnt && (
+                                          <a
+                                            href={dispInfo.ont}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                              color: '#38bdf8',
+                                              fontWeight: 'bold',
+                                              fontSize: '0.72rem',
+                                              background: 'rgba(56, 189, 248, 0.12)',
+                                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                                              borderRadius: '4px',
+                                              padding: '2px 5px',
+                                              textDecoration: 'none',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px'
+                                            }}
+                                            title="Ver foto de Equipo Bridge / ONT"
+                                          >
+                                            🔌 Bridge/ONT
+                                          </a>
+                                        )}
+                                        {hasRouter && (
+                                          <a
+                                            href={dispInfo.router}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                              color: '#c084fc',
+                                              fontWeight: 'bold',
+                                              fontSize: '0.72rem',
+                                              background: 'rgba(168, 85, 247, 0.12)',
+                                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                                              borderRadius: '4px',
+                                              padding: '2px 5px',
+                                              textDecoration: 'none',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px'
+                                            }}
+                                            title="Ver foto de Router"
+                                          >
+                                            📡 Router
+                                          </a>
+                                        )}
+                                        {extraText && (
+                                          <span style={{ fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }} title={extraText}>
+                                            {extraText}
+                                          </span>
+                                        )}
+                                        {!hasOnt && !hasRouter && !extraText && (
+                                          <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                        )}
+                                      </div>
+                                      {canModifyTable && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openDevicePhotoModal(c);
+                                          }}
+                                          style={{
+                                            background: 'rgba(56, 189, 248, 0.15)',
+                                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                                            color: '#38bdf8',
+                                            padding: '2px 6px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                          title="Subir o gestionar fotos de equipos (Bridge/ONT y Router)"
+                                        >
+                                          📷 Equipos
                                         </button>
                                       )}
                                     </div>
@@ -2403,6 +2606,249 @@ const General = () => {
                 style={{ minWidth: '130px' }}
               >
                 {modalUploading ? '⏳ Guardando...' : '💾 Guardar Fotos'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal de Fotografías de Equipos (Bridge/ONT y Router - Dispositivo) */}
+      {selectedDeviceClient && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 11000 }}
+          onClick={() => {
+            if (!deviceModalUploading) {
+              closeDevicePhotoModal();
+            }
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#131722',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '700px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📸</span> Fotografías de Equipos (Dispositivo)
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedDeviceClient.nombre}</strong> (ID: {selectedDeviceClient.id}) • Máx 1.5 MB por foto
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!deviceModalUploading) {
+                    closeDevicePhotoModal();
+                  }
+                }}
+                disabled={deviceModalUploading}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '4px 8px'
+                }}
+              >✕</button>
+            </div>
+
+            {/* Grid de 2 Fotos: Equipo Bridge/ONT y Router */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {/* 1. Equipo Bridge / ONT */}
+              {(() => {
+                const existingOnt = getClientDevicePhotos(selectedDeviceClient).ont;
+                const isRemoved = deviceModalRemoveOnt;
+
+                return (
+                  <div style={{ background: 'rgba(56, 189, 248, 0.03)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>🔌 Equipo Bridge / ONT</span>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Opcional</span>
+                    </div>
+
+                    <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', marginBottom: '10px', position: 'relative' }}>
+                      {deviceModalOntPreview ? (
+                        <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+                          <img src={deviceModalOntPreview} alt="Preview ONT" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '6px' }} />
+                          <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#cbd5e1' }}>
+                            {deviceModalOntFile?.name} ({((deviceModalOntFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setDeviceModalOntFile(null); setDeviceModalOntPreview(null); }}
+                            style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                            title="Quitar foto"
+                          >✕</button>
+                        </div>
+                      ) : (existingOnt && !isRemoved) ? (
+                        <div style={{ textAlign: 'center', width: '100%', position: 'relative' }}>
+                          <img src={existingOnt} alt="Actual Bridge/ONT" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '6px', opacity: 0.9 }} />
+                          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <a href={existingOnt} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: '#38bdf8', textDecoration: 'underline' }}>Ver foto actual</a>
+                            <button
+                              type="button"
+                              onClick={() => setDeviceModalRemoveOnt(true)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                            >
+                              Eliminar foto
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {isRemoved ? 'Foto marcada para eliminar' : 'Sin foto de ONT'}
+                        </span>
+                      )}
+                    </div>
+
+                    <input
+                      placeholder="Pegar (Ctrl+V) o arrastrar"
+                      onPaste={(e) => {
+                        setDeviceModalRemoveOnt(false);
+                        handleModalPaste(e, setDeviceModalOntFile, 'equipo_ont.jpg');
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files?.[0]) {
+                          setDeviceModalRemoveOnt(false);
+                          processModalImage(e.dataTransfer.files[0], 'equipo_ont.jpg').then(f => f && setDeviceModalOntFile(f));
+                        }
+                      }}
+                      readOnly
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '0.72rem', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#cbd5e1', marginBottom: '8px', textAlign: 'center' }}
+                    />
+                    <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '0.75rem', textAlign: 'center', cursor: 'pointer', display: 'block', borderRadius: '6px' }}>
+                      📁 {deviceModalOntFile || existingOnt ? 'Cambiar Foto' : 'Seleccionar Foto'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                        if (e.target.files?.[0]) {
+                          const f = await processModalImage(e.target.files[0], 'equipo_ont.jpg');
+                          if (f) {
+                            setDeviceModalRemoveOnt(false);
+                            setDeviceModalOntFile(f);
+                          }
+                        }
+                      }} />
+                    </label>
+                  </div>
+                );
+              })()}
+
+              {/* 2. Router */}
+              {(() => {
+                const existingRouter = getClientDevicePhotos(selectedDeviceClient).router;
+                const isRemoved = deviceModalRemoveRouter;
+
+                return (
+                  <div style={{ background: 'rgba(168, 85, 247, 0.03)', border: '1px solid rgba(168, 85, 247, 0.25)', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>📡 Router</span>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Opcional</span>
+                    </div>
+
+                    <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '8px', marginBottom: '10px', position: 'relative' }}>
+                      {deviceModalRouterPreview ? (
+                        <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+                          <img src={deviceModalRouterPreview} alt="Preview Router" style={{ maxWidth: '100%', maxHeight: '110px', borderRadius: '6px' }} />
+                          <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#cbd5e1' }}>
+                            {deviceModalRouterFile?.name} ({((deviceModalRouterFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setDeviceModalRouterFile(null); setDeviceModalRouterPreview(null); }}
+                            style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                            title="Quitar foto"
+                          >✕</button>
+                        </div>
+                      ) : (existingRouter && !isRemoved) ? (
+                        <div style={{ textAlign: 'center', width: '100%', position: 'relative' }}>
+                          <img src={existingRouter} alt="Actual Router" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '6px', opacity: 0.9 }} />
+                          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <a href={existingRouter} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: '#c084fc', textDecoration: 'underline' }}>Ver foto actual</a>
+                            <button
+                              type="button"
+                              onClick={() => setDeviceModalRemoveRouter(true)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                            >
+                              Eliminar foto
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {isRemoved ? 'Foto marcada para eliminar' : 'Sin foto de Router'}
+                        </span>
+                      )}
+                    </div>
+
+                    <input
+                      placeholder="Pegar (Ctrl+V) o arrastrar"
+                      onPaste={(e) => {
+                        setDeviceModalRemoveRouter(false);
+                        handleModalPaste(e, setDeviceModalRouterFile, 'router.jpg');
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files?.[0]) {
+                          setDeviceModalRemoveRouter(false);
+                          processModalImage(e.dataTransfer.files[0], 'router.jpg').then(f => f && setDeviceModalRouterFile(f));
+                        }
+                      }}
+                      readOnly
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '0.72rem', background: '#1e1b4b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#cbd5e1', marginBottom: '8px', textAlign: 'center' }}
+                    />
+                    <label className="btn btn-secondary" style={{ padding: '6px', fontSize: '0.75rem', textAlign: 'center', cursor: 'pointer', display: 'block', borderRadius: '6px' }}>
+                      📁 {deviceModalRouterFile || existingRouter ? 'Cambiar Foto' : 'Seleccionar Foto'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                        if (e.target.files?.[0]) {
+                          const f = await processModalImage(e.target.files[0], 'router.jpg');
+                          if (f) {
+                            setDeviceModalRemoveRouter(false);
+                            setDeviceModalRouterFile(f);
+                          }
+                        }
+                      }} />
+                    </label>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Acciones */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={deviceModalUploading}
+                onClick={closeDevicePhotoModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={deviceModalUploading || (!deviceModalOntFile && !deviceModalRouterFile && !deviceModalRemoveOnt && !deviceModalRemoveRouter)}
+                onClick={handleSaveDeviceModalPhotos}
+                style={{ minWidth: '130px' }}
+              >
+                {deviceModalUploading ? '⏳ Guardando...' : '💾 Guardar Equipos'}
               </button>
             </div>
           </motion.div>
