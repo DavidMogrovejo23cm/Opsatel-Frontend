@@ -24,10 +24,118 @@ const ExtrasGeneral = () => {
     const [selectedForPago, setSelectedForPago] = useState(null);
     const [pagoData, setPagoData] = useState({ monto: 0, mes: 'ENERO', metodo: 'EFECTIVO', factura: '', referencia: '' });
 
+    // Estados para Edición en Vivo (Inline Editing) de toda la tabla
+    const [editingCell, setEditingCell] = useState(null); // { id: extra.id, field: string }
+    const [tempValue, setTempValue] = useState('');
+    const [savingCellKey, setSavingCellKey] = useState(null);
+
+    const estadoOptions = ['30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'ELIMINADO'];
+    const activoOptions = ['SI', 'NO'];
+
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
+
+    const allBankOptions = useMemo(() => {
+        const base = ['EFECTIVO', 'PICHINCHA', 'JEP', 'BANCO GUAYAQUIL', 'BANCO PACIFICO', 'PRODUBANCO'];
+        const fromDb = (bancosList || []).map(b => (b.nombre || '').trim().toUpperCase()).filter(Boolean);
+        return Array.from(new Set([...base, ...fromDb]));
+    }, [bancosList]);
+
+    const handleStartEdit = (extra, field, val) => {
+        setEditingCell({ id: extra.id, field });
+        setTempValue(val !== undefined && val !== null ? String(val) : '');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingCell(null);
+        setTempValue('');
+    };
+
+    const handleKeyDown = (e, extra, field) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSaveCell(extra, field, e.target.value);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancelEdit();
+        }
+    };
+
+    const handleSaveCell = async (extra, field, overrideVal = null) => {
+        const rawVal = overrideVal !== null ? overrideVal : tempValue;
+        let valToSave = typeof rawVal === 'string' ? rawVal.trim() : rawVal;
+
+        let original = extra[field];
+        if (field === 'saldo') {
+            original = calculateDebe(extra);
+        }
+        if (String(original ?? '') === String(valToSave ?? '')) {
+            setEditingCell(null);
+            return;
+        }
+
+        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        let payload = {};
+
+        if (field === 'valor') {
+            const numVal = parseFloat(valToSave) || 0;
+            payload = { valor: numVal };
+        } else if (field === 'saldo') {
+            const numVal = parseFloat(valToSave) || 0;
+            const currentMonthKey = listMonths[new Date().getMonth()];
+            payload = {
+                [`${currentMonthKey}_saldo`]: numVal,
+                saldo_pendiente: numVal
+            };
+        } else if (field.endsWith('_pago')) {
+            const numVal = parseFloat(valToSave) || 0;
+            const m = field.replace('_pago', '');
+            payload[field] = numVal;
+
+            if (!extra[`${m}_fecha_pago`] && numVal > 0) {
+                const now = new Date();
+                const d = String(now.getDate()).padStart(2, '0');
+                const mon = String(now.getMonth() + 1).padStart(2, '0');
+                const y = now.getFullYear();
+                payload[`${m}_fecha_pago`] = `${d}/${mon}/${y}`;
+            }
+            if (!extra[`${m}_banco`] && numVal > 0) {
+                payload[`${m}_banco`] = 'EFECTIVO';
+            }
+            const baseVal = parseFloat(extra.valor || 0);
+            payload[`${m}_saldo`] = Math.max(0, baseVal - numVal);
+        } else if (field.endsWith('_saldo')) {
+            const numVal = parseFloat(valToSave) || 0;
+            payload[field] = numVal;
+        } else if (field.endsWith('_fecha_pago') || field === 'fecha_ingreso') {
+            payload[field] = valToSave ? normalizeDateInput(valToSave) : '';
+        } else {
+            payload[field] = valToSave;
+        }
+
+        const cellKey = `${extra.id}_${field}`;
+        setEditingCell(null);
+        setSavingCellKey(cellKey);
+
+        // Actualización optimista inmediata
+        setExtras(prev => prev.map(item => item.id === extra.id ? { ...item, ...payload } : item));
+
+        try {
+            const res = await extrasService.actualizar(extra.id, payload);
+            if (res.data) {
+                setExtras(prev => prev.map(item => item.id === extra.id ? { ...item, ...res.data } : item));
+            }
+            showToast(`Campo actualizado`, 'success', 1800);
+        } catch (err) {
+            console.error("Error al actualizar campo inline:", err);
+            setExtras(prev => prev.map(item => item.id === extra.id ? extra : item));
+            showError("Error al guardar: " + (err.response?.data?.detail || err.message));
+        } finally {
+            setSavingCellKey(null);
+        }
+    };
 
     const [showAllMonths, setShowAllMonths] = useState(false);
     const currentMonthIdx = new Date().getMonth(); // 9 para Octubre
@@ -320,14 +428,77 @@ const ExtrasGeneral = () => {
 
     const filteredMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
+    const inlineInputStyle = {
+        width: '100%',
+        height: '28px',
+        background: '#090d16',
+        color: '#ffffff',
+        border: '1px solid #3b82f6',
+        borderRadius: '4px',
+        padding: '2px 6px',
+        fontSize: '0.78rem',
+        fontFamily: 'inherit',
+        outline: 'none',
+        boxSizing: 'border-box'
+    };
+
+    const inlineSelectStyle = {
+        width: '100%',
+        height: '28px',
+        background: '#090d16',
+        color: '#ffffff',
+        border: '1px solid #3b82f6',
+        borderRadius: '4px',
+        padding: '2px 4px',
+        fontSize: '0.75rem',
+        fontFamily: 'inherit',
+        outline: 'none',
+        cursor: 'pointer',
+        boxSizing: 'border-box'
+    };
+
     return (
         <div style={{ padding: '10px' }}>
+            <style>{`
+                .editable-td {
+                    cursor: pointer;
+                    position: relative;
+                    transition: background 0.15s ease, outline 0.15s ease;
+                }
+                .editable-td:hover {
+                    background: rgba(59, 130, 246, 0.15) !important;
+                    outline: 1px dashed rgba(96, 165, 250, 0.5) !important;
+                    outline-offset: -1px;
+                }
+                .editable-td-active {
+                    background: rgba(15, 23, 42, 0.98) !important;
+                    outline: 2px solid #3b82f6 !important;
+                    outline-offset: -2px;
+                    padding: 3px !important;
+                }
+            `}</style>
 
             {/* HEADER */}
             <div className="page-header" style={{ marginBottom: '24px' }}>
                 <div className="page-header-info">
-                    <h1 style={{ fontWeight: '900', margin: 0 }}>Extras General</h1>
-                    <p style={{ marginTop: '4px' }}>Control administrativo de servicios y cobranzas.</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h1 style={{ fontWeight: '900', margin: 0 }}>Extras General</h1>
+                        <span style={{ 
+                            fontSize: '0.78rem', 
+                            background: 'rgba(59, 130, 246, 0.12)', 
+                            color: '#60a5fa', 
+                            padding: '4px 10px', 
+                            borderRadius: '20px', 
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}>
+                            ⚡ Toda la tabla es modificable en vivo (clic en cualquier celda para editar)
+                        </span>
+                    </div>
+                    <p style={{ marginTop: '4px' }}>Control administrativo de servicios y cobranzas. Modifica cualquier campo directamente; los pagos impactan en Balance y Finanzas según el mes.</p>
                 </div>
                 <div className="page-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <input
@@ -410,7 +581,7 @@ const ExtrasGeneral = () => {
 
             {/* TABLE */}
             <div className="table-container">
-                <div style={{ maxHeight: '65vh' }}>
+                <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
                     <table style={{ tableLayout: 'fixed' }}>
                         <thead>
                             <tr style={{ background: 'var(--table-header-bg, #1e293b)', borderBottom: '1px solid var(--table-border, rgba(255,255,255,0.1))' }}>
@@ -448,102 +619,540 @@ const ExtrasGeneral = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map(e => (
-                                <tr key={e.id} style={{ borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))' }}>
-                                    <td style={{ position: 'sticky', left: 0, zIndex: 5, width: '80px', background: 'var(--sticky-col-bg, #0f172a)', padding: '14px', color: '#a855f7', fontWeight: 'bold', borderRight: '1px solid var(--glass-border, rgba(255,255,255,0.1))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.cod}</td>
-                                    <td style={{ position: 'sticky', left: '80px', zIndex: 5, width: '220px', background: 'var(--sticky-col-bg, #0f172a)', padding: '14px', fontWeight: 'bold', borderRight: '2px solid #3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre_cliente}</td>
-                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.contacto}</td>
-                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.proveedor}</td>
-                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.usuario}</td>
-                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.contrasena || '-'}</td>
-                                    <td style={{ width: '80px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.cuentas}</td>
-                                    <td style={{ width: '160px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.mac_smart_one || '-'}</td>
-                                    <td style={{ width: '180px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.observaciones}>{e.observaciones || '-'}</td>
-                                    <td style={{ width: '130px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', fontWeight: 'bold' }}>${parseFloat(e.valor || 0).toFixed(2)}</td>
-                                    <td style={{ width: '120px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.estado}</td>
-                                    <td style={{ 
-                                        width: '120px',
-                                        padding: '14px', 
-                                        borderRight: '1px solid rgba(255,255,255,0.05)',
-                                        color: calculateDebe(e) > 0 ? '#f87171' : (calculateDebe(e) < 0 ? '#34d399' : '#94a3b8'),
-                                        fontWeight: 'bold',
-                                        textAlign: 'center',
-                                        background: calculateDebe(e) < 0 ? 'rgba(52, 211, 153, 0.08)' : (calculateDebe(e) > 0 ? 'rgba(248, 113, 113, 0.05)' : 'transparent')
-                                    }} title={calculateDebe(e) < 0 ? `Excedente a favor: $${Math.abs(calculateDebe(e)).toFixed(2)}` : ''}>
-                                        ${calculateDebe(e).toFixed(2)}
-                                        {calculateDebe(e) < 0 && (
-                                            <span style={{ fontSize: '0.65rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
-                                                A Favor
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td style={{ width: '100px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.activo}</td>
-                                    <td style={{ width: '120px', padding: '14px', textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                            <button className="btn" onClick={() => handleEdit(e)} title="Editar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                            </button>
-                                            <button className="btn" onClick={() => handleOpenPago(e)} title="Cobrar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a4.5 4.5 0 1 0 0 9h5a4.5 4.5 0 1 1 0 9H6"></path></svg>
-                                            </button>
-                                            <button className="btn" onClick={() => handleDelete(e.id)} title="Eliminar" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    {displayMonths.map((m, mIdx) => {
-                                        const l = m.toLowerCase();
-                                        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
-                                        const isPriorToIngreso = mIdx < startMonthIdx;
+                            {filtered.map(e => {
+                                const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
+                                const debeVal = calculateDebe(e);
 
-                                        const pagoMes = parseFloat(e[l + '_pago'] || 0);
-                                        const saldoMes = parseFloat(e[l + '_saldo'] || 0);
-                                        const valorBase = parseFloat(e.valor || 0);
-                                        
-                                        let saldoAMostrar = 0;
-                                        if (isPriorToIngreso) {
-                                            saldoAMostrar = 0;
-                                        } else {
+                                return (
+                                    <tr key={e.id} style={{ borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))' }}>
+                                        {/* COD */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'cod' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'cod', e.cod)}
+                                            style={{ position: 'sticky', left: 0, zIndex: 5, width: '80px', background: 'var(--sticky-col-bg, #0f172a)', padding: editingCell?.id === e.id && editingCell?.field === 'cod' ? '3px' : '14px', color: '#a855f7', fontWeight: 'bold', borderRight: '1px solid var(--glass-border, rgba(255,255,255,0.1))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar CÓDIGO"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'cod' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'cod')}
+                                                    onBlur={ev => handleSaveCell(e, 'cod', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.cod || '-'
+                                            )}
+                                        </td>
+
+                                        {/* NOMBRE CLIENTE */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'nombre_cliente' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'nombre_cliente', e.nombre_cliente)}
+                                            style={{ position: 'sticky', left: '80px', zIndex: 5, width: '220px', background: 'var(--sticky-col-bg, #0f172a)', padding: editingCell?.id === e.id && editingCell?.field === 'nombre_cliente' ? '3px' : '14px', fontWeight: 'bold', borderRight: '2px solid #3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar Nombre"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'nombre_cliente' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'nombre_cliente')}
+                                                    onBlur={ev => handleSaveCell(e, 'nombre_cliente', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.nombre_cliente || '-'
+                                            )}
+                                        </td>
+
+                                        {/* CONTACTO */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'contacto' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'contacto', e.contacto)}
+                                            style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'contacto' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar Contacto"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'contacto' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'contacto')}
+                                                    onBlur={ev => handleSaveCell(e, 'contacto', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.contacto || '-'
+                                            )}
+                                        </td>
+
+                                        {/* PROVEEDOR */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'proveedor' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'proveedor', e.proveedor)}
+                                            style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'proveedor' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar Proveedor"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'proveedor' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'proveedor')}
+                                                    onBlur={ev => handleSaveCell(e, 'proveedor', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.proveedor || '-'
+                                            )}
+                                        </td>
+
+                                        {/* USUARIO */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'usuario' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'usuario', e.usuario)}
+                                            style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'usuario' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar Usuario"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'usuario' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'usuario')}
+                                                    onBlur={ev => handleSaveCell(e, 'usuario', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.usuario || '-'
+                                            )}
+                                        </td>
+
+                                        {/* CONTRASEÑA */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'contrasena' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'contrasena', e.contrasena)}
+                                            style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'contrasena' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar Contraseña"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'contrasena' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'contrasena')}
+                                                    onBlur={ev => handleSaveCell(e, 'contrasena', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.contrasena || '-'
+                                            )}
+                                        </td>
+
+                                        {/* CUENTAS */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'cuentas' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'cuentas', e.cuentas)}
+                                            style={{ width: '80px', padding: editingCell?.id === e.id && editingCell?.field === 'cuentas' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}
+                                            title="Clic para editar Cuentas"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'cuentas' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    style={{ ...inlineInputStyle, textAlign: 'center' }}
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'cuentas')}
+                                                    onBlur={ev => handleSaveCell(e, 'cuentas', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.cuentas || '1'
+                                            )}
+                                        </td>
+
+                                        {/* MAC SMART ONE */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'mac_smart_one' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'mac_smart_one', e.mac_smart_one)}
+                                            style={{ width: '160px', padding: editingCell?.id === e.id && editingCell?.field === 'mac_smart_one' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para editar MAC Smart One"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'mac_smart_one' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'mac_smart_one')}
+                                                    onBlur={ev => handleSaveCell(e, 'mac_smart_one', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.mac_smart_one || '-'
+                                            )}
+                                        </td>
+
+                                        {/* OBSERVACIONES */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'observaciones' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'observaciones', e.observaciones)}
+                                            style={{ width: '180px', padding: editingCell?.id === e.id && editingCell?.field === 'observaciones' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title={e.observaciones || "Clic para editar Observaciones"}
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'observaciones' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    className="inline-cell-input"
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'observaciones')}
+                                                    onBlur={ev => handleSaveCell(e, 'observaciones', ev.target.value)}
+                                                />
+                                            ) : (
+                                                e.observaciones || '-'
+                                            )}
+                                        </td>
+
+                                        {/* VALOR */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'valor' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'valor', e.valor)}
+                                            style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'valor' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', fontWeight: 'bold' }}
+                                            title="Clic para editar Valor Mensual"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'valor' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="inline-cell-input"
+                                                    style={{ ...inlineInputStyle, fontWeight: 'bold', color: '#60a5fa' }}
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'valor')}
+                                                    onBlur={ev => handleSaveCell(e, 'valor', ev.target.value)}
+                                                />
+                                            ) : (
+                                                <span style={{ color: '#60a5fa' }}>${parseFloat(e.valor || 0).toFixed(2)}</span>
+                                            )}
+                                        </td>
+
+                                        {/* ESTADO */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'estado' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'estado', e.estado)}
+                                            style={{ width: '120px', padding: editingCell?.id === e.id && editingCell?.field === 'estado' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                            title="Clic para cambiar Estado"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'estado' ? (
+                                                <select
+                                                    autoFocus
+                                                    className="inline-cell-select"
+                                                    value={tempValue || '30 DÍAS'}
+                                                    onChange={ev => handleSaveCell(e, 'estado', ev.target.value)}
+                                                    onBlur={handleCancelEdit}
+                                                >
+                                                    {estadoOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 'bold',
+                                                    background: e.estado === '30 DÍAS' ? 'rgba(59, 130, 246, 0.15)' : (e.estado === 'FIJO' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)'),
+                                                    color: e.estado === '30 DÍAS' ? '#60a5fa' : (e.estado === 'FIJO' ? '#34d399' : '#e2e8f0'),
+                                                    border: '1px solid rgba(255,255,255,0.1)'
+                                                }}>
+                                                    {e.estado || '30 DÍAS'}
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* SALDO (GLOBAL / NETO) */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'saldo' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'saldo', debeVal)}
+                                            style={{ 
+                                                width: '120px',
+                                                padding: editingCell?.id === e.id && editingCell?.field === 'saldo' ? '3px' : '14px', 
+                                                borderRight: '1px solid rgba(255,255,255,0.05)',
+                                                color: debeVal > 0 ? '#f87171' : (debeVal < 0 ? '#34d399' : '#94a3b8'),
+                                                fontWeight: 'bold',
+                                                textAlign: 'center',
+                                                background: debeVal < 0 ? 'rgba(52, 211, 153, 0.08)' : (debeVal > 0 ? 'rgba(248, 113, 113, 0.05)' : 'transparent')
+                                            }} 
+                                            title={debeVal < 0 ? `Excedente a favor: $${Math.abs(debeVal).toFixed(2)} (Clic para editar)` : 'Clic para editar Saldo'}
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'saldo' ? (
+                                                <input
+                                                    autoFocus
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="inline-cell-input"
+                                                    style={{ ...inlineInputStyle, textAlign: 'center', fontWeight: 'bold' }}
+                                                    value={tempValue}
+                                                    onChange={ev => setTempValue(ev.target.value)}
+                                                    onKeyDown={ev => handleKeyDown(ev, e, 'saldo')}
+                                                    onBlur={ev => handleSaveCell(e, 'saldo', ev.target.value)}
+                                                />
+                                            ) : (
+                                                <>
+                                                    ${debeVal.toFixed(2)}
+                                                    {debeVal < 0 && (
+                                                        <span style={{ fontSize: '0.65rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
+                                                            A Favor
+                                                        </span>
+                                                    )}
+                                                </>
+                                            )}
+                                        </td>
+
+                                        {/* ACTIVO */}
+                                        <td 
+                                            className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'activo' ? 'editable-td-active' : ''}`}
+                                            onClick={() => handleStartEdit(e, 'activo', e.activo)}
+                                            style={{ width: '100px', padding: editingCell?.id === e.id && editingCell?.field === 'activo' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}
+                                            title="Clic para cambiar Activo (SI/NO)"
+                                        >
+                                            {editingCell?.id === e.id && editingCell?.field === 'activo' ? (
+                                                <select
+                                                    autoFocus
+                                                    className="inline-cell-select"
+                                                    value={tempValue || 'SI'}
+                                                    onChange={ev => handleSaveCell(e, 'activo', ev.target.value)}
+                                                    onBlur={handleCancelEdit}
+                                                >
+                                                    {activoOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span style={{ 
+                                                    fontWeight: 'bold', 
+                                                    color: e.activo === 'SI' ? '#34d399' : '#f87171',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '4px',
+                                                    background: e.activo === 'SI' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)'
+                                                }}>
+                                                    {e.activo || 'SI'}
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* ACCIONES */}
+                                        <td style={{ width: '120px', padding: '14px', textAlign: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                                <button className="btn" onClick={() => handleEdit(e)} title="Editar en modal completo" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                                <button className="btn" onClick={() => handleOpenPago(e)} title="Cobrar rápido" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a4.5 4.5 0 1 0 0 9h5a4.5 4.5 0 1 1 0 9H6"></path></svg>
+                                                </button>
+                                                <button className="btn" onClick={() => handleDelete(e.id)} title="Eliminar servicio" style={{ padding: '6px', minWidth: 'auto', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                                </button>
+                                            </div>
+                                        </td>
+
+                                        {/* MESES */}
+                                        {displayMonths.map((m, mIdx) => {
+                                            const l = m.toLowerCase();
+                                            const isPriorToIngreso = mIdx < startMonthIdx;
+
+                                            const pagoMes = parseFloat(e[l + '_pago'] || 0);
+                                            const saldoMes = parseFloat(e[l + '_saldo'] || 0);
+                                            const valorBase = parseFloat(e.valor || 0);
+                                            
+                                            let saldoAMostrar = 0;
                                             if (e[l + '_saldo'] !== undefined && e[l + '_saldo'] !== null && e[l + '_saldo'] !== '') {
                                                 saldoAMostrar = saldoMes;
                                             } else if (pagoMes > 0) {
                                                 saldoAMostrar = saldoMes;
+                                            } else if (isPriorToIngreso) {
+                                                saldoAMostrar = 0;
                                             } else {
                                                 saldoAMostrar = valorBase;
                                             }
-                                        }
-                                        const hasPaid = pagoMes > 0;
-                                        const isExcedente = !isPriorToIngreso && saldoAMostrar < 0;
-                                        const isDeuda = !isPriorToIngreso && saldoAMostrar > 0;
 
-                                        return (
-                                            <React.Fragment key={m}>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '8px', fontSize: '0.75rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_factura'] || '-')}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: isPriorToIngreso ? 0.35 : 0.8 }}>{isPriorToIngreso ? '-' : (e[l + '_fecha_pago'] ? formatToDMY(e[l + '_fecha_pago']) : '-')}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center', opacity: isPriorToIngreso ? 0.35 : 1 }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_banco'] || '-')}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_cod'] || '-')}</td>
-                                                <td style={{ 
-                                                    width: '100px', 
-                                                    borderLeft: '1px solid rgba(255,255,255,0.05)', 
-                                                    padding: '8px', 
-                                                    color: isPriorToIngreso ? '#64748b' : (isDeuda ? '#f87171' : (isExcedente ? '#34d399' : '#94a3b8')), 
-                                                    fontWeight: 'bold', 
-                                                    textAlign: 'center',
-                                                    background: isExcedente ? 'rgba(52, 211, 153, 0.08)' : (isDeuda ? 'rgba(248, 113, 113, 0.05)' : 'transparent')
-                                                }} title={isExcedente ? `Excedente a favor: $${Math.abs(saldoAMostrar).toFixed(2)}` : ''}>
-                                                    ${saldoAMostrar.toFixed(2)}
-                                                    {isExcedente && (
-                                                        <span style={{ fontSize: '0.62rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
-                                                            Excedente
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
+                                            const hasPaid = pagoMes > 0;
+                                            const isExcedente = saldoAMostrar < 0;
+                                            const isDeuda = saldoAMostrar > 0;
+
+                                            return (
+                                                <React.Fragment key={m}>
+                                                    {/* Factura */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_factura` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_factura`, e[`${l}_factura`])}
+                                                        style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: editingCell?.id === e.id && editingCell?.field === `${l}_factura` ? '2px' : '8px', fontSize: '0.75rem', opacity: (!e[`${l}_factura`] && isPriorToIngreso) ? 0.4 : 1 }}
+                                                        title={`Clic para editar Factura de ${m}`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_factura` ? (
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                className="inline-cell-input"
+                                                                placeholder="Factura"
+                                                                value={tempValue}
+                                                                onChange={ev => setTempValue(ev.target.value)}
+                                                                onKeyDown={ev => handleKeyDown(ev, e, `${l}_factura`)}
+                                                                onBlur={ev => handleSaveCell(e, `${l}_factura`, ev.target.value)}
+                                                            />
+                                                        ) : (
+                                                            e[l + '_factura'] || '-'
+                                                        )}
+                                                    </td>
+
+                                                    {/* Fecha de Pago */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_fecha_pago` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_fecha_pago`, e[`${l}_fecha_pago`])}
+                                                        style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: editingCell?.id === e.id && editingCell?.field === `${l}_fecha_pago` ? '2px' : '8px', fontSize: '0.7rem', opacity: (!e[`${l}_fecha_pago`] && isPriorToIngreso) ? 0.4 : 0.85 }}
+                                                        title={`Clic para editar Fecha de Pago de ${m}`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_fecha_pago` ? (
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                className="inline-cell-input"
+                                                                placeholder="DD/MM/YYYY"
+                                                                value={tempValue}
+                                                                onChange={ev => setTempValue(ev.target.value)}
+                                                                onKeyDown={ev => handleKeyDown(ev, e, `${l}_fecha_pago`)}
+                                                                onBlur={ev => handleSaveCell(e, `${l}_fecha_pago`, ev.target.value)}
+                                                            />
+                                                        ) : (
+                                                            e[l + '_fecha_pago'] ? formatToDMY(e[l + '_fecha_pago']) : '-'
+                                                        )}
+                                                    </td>
+
+                                                    {/* Monto Pago */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_pago` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_pago`, e[`${l}_pago`])}
+                                                        style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: editingCell?.id === e.id && editingCell?.field === `${l}_pago` ? '2px' : '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center', opacity: (!hasPaid && isPriorToIngreso) ? 0.4 : 1 }}
+                                                        title={`Clic para registrar Pago de ${m} (Afecta Balance y Finanzas)`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_pago` ? (
+                                                            <input
+                                                                autoFocus
+                                                                type="number"
+                                                                step="0.01"
+                                                                className="inline-cell-input"
+                                                                style={{ ...inlineInputStyle, textAlign: 'center', fontWeight: 'bold', color: '#10b981' }}
+                                                                placeholder="0.00"
+                                                                value={tempValue}
+                                                                onChange={ev => setTempValue(ev.target.value)}
+                                                                onKeyDown={ev => handleKeyDown(ev, e, `${l}_pago`)}
+                                                                onBlur={ev => handleSaveCell(e, `${l}_pago`, ev.target.value)}
+                                                            />
+                                                        ) : (
+                                                            hasPaid ? `$${pagoMes.toFixed(2)}` : '-'
+                                                        )}
+                                                    </td>
+
+                                                    {/* Banco / Método */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_banco` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_banco`, e[`${l}_banco`])}
+                                                        style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: editingCell?.id === e.id && editingCell?.field === `${l}_banco` ? '2px' : '8px', fontSize: '0.75rem', opacity: (!e[`${l}_banco`] && isPriorToIngreso) ? 0.4 : 1 }}
+                                                        title={`Clic para cambiar Banco de ${m}`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_banco` ? (
+                                                            <select
+                                                                autoFocus
+                                                                className="inline-cell-select"
+                                                                value={tempValue || 'EFECTIVO'}
+                                                                onChange={ev => handleSaveCell(e, `${l}_banco`, ev.target.value)}
+                                                                onBlur={handleCancelEdit}
+                                                            >
+                                                                <option value="">-- Banco --</option>
+                                                                {allBankOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            e[l + '_banco'] || '-'
+                                                        )}
+                                                    </td>
+
+                                                    {/* Ref / COD */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_cod` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_cod`, e[`${l}_cod`])}
+                                                        style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: editingCell?.id === e.id && editingCell?.field === `${l}_cod` ? '2px' : '8px', fontSize: '0.7rem', opacity: (!e[`${l}_cod`] && isPriorToIngreso) ? 0.4 : 1 }}
+                                                        title={`Clic para editar Referencia de ${m}`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_cod` ? (
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                className="inline-cell-input"
+                                                                placeholder="Ref"
+                                                                value={tempValue}
+                                                                onChange={ev => setTempValue(ev.target.value)}
+                                                                onKeyDown={ev => handleKeyDown(ev, e, `${l}_cod`)}
+                                                                onBlur={ev => handleSaveCell(e, `${l}_cod`, ev.target.value)}
+                                                            />
+                                                        ) : (
+                                                            e[l + '_cod'] || '-'
+                                                        )}
+                                                    </td>
+
+                                                    {/* Saldo de este mes */}
+                                                    <td 
+                                                        className={`editable-td ${editingCell?.id === e.id && editingCell?.field === `${l}_saldo` ? 'editable-td-active' : ''}`}
+                                                        onClick={() => handleStartEdit(e, `${l}_saldo`, saldoAMostrar)}
+                                                        style={{ 
+                                                            width: '100px', 
+                                                            borderLeft: '1px solid rgba(255,255,255,0.05)', 
+                                                            padding: editingCell?.id === e.id && editingCell?.field === `${l}_saldo` ? '2px' : '8px', 
+                                                            color: isDeuda ? '#f87171' : (isExcedente ? '#34d399' : '#94a3b8'), 
+                                                            fontWeight: 'bold', 
+                                                            textAlign: 'center',
+                                                            background: isExcedente ? 'rgba(52, 211, 153, 0.08)' : (isDeuda ? 'rgba(248, 113, 113, 0.05)' : 'transparent'),
+                                                            opacity: (saldoAMostrar === 0 && isPriorToIngreso) ? 0.4 : 1
+                                                        }} 
+                                                        title={isExcedente ? `Excedente a favor: $${Math.abs(saldoAMostrar).toFixed(2)} (Clic para editar)` : `Clic para editar Saldo de ${m}`}
+                                                    >
+                                                        {editingCell?.id === e.id && editingCell?.field === `${l}_saldo` ? (
+                                                            <input
+                                                                autoFocus
+                                                                type="number"
+                                                                step="0.01"
+                                                                className="inline-cell-input"
+                                                                style={{ ...inlineInputStyle, textAlign: 'center', fontWeight: 'bold' }}
+                                                                placeholder="0.00"
+                                                                value={tempValue}
+                                                                onChange={ev => setTempValue(ev.target.value)}
+                                                                onKeyDown={ev => handleKeyDown(ev, e, `${l}_saldo`)}
+                                                                onBlur={ev => handleSaveCell(e, `${l}_saldo`, ev.target.value)}
+                                                            />
+                                                        ) : (
+                                                            <>
+                                                                ${saldoAMostrar.toFixed(2)}
+                                                                {isExcedente && (
+                                                                    <span style={{ fontSize: '0.62rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
+                                                                        Excedente
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
