@@ -62,6 +62,14 @@ export const whatsappService = {
   reintentarFallidos: () =>
     api.post('/whatsapp/historial/reintentar-fallidos'),
 
+  // Cancelar una difusión masiva específica en curso
+  cancelarDifusion: (difusion_id) =>
+    api.post(`/whatsapp/difusion/${difusion_id}/cancelar`),
+
+  // Cancelar de emergencia todos los envíos masivos y reintentos en curso
+  cancelarTodosLosEnvios: () =>
+    api.post('/whatsapp/cancelar-todos-envios'),
+
   // Obtener estado del puente
   obtenerStatusBridge: () =>
     api.get('/whatsapp/status-bridge'),

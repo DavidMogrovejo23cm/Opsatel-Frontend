@@ -30,7 +30,7 @@ const WhatsApp = () => {
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [nodoSeleccionado, setNodoSeleccionado] = useState('todos');
     const [estadoSeleccionado, setEstadoSeleccionado] = useState('ACTIVO');
-    const [velocidadEnvio, setVelocidadEnvio] = useState('diario_20'); // 'diario_20' (20 al día intercalando horas/minutos) | 'espaciado_lento' | 'seguro' | 'prudente' | 'moderado'
+    const [velocidadEnvio, setVelocidadEnvio] = useState('seguro'); // 'seguro' (recomendado) | 'moderado' | 'prudente' | 'espaciado_lento' | 'diario_20'
     const [desdeId, setDesdeId] = useState(''); // Continuar desde ID específico (ej. 50)
     const [hastaId, setHastaId] = useState(''); // Límite de ID final opcional
     const [limiteMensajes, setLimiteMensajes] = useState('20'); // Límite de mensajes a enviar en la tanda (ej. 20)
@@ -51,6 +51,8 @@ const WhatsApp = () => {
     const [busquedaHistorial, setBusquedaHistorial] = useState('');
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const [reintentandoFallidos, setReintentandoFallidos] = useState(false);
+    const [cancelandoId, setCancelandoId] = useState(null);
+    const [cancelandoTodo, setCancelandoTodo] = useState(false);
 
     // Administradores autorizados
     const [administradores, setAdministradores] = useState([]);
@@ -88,6 +90,17 @@ const WhatsApp = () => {
         const intervalo = setInterval(cargarHistorial, 30000);
         return () => clearInterval(intervalo);
     }, []);
+
+    // Polling acelerado a 4s mientras haya campañas o envíos en proceso
+    useEffect(() => {
+        const hayEnProceso = difusiones.some(d => d.estado === 'en_proceso');
+        if (hayEnProceso) {
+            const intv = setInterval(() => {
+                cargarHistorial(false);
+            }, 4000);
+            return () => clearInterval(intv);
+        }
+    }, [difusiones]);
 
     const normalizeLocationKey = (str) => {
         if (!str) return '';
@@ -937,12 +950,12 @@ const WhatsApp = () => {
         const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
         const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel} ${rangoIdsTexto}`.trim();
 
-        let delayMin = 30.0;
-        let delayMax = 120.0;
+        let delayMin = 25.0;
+        let delayMax = 45.0;
         let batchSize = 10;
-        let batchPauseMin = 300.0; // 5 minutos
-        let batchPauseMax = 600.0; // 10 minutos
-        let ritmoTexto = 'Grupos de 10 clientes (30 a 120 seg entre mensajes) con descanso de 5 a 10 minutos entre cada grupo';
+        let batchPauseMin = 180.0; // 3 minutos
+        let batchPauseMax = 300.0; // 5 minutos
+        let ritmoTexto = '🛡️ Modo Seguro (Recomendado): Grupos de 10 clientes (25 a 45 seg entre mensajes) con descanso de 3 a 5 minutos';
 
         if (velocidadEnvio === 'diario_20') {
             delayMin = 900.0; // 15 minutos
@@ -950,28 +963,28 @@ const WhatsApp = () => {
             batchSize = 5;
             batchPauseMin = 1800.0; // 30 minutos
             batchPauseMax = 3600.0; // 1 hora
-            ritmoTexto = '🗓️ Campaña Diaria Anti-Baneo: 1 mensaje cada 15 a 30 minutos a lo largo del día (Máxima Seguridad para 20-30 clientes)';
+            ritmoTexto = '🗓️ Campaña Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 minutos a lo largo del día (Máxima Seguridad para 20-30 clientes)';
         } else if (velocidadEnvio === 'espaciado_lento') {
-            delayMin = 180.0; // 3 minutos
-            delayMax = 360.0; // 6 minutos
+            delayMin = 120.0; // 2 minutos
+            delayMax = 240.0; // 4 minutos
             batchSize = 5;
-            batchPauseMin = 600.0; // 10 minutos
-            batchPauseMax = 1200.0; // 20 minutos
-            ritmoTexto = '🐢 Espaciado Lento: 1 mensaje cada 3 a 6 minutos con descanso de 10 a 20 minutos cada 5 clientes';
+            batchPauseMin = 300.0; // 5 minutos
+            batchPauseMax = 600.0; // 10 minutos
+            ritmoTexto = '🐢 Espaciado Lento: 1 mensaje cada 2 a 4 minutos con descanso de 5 a 10 minutos cada 5 clientes';
         } else if (velocidadEnvio === 'prudente') {
-            delayMin = 45.0;
-            delayMax = 150.0;
+            delayMin = 40.0;
+            delayMax = 90.0;
             batchSize = 8;
-            batchPauseMin = 420.0; // 7 minutos
-            batchPauseMax = 720.0; // 12 minutos
-            ritmoTexto = '🔒 Ultra Seguro: Grupos de 8 clientes (45 a 150 seg entre mensajes) con descanso de 7 a 12 minutos';
+            batchPauseMin = 300.0; // 5 minutos
+            batchPauseMax = 480.0; // 8 minutos
+            ritmoTexto = '🔒 Modo Prudente: Grupos de 8 clientes (40 a 90 seg entre mensajes) con descanso de 5 a 8 minutos';
         } else if (velocidadEnvio === 'moderado') {
-            delayMin = 20.0;
-            delayMax = 60.0;
+            delayMin = 15.0;
+            delayMax = 30.0;
             batchSize = 10;
-            batchPauseMin = 180.0; // 3 minutos
-            batchPauseMax = 300.0; // 5 minutos
-            ritmoTexto = '⏱️ Moderado: Grupos de 10 clientes (20 a 60 seg entre mensajes) con descanso de 3 a 5 minutos';
+            batchPauseMin = 120.0; // 2 minutos
+            batchPauseMax = 180.0; // 3 minutos
+            ritmoTexto = '⏱️ Modo Rápido Seguro: Grupos de 10 clientes (15 a 30 seg entre mensajes) con descanso de 2 a 3 minutos';
         }
 
         const confirmacion1 = await showConfirm(
@@ -984,7 +997,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.`,
+            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.\n\n💡 Podrás cancelar el envío en cualquier momento desde la pestaña de Historial.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -1013,11 +1026,54 @@ const WhatsApp = () => {
             showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Se procesará en segundo plano con protección anti-bloqueo.`);
             setMensajeGlobal('');
             setActiveTab('Historial');
-            cargarHistorial();
+            setVistaHistorial('difusiones');
+            cargarHistorial(true);
         } catch (error) {
             showError('Error al iniciar difusión: ' + (error.response?.data?.detail || error.message));
         } finally {
             setEnviandoGlobal(false);
+        }
+    };
+
+    const manejarCancelarDifusion = async (difusionId) => {
+        const confirmado = await showConfirm(
+            '🛑 Cancelar Difusión Masiva',
+            `¿Estás seguro de cancelar esta difusión masiva (ID #${difusionId})?\n\nLos mensajes pendientes NO se enviarán y la tarea se detendrá inmediatamente para proteger tu número.`,
+            'Sí, cancelar envío',
+            'Seguir enviando'
+        );
+        if (!confirmado) return;
+
+        setCancelandoId(difusionId);
+        try {
+            const res = await whatsappService.cancelarDifusion(difusionId);
+            showSuccess(res.data?.message || 'Difusión cancelada exitosamente.');
+            cargarHistorial(true);
+        } catch (error) {
+            showError('Error al cancelar difusión: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setCancelandoId(null);
+        }
+    };
+
+    const manejarCancelarTodosLosEnvios = async () => {
+        const confirmado = await showConfirm(
+            '🛑 Cancelar Todos los Envíos',
+            '¿Estás seguro de cancelar de inmediato TODOS los envíos masivos y reintentos que se encuentren en proceso?\n\nSe detendrán todas las colas de mensajería pendientes.',
+            'Sí, detener todo',
+            'Volver'
+        );
+        if (!confirmado) return;
+
+        setCancelandoTodo(true);
+        try {
+            const res = await whatsappService.cancelarTodosLosEnvios();
+            showSuccess(res.data?.message || 'Todos los envíos en curso han sido cancelados.');
+            cargarHistorial(true);
+        } catch (error) {
+            showError('Error al cancelar envíos: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setCancelandoTodo(false);
         }
     };
 
@@ -2259,11 +2315,11 @@ const WhatsApp = () => {
                                             width: '100%'
                                         }}
                                     >
-                                        <option value="diario_20">🗓️ Campaña Diaria Anti-Baneo: 1 mensaje cada 15 a 30 min (Máxima Seguridad para 20-30 clientes al día)</option>
-                                        <option value="espaciado_lento">🐢 Espaciado Lento: 1 mensaje cada 3 a 6 min (Pausa 10-20 min c/5 clientes)</option>
-                                        <option value="seguro">🛡️ Modo Seguro: Grupos de 10 (30-120s c/u + pausa 5-10 min)</option>
-                                        <option value="prudente">🔒 Ultra Seguro: Grupos de 8 (45-150s c/u + pausa 7-12 min)</option>
-                                        <option value="moderado">⏱️ Moderado: Grupos de 10 (20-60s c/u + pausa 3-5 min)</option>
+                                        <option value="seguro">🛡️ Modo Seguro (Recomendado): Grupos de 10 (25 a 45s c/u + pausa 3-5 min)</option>
+                                        <option value="moderado">⏱️ Modo Rápido Seguro: Grupos de 10 (15 a 30s c/u + pausa 2-3 min)</option>
+                                        <option value="prudente">🔒 Modo Prudente: Grupos de 8 (40 a 90s c/u + pausa 5-8 min)</option>
+                                        <option value="espaciado_lento">🐢 Espaciado Lento: 1 mensaje cada 2 a 4 min (Pausa 5-10 min c/5 clientes)</option>
+                                        <option value="diario_20">🗓️ Campaña Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 min (20-30 clientes al día)</option>
                                     </select>
                                 </div>
                             </div>
@@ -2381,15 +2437,88 @@ const WhatsApp = () => {
                                     Registro de difusiones masivas (a todos o por nodo/parroquia), envíos programados y despachos directos.
                                 </p>
                             </div>
-                            <button 
-                                className="btn btn-secondary"
-                                onClick={() => cargarHistorial(true)}
-                                disabled={cargandoHistorial}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-                            >
-                                {cargandoHistorial ? '⏳ Cargando...' : '🔄 Actualizar Historial'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {difusiones.some(d => d.estado === 'en_proceso') && (
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={manejarCancelarTodosLosEnvios}
+                                        disabled={cancelandoTodo}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '0.85rem',
+                                            background: 'rgba(239, 68, 68, 0.25)',
+                                            border: '1px solid #ef4444',
+                                            color: '#fca5a5',
+                                            padding: '6px 14px',
+                                            borderRadius: '6px',
+                                            fontWeight: 'bold',
+                                            cursor: cancelandoTodo ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        {cancelandoTodo ? '⏳ Cancelando...' : '🛑 Cancelar Todos los Envíos'}
+                                    </button>
+                                )}
+                                <button 
+                                    className="btn btn-secondary"
+                                    onClick={() => cargarHistorial(true)}
+                                    disabled={cargandoHistorial}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                                >
+                                    {cargandoHistorial ? '⏳ Cargando...' : '🔄 Actualizar Historial'}
+                                </button>
+                            </div>
                         </div>
+
+                        {/* BANNER INFORMATIVO SI HAY ENVÍO EN CURSO */}
+                        {difusiones.some(d => d.estado === 'en_proceso') && (
+                            <div style={{
+                                background: 'linear-gradient(90deg, rgba(234, 179, 8, 0.15), rgba(239, 68, 68, 0.15))',
+                                border: '1px solid rgba(234, 179, 8, 0.4)',
+                                borderRadius: '8px',
+                                padding: '12px 18px',
+                                marginBottom: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: '12px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '1.4rem' }}>⏳</span>
+                                    <div>
+                                        <strong style={{ color: '#fef08a', fontSize: '0.9rem', display: 'block' }}>
+                                            Hay una difusión masiva en ejecución en segundo plano
+                                        </strong>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                            Los mensajes se están enviando de forma escalonada con protección anti-bloqueo. Puedes cancelarla en cualquier momento.
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={manejarCancelarTodosLosEnvios}
+                                    disabled={cancelandoTodo}
+                                    style={{
+                                        background: '#dc2626',
+                                        border: 'none',
+                                        color: '#fff',
+                                        borderRadius: '6px',
+                                        padding: '7px 16px',
+                                        fontSize: '0.82rem',
+                                        fontWeight: 'bold',
+                                        cursor: cancelandoTodo ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)'
+                                    }}
+                                >
+                                    <span>🛑</span> {cancelandoTodo ? 'Cancelando...' : 'Detener y Cancelar Todo'}
+                                </button>
+                            </div>
+                        )}
 
                         {/* SELECTOR DE SUB-VISTAS: DIFUSIONES VS MENSAJES */}
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
@@ -2466,15 +2595,21 @@ const WhatsApp = () => {
                                         {difusiones.map((dif, idx) => {
                                             const esMasiva = dif.tipo === 'difusion_masiva';
                                             const esProgramado = dif.tipo === 'envio_programado';
+                                            const enProceso = dif.estado === 'en_proceso';
+                                            const cancelado = dif.estado === 'cancelado';
                                             return (
                                                 <div 
                                                     key={dif.id || idx}
                                                     style={{
                                                         background: 'rgba(15, 23, 42, 0.8)',
-                                                        border: esMasiva ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(59, 130, 246, 0.35)',
+                                                        border: enProceso 
+                                                            ? '1px solid rgba(234, 179, 8, 0.5)' 
+                                                            : (cancelado 
+                                                                ? '1px solid rgba(148, 163, 184, 0.3)' 
+                                                                : (esMasiva ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(59, 130, 246, 0.35)')),
                                                         borderRadius: '10px',
                                                         padding: '16px 20px',
-                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                                                        boxShadow: enProceso ? '0 4px 16px rgba(234, 179, 8, 0.15)' : '0 4px 12px rgba(0,0,0,0.25)',
                                                         display: 'flex',
                                                         flexDirection: 'column',
                                                         gap: '10px'
@@ -2498,20 +2633,59 @@ const WhatsApp = () => {
                                                             </span>
                                                         </div>
 
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                                             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                                                                 🗓️ {dif.fecha || 'Fecha registrada'}
                                                             </span>
                                                             <span style={{
                                                                 fontSize: '0.78rem',
                                                                 fontWeight: 'bold',
-                                                                padding: '3px 10px',
+                                                                padding: '4px 10px',
                                                                 borderRadius: '12px',
-                                                                background: dif.estado === 'completado' ? 'rgba(34, 197, 94, 0.2)' : (dif.estado === 'en_proceso' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
-                                                                color: dif.estado === 'completado' ? '#86efac' : (dif.estado === 'en_proceso' ? '#fef08a' : '#fca5a5')
+                                                                background: dif.estado === 'completado' 
+                                                                    ? 'rgba(34, 197, 94, 0.2)' 
+                                                                    : (enProceso 
+                                                                        ? 'rgba(234, 179, 8, 0.2)' 
+                                                                        : (cancelado 
+                                                                            ? 'rgba(148, 163, 184, 0.2)' 
+                                                                            : 'rgba(239, 68, 68, 0.2)')),
+                                                                color: dif.estado === 'completado' 
+                                                                    ? '#86efac' 
+                                                                    : (enProceso 
+                                                                        ? '#fef08a' 
+                                                                        : (cancelado 
+                                                                            ? '#cbd5e1' 
+                                                                            : '#fca5a5')),
+                                                                border: cancelado ? '1px solid rgba(148, 163, 184, 0.3)' : (enProceso ? '1px solid rgba(234, 179, 8, 0.4)' : 'none')
                                                             }}>
-                                                                {dif.estado === 'completado' ? '✅ Completado' : (dif.estado === 'en_proceso' ? '⏳ En Proceso' : '❌ Fallido')}
+                                                                {dif.estado === 'completado' ? '✅ Completado' : (enProceso ? '⏳ En Proceso' : (cancelado ? '⏹️ Cancelado' : '❌ Fallido'))}
                                                             </span>
+
+                                                            {/* BOTÓN CANCELAR ENVÍO */}
+                                                            {enProceso && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => manejarCancelarDifusion(dif.id)}
+                                                                    disabled={cancelandoId === dif.id}
+                                                                    title="Detener de inmediato esta difusión masiva"
+                                                                    style={{
+                                                                        background: 'rgba(239, 68, 68, 0.25)',
+                                                                        border: '1px solid #ef4444',
+                                                                        color: '#fca5a5',
+                                                                        borderRadius: '6px',
+                                                                        padding: '4px 12px',
+                                                                        fontSize: '0.78rem',
+                                                                        fontWeight: 'bold',
+                                                                        cursor: cancelandoId === dif.id ? 'not-allowed' : 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '5px',
+                                                                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)'
+                                                                    }}
+                                                                >
+                                                                    <span>🛑</span> {cancelandoId === dif.id ? 'Cancelando...' : 'Cancelar Envío'}
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -2533,13 +2707,18 @@ const WhatsApp = () => {
                                                         <span>
                                                             👥 Total Destinatarios: <strong style={{ color: '#fff' }}>{dif.total_destinatarios || 0}</strong> clientes
                                                         </span>
-                                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                                             <span style={{ color: '#86efac' }}>
                                                                 ✅ {dif.total_exitosos || 0} entregados
                                                             </span>
                                                             {dif.total_fallidos > 0 && (
                                                                 <span style={{ color: '#fca5a5' }}>
                                                                     ❌ {dif.total_fallidos} fallidos
+                                                                </span>
+                                                            )}
+                                                            {cancelado && (
+                                                                <span style={{ color: '#cbd5e1' }}>
+                                                                    ⏹️ Envío detenido por el usuario
                                                                 </span>
                                                             )}
                                                         </div>

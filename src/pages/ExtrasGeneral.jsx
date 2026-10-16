@@ -29,6 +29,14 @@ const ExtrasGeneral = () => {
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
+    const [showAllMonths, setShowAllMonths] = useState(false);
+    const currentMonthIdx = new Date().getMonth(); // 9 para Octubre
+
+    const displayMonths = useMemo(() => {
+        if (showAllMonths) return months;
+        return months.filter((_, idx) => idx <= currentMonthIdx);
+    }, [showAllMonths, currentMonthIdx]);
+
     const initialForm = {
         cod: '',
         nombre_cliente: '',
@@ -124,37 +132,37 @@ const ExtrasGeneral = () => {
         if (!e) return 0;
         const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
         const currentMonthIdx = new Date().getMonth();
-        let totalDebe = 0;
-        
-        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
+        const currentMonthKey = listMonths[currentMonthIdx];
 
-        for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
-            const m = listMonths[i];
-            const pagoMes = parseFloat(e[`${m}_pago`] || 0);
-            const saldoField = e[`${m}_saldo`];
-            const valorBase = parseFloat(e.valor || 0);
-
-            let saldoMes = 0;
-            if (pagoMes > 0) {
-                saldoMes = parseFloat(saldoField || 0);
-            } else {
-                if (saldoField !== undefined && saldoField !== null && saldoField !== '' && parseFloat(saldoField) >= 0) {
-                    saldoMes = parseFloat(saldoField);
-                } else {
-                    saldoMes = valorBase;
-                }
-            }
-            totalDebe += Math.max(0, saldoMes);
+        // El saldo del mes actual representa el balance neto acumulado (positivo = deuda, negativo = excedente)
+        if (e[`${currentMonthKey}_saldo`] !== undefined && e[`${currentMonthKey}_saldo`] !== null && e[`${currentMonthKey}_saldo`] !== '') {
+            return parseFloat(e[`${currentMonthKey}_saldo`]);
         }
-        return totalDebe;
+
+        // Si no está registrado en el mes actual, buscar en el mes más reciente anterior
+        for (let i = currentMonthIdx - 1; i >= 0; i--) {
+            const m = listMonths[i];
+            if (e[`${m}_saldo`] !== undefined && e[`${m}_saldo`] !== null && e[`${m}_saldo`] !== '') {
+                return parseFloat(e[`${m}_saldo`]);
+            }
+        }
+        return parseFloat(e.valor || 0);
     };
 
     const stats = useMemo(() => {
         let pend = 0;
+        let excedentes = 0;
         extras.forEach(e => {
-            pend += calculateDebe(e);
+            const d = calculateDebe(e);
+            if (d > 0) pend += d;
+            else if (d < 0) excedentes += Math.abs(d);
         });
-        return { pend, total: extras.length, activos: extras.filter(x => x.activo === 'SI').length };
+        return { 
+            pend, 
+            excedentes,
+            total: extras.length, 
+            activos: extras.filter(x => x.activo === 'SI').length 
+        };
     }, [extras]);
 
     const handleOpenModal = () => {
@@ -330,6 +338,21 @@ const ExtrasGeneral = () => {
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                     <button
+                        className="btn btn-secondary"
+                        onClick={() => setShowAllMonths(!showAllMonths)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            whiteSpace: 'nowrap',
+                            border: showAllMonths ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)'
+                        }}
+                        title={showAllMonths ? "Mostrar únicamente hasta el mes actual" : "Ver cuadrícula completa de todos los meses"}
+                    >
+                        <span>{showAllMonths ? '🔒' : '🔓'}</span>
+                        {showAllMonths ? `Hasta ${months[currentMonthIdx]}` : 'Desbloquear todos'}
+                    </button>
+                    <button
                         className="btn"
                         onClick={() => setShowUploadModal(true)}
                         style={{
@@ -373,9 +396,10 @@ const ExtrasGeneral = () => {
             {/* STATS */}
             <div className="grid-responsive" style={{ marginBottom: '32px' }}>
                 {[
-                    { label: 'Saldo Pendiente', val: `$${stats.pend.toLocaleString()}`, color: '#f87171' },
-                    { label: 'Servicios Activos', val: stats.activos, color: '#34d399' },
-                    { label: 'Total Clientes', val: stats.total, color: '#3b82f6' }
+                    { label: 'Saldo Pendiente (Deuda)', val: `$${stats.pend.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, color: '#f87171' },
+                    { label: 'Total Excedentes (A Favor)', val: `-$${stats.excedentes.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, color: '#34d399' },
+                    { label: 'Servicios Activos', val: stats.activos, color: '#38bdf8' },
+                    { label: 'Total Clientes', val: stats.total, color: '#818cf8' }
                 ].map((s, i) => (
                     <div key={i} className="glass-card glass" style={{ padding: '24px' }}>
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
@@ -404,14 +428,14 @@ const ExtrasGeneral = () => {
                                 <th rowSpan="2" style={{ width: '120px', padding: '15px' }}>SALDO</th>
                                 <th rowSpan="2" style={{ width: '100px', padding: '15px' }}>ACTIVO</th>
                                 <th rowSpan="2" style={{ width: '120px', padding: '15px', textAlign: 'center' }}>ACCIONES</th>
-                                {months.map(m => (
+                                {displayMonths.map(m => (
                                     <th key={m} style={{ width: '600px', textAlign: 'center', borderLeft: '1px solid var(--table-border, rgba(255,255,255,0.1))', padding: '10px', background: 'var(--table-header-bg, #1e1b4b)' }} colSpan="6">
                                         {m.toUpperCase()}
                                     </th>
                                 ))}
                             </tr>
                             <tr style={{ background: 'var(--sticky-sub-bg, #0f172a)', fontSize: '0.7rem' }}>
-                                {months.map(m => (
+                                {displayMonths.map(m => (
                                     <React.Fragment key={m + '_sub'}>
                                         <th style={{ width: '100px', padding: '8px', borderLeft: '1px solid var(--glass-border, rgba(255,255,255,0.1))' }}>Factura</th>
                                         <th style={{ width: '100px', padding: '8px' }}>Fecha</th>
@@ -443,9 +467,15 @@ const ExtrasGeneral = () => {
                                         borderRight: '1px solid rgba(255,255,255,0.05)',
                                         color: calculateDebe(e) > 0 ? '#f87171' : (calculateDebe(e) < 0 ? '#34d399' : '#94a3b8'),
                                         fontWeight: 'bold',
-                                        textAlign: 'center'
-                                    }}>
+                                        textAlign: 'center',
+                                        background: calculateDebe(e) < 0 ? 'rgba(52, 211, 153, 0.08)' : (calculateDebe(e) > 0 ? 'rgba(248, 113, 113, 0.05)' : 'transparent')
+                                    }} title={calculateDebe(e) < 0 ? `Excedente a favor: $${Math.abs(calculateDebe(e)).toFixed(2)}` : ''}>
                                         ${calculateDebe(e).toFixed(2)}
+                                        {calculateDebe(e) < 0 && (
+                                            <span style={{ fontSize: '0.65rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
+                                                A Favor
+                                            </span>
+                                        )}
                                     </td>
                                     <td style={{ width: '100px', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>{e.activo}</td>
                                     <td style={{ width: '120px', padding: '14px', textAlign: 'center' }}>
@@ -461,7 +491,7 @@ const ExtrasGeneral = () => {
                                             </button>
                                         </div>
                                     </td>
-                                    {months.map((m, mIdx) => {
+                                    {displayMonths.map((m, mIdx) => {
                                         const l = m.toLowerCase();
                                         const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
                                         const isPriorToIngreso = mIdx < startMonthIdx;
@@ -474,17 +504,17 @@ const ExtrasGeneral = () => {
                                         if (isPriorToIngreso) {
                                             saldoAMostrar = 0;
                                         } else {
-                                            if (pagoMes > 0) {
+                                            if (e[l + '_saldo'] !== undefined && e[l + '_saldo'] !== null && e[l + '_saldo'] !== '') {
+                                                saldoAMostrar = saldoMes;
+                                            } else if (pagoMes > 0) {
                                                 saldoAMostrar = saldoMes;
                                             } else {
-                                                if (e[l + '_saldo'] !== undefined && e[l + '_saldo'] !== null && e[l + '_saldo'] !== '') {
-                                                    saldoAMostrar = saldoMes;
-                                                } else {
-                                                    saldoAMostrar = valorBase;
-                                                }
+                                                saldoAMostrar = valorBase;
                                             }
                                         }
                                         const hasPaid = pagoMes > 0;
+                                        const isExcedente = !isPriorToIngreso && saldoAMostrar < 0;
+                                        const isDeuda = !isPriorToIngreso && saldoAMostrar > 0;
 
                                         return (
                                             <React.Fragment key={m}>
@@ -493,8 +523,21 @@ const ExtrasGeneral = () => {
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: '#10b981', fontWeight: 'bold', textAlign: 'center', opacity: isPriorToIngreso ? 0.35 : 1 }}>{hasPaid ? `$${pagoMes.toFixed(2)}` : '-'}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.75rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_banco'] || '-')}</td>
                                                 <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', fontSize: '0.7rem', opacity: isPriorToIngreso ? 0.35 : 1 }}>{isPriorToIngreso ? '-' : (e[l + '_cod'] || '-')}</td>
-                                                <td style={{ width: '100px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '8px', color: isPriorToIngreso ? '#64748b' : (saldoAMostrar > 0 ? '#f43f5e' : '#94a3b8'), fontWeight: 'bold', textAlign: 'center' }}>
+                                                <td style={{ 
+                                                    width: '100px', 
+                                                    borderLeft: '1px solid rgba(255,255,255,0.05)', 
+                                                    padding: '8px', 
+                                                    color: isPriorToIngreso ? '#64748b' : (isDeuda ? '#f87171' : (isExcedente ? '#34d399' : '#94a3b8')), 
+                                                    fontWeight: 'bold', 
+                                                    textAlign: 'center',
+                                                    background: isExcedente ? 'rgba(52, 211, 153, 0.08)' : (isDeuda ? 'rgba(248, 113, 113, 0.05)' : 'transparent')
+                                                }} title={isExcedente ? `Excedente a favor: $${Math.abs(saldoAMostrar).toFixed(2)}` : ''}>
                                                     ${saldoAMostrar.toFixed(2)}
+                                                    {isExcedente && (
+                                                        <span style={{ fontSize: '0.62rem', display: 'block', color: '#34d399', fontWeight: 'normal' }}>
+                                                            Excedente
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </React.Fragment>
                                         );
@@ -701,9 +744,11 @@ const ExtrasGeneral = () => {
                                 <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${parseFloat(selectedForPago?.valor || 0).toFixed(2)}</span>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>DEUDA ACUMULADA</span>
-                                <span style={{ fontWeight: 'bold', color: calculateDebe(selectedForPago) > 0 ? '#f87171' : '#34d399' }}>
-                                    ${calculateDebe(selectedForPago).toFixed(2)}
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
+                                    {calculateDebe(selectedForPago) < 0 ? 'EXCEDENTE A FAVOR' : 'DEUDA ACUMULADA'}
+                                </span>
+                                <span style={{ fontWeight: 'bold', color: calculateDebe(selectedForPago) > 0 ? '#f87171' : (calculateDebe(selectedForPago) < 0 ? '#34d399' : '#94a3b8') }}>
+                                    ${calculateDebe(selectedForPago).toFixed(2)} {calculateDebe(selectedForPago) < 0 ? '(A favor)' : ''}
                                 </span>
                             </div>
                         </div>
