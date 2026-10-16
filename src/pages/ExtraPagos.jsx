@@ -10,6 +10,7 @@ const ExtraPagos = () => {
   const [pagosHistory, setPagosHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEstado, setSelectedEstado] = useState('TODOS');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedExtra, setSelectedExtra] = useState(null);
 
@@ -29,6 +30,11 @@ const ExtraPagos = () => {
     "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
   ];
 
+  const listMonths = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+  ];
+
   // Mes seleccionado para gestionar en la tabla (por defecto el mes actual)
   const currentMonthName = months[new Date().getMonth()];
   const [selectedMonth, setSelectedMonth] = useState(currentMonthName);
@@ -41,13 +47,19 @@ const ExtraPagos = () => {
     factura: ''
   });
 
+  const getMonthIdxByName = (mName) => {
+    if (!mName) return new Date().getMonth();
+    const idx = listMonths.indexOf(String(mName).trim().toLowerCase());
+    return idx >= 0 ? idx : new Date().getMonth();
+  };
+
   const getStartMonthIdx = (fechaIngreso) => {
     if (!fechaIngreso) return 0;
     try {
       const str = String(fechaIngreso).trim();
       if (str.includes('-')) {
         const parts = str.split('-');
-        const m = parseInt(parts[1], 10);
+        const m = parseInt(parts[0].length === 4 ? parts[1] : parts[1], 10);
         if (!isNaN(m) && m >= 1 && m <= 12) return m - 1;
       } else if (str.includes('/')) {
         const parts = str.split('/');
@@ -58,6 +70,10 @@ const ExtraPagos = () => {
       console.error("Error parsing fecha_ingreso:", e);
     }
     return 0;
+  };
+
+  const strNonEmpty = (val) => {
+    return val !== undefined && val !== null && String(val).trim() !== '';
   };
 
   // Obtiene el pago del mes seleccionado para un cliente
@@ -71,46 +87,47 @@ const ExtraPagos = () => {
   // Si > 0: Debe (saldo pendiente)
   // Si < 0: Excedente / A favor
   // Si === 0: Al día
+  // IMPORTANTE:
+  // 1) Si estado es ELIMINADO: saldo es 0.00
+  // 2) Arrastre acumulativo: Si en el mes anterior debía dinero (ej: Septiembre $4) y en el mes actual
+  //    son $4 de valor base con pago $0, el total a cancelar es $8 ($4 + $4).
   const getSaldoMes = (e, mesNombre = selectedMonth) => {
     if (!e) return 0;
-    const m = (mesNombre || 'octubre').toLowerCase();
-    const saldoField = e[`${m}_saldo`];
+    if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return 0;
+
+    const mIdx = getMonthIdxByName(mesNombre);
+    const m = listMonths[mIdx];
     const valorBase = parseFloat(e.valor || 0);
     const pagoMes = parseFloat(e[`${m}_pago`] || 0);
-
-    if (saldoField !== undefined && saldoField !== null && strNonEmpty(saldoField)) {
-      return parseFloat(saldoField);
-    }
-    return valorBase - pagoMes;
-  };
-
-  const strNonEmpty = (val) => {
-    return String(val).trim() !== '';
-  };
-
-  // Deuda total acumulada de todos los meses hasta el mes actual (considerando excedentes)
-  const calculateDebeTotal = (e) => {
-    if (!e) return 0;
-    const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-    const currentMonthIdx = new Date().getMonth();
-    let total = 0;
     const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
 
-    for (let i = startMonthIdx; i <= currentMonthIdx; i++) {
-      const m = listMonths[i];
-      const saldoField = e[`${m}_saldo`];
-      const valorBase = parseFloat(e.valor || 0);
-      const pagoMes = parseFloat(e[`${m}_pago`] || 0);
+    if (mIdx < startMonthIdx) return 0;
 
-      let saldoMes = 0;
-      if (saldoField !== undefined && saldoField !== null && strNonEmpty(saldoField)) {
-        saldoMes = parseFloat(saldoField);
-      } else {
-        saldoMes = valorBase - pagoMes;
+    // Saldo acumulado del mes anterior
+    const prevSaldo = (mIdx > 0 && mIdx > startMonthIdx)
+      ? getSaldoMes(e, listMonths[mIdx - 1])
+      : (mIdx > 0 ? parseFloat(e[`${listMonths[mIdx - 1]}_saldo`] || 0) : 0);
+
+    const saldoField = e[`${m}_saldo`];
+    if (strNonEmpty(saldoField)) {
+      const numSaldo = parseFloat(saldoField);
+      // Si el mes previo tenía saldo deudor y en el actual no hubo pago suficiente,
+      // asegurar que refleje la acumulación (ej: sep 4 + oct 4 = 8)
+      if (prevSaldo > 0 && pagoMes === 0 && numSaldo < prevSaldo + valorBase) {
+        return Math.round((prevSaldo + valorBase) * 100) / 100;
       }
-      total += saldoMes;
+      return numSaldo;
     }
-    return total;
+
+    return Math.round((prevSaldo + valorBase - pagoMes) * 100) / 100;
+  };
+
+  // Deuda total acumulada a la fecha actual (o mes actual)
+  const calculateDebeTotal = (e) => {
+    if (!e) return 0;
+    if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return 0;
+    const currentMonthIdx = new Date().getMonth();
+    return getSaldoMes(e, listMonths[currentMonthIdx]);
   };
 
   const fetchData = async () => {
@@ -135,6 +152,13 @@ const ExtraPagos = () => {
     fetchData();
   }, []);
 
+  // Lista de estados disponibles para filtrar
+  const availableEstados = useMemo(() => {
+    const base = ['TODOS', '30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'EN CORTE', 'ELIMINADO'];
+    const fromData = extras.map(e => (e.estado || '').trim().toUpperCase()).filter(Boolean);
+    return Array.from(new Set([...base, ...fromData]));
+  }, [extras]);
+
   // Métodos de pago sin duplicar "EFECTIVO"
   const uniqueMetodosPago = useMemo(() => {
     const list = ['EFECTIVO'];
@@ -148,27 +172,39 @@ const ExtraPagos = () => {
   }, [bancosList]);
 
   // Totales de recaudación y cartera pendiente para el mes seleccionado
+  // REGLA CLAVE: En saldo pendiente / cartera NO cuentan los clientes con estado ELIMINADO
   const totals = useMemo(() => {
     let globalDebe = 0;
     let recaudadoMes = 0;
     extras.forEach(e => {
+      if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return;
       const saldoMes = getSaldoMes(e, selectedMonth);
       if (saldoMes > 0) {
         globalDebe += saldoMes;
       }
       recaudadoMes += getPagoMes(e, selectedMonth);
     });
-    return { globalDebe, recaudadoMes, totalClientes: extras.length };
+    return { 
+      globalDebe, 
+      recaudadoMes, 
+      totalClientes: extras.length,
+      activosCount: extras.filter(x => (x.estado || '').trim().toUpperCase() !== 'ELIMINADO' && x.activo === 'SI').length 
+    };
   }, [extras, selectedMonth]);
 
-  // Abrir modal de cobro
+  // Abrir modal de cobro con sugerencia acumulada exacta
   const openPagoModal = (extra) => {
+    if ((extra.estado || '').trim().toUpperCase() === 'ELIMINADO') {
+      showError("El cliente tiene estado ELIMINADO y no registra saldo pendiente a cobrar.");
+      return;
+    }
+
     setSelectedExtra(extra);
     const saldoMesActual = getSaldoMes(extra, selectedMonth);
     const deudaTotal = calculateDebeTotal(extra);
     
-    // Sugerencia de cobro inteligente: si debe en este mes cobra eso, sino deuda total, sino valor base
-    let montoInicial = extra.valor || 0;
+    // Sugerencia de cobro inteligente: si debe en este mes cobra eso (que ya incluye meses previos acumulados), sino deuda total, sino valor base
+    let montoInicial = parseFloat(extra.valor || 0);
     if (saldoMesActual > 0) {
       montoInicial = saldoMesActual;
     } else if (deudaTotal > 0) {
@@ -204,6 +240,10 @@ const ExtraPagos = () => {
 
   // --- LÓGICA DE EDICIÓN DIRECTA EN LÍNEA (INLINE EDIT) ---
   const handleStartEdit = (extra, field) => {
+    if ((extra.estado || '').trim().toUpperCase() === 'ELIMINADO' && field === 'saldo') {
+      showError("Los clientes con estado ELIMINADO tienen saldo $0.00 fijo.");
+      return;
+    }
     let initialVal = 0;
     if (field === 'valor') {
       initialVal = parseFloat(extra.valor || 0);
@@ -229,20 +269,69 @@ const ExtraPagos = () => {
     }
 
     const m = selectedMonth.toLowerCase();
+    const mIdx = listMonths.indexOf(m);
+    const isEliminado = (extra.estado || '').trim().toUpperCase() === 'ELIMINADO';
     const payload = {};
 
     if (field === 'valor') {
       payload.valor = valNum;
-      // Actualizar saldo del mes considerando nuevo valor
-      const pagoActual = getPagoMes(extra, selectedMonth);
-      payload[`${m}_saldo`] = roundTwo(valNum - pagoActual);
+      // Arrastrar cálculo para todos los meses
+      let running = 0;
+      for (let j = 0; j < 12; j++) {
+        const curM = listMonths[j];
+        const curPago = parseFloat(extra[`${curM}_pago`] || 0);
+        running = Math.round((running + valNum - curPago) * 100) / 100;
+        payload[`${curM}_saldo`] = isEliminado ? 0 : running;
+      }
+      const currentMonthIdx = new Date().getMonth();
+      const currKey = listMonths[currentMonthIdx];
+      payload.saldo_pendiente = isEliminado ? 0 : Math.max(0, payload[`${currKey}_saldo`] ?? running);
     } else if (field === 'pago') {
       payload[`${m}_pago`] = valNum;
-      // Si el pagado se edita directamente, actualizar el debe/saldo: valor - pagado
-      const valorBase = parseFloat(extra.valor || 0);
-      payload[`${m}_saldo`] = roundTwo(valorBase - valNum);
+      if (!extra[`${m}_fecha_pago`] && valNum > 0) {
+        const now = new Date();
+        const d = String(now.getDate()).padStart(2, '0');
+        const mon = String(now.getMonth() + 1).padStart(2, '0');
+        const y = now.getFullYear();
+        payload[`${m}_fecha_pago`] = `${d}/${mon}/${y}`;
+      }
+      if (!extra[`${m}_banco`] && valNum > 0) {
+        payload[`${m}_banco`] = 'EFECTIVO';
+      }
+      const baseVal = parseFloat(extra.valor || 0);
+      const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
+      const prevSaldo = prevM ? getSaldoMes(extra, listMonths[mIdx - 1]) : 0;
+      const newSaldo = Math.round((prevSaldo + baseVal - valNum) * 100) / 100;
+      payload[`${m}_saldo`] = isEliminado ? 0 : newSaldo;
+
+      let running = newSaldo;
+      for (let j = mIdx + 1; j < 12; j++) {
+        const nextM = listMonths[j];
+        const nextPago = parseFloat(extra[`${nextM}_pago`] || 0);
+        running = Math.round((running + baseVal - nextPago) * 100) / 100;
+        payload[`${nextM}_saldo`] = isEliminado ? 0 : running;
+      }
+      const currentMonthIdx = new Date().getMonth();
+      const currKey = listMonths[currentMonthIdx];
+      payload.saldo_pendiente = isEliminado ? 0 : Math.max(0, payload[`${currKey}_saldo`] ?? running);
     } else if (field === 'saldo') {
-      payload[`${m}_saldo`] = valNum;
+      if (isEliminado) {
+        payload[`${m}_saldo`] = 0;
+        payload.saldo_pendiente = 0;
+      } else {
+        payload[`${m}_saldo`] = valNum;
+        const baseVal = parseFloat(extra.valor || 0);
+        let running = valNum;
+        for (let j = mIdx + 1; j < 12; j++) {
+          const nextM = listMonths[j];
+          const nextPago = parseFloat(extra[`${nextM}_pago`] || 0);
+          running = Math.round((running + baseVal - nextPago) * 100) / 100;
+          payload[`${nextM}_saldo`] = running;
+        }
+        const currentMonthIdx = new Date().getMonth();
+        const currKey = listMonths[currentMonthIdx];
+        payload.saldo_pendiente = Math.max(0, payload[`${currKey}_saldo`] ?? running);
+      }
     }
 
     setSavingCell(true);
@@ -317,11 +406,18 @@ const ExtraPagos = () => {
     return '';
   };
 
-  const filteredExtras = extras.filter(e =>
-    e.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.cod?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.usuario?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredExtras = extras.filter(e => {
+    const s = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      e.nombre_cliente?.toLowerCase().includes(s) ||
+      e.cod?.toLowerCase().includes(s) ||
+      e.usuario?.toLowerCase().includes(s);
+
+    const eEstado = (e.estado || '').trim().toUpperCase();
+    const matchesEstado = selectedEstado === 'TODOS' || eEstado === selectedEstado.toUpperCase();
+
+    return matchesSearch && matchesEstado;
+  });
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%' }}>
@@ -364,10 +460,42 @@ const ExtraPagos = () => {
             </select>
           </div>
 
+          {/* SELECTOR DE ESTADO */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>ESTADO:</span>
+            <select
+              className="input"
+              value={selectedEstado}
+              onChange={(e) => setSelectedEstado(e.target.value)}
+              style={{
+                background: '#1e1b4b',
+                color: selectedEstado === 'TODOS' ? '#94a3b8' : '#38bdf8',
+                fontWeight: 'bold',
+                padding: '8px 12px',
+                border: selectedEstado === 'TODOS' ? '1px solid #4f46e5' : '1px solid #38bdf8',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                marginBottom: 0
+              }}
+              title="Filtrar por Estado de Cliente"
+            >
+              {availableEstados.map(est => {
+                const count = est === 'TODOS'
+                  ? extras.length
+                  : extras.filter(x => (x.estado || '').trim().toUpperCase() === est.toUpperCase()).length;
+                return (
+                  <option key={est} value={est} style={{ background: '#0f172a', color: 'white' }}>
+                    {est === 'TODOS' ? '🏷️ Todos los Estados' : est} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           <input
             className="input"
             placeholder="🔍 Buscar por COD, Nombre o Usuario..."
-            style={{ width: '100%', maxWidth: '280px', marginBottom: 0 }}
+            style={{ width: '100%', maxWidth: '260px', marginBottom: 0 }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -420,6 +548,7 @@ const ExtraPagos = () => {
                 <th style={{ minWidth: '110px' }}>VALOR BASE ✏️</th>
                 <th style={{ minWidth: '120px' }}>PAGADO ({selectedMonth}) ✏️</th>
                 <th style={{ minWidth: '130px' }}>DEBE (SALDO) ✏️</th>
+                <th>ESTADO</th>
                 <th>ACTIVO</th>
                 <th>ACCIONES</th>
                 <th style={{ minWidth: '180px' }}>REFERENCIAS / COMENTARIOS</th>
@@ -427,9 +556,12 @@ const ExtraPagos = () => {
             </thead>
             <tbody>
               {filteredExtras.map(e => {
+                const isEliminado = (e.estado || '').trim().toUpperCase() === 'ELIMINADO';
                 const pagoMes = getPagoMes(e, selectedMonth);
                 const saldoMes = getSaldoMes(e, selectedMonth);
-                const deudaAcumulada = calculateDebeTotal(e);
+                const selIdx = getMonthIdxByName(selectedMonth);
+                const prevMonthName = selIdx > 0 ? months[selIdx - 1] : null;
+                const prevDebt = (prevMonthName && !isEliminado) ? getSaldoMes(e, prevMonthName) : 0;
                 const refPreview = getReferenciaPreview(e);
 
                 const isEditingValor = editingCell?.id === e.id && editingCell?.field === 'valor';
@@ -632,10 +764,10 @@ const ExtraPagos = () => {
                         </div>
                       ) : (
                         <div
-                          onClick={() => handleStartEdit(e, 'saldo')}
-                          title="Clic para editar saldo directamente. Valores negativos = excedente a favor."
+                          onClick={() => !isEliminado && handleStartEdit(e, 'saldo')}
+                          title={isEliminado ? "Cliente con estado ELIMINADO (Saldo $0.00)" : "Clic para editar saldo directamente. Valores negativos = excedente a favor."}
                           style={{
-                            cursor: 'pointer',
+                            cursor: isEliminado ? 'default' : 'pointer',
                             display: 'inline-flex',
                             flexDirection: 'column',
                             padding: '3px 6px',
@@ -643,27 +775,48 @@ const ExtraPagos = () => {
                             border: '1px solid transparent',
                             transition: 'all 0.2s'
                           }}
-                          onMouseEnter={(ev) => ev.currentTarget.style.borderColor = 'rgba(96, 165, 250, 0.4)'}
-                          onMouseLeave={(ev) => ev.currentTarget.style.borderColor = 'transparent'}
+                          onMouseEnter={(ev) => { if (!isEliminado) ev.currentTarget.style.borderColor = 'rgba(96, 165, 250, 0.4)'; }}
+                          onMouseLeave={(ev) => { if (!isEliminado) ev.currentTarget.style.borderColor = 'transparent'; }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{
                               fontWeight: 'bold',
-                              color: saldoMes > 0 ? '#f87171' : (saldoMes < 0 ? '#34d399' : '#94a3b8')
+                              color: isEliminado ? '#94a3b8' : (saldoMes > 0 ? '#f87171' : (saldoMes < 0 ? '#34d399' : '#94a3b8'))
                             }}>
-                              {saldoMes > 0 ? `Debe $${saldoMes.toFixed(2)}` : (saldoMes < 0 ? `Excedente $${Math.abs(saldoMes).toFixed(2)}` : '$0.00')}
+                              {isEliminado ? '$0.00' : (saldoMes > 0 ? `Debe $${saldoMes.toFixed(2)}` : (saldoMes < 0 ? `Excedente $${Math.abs(saldoMes).toFixed(2)}` : '$0.00'))}
                             </span>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>✏️</span>
+                            {!isEliminado && <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>✏️</span>}
                           </div>
 
-                          {/* Subtexto indicando si hay deuda acumulada previa distinta al mes */}
-                          {Math.abs(deudaAcumulada - saldoMes) > 0.01 && (
-                            <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
-                              Total acum: {deudaAcumulada > 0 ? `Debe $${deudaAcumulada.toFixed(2)}` : (deudaAcumulada < 0 ? `A favor $${Math.abs(deudaAcumulada).toFixed(2)}` : '$0.00')}
+                          {/* Subtexto indicando arrastre de deuda previa o estado eliminado */}
+                          {isEliminado ? (
+                            <span style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 'bold' }}>
+                              ELIMINADO (Sin saldo)
                             </span>
+                          ) : (
+                            prevDebt > 0 && pagoMes === 0 && (
+                              <span style={{ fontSize: '0.7rem', color: '#fbbf24', marginTop: '2px', fontWeight: '600' }}>
+                                ⚠️ Incluye ${prevDebt.toFixed(2)} de {prevMonthName}
+                              </span>
+                            )
                           )}
                         </div>
                       )}
+                    </td>
+
+                    {/* ESTADO */}
+                    <td style={{ fontSize: '0.8rem' }}>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        background: isEliminado ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+                        color: isEliminado ? '#ef4444' : '#a5b4fc',
+                        border: isEliminado ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(99, 102, 241, 0.3)'
+                      }}>
+                        {e.estado || '30 DÍAS'}
+                      </span>
                     </td>
 
                     <td style={{ fontSize: '0.8rem', color: e.activo === 'SI' ? '#34d399' : '#f87171' }}>
@@ -672,26 +825,50 @@ const ExtraPagos = () => {
 
                     {/* ACCIONES */}
                     <td>
-                      <button
-                        className="btn"
-                        onClick={() => openPagoModal(e)}
-                        style={{
-                          padding: '7px 14px',
-                          background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                          border: 'none',
-                          color: 'white',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
-                        }}
-                      >
-                        💰 Cobrar
-                      </button>
+                      {isEliminado ? (
+                        <button
+                          className="btn"
+                          disabled
+                          title="Cliente con estado ELIMINADO no registra saldo a cobrar"
+                          style={{
+                            padding: '7px 12px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: '#64748b',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            borderRadius: '6px',
+                            cursor: 'not-allowed',
+                            opacity: 0.7
+                          }}
+                        >
+                          🚫 Eliminado
+                        </button>
+                      ) : (
+                        <button
+                          className="btn"
+                          onClick={() => openPagoModal(e)}
+                          style={{
+                            padding: '7px 14px',
+                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
+                          }}
+                        >
+                          💰 Cobrar
+                        </button>
+                      )}
                     </td>
 
                     {/* COLUMNA REFERENCIAS / COMENTARIOS AL FINAL */}
@@ -824,6 +1001,33 @@ const ExtraPagos = () => {
                 <span>Este cliente cuenta con un <b>excedente a favor de ${Math.abs(getSaldoMes(selectedExtra, pagoData.mes)).toFixed(2)}</b> en {pagoData.mes}.</span>
               </div>
             )}
+
+            {/* Aviso si el valor a pagar incluye arrastre de deuda de meses anteriores */}
+            {(() => {
+              const pIdx = getMonthIdxByName(pagoData.mes);
+              const pM = pIdx > 0 ? months[pIdx - 1] : null;
+              const pDebt = pM ? getSaldoMes(selectedExtra, pM) : 0;
+              if (pDebt > 0 && getPagoMes(selectedExtra, pagoData.mes) === 0) {
+                return (
+                  <div style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    color: '#fbbf24',
+                    fontSize: '0.85rem',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span>⚠️</span>
+                    <span>El total sugerido de <b>${getSaldoMes(selectedExtra, pagoData.mes).toFixed(2)}</b> incluye <b>${pDebt.toFixed(2)}</b> adeudados de <b>{pM}</b> + mensualidad de {pagoData.mes}.</span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <div className="grid-responsive" style={{ gap: '14px' }}>
               <div className="form-group">

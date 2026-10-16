@@ -10,6 +10,7 @@ const ExtrasGeneral = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEstado, setSelectedEstado] = useState('TODOS');
 
     const [showModal, setShowModal] = useState(false);
     const [showPagoModal, setShowPagoModal] = useState(false);
@@ -29,8 +30,14 @@ const ExtrasGeneral = () => {
     const [tempValue, setTempValue] = useState('');
     const [savingCellKey, setSavingCellKey] = useState(null);
 
-    const estadoOptions = ['30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'ELIMINADO'];
+    const estadoOptions = ['30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'EN CORTE', 'ELIMINADO'];
     const activoOptions = ['SI', 'NO'];
+
+    const availableEstados = useMemo(() => {
+        const base = ['TODOS', '30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'EN CORTE', 'ELIMINADO'];
+        const fromData = extras.map(e => (e.estado || '').trim().toUpperCase()).filter(Boolean);
+        return Array.from(new Set([...base, ...fromData]));
+    }, [extras]);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -82,6 +89,16 @@ const ExtrasGeneral = () => {
         if (field === 'valor') {
             const numVal = parseFloat(valToSave) || 0;
             payload = { valor: numVal };
+            let running = 0;
+            for (let j = 0; j < 12; j++) {
+                const curM = listMonths[j];
+                const curPago = parseFloat(extra[`${curM}_pago`] || 0);
+                running = Math.round((running + numVal - curPago) * 100) / 100;
+                payload[`${curM}_saldo`] = running;
+            }
+            const currentMonthIdx = new Date().getMonth();
+            const currKey = listMonths[currentMonthIdx];
+            payload.saldo_pendiente = Math.max(0, payload[`${currKey}_saldo`] ?? running);
         } else if (field === 'saldo') {
             const numVal = parseFloat(valToSave) || 0;
             const currentMonthKey = listMonths[new Date().getMonth()];
@@ -92,6 +109,7 @@ const ExtrasGeneral = () => {
         } else if (field.endsWith('_pago')) {
             const numVal = parseFloat(valToSave) || 0;
             const m = field.replace('_pago', '');
+            const mIdx = listMonths.indexOf(m);
             payload[field] = numVal;
 
             if (!extra[`${m}_fecha_pago`] && numVal > 0) {
@@ -105,7 +123,28 @@ const ExtrasGeneral = () => {
                 payload[`${m}_banco`] = 'EFECTIVO';
             }
             const baseVal = parseFloat(extra.valor || 0);
-            payload[`${m}_saldo`] = Math.max(0, baseVal - numVal);
+            const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
+            const prevSaldo = prevM ? getMonthSaldo(extra, mIdx - 1) : 0;
+            const newSaldo = Math.round((prevSaldo + baseVal - numVal) * 100) / 100;
+            payload[`${m}_saldo`] = newSaldo;
+
+            // Arrastrar el saldo acumulado a los meses posteriores
+            let running = newSaldo;
+            for (let j = mIdx + 1; j < 12; j++) {
+                const nextM = listMonths[j];
+                const nextPago = parseFloat(extra[`${nextM}_pago`] || 0);
+                running = Math.round((running + baseVal - nextPago) * 100) / 100;
+                payload[`${nextM}_saldo`] = running;
+            }
+            const currentMonthIdx = new Date().getMonth();
+            const currKey = listMonths[currentMonthIdx];
+            payload.saldo_pendiente = Math.max(0, payload[`${currKey}_saldo`] ?? running);
+        } else if (field === 'estado') {
+            payload[field] = valToSave;
+            if (valToSave === 'ELIMINADO') {
+                payload.saldo_pendiente = 0;
+                listMonths.forEach(m => { payload[`${m}_saldo`] = 0; });
+            }
         } else if (field.endsWith('_saldo')) {
             const numVal = parseFloat(valToSave) || 0;
             payload[field] = numVal;
@@ -236,31 +275,52 @@ const ExtrasGeneral = () => {
         return `${max + 1}C`;
     };
 
+    const getMonthSaldo = (e, mIdx) => {
+        if (!e) return 0;
+        if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return 0;
+
+        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        const m = listMonths[mIdx];
+        const valorBase = parseFloat(e.valor || 0);
+        const pagoMes = parseFloat(e[`${m}_pago`] || 0);
+        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
+
+        if (mIdx < startMonthIdx) return 0;
+
+        // Saldo del mes anterior acumulado
+        const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
+        const prevSaldo = (prevM && mIdx > startMonthIdx)
+            ? getMonthSaldo(e, mIdx - 1)
+            : (prevM ? parseFloat(e[`${prevM}_saldo`] || 0) : 0);
+
+        const saldoGuardado = e[`${m}_saldo`];
+        if (saldoGuardado !== undefined && saldoGuardado !== null && String(saldoGuardado).trim() !== '') {
+            const numSaldo = parseFloat(saldoGuardado);
+            // Si el mes anterior tenía deuda acumulada y este mes no hubo pago (o saldoGuardado no acumuló prevSaldo):
+            // ej: si en septiembre debe $4 y este mes de octubre son $4 => total $8
+            if (prevSaldo > 0 && pagoMes === 0 && numSaldo < prevSaldo + valorBase) {
+                return Math.round((prevSaldo + valorBase) * 100) / 100;
+            }
+            return numSaldo;
+        }
+
+        // Si no está registrado explícitamente:
+        return Math.round((prevSaldo + valorBase - pagoMes) * 100) / 100;
+    };
+
     const calculateDebe = (e) => {
         if (!e) return 0;
-        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return 0;
         const currentMonthIdx = new Date().getMonth();
-        const currentMonthKey = listMonths[currentMonthIdx];
-
-        // El saldo del mes actual representa el balance neto acumulado (positivo = deuda, negativo = excedente)
-        if (e[`${currentMonthKey}_saldo`] !== undefined && e[`${currentMonthKey}_saldo`] !== null && e[`${currentMonthKey}_saldo`] !== '') {
-            return parseFloat(e[`${currentMonthKey}_saldo`]);
-        }
-
-        // Si no está registrado en el mes actual, buscar en el mes más reciente anterior
-        for (let i = currentMonthIdx - 1; i >= 0; i--) {
-            const m = listMonths[i];
-            if (e[`${m}_saldo`] !== undefined && e[`${m}_saldo`] !== null && e[`${m}_saldo`] !== '') {
-                return parseFloat(e[`${m}_saldo`]);
-            }
-        }
-        return parseFloat(e.valor || 0);
+        return getMonthSaldo(e, currentMonthIdx);
     };
 
     const stats = useMemo(() => {
         let pend = 0;
         let excedentes = 0;
         extras.forEach(e => {
+            // En saldo pendiente no cuentan los que tengan estado eliminado
+            if ((e.estado || '').trim().toUpperCase() === 'ELIMINADO') return;
             const d = calculateDebe(e);
             if (d > 0) pend += d;
             else if (d < 0) excedentes += Math.abs(d);
@@ -269,7 +329,7 @@ const ExtrasGeneral = () => {
             pend, 
             excedentes,
             total: extras.length, 
-            activos: extras.filter(x => x.activo === 'SI').length 
+            activos: extras.filter(x => x.activo === 'SI' && (x.estado || '').trim().toUpperCase() !== 'ELIMINADO').length 
         };
     }, [extras]);
 
@@ -345,16 +405,31 @@ const ExtrasGeneral = () => {
         }
     };
 
-    const filtered = extras.filter(e =>
-        e.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.cod?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = extras.filter(e => {
+        const s = searchTerm.toLowerCase();
+        const matchesSearch = !searchTerm ||
+            e.nombre_cliente?.toLowerCase().includes(s) ||
+            e.cod?.toLowerCase().includes(s) ||
+            e.usuario?.toLowerCase().includes(s) ||
+            e.contacto?.toLowerCase().includes(s);
+
+        const eEstado = (e.estado || '').trim().toUpperCase();
+        const matchesEstado = selectedEstado === 'TODOS' || eEstado === selectedEstado.toUpperCase();
+
+        return matchesSearch && matchesEstado;
+    });
 
     const handleOpenPago = (extra) => {
+        if ((extra.estado || '').trim().toUpperCase() === 'ELIMINADO') {
+            showError("El servicio tiene estado ELIMINADO y no registra saldo pendiente.");
+            return;
+        }
         const currentMonthIdx = new Date().getMonth();
         setSelectedForPago(extra);
+        const debeCalculado = calculateDebe(extra);
+        const montoCobro = debeCalculado > 0 ? debeCalculado : (extra.valor || 0);
         setPagoData({
-            monto: extra.valor || 0,
+            monto: montoCobro,
             mes: months[currentMonthIdx].toUpperCase(),
             metodo: 'EFECTIVO',
             factura: '',
@@ -508,6 +583,35 @@ const ExtrasGeneral = () => {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
+                    <select
+                        className="input"
+                        value={selectedEstado}
+                        onChange={e => setSelectedEstado(e.target.value)}
+                        style={{
+                            width: 'auto',
+                            minWidth: '175px',
+                            marginBottom: 0,
+                            background: '#1e1b4b',
+                            color: selectedEstado === 'TODOS' ? '#94a3b8' : '#38bdf8',
+                            border: selectedEstado === 'TODOS' ? '1px solid #4f46e5' : '1px solid #38bdf8',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            padding: '8px 12px',
+                            cursor: 'pointer'
+                        }}
+                        title="Filtrar por Estado"
+                    >
+                        {availableEstados.map(est => {
+                            const count = est === 'TODOS'
+                                ? extras.length
+                                : extras.filter(x => (x.estado || '').trim().toUpperCase() === est.toUpperCase()).length;
+                            return (
+                                <option key={est} value={est} style={{ background: '#0f172a', color: 'white' }}>
+                                    {est === 'TODOS' ? '🏷️ Todos los Estados' : est} ({count})
+                                </option>
+                            );
+                        })}
+                    </select>
                     <button
                         className="btn btn-secondary"
                         onClick={() => setShowAllMonths(!showAllMonths)}
@@ -970,19 +1074,7 @@ const ExtrasGeneral = () => {
                                             const isPriorToIngreso = mIdx < startMonthIdx;
 
                                             const pagoMes = parseFloat(e[l + '_pago'] || 0);
-                                            const saldoMes = parseFloat(e[l + '_saldo'] || 0);
-                                            const valorBase = parseFloat(e.valor || 0);
-                                            
-                                            let saldoAMostrar = 0;
-                                            if (e[l + '_saldo'] !== undefined && e[l + '_saldo'] !== null && e[l + '_saldo'] !== '') {
-                                                saldoAMostrar = saldoMes;
-                                            } else if (pagoMes > 0) {
-                                                saldoAMostrar = saldoMes;
-                                            } else if (isPriorToIngreso) {
-                                                saldoAMostrar = 0;
-                                            } else {
-                                                saldoAMostrar = valorBase;
-                                            }
+                                            const saldoAMostrar = getMonthSaldo(e, mIdx);
 
                                             const hasPaid = pagoMes > 0;
                                             const isExcedente = saldoAMostrar < 0;
