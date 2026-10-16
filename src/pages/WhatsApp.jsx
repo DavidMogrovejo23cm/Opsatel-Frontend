@@ -19,6 +19,7 @@ const WhatsApp = () => {
     const [diaMes, setDiaMes] = useState(1);
     const [recurrencia, setRecurrencia] = useState('mensual');
     const [filtroClientes, setFiltroClientes] = useState('todos'); // 'todos' | 'deuda' | 'al_dia'
+    const [desdeClienteId, setDesdeClienteId] = useState(''); // Continuar desde ID específico de cliente
     const [mensajeProgramado, setMensajeProgramado] = useState('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
     const [configuracion, setConfiguracion] = useState(null);
     const [configuraciones, setConfiguraciones] = useState([]);
@@ -320,7 +321,7 @@ const WhatsApp = () => {
         return conteo;
     };
 
-    const getConteoClientesProgramados = (filtro = filtroClientes) => {
+    const getConteoClientesProgramados = (filtro = filtroClientes, desdeIdParam = desdeClienteId) => {
         const activos = listaClientes.filter(c => {
             const isActivo = c.estado && (
                 c.estado.toUpperCase() === 'ACTIVO' || 
@@ -350,12 +351,18 @@ const WhatsApp = () => {
             unicos.push(c);
         }
 
-        if (filtro === 'deuda') {
-            return unicos.filter(c => parseFloat(c.saldo || 0) > 0).length;
-        } else if (filtro === 'al_dia' || filtro === 'pago' || filtro === 'sin_deuda') {
-            return unicos.filter(c => parseFloat(c.saldo || 0) <= 0).length;
+        let lista = unicos;
+        if (desdeIdParam && parseInt(desdeIdParam, 10) > 0) {
+            const minId = parseInt(desdeIdParam, 10);
+            lista = lista.filter(c => c.id >= minId);
         }
-        return unicos.length;
+
+        if (filtro === 'deuda') {
+            return lista.filter(c => parseFloat(c.saldo || 0) > 0).length;
+        } else if (filtro === 'al_dia' || filtro === 'pago' || filtro === 'sin_deuda') {
+            return lista.filter(c => parseFloat(c.saldo || 0) <= 0).length;
+        }
+        return lista.length;
     };
 
     const renderDestinoBadge = (filtro) => {
@@ -784,6 +791,7 @@ const WhatsApp = () => {
         setDiaMes(1);
         setRecurrencia('mensual');
         setFiltroClientes('todos');
+        setDesdeClienteId('');
         setMensajeProgramado('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
     };
 
@@ -796,6 +804,7 @@ const WhatsApp = () => {
         setDiaMes(cfg.dia_mes || 1);
         setFecha(cfg.fecha || '');
         setFiltroClientes(cfg.filtro_clientes || (cfg.enviar_a_todos ? 'todos' : 'todos'));
+        setDesdeClienteId(cfg.desde_cliente_id ? String(cfg.desde_cliente_id) : '');
         window.scrollTo({ top: 200, behavior: 'smooth' });
     };
 
@@ -840,18 +849,21 @@ const WhatsApp = () => {
             const fechaParaEnviar = (recurrencia === 'unico' || recurrencia === 'mensual') ? fecha : (editandoConfig ? 'vaciar' : null);
             const diaMesNum = recurrencia === 'mensual' ? (parseInt(diaMes, 10) || 1) : null;
             const esTodos = filtroClientes === 'todos';
+            const desdeCIdNum = desdeClienteId && parseInt(desdeClienteId, 10) > 0 ? parseInt(desdeClienteId, 10) : null;
 
             if (editandoConfig && editandoId) {
-                await whatsappService.actualizarConfiguracion(editandoId, hora, mensajeProgramado, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes);
+                await whatsappService.actualizarConfiguracion(editandoId, hora, mensajeProgramado, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum);
                 showSuccess('Programación actualizada con éxito');
             } else {
-                await whatsappService.programar(hora, mensajeProgramado, esTodos, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes);
+                await whatsappService.programar(hora, mensajeProgramado, esTodos, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum);
                 let msg = 'Envío programado para las ' + hora;
                 if (recurrencia === 'mensual') msg = `Envío mensual recurrente programado para el día ${diaMesNum} de cada mes a las ${hora}`;
                 else if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
                 
                 if (filtroClientes === 'deuda') msg += ' (Solo a clientes con deuda pendiente)';
                 else if (filtroClientes === 'al_dia') msg += ' (Solo a clientes al día / sin deuda)';
+
+                if (desdeCIdNum) msg += ` (Continuando desde Cliente ID #${desdeCIdNum})`;
                 showSuccess(msg);
             }
             cancelarEdicion();
@@ -1790,7 +1802,7 @@ const WhatsApp = () => {
                                             border: `1px solid ${filtroClientes === 'deuda' ? 'rgba(239, 68, 68, 0.4)' : (filtroClientes === 'al_dia' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(96, 165, 250, 0.35)')}`,
                                             fontWeight: 700
                                         }}>
-                                            {getConteoClientesProgramados(filtroClientes)} Clientes
+                                            {getConteoClientesProgramados(filtroClientes, desdeClienteId)} Clientes
                                         </span>
                                     </label>
                                     <select 
@@ -1808,9 +1820,9 @@ const WhatsApp = () => {
                                             fontWeight: 'bold'
                                         }}
                                     >
-                                        <option value="todos">👥 Todos los Clientes ({getConteoClientesProgramados('todos')})</option>
-                                        <option value="deuda">🔴 Solo Clientes con Deuda (Saldo &gt; $0) ({getConteoClientesProgramados('deuda')})</option>
-                                        <option value="al_dia">🟢 Solo Clientes al Día / Pago (Sin deuda) ({getConteoClientesProgramados('al_dia')})</option>
+                                        <option value="todos">👥 Todos los Clientes ({getConteoClientesProgramados('todos', desdeClienteId)})</option>
+                                        <option value="deuda">🔴 Solo Clientes con Deuda (Saldo &gt; $0) ({getConteoClientesProgramados('deuda', desdeClienteId)})</option>
+                                        <option value="al_dia">🟢 Solo Clientes al Día / Pago (Sin deuda) ({getConteoClientesProgramados('al_dia', desdeClienteId)})</option>
                                     </select>
                                     <small style={{ 
                                         color: filtroClientes === 'deuda' ? '#fca5a5' : (filtroClientes === 'al_dia' ? '#86efac' : 'var(--text-muted)'), 
@@ -1822,6 +1834,53 @@ const WhatsApp = () => {
                                             : (filtroClientes === 'al_dia' 
                                                 ? '✅ Solo se enviará a clientes activos sin deuda pendiente (al día)' 
                                                 : '👥 Se enviará a todos los clientes activos registrados')}
+                                    </small>
+                                </div>
+
+                                <div className="input-group" style={{ flex: 1.1, minWidth: '220px' }}>
+                                    <label className="label" style={{ color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>🔢</span> Continuar desde ID
+                                        </span>
+                                        {desdeClienteId && (
+                                            <span 
+                                                onClick={() => setDesdeClienteId('')}
+                                                style={{ fontSize: '0.72rem', color: '#f87171', cursor: 'pointer', textDecoration: 'underline' }}
+                                                title="Limpiar ID inicial"
+                                            >
+                                                Limpiar
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input 
+                                        type="number"
+                                        min="1"
+                                        className="input" 
+                                        value={desdeClienteId}
+                                        onChange={e => setDesdeClienteId(e.target.value)}
+                                        placeholder="Ej: 50 (desde el 1 si está vacío)"
+                                        style={{ 
+                                            marginTop: '8px', 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(168, 85, 247, 0.4)', 
+                                            borderRadius: '4px', 
+                                            padding: '0 10px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    />
+                                    <small style={{ 
+                                        color: desdeClienteId ? '#d8b4fe' : 'var(--text-muted)', 
+                                        marginTop: '5px',
+                                        display: 'block'
+                                    }}>
+                                        {desdeClienteId ? (() => {
+                                            const cFound = listaClientes.find(c => c.id === parseInt(desdeClienteId, 10));
+                                            return cFound 
+                                                ? `🎯 Iniciará desde: #${cFound.id} - ${cFound.nombre}` 
+                                                : `🎯 Iniciará con clientes con ID ≥ ${desdeClienteId}`;
+                                        })() : 'Opcional. Permite retomar el envío desde un cliente específico.'}
                                     </small>
                                 </div>
                             </div>
@@ -1981,11 +2040,24 @@ const WhatsApp = () => {
                                             </div>
 
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', marginTop: 'auto', flexWrap: 'wrap', gap: '8px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                         Destino:
                                                     </span>
                                                     {renderDestinoBadge(cfg.filtro_clientes)}
+                                                    {cfg.desde_cliente_id && (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '6px', 
+                                                            background: 'rgba(168, 85, 247, 0.2)', 
+                                                            color: '#d8b4fe', 
+                                                            border: '1px solid rgba(168, 85, 247, 0.4)',
+                                                            fontWeight: 700 
+                                                        }}>
+                                                            🔢 Desde ID #{cfg.desde_cliente_id}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
@@ -2068,11 +2140,24 @@ const WhatsApp = () => {
                                                 {cfg.mensaje}
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                         Destino:
                                                     </span>
                                                     {renderDestinoBadge(cfg.filtro_clientes)}
+                                                    {cfg.desde_cliente_id && (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '6px', 
+                                                            background: 'rgba(168, 85, 247, 0.2)', 
+                                                            color: '#d8b4fe', 
+                                                            border: '1px solid rgba(168, 85, 247, 0.4)',
+                                                            fontWeight: 700 
+                                                        }}>
+                                                            🔢 Desde ID #{cfg.desde_cliente_id}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
