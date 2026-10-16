@@ -29,6 +29,7 @@ const ExtrasGeneral = () => {
     const [editingCell, setEditingCell] = useState(null); // { id: extra.id, field: string }
     const [tempValue, setTempValue] = useState('');
     const [savingCellKey, setSavingCellKey] = useState(null);
+    const isSavingRef = React.useRef(false);
 
     const estadoOptions = ['30 DÍAS', 'INFINITO', 'FIJO', 'SEMIFIJO', 'CORTE', 'EN CORTE', 'ELIMINADO'];
     const activoOptions = ['SI', 'NO'];
@@ -63,7 +64,7 @@ const ExtrasGeneral = () => {
     const handleKeyDown = (e, extra, field) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            handleSaveCell(extra, field, e.target.value);
+            e.target.blur();
         } else if (e.key === 'Escape') {
             e.preventDefault();
             handleCancelEdit();
@@ -71,6 +72,7 @@ const ExtrasGeneral = () => {
     };
 
     const handleSaveCell = async (extra, field, overrideVal = null) => {
+        if (isSavingRef.current) return;
         const rawVal = overrideVal !== null ? overrideVal : tempValue;
         let valToSave = typeof rawVal === 'string' ? rawVal.trim() : rawVal;
 
@@ -104,7 +106,7 @@ const ExtrasGeneral = () => {
             const currentMonthKey = listMonths[new Date().getMonth()];
             payload = {
                 [`${currentMonthKey}_saldo`]: numVal,
-                saldo_pendiente: numVal
+                saldo_pendiente: Math.max(0, numVal)
             };
         } else if (field.endsWith('_pago')) {
             const numVal = parseFloat(valToSave) || 0;
@@ -124,12 +126,30 @@ const ExtrasGeneral = () => {
             }
             const baseVal = parseFloat(extra.valor || 0);
             const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
-            const prevSaldo = prevM ? getMonthSaldo(extra, mIdx - 1) : 0;
+            const prevSaldo = prevM ? parseFloat(extra[`${prevM}_saldo`] ?? 0) : 0;
             const newSaldo = Math.round((prevSaldo + baseVal - numVal) * 100) / 100;
             payload[`${m}_saldo`] = newSaldo;
 
             // Arrastrar el saldo acumulado a los meses posteriores
             let running = newSaldo;
+            for (let j = mIdx + 1; j < 12; j++) {
+                const nextM = listMonths[j];
+                const nextPago = parseFloat(extra[`${nextM}_pago`] || 0);
+                running = Math.round((running + baseVal - nextPago) * 100) / 100;
+                payload[`${nextM}_saldo`] = running;
+            }
+            const currentMonthIdx = new Date().getMonth();
+            const currKey = listMonths[currentMonthIdx];
+            payload.saldo_pendiente = Math.max(0, payload[`${currKey}_saldo`] ?? running);
+        } else if (field.endsWith('_saldo')) {
+            const numVal = parseFloat(valToSave) || 0;
+            const m = field.replace('_saldo', '');
+            const mIdx = listMonths.indexOf(m);
+            payload[field] = numVal;
+
+            // Arrastrar el saldo modificado a los meses posteriores
+            const baseVal = parseFloat(extra.valor || 0);
+            let running = numVal;
             for (let j = mIdx + 1; j < 12; j++) {
                 const nextM = listMonths[j];
                 const nextPago = parseFloat(extra[`${nextM}_pago`] || 0);
@@ -145,10 +165,7 @@ const ExtrasGeneral = () => {
                 payload.saldo_pendiente = 0;
                 listMonths.forEach(m => { payload[`${m}_saldo`] = 0; });
             }
-        } else if (field.endsWith('_saldo')) {
-            const numVal = parseFloat(valToSave) || 0;
-            payload[field] = numVal;
-        } else if (field.endsWith('_fecha_pago') || field === 'fecha_ingreso') {
+        } else if (field.endsWith('_fecha_pago') || field.endsWith('_fecha_a_pagar') || field === 'fecha_ingreso') {
             payload[field] = valToSave ? normalizeDateInput(valToSave) : '';
         } else {
             payload[field] = valToSave;
@@ -157,6 +174,7 @@ const ExtrasGeneral = () => {
         const cellKey = `${extra.id}_${field}`;
         setEditingCell(null);
         setSavingCellKey(cellKey);
+        isSavingRef.current = true;
 
         // Actualización optimista inmediata
         setExtras(prev => prev.map(item => item.id === extra.id ? { ...item, ...payload } : item));
@@ -173,6 +191,7 @@ const ExtrasGeneral = () => {
             showError("Error al guardar: " + (err.response?.data?.detail || err.message));
         } finally {
             setSavingCellKey(null);
+            isSavingRef.current = false;
         }
     };
 
@@ -281,30 +300,19 @@ const ExtrasGeneral = () => {
 
         const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
         const m = listMonths[mIdx];
-        const valorBase = parseFloat(e.valor || 0);
-        const pagoMes = parseFloat(e[`${m}_pago`] || 0);
-        const startMonthIdx = getStartMonthIdx(e.fecha_ingreso);
 
-        if (mIdx < startMonthIdx) return 0;
-
-        // Saldo del mes anterior acumulado
-        const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
-        const prevSaldo = (prevM && mIdx > startMonthIdx)
-            ? getMonthSaldo(e, mIdx - 1)
-            : (prevM ? parseFloat(e[`${prevM}_saldo`] || 0) : 0);
-
+        // Si el saldo está guardado explícitamente en el objeto, retornar exactamente ese valor
         const saldoGuardado = e[`${m}_saldo`];
         if (saldoGuardado !== undefined && saldoGuardado !== null && String(saldoGuardado).trim() !== '') {
-            const numSaldo = parseFloat(saldoGuardado);
-            // Si el mes anterior tenía deuda acumulada y este mes no hubo pago (o saldoGuardado no acumuló prevSaldo):
-            // ej: si en septiembre debe $4 y este mes de octubre son $4 => total $8
-            if (prevSaldo > 0 && pagoMes === 0 && numSaldo < prevSaldo + valorBase) {
-                return Math.round((prevSaldo + valorBase) * 100) / 100;
-            }
-            return numSaldo;
+            return parseFloat(saldoGuardado);
         }
 
-        // Si no está registrado explícitamente:
+        // Si no está registrado explícitamente, calcular arrastre acumulado
+        const valorBase = parseFloat(e.valor || 0);
+        const pagoMes = parseFloat(e[`${m}_pago`] || 0);
+        const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
+        const prevSaldo = prevM ? getMonthSaldo(e, mIdx - 1) : 0;
+
         return Math.round((prevSaldo + valorBase - pagoMes) * 100) / 100;
     };
 
@@ -530,6 +538,53 @@ const ExtrasGeneral = () => {
         outline: 'none',
         cursor: 'pointer',
         boxSizing: 'border-box'
+    };
+
+    const handleModalPagoChange = (mKey, valStr) => {
+        const val = parseFloat(valStr) || 0;
+        const base = parseFloat(formData.valor) || 0;
+        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        const mIdx = listMonths.indexOf(mKey);
+
+        const prevM = mIdx > 0 ? listMonths[mIdx - 1] : null;
+        const prevSaldo = prevM ? parseFloat(formData[`${prevM}_saldo`] || 0) : 0;
+        const newSaldo = Math.round((prevSaldo + base - val) * 100) / 100;
+
+        let updated = {
+            ...formData,
+            [`${mKey}_pago`]: valStr,
+            [`${mKey}_saldo`]: newSaldo
+        };
+
+        let running = newSaldo;
+        for (let j = mIdx + 1; j < 12; j++) {
+            const nextM = listMonths[j];
+            const nextPago = parseFloat(updated[`${nextM}_pago`] || 0);
+            running = Math.round((running + base - nextPago) * 100) / 100;
+            updated[`${nextM}_saldo`] = running;
+        }
+        setFormData(updated);
+    };
+
+    const handleModalSaldoChange = (mKey, valStr) => {
+        const val = parseFloat(valStr) || 0;
+        const base = parseFloat(formData.valor) || 0;
+        const listMonths = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        const mIdx = listMonths.indexOf(mKey);
+
+        let updated = {
+            ...formData,
+            [`${mKey}_saldo`]: valStr
+        };
+
+        let running = val;
+        for (let j = mIdx + 1; j < 12; j++) {
+            const nextM = listMonths[j];
+            const nextPago = parseFloat(updated[`${nextM}_pago`] || 0);
+            running = Math.round((running + base - nextPago) * 100) / 100;
+            updated[`${nextM}_saldo`] = running;
+        }
+        setFormData(updated);
     };
 
     return (
@@ -1071,12 +1126,11 @@ const ExtrasGeneral = () => {
                                         {/* MESES */}
                                         {displayMonths.map((m, mIdx) => {
                                             const l = m.toLowerCase();
-                                            const isPriorToIngreso = mIdx < startMonthIdx;
-
                                             const pagoMes = parseFloat(e[l + '_pago'] || 0);
                                             const saldoAMostrar = getMonthSaldo(e, mIdx);
-
                                             const hasPaid = pagoMes > 0;
+                                            const isPriorToIngreso = mIdx < startMonthIdx && !hasPaid && !e[l + '_factura'] && (saldoAMostrar === 0);
+
                                             const isExcedente = saldoAMostrar < 0;
                                             const isDeuda = saldoAMostrar > 0;
 
@@ -1368,15 +1422,7 @@ const ExtrasGeneral = () => {
                                                             type="number" 
                                                             step="0.01" 
                                                             value={formData[`${l}_pago`]} 
-                                                            onChange={e => {
-                                                                const val = parseFloat(e.target.value) || 0;
-                                                                const base = parseFloat(formData.valor) || 0;
-                                                                setFormData({
-                                                                    ...formData, 
-                                                                    [`${l}_pago`]: e.target.value,
-                                                                    [`${l}_saldo`]: Math.max(0, base - val).toFixed(2)
-                                                                });
-                                                            }} 
+                                                            onChange={e => handleModalPagoChange(l, e.target.value)} 
                                                         />
                                                     </div>
                                                     <div>
@@ -1394,9 +1440,7 @@ const ExtrasGeneral = () => {
                                                             type="number" 
                                                             step="0.01" 
                                                             value={formData[`${l}_saldo`]} 
-                                                            onChange={e => {
-                                                                setFormData({...formData, [`${l}_saldo`]: e.target.value});
-                                                            }} 
+                                                            onChange={e => handleModalSaldoChange(l, e.target.value)} 
                                                         />
                                                     </div>
                                                 </div>
