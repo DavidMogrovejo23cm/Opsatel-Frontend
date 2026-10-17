@@ -44,13 +44,24 @@ const Activacion = () => {
   // Modal de Red, Contraseña y Fotos de Equipos Post-Activación
   const [showWifiModal, setShowWifiModal] = useState(false);
   const [wifiStep, setWifiStep] = useState(1); // 1: Red y Contraseña, 2: Fotos de Equipos
-  const [wifiData, setWifiData] = useState({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+  const [wifiData, setWifiData] = useState({ clienteId: null, clienteNombre: '', red: '', clave: '', ip: '' });
   const [savingWifi, setSavingWifi] = useState(false);
   const [deviceOntFile, setDeviceOntFile] = useState(null);
   const [deviceRouterFile, setDeviceRouterFile] = useState(null);
   const [deviceOntPreview, setDeviceOntPreview] = useState(null);
   const [deviceRouterPreview, setDeviceRouterPreview] = useState(null);
   const [savingDevicePhotos, setSavingDevicePhotos] = useState(false);
+
+  // Verificación de Acceso Remoto Obligatorio
+  const [showRemoteModal, setShowRemoteModal] = useState(false);
+  const [remoteAccessVerified, setRemoteAccessVerified] = useState(false);
+  const [remoteAccessResult, setRemoteAccessResult] = useState(null);
+  const [testingRemote, setTestingRemote] = useState(false);
+  const [remoteType, setRemoteType] = useState('wifi5'); // 'wifi5' | 'ont' | 'wifi6' | 'custom'
+  const [remoteProtocol, setRemoteProtocol] = useState('http'); // 'http' | 'https'
+  const [remoteIp, setRemoteIp] = useState('');
+  const [remotePort, setRemotePort] = useState('5151');
+  const [remoteErrorMsg, setRemoteErrorMsg] = useState(null);
 
   // Activación Masiva (Bulk)
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -375,6 +386,9 @@ const Activacion = () => {
     setConfirming(true);
     const targetClienteId = confirmTaskData.cliente_id;
     const targetClienteNombre = confirmTaskData.comentario || `Cliente #${targetClienteId}`;
+    const targetIp = (confirmTaskData.ip && confirmTaskData.ip !== '—')
+      ? confirmTaskData.ip
+      : (confirmTaskData.ip_dhcp && confirmTaskData.ip_dhcp !== '—' ? confirmTaskData.ip_dhcp : '');
     try {
       const res = await oltService.confirmTask(confirmTaskData.id);
       setShowConfirmModal(false);
@@ -392,8 +406,19 @@ const Activacion = () => {
         clienteId: targetClienteId,
         clienteNombre: targetClienteNombre,
         red: '',
-        clave: ''
+        clave: '',
+        ip: targetIp
       });
+
+      // Reiniciar estado de comprobación de acceso remoto
+      setRemoteAccessVerified(false);
+      setRemoteAccessResult(null);
+      setRemoteType('wifi5');
+      setRemoteProtocol('http');
+      setRemoteIp(targetIp);
+      setRemotePort('5151');
+      setRemoteErrorMsg(null);
+
       setShowWifiModal(true);
     } catch (e) {
       console.error(e);
@@ -568,11 +593,7 @@ const Activacion = () => {
         await clienteService.actualizar(wifiData.clienteId, payload);
         notify('✓ Red y contraseña guardadas correctamente.', 'success');
       }
-      if (advanceToPhotos) {
-        setWifiStep(2);
-      } else {
-        closePostActivationModal();
-      }
+      setWifiStep(2);
     } catch (e) {
       console.error(e);
       notify('Error al guardar red y contraseña: ' + (e.response?.data?.detail || e.message), 'error');
@@ -585,25 +606,104 @@ const Activacion = () => {
     setWifiStep(2);
   };
 
+  const handleSelectRemoteType = (type) => {
+    setRemoteType(type);
+    setRemoteErrorMsg(null);
+    if (type === 'wifi5') {
+      setRemoteProtocol('http');
+      setRemotePort('5151');
+    } else if (type === 'ont') {
+      setRemoteProtocol('http');
+      setRemotePort('');
+    } else if (type === 'wifi6') {
+      setRemoteProtocol('https');
+      setRemotePort('');
+    }
+  };
+
+  const handleProtocolChange = (prot) => {
+    setRemoteProtocol(prot);
+    setRemoteErrorMsg(null);
+    if (prot === 'https') {
+      if (remoteType === 'wifi5') {
+        setRemoteType('wifi6');
+      }
+      if (remotePort === '5151' || remotePort === '80') {
+        setRemotePort('');
+      }
+    } else if (prot === 'http') {
+      if (remoteType === 'wifi6') {
+        setRemoteType('wifi5');
+        setRemotePort('5151');
+      }
+    }
+  };
+
+  const handleTestRemoteAccess = async () => {
+    const cleanIp = (remoteIp || '').trim();
+    if (!cleanIp) {
+      notify('Por favor ingrese la dirección IP del equipo a comprobar.', 'warning');
+      return;
+    }
+
+    setTestingRemote(true);
+    setRemoteErrorMsg(null);
+    try {
+      const payload = {
+        ip: cleanIp,
+        protocol: remoteProtocol,
+        port: remotePort ? remotePort.trim() : null,
+        device_type: remoteType,
+        cliente_id: wifiData.clienteId
+      };
+      const res = await oltService.testRemoteAccess(payload);
+      const data = res.data;
+      if (data.success) {
+        setRemoteAccessResult(data);
+        setRemoteAccessVerified(true);
+        notify(`✓ Acceso remoto verificado: ${data.device_detected || 'OK'} (${data.latency_ms} ms)`, 'success');
+      } else {
+        setRemoteAccessResult(data);
+        setRemoteAccessVerified(false);
+        setRemoteErrorMsg(data.message || 'No se recibió respuesta del equipo.');
+        notify(`⚠️ ${data.message || 'Sin respuesta remota'}`, 'warning');
+      }
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.detail || err.message || 'Error al conectar con el servidor';
+      setRemoteAccessVerified(false);
+      setRemoteAccessResult({ success: false, message: msg });
+      setRemoteErrorMsg(msg);
+      notify(`Error de prueba remota: ${msg}`, 'error');
+    } finally {
+      setTestingRemote(false);
+    }
+  };
+
   const handleSaveDevicePhotos = async () => {
     if (!wifiData.clienteId) return;
-    if (!deviceOntFile && !deviceRouterFile) {
-      notify('No seleccionó ninguna foto. Presione "Omitir Fotos" si desea terminar.', 'info');
+    if (!remoteAccessVerified) {
+      notify('⚠️ Verificación requerida: Debe probar el acceso remoto del equipo antes de finalizar.', 'warning');
+      setShowRemoteModal(true);
       return;
     }
     setSavingDevicePhotos(true);
     try {
-      const formData = new FormData();
-      if (deviceOntFile) {
-        formData.append('equipo_ont', deviceOntFile, deviceOntFile.name || 'ont.jpg');
-      }
-      if (deviceRouterFile) {
-        formData.append('equipo_router', deviceRouterFile, deviceRouterFile.name || 'router.jpg');
-      }
+      if (deviceOntFile || deviceRouterFile) {
+        const formData = new FormData();
+        if (deviceOntFile) {
+          formData.append('equipo_ont', deviceOntFile, deviceOntFile.name || 'ont.jpg');
+        }
+        if (deviceRouterFile) {
+          formData.append('equipo_router', deviceRouterFile, deviceRouterFile.name || 'router.jpg');
+        }
 
-      await clienteService.uploadDispositivo(wifiData.clienteId, formData);
-      notify('✓ Fotos de equipos guardadas correctamente en General (Dispositivo).', 'success');
-      closePostActivationModal();
+        await clienteService.uploadDispositivo(wifiData.clienteId, formData);
+        notify('✓ Fotos de equipos guardadas y acceso remoto verificado correctamente.', 'success');
+      } else {
+        notify('✓ Instalación finalizada y acceso remoto verificado exitosamente.', 'success');
+      }
+      closePostActivationModal(true);
     } catch (e) {
       console.error(e);
       notify('Error al guardar fotos de equipos: ' + (e.response?.data?.detail || e.message), 'error');
@@ -612,14 +712,33 @@ const Activacion = () => {
     }
   };
 
-  const closePostActivationModal = () => {
+  const handleFinalizarInstalacion = () => {
+    if (!remoteAccessVerified) {
+      notify('⚠️ Acceso remoto obligatorio: Debe probar y verificar la conexión remota del equipo antes de finalizar.', 'warning');
+      setShowRemoteModal(true);
+      return;
+    }
+    notify('✓ Instalación finalizada y verificada con éxito.', 'success');
+    closePostActivationModal(true);
+  };
+
+  const closePostActivationModal = (force = false) => {
+    if (!force && !remoteAccessVerified) {
+      notify('⚠️ Debe verificar el acceso remoto del equipo antes de poder finalizar la instalación.', 'warning');
+      setShowRemoteModal(true);
+      return;
+    }
     setShowWifiModal(false);
+    setShowRemoteModal(false);
     setWifiStep(1);
-    setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '' });
+    setWifiData({ clienteId: null, clienteNombre: '', red: '', clave: '', ip: '' });
     setDeviceOntFile(null);
     setDeviceRouterFile(null);
     setDeviceOntPreview(null);
     setDeviceRouterPreview(null);
+    setRemoteAccessVerified(false);
+    setRemoteAccessResult(null);
+    setRemoteErrorMsg(null);
     fetchClientes();
   };
 
@@ -1279,10 +1398,10 @@ const Activacion = () => {
             {/* Cabecera */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.15rem' }}>
-                {wifiStep === 1 ? '📶 Ingrese Red y Contraseña (Paso 1 de 2)' : '📷 Fotos de Equipos (Paso 2 de 2 - Opcional)'}
+                {wifiStep === 1 ? '📶 Ingrese Red y Contraseña (Paso 1 de 2)' : '📷 Fotos y Acceso Remoto (Paso 2 de 2)'}
               </h3>
               <button
-                onClick={closePostActivationModal}
+                onClick={() => closePostActivationModal(false)}
                 style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer', padding: '2px 6px' }}
                 title="Cerrar / Finalizar"
               >
@@ -1292,8 +1411,8 @@ const Activacion = () => {
 
             <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
               {wifiStep === 1
-                ? 'Ingrese las credenciales WiFi del cliente. A continuación podrá subir opcionalmente las fotos de los equipos instalados.'
-                : 'Suba las fotos de los equipos instalados (Bridge/ONT y Router). Se guardarán en el campo Dispositivo de General (máximo 1.5 MB por foto).'}
+                ? 'Ingrese las credenciales WiFi del cliente. A continuación podrá subir fotos y verificar la conexión remota.'
+                : 'Suba las fotos de los equipos instalados y compruebe el acceso remoto obligatorio para poder finalizar la instalación.'}
             </p>
 
             {wifiData.clienteNombre && (
@@ -1385,29 +1504,11 @@ const Activacion = () => {
 
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
-                      type="button"
-                      className="btn"
-                      onClick={() => handleSaveWifi(false)}
-                      disabled={savingWifi}
-                      title="Guardar red/clave y finalizar sin subir fotos"
-                      style={{
-                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
-                        padding: '9px 16px',
-                        borderRadius: 6,
-                        cursor: savingWifi ? 'not-allowed' : 'pointer',
-                        fontSize: '13px'
-                      }}
-                    >
-                      Guardar y Salir
-                    </button>
-                    <button
                       type="submit"
                       className="btn primary"
                       disabled={savingWifi}
                       style={{
-                        backgroundColor: '#2ecc71',
+                        backgroundColor: '#0284c7',
                         color: '#fff',
                         border: 'none',
                         padding: '9px 20px',
@@ -1420,7 +1521,7 @@ const Activacion = () => {
                         fontSize: '13px'
                       }}
                     >
-                      {savingWifi ? 'Guardando...' : 'Continuar a Fotos ➔'}
+                      {savingWifi ? 'Guardando...' : 'Continuar a Fotos y Acceso Remoto ➔'}
                     </button>
                   </div>
                 </div>
@@ -1637,6 +1738,75 @@ const Activacion = () => {
                   </div>
                 </div>
 
+                {/* TARJETA DE VERIFICACIÓN DE ACCESO REMOTO (OBLIGATORIO) */}
+                <div style={{
+                  marginBottom: 20,
+                  padding: '16px 18px',
+                  borderRadius: 10,
+                  background: remoteAccessVerified ? 'rgba(34, 197, 94, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                  border: remoteAccessVerified ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 14,
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ flex: '1 1 300px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      color: remoteAccessVerified ? '#22c55e' : '#f59e0b'
+                    }}>
+                      <span>{remoteAccessVerified ? '✅' : '⚠️'}</span>
+                      <span>
+                        {remoteAccessVerified ? 'Acceso Remoto Verificado' : 'Verificación de Acceso Remoto Pendiente (Obligatorio)'}
+                      </span>
+                      {remoteAccessVerified && (
+                        <span style={{ fontSize: '11px', background: 'rgba(34, 197, 94, 0.2)', color: '#86efac', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                          HTTP {remoteAccessResult?.status_code || 200} • {remoteAccessResult?.latency_ms || 0} ms
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: 4 }}>
+                      {remoteAccessVerified ? (
+                        <span>
+                          Equipo respondiendo en <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{remoteAccessResult?.url}</strong> ({remoteAccessResult?.device_detected || 'OK'})
+                        </span>
+                      ) : (
+                        <span>
+                          Es <strong>obligatorio</strong> comprobar la respuesta remota del equipo (ONT / WiFi 5 / WiFi 6) para poder finalizar la instalación.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowRemoteModal(true)}
+                    style={{
+                      background: remoteAccessVerified ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #0284c7, #0ea5e9)',
+                      color: remoteAccessVerified ? '#cbd5e1' : '#fff',
+                      border: remoteAccessVerified ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                      padding: '10px 18px',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: remoteAccessVerified ? 'none' : '0 4px 14px rgba(14, 165, 233, 0.35)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>🌐</span>
+                    <span>{remoteAccessVerified ? 'Volver a Probar' : 'Probar Conexión Remota'}</span>
+                  </button>
+                </div>
+
                 {/* Botones de acción Paso 2 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <button
@@ -1657,50 +1827,395 @@ const Activacion = () => {
                     ⬅ Volver a Red y Clave
                   </button>
 
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button
                       type="button"
                       className="btn"
-                      onClick={closePostActivationModal}
-                      disabled={savingDevicePhotos}
+                      onClick={() => setShowRemoteModal(true)}
                       style={{
-                        backgroundColor: 'rgba(255,255,255,0.06)',
-                        color: '#94a3b8',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        padding: '9px 18px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        padding: '9px 16px',
                         borderRadius: 6,
-                        cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
-                        fontSize: '13px'
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
                       }}
                     >
-                      Omitir Fotos / Finalizar
+                      🌐 Probar Conexión
                     </button>
+
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={handleFinalizarInstalacion}
+                      disabled={savingDevicePhotos}
+                      style={{
+                        backgroundColor: remoteAccessVerified ? 'rgba(255,255,255,0.06)' : 'rgba(245, 158, 11, 0.08)',
+                        color: remoteAccessVerified ? '#cbd5e1' : '#f59e0b',
+                        border: remoteAccessVerified ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(245, 158, 11, 0.35)',
+                        padding: '9px 16px',
+                        borderRadius: 6,
+                        cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                      title={!remoteAccessVerified ? "Debe verificar el acceso remoto primero" : "Finalizar sin fotos adicionales"}
+                    >
+                      {!remoteAccessVerified && <span>🔒</span>}
+                      <span>Omitir Fotos / Finalizar</span>
+                    </button>
+
                     <button
                       type="button"
                       className="btn primary"
                       onClick={handleSaveDevicePhotos}
-                      disabled={savingDevicePhotos || (!deviceOntFile && !deviceRouterFile)}
+                      disabled={savingDevicePhotos}
                       style={{
-                        backgroundColor: '#2ecc71',
+                        backgroundColor: remoteAccessVerified ? '#2ecc71' : '#334155',
                         color: '#fff',
                         border: 'none',
-                        padding: '9px 22px',
+                        padding: '9px 20px',
                         borderRadius: 6,
                         fontWeight: 'bold',
-                        cursor: (savingDevicePhotos || (!deviceOntFile && !deviceRouterFile)) ? 'not-allowed' : 'pointer',
-                        opacity: (!deviceOntFile && !deviceRouterFile) ? 0.6 : 1,
+                        cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
+                        opacity: remoteAccessVerified ? 1 : 0.8,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
                         fontSize: '13px'
                       }}
+                      title={!remoteAccessVerified ? "Debe verificar el acceso remoto primero" : "Guardar fotos y finalizar"}
                     >
-                      {savingDevicePhotos ? 'Guardando Fotos...' : '💾 Guardar Equipos'}
+                      {!remoteAccessVerified && <span>🔒</span>}
+                      <span>{savingDevicePhotos ? 'Guardando Fotos...' : (deviceOntFile || deviceRouterFile) ? '💾 Guardar Equipos y Finalizar' : 'Finalizar Instalación'}</span>
                     </button>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Prueba de Acceso Remoto Obligatorio */}
+      {showRemoteModal && (
+        <div className="modal-overlay" style={{ zIndex: 12000 }}>
+          <div className="modal" style={{
+            width: '580px',
+            maxWidth: '95%',
+            padding: '24px',
+            borderRadius: '12px',
+            background: '#0f172a',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.7)'
+          }}>
+            {/* Cabecera */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>🌐</span> Probar Conexión Remota
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRemoteModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer', padding: '2px 6px' }}
+                title="Cerrar ventana"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '13px', lineHeight: 1.5 }}>
+              Envíe una petición HTTP / HTTPS al equipo para comprobar respuesta en vivo. Este paso es <strong>obligatorio</strong> para poder finalizar la instalación.
+            </p>
+
+            {/* Presets de Selección Rápida */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: 8 }}>
+                Seleccione Tipo de Equipo / Perfil:
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectRemoteType('wifi5')}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: 8,
+                    border: remoteType === 'wifi5' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                    background: remoteType === 'wifi5' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: remoteType === 'wifi5' ? '#38bdf8' : '#cbd5e1',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div>📶 WiFi 5</div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: 3 }}>http:// :5151</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectRemoteType('ont')}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: 8,
+                    border: remoteType === 'ont' ? '2px solid #22c55e' : '1px solid rgba(255,255,255,0.1)',
+                    background: remoteType === 'ont' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: remoteType === 'ont' ? '#22c55e' : '#cbd5e1',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div>🔌 ONT</div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: 3 }}>http:// (Solo IP)</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectRemoteType('wifi6')}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: 8,
+                    border: remoteType === 'wifi6' ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
+                    background: remoteType === 'wifi6' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: remoteType === 'wifi6' ? '#c084fc' : '#cbd5e1',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div>🚀 WiFi 6</div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: 3 }}>https:// (Solo IP)</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Controles: Protocolo, IP y Puerto */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 100px', gap: 10, alignItems: 'flex-start' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Protocolo</label>
+                  <select
+                    value={remoteProtocol}
+                    onChange={(e) => handleProtocolChange(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 8px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontWeight: 600
+                    }}
+                  >
+                    <option value="http">http://</option>
+                    <option value="https">https://</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                    Dirección IP {wifiData.ip && <span style={{ color: '#38bdf8', fontWeight: 400 }}>(IP asignada)</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={remoteIp}
+                    onChange={(e) => { setRemoteIp(e.target.value); setRemoteErrorMsg(null); }}
+                    placeholder="Ej: 172.16.0.61"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                    Puerto {remoteProtocol === 'https' ? '(Opcional)' : ''}
+                  </label>
+                  <input
+                    type="text"
+                    value={remotePort}
+                    onChange={(e) => { setRemotePort(e.target.value); setRemoteErrorMsg(null); }}
+                    placeholder={remoteProtocol === 'https' ? '443' : remoteType === 'wifi5' ? '5151' : '80'}
+                    style={{
+                      width: '100%',
+                      padding: '10px 10px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Preview de URL armada y comando curl equivalente */}
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(0,0,0,0.3)', borderRadius: 6, fontSize: '11px', color: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'monospace', flexWrap: 'wrap', gap: 6 }}>
+                <span>
+                  <strong style={{ color: '#38bdf8' }}>Destino:</strong> {remoteProtocol}://{remoteIp || '0.0.0.0'}{remotePort ? `:${remotePort}` : ''}
+                </span>
+                <span style={{ color: '#94a3b8', fontSize: '10px' }}>
+                  curl {remoteProtocol === 'https' ? '-k ' : ''}{remoteProtocol}://{remoteIp || '0.0.0.0'}{remotePort ? `:${remotePort}` : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Botón de Ejecutar Prueba */}
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={handleTestRemoteAccess}
+                disabled={testingRemote || !remoteIp.trim()}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: testingRemote ? '#334155' : 'linear-gradient(135deg, #0284c7, #0369a1)',
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: (testingRemote || !remoteIp.trim()) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+                }}
+              >
+                {testingRemote ? (
+                  <>
+                    <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Enviando petición a {remoteProtocol}://{remoteIp}...
+                  </>
+                ) : (
+                  <>⚡ Enviar Petición y Comprobar Acceso</>
+                )}
+              </button>
+            </div>
+
+            {/* Resultado de la Prueba */}
+            {remoteAccessResult && (
+              <div style={{
+                padding: 14,
+                borderRadius: 8,
+                marginBottom: 16,
+                background: remoteAccessResult.success ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                border: remoteAccessResult.success ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)'
+              }}>
+                {remoteAccessResult.success ? (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ color: '#22c55e', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        ✅ Acceso Remoto Verificado Exitosamente
+                      </span>
+                      <span style={{ fontSize: '11px', background: 'rgba(34,197,94,0.2)', color: '#86efac', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                        HTTP {remoteAccessResult.status_code} • {remoteAccessResult.latency_ms} ms
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#e2e8f0', marginBottom: 6 }}>
+                      <strong>Detección:</strong> {remoteAccessResult.device_detected || 'Servidor Web Respondió'}
+                    </div>
+                    {remoteAccessResult.page_title && (
+                      <div style={{ fontSize: '11px', color: '#cbd5e1', marginBottom: 6 }}>
+                        <strong>Título de Página:</strong> <em>{remoteAccessResult.page_title}</em>
+                      </div>
+                    )}
+                    {remoteAccessResult.snippet && (
+                      <div style={{
+                        maxHeight: 110,
+                        overflowY: 'auto',
+                        padding: 8,
+                        background: 'rgba(0,0,0,0.4)',
+                        borderRadius: 6,
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: '#94a3b8',
+                        wordBreak: 'break-all',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {remoteAccessResult.snippet}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontWeight: 700, fontSize: '13px', marginBottom: 6 }}>
+                      <span>❌</span> Sin Respuesta / Error de Conexión
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#cbd5e1', lineHeight: 1.4 }}>
+                      {remoteErrorMsg || remoteAccessResult.message || 'El equipo no devolvió respuesta. Verifique que la IP y el puerto sean los correctos y que el equipo esté encendido.'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#f87171', marginTop: 6, fontWeight: 600 }}>
+                      ⚠️ Debe verificar el acceso remoto hasta que reciba una respuesta válida para poder finalizar la instalación.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botones de acción modal de prueba */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowRemoteModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#cbd5e1',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '9px 18px',
+                  borderRadius: 6,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Volver a Fotos
+              </button>
+              {remoteAccessVerified && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRemoteModal(false);
+                    notify('✓ Acceso remoto verificado. Ahora puede finalizar la instalación.', 'success');
+                  }}
+                  style={{
+                    background: '#2ecc71',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '9px 20px',
+                    borderRadius: 6,
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  ✅ Aceptar y Continuar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
