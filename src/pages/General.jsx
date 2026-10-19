@@ -68,8 +68,14 @@ const General = () => {
   const [deviceModalOntPreview, setDeviceModalOntPreview] = useState(null);
   const [deviceModalRouterPreview, setDeviceModalRouterPreview] = useState(null);
   const [deviceModalRemoveOnt, setDeviceModalRemoveOnt] = useState(false);
-  const [deviceModalRemoveRouter, setDeviceModalRemoveRouter] = useState(false);
   const [deviceModalUploading, setDeviceModalUploading] = useState(false);
+
+  // Estados para modal de cuenta IPTV externa (solo datos en General)
+  const [selectedIptvClient, setSelectedIptvClient] = useState(null);
+  const [iptvModalUser, setIptvModalUser] = useState('');
+  const [iptvModalPass, setIptvModalPass] = useState('');
+  const [iptvModalScreens, setIptvModalScreens] = useState(1);
+  const [iptvModalSaving, setIptvModalSaving] = useState(false);
 
   // Definición de las columnas del sistema
   const allColumns = [
@@ -92,6 +98,7 @@ const General = () => {
       else if (col === 'cod' || col === 'facturas') widths[col] = 90;
       else if (col === 'bridge') widths[col] = 160;
       else if (col === 'dispositivo') widths[col] = 190;
+      else if (col === 'iptv_cuenta') widths[col] = 190;
       else if (col === 'mac') widths[col] = 280;
       else widths[col] = 150;
     });
@@ -457,6 +464,89 @@ const General = () => {
     setDeviceModalRemoveRouter(false);
   };
 
+  const openIptvModal = (cliente) => {
+    setSelectedIptvClient(cliente);
+    setIptvModalUser(cliente.iptv_user || '');
+    setIptvModalPass(cliente.iptv_pass || '');
+    setIptvModalScreens(cliente.iptv_max_conn || 1);
+  };
+
+  const closeIptvModal = () => {
+    setSelectedIptvClient(null);
+    setIptvModalUser('');
+    setIptvModalPass('');
+    setIptvModalScreens(1);
+    setIptvModalSaving(false);
+  };
+
+  const handleSaveIptvAccount = async () => {
+    if (!selectedIptvClient) return;
+
+    const u = iptvModalUser.trim();
+    const p = iptvModalPass.trim();
+
+    if (!u || !p) {
+      showWarning('Por favor ingrese tanto el usuario como la contraseña de la cuenta IPTV.');
+      return;
+    }
+
+    try {
+      setIptvModalSaving(true);
+      const payload = {
+        iptv_user: u,
+        iptv_pass: p,
+        iptv_max_conn: Math.max(1, parseInt(iptvModalScreens, 10) || 1),
+        tv_tipo: 'IPTV',
+        iptv_activar: true
+      };
+
+      await clienteService.actualizar(selectedIptvClient.id, payload);
+      showSuccess(`Cuenta IPTV de "${selectedIptvClient.nombre}" guardada correctamente en General`);
+      closeIptvModal();
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.detail || err.message || 'Error al guardar cuenta IPTV';
+      showError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setIptvModalSaving(false);
+    }
+  };
+
+  const handleRemoveIptvAccount = async () => {
+    if (!selectedIptvClient) return;
+
+    const confirmed = await showConfirm(
+      '¿Quitar cuenta IPTV?',
+      `¿Deseas retirar las credenciales IPTV de "${selectedIptvClient.nombre}" en General?`,
+      'Sí, Quitar',
+      'Cancelar'
+    );
+    if (!confirmed) return;
+
+    try {
+      setIptvModalSaving(true);
+      const payload = {
+        iptv_user: '',
+        iptv_pass: '',
+        iptv_max_conn: 0,
+        tv_tipo: 'Ninguno',
+        iptv_activar: false
+      };
+
+      await clienteService.actualizar(selectedIptvClient.id, payload);
+      showSuccess(`Cuenta IPTV retirada de "${selectedIptvClient.nombre}"`);
+      closeIptvModal();
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.detail || err.message || 'Error al retirar cuenta IPTV';
+      showError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setIptvModalSaving(false);
+    }
+  };
+
   const handleSaveDeviceModalPhotos = async () => {
     if (!selectedDeviceClient) return;
     if (!deviceModalOntFile && !deviceModalRouterFile && !deviceModalRemoveOnt && !deviceModalRemoveRouter) {
@@ -552,6 +642,13 @@ const General = () => {
 
   const handleSaveEdit = async (id, col) => {
     if (!editingCell) return;
+
+    if (col === 'iptv_cuenta') {
+      setEditingCell(null);
+      const cl = clientes.find(c => c.id === id);
+      if (cl) openIptvModal(cl);
+      return;
+    }
 
     const clienteActual = clientes.find(c => c.id === id);
     let original = clienteActual?.[col];
@@ -1502,7 +1599,7 @@ const General = () => {
                           key={col}
                           onClick={() => {
                             if (!isCellEditable) return;
-                            if (col === 'fotos_cedula' || col === 'dispositivo') {
+                            if (col === 'fotos_cedula' || col === 'dispositivo' || col === 'iptv_cuenta') {
                               return;
                             }
                             if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
@@ -1519,6 +1616,10 @@ const General = () => {
                             }
                             if (col === 'dispositivo') {
                               openDevicePhotoModal(c);
+                              return;
+                            }
+                            if (col === 'iptv_cuenta') {
+                              openIptvModal(c);
                               return;
                             }
                             if (col !== 'estado') {
@@ -1935,19 +2036,45 @@ const General = () => {
                                   );
                                 }
                                 if (col === 'iptv_cuenta') {
-                                  // Mostrar credenciales IPTV si el cliente tiene IPTV activo
-                                  if ((c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user) {
-                                    return (
-                                      <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap' }}>
-                                        <div><strong>👤</strong> {c.iptv_user}</div>
-                                        <div><strong>🔑</strong> {c.iptv_pass}</div>
-                                        {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
-                                      </div>
-                                    );
-                                  } else if (c.tv_tipo === 'CATV') {
-                                    return <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>;
-                                  }
-                                  return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                  const hasIptv = (c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user;
+                                  return (
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                      {hasIptv ? (
+                                        <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap', flex: 1, overflow: 'hidden' }}>
+                                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>👤</strong> {c.iptv_user}</div>
+                                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>🔑</strong> {c.iptv_pass}</div>
+                                          {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
+                                        </div>
+                                      ) : c.tv_tipo === 'CATV' ? (
+                                        <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>
+                                      ) : (
+                                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem' }}>-</span>
+                                      )}
+                                      {canModifyTable && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openIptvModal(c);
+                                          }}
+                                          style={{
+                                            background: hasIptv ? 'rgba(99, 102, 241, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                                            border: hasIptv ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(168, 85, 247, 0.4)',
+                                            color: hasIptv ? '#c7d2fe' : '#e9d5ff',
+                                            padding: '2px 6px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                          title={hasIptv ? "Editar cuenta IPTV externa" : "Asignar cuenta IPTV externa"}
+                                        >
+                                          {hasIptv ? '✏️ Cuenta' : '➕ IPTV'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
                                 }
                                 if (col === 'ubicacion_cliente') {
                                   // Mostrar ubicacion: primero del contrato, sino la dirección
@@ -2858,6 +2985,169 @@ const General = () => {
                 {deviceModalUploading ? '⏳ Guardando...' : '💾 Guardar Equipos'}
               </button>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* MODAL PARA INGRESAR O EDITAR CUENTA IPTV EXTERNA (SOLO EN GENERAL) */}
+      {selectedIptvClient && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            if (!iptvModalSaving) closeIptvModal();
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#131722',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '520px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+            }}
+          >
+            {/* Cabecera del modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📺</span> Cuenta IPTV Externa
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                  Cliente: <strong style={{ color: '#38bdf8' }}>{selectedIptvClient.nombre}</strong> (ID: #{selectedIptvClient.id})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeIptvModal}
+                disabled={iptvModalSaving}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px' }}
+                title="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Aviso informativo */}
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              marginBottom: '18px',
+              fontSize: '0.78rem',
+              color: '#c7d2fe',
+              lineHeight: 1.4
+            }}>
+              ℹ️ <strong>Registro manual:</strong> Solo guarda los datos de la cuenta en la Base de Datos (General). No crea ni altera usuarios en paneles o servidores externos.
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveIptvAccount(); }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+                  👤 Usuario IPTV <span style={{ color: '#f87171' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  className="input"
+                  placeholder="Ingrese el usuario IPTV..."
+                  value={iptvModalUser}
+                  onChange={(e) => setIptvModalUser(e.target.value)}
+                  style={{ width: '100%', marginBottom: 0, background: '#1e1b4b', borderColor: 'rgba(255,255,255,0.15)' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+                  🔑 Contraseña IPTV <span style={{ color: '#f87171' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ingrese la contraseña IPTV..."
+                  value={iptvModalPass}
+                  onChange={(e) => setIptvModalPass(e.target.value)}
+                  style={{ width: '100%', marginBottom: 0, background: '#1e1b4b', borderColor: 'rgba(255,255,255,0.15)' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+                  📺 Pantallas simultáneas (Conexiones)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  className="input"
+                  value={iptvModalScreens}
+                  onChange={(e) => setIptvModalScreens(e.target.value)}
+                  style={{ width: '100%', marginBottom: 0, background: '#1e1b4b', borderColor: 'rgba(255,255,255,0.15)' }}
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                {selectedIptvClient.iptv_user ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveIptvAccount}
+                    disabled={iptvModalSaving}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      color: '#f87171',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    🗑️ Quitar Cuenta
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={iptvModalSaving}
+                    onClick={closeIptvModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={iptvModalSaving || !iptvModalUser.trim() || !iptvModalPass.trim()}
+                    style={{ minWidth: '130px' }}
+                  >
+                    {iptvModalSaving ? '⏳ Guardando...' : '💾 Guardar en General'}
+                  </button>
+                </div>
+              </div>
+            </form>
           </motion.div>
         </div>
       )}
