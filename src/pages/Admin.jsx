@@ -26,6 +26,97 @@ const Admin = () => {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedComentariosModal, setSelectedComentariosModal] = useState(null);
 
+  // Ancho ajustable horizontalmente para la columna 'Nombre' (estilo Excel) con persistencia
+  const [nombreWidth, setNombreWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem('opsatel_admin_nombre_width');
+      const parsed = parseInt(saved, 10);
+      return !isNaN(parsed) && parsed >= 90 && parsed <= 900 ? parsed : 220;
+    } catch {
+      return 220;
+    }
+  });
+  const [isResizingNombre, setIsResizingNombre] = useState(false);
+
+  const handleMouseDownNombre = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizingNombre(true);
+    const startX = e.clientX;
+    const startWidth = nombreWidth;
+    let currentWidth = startWidth;
+
+    const handleMouseMove = (moveEvent) => {
+      const delta = moveEvent.clientX - startX;
+      currentWidth = Math.max(90, Math.min(800, startWidth + delta));
+      setNombreWidth(currentWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingNombre(false);
+      try {
+        localStorage.setItem('opsatel_admin_nombre_width', currentWidth.toString());
+      } catch (err) {
+        console.error('Error saving nombre width:', err);
+      }
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchStartNombre = (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    setIsResizingNombre(true);
+    const startX = e.touches[0].clientX;
+    const startWidth = nombreWidth;
+    let currentWidth = startWidth;
+
+    const handleTouchMove = (moveEvent) => {
+      if (!moveEvent.touches || moveEvent.touches.length !== 1) return;
+      const delta = moveEvent.touches[0].clientX - startX;
+      currentWidth = Math.max(90, Math.min(800, startWidth + delta));
+      setNombreWidth(currentWidth);
+    };
+
+    const handleTouchEnd = () => {
+      setIsResizingNombre(false);
+      try {
+        localStorage.setItem('opsatel_admin_nombre_width', currentWidth.toString());
+      } catch (err) {
+        console.error('Error saving nombre width:', err);
+      }
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleResetNombreWidth = () => {
+    setNombreWidth(220);
+    try {
+      localStorage.setItem('opsatel_admin_nombre_width', '220');
+    } catch {
+      // no-op
+    }
+  };
+
+  // Limpieza de cursor y estilos globales si se desmonta
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, []);
+
   // Controlan la transaccionabilidad y UI del modal sobrepuesto de pagos
   const [pagoData, setPagoData] = useState({
     monto: '',
@@ -650,7 +741,66 @@ const Admin = () => {
             <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
               <tr style={{ background: '#15122e' }}>
                 <th style={{ position: 'sticky', top: 0, left: 0, background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '60px', minWidth: '60px' }}>ID</th>
-                <th style={{ position: 'sticky', top: 0, left: '60px', background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', borderRight: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '220px', minWidth: '220px' }}>Nombre</th>
+                <th
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    left: '60px',
+                    background: '#15122e',
+                    zIndex: 25,
+                    padding: '12px 10px',
+                    borderBottom: '2px solid rgba(255, 255, 255, 0.15)',
+                    borderRight: '2px solid rgba(255, 255, 255, 0.15)',
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                    width: `${nombreWidth}px`,
+                    minWidth: `${nombreWidth}px`,
+                    maxWidth: `${nombreWidth}px`,
+                    boxSizing: 'border-box',
+                    userSelect: isResizingNombre ? 'none' : 'auto'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '4px' }}>
+                    <span>Nombre</span>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        opacity: 0.45,
+                        cursor: 'col-resize',
+                        marginLeft: '4px',
+                        userSelect: 'none'
+                      }}
+                      title="Arrastra para redimensionar (Doble clic para restablecer a 220px)"
+                    >
+                      ↔
+                    </span>
+                  </div>
+
+                  {/* Control para redimensionar la columna horizontalmente como en Excel */}
+                  <div
+                    onMouseDown={handleMouseDownNombre}
+                    onTouchStart={handleTouchStartNombre}
+                    onDoubleClick={handleResetNombreWidth}
+                    title="Arrastra el borde derecho para cambiar el ancho (Doble clic para restablecer a 220px)"
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: '10px',
+                      cursor: 'col-resize',
+                      background: isResizingNombre ? 'rgba(99, 102, 241, 0.8)' : 'transparent',
+                      zIndex: 30,
+                      userSelect: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isResizingNombre) e.currentTarget.style.background = 'rgba(99, 102, 241, 0.45)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isResizingNombre) e.currentTarget.style.background = 'transparent';
+                    }}
+                  />
+                </th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Estado</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Plan Base</th>
                 <th style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Pantallas IPTV</th>
@@ -669,7 +819,27 @@ const Admin = () => {
                   opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
                 }}>
                   <td style={{ position: 'sticky', left: 0, zIndex: 15, background: '#130f26', padding: '12px 10px', whiteSpace: 'nowrap' }}>{c.id}</td>
-                  <td style={{ position: 'sticky', left: '60px', zIndex: 15, background: '#130f26', padding: '12px 10px', borderRight: '2px solid rgba(255, 255, 255, 0.15)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.nombre}</td>
+                  <td
+                    style={{
+                      position: 'sticky',
+                      left: '60px',
+                      zIndex: 15,
+                      background: '#130f26',
+                      padding: '12px 10px',
+                      borderRight: '2px solid rgba(255, 255, 255, 0.15)',
+                      width: `${nombreWidth}px`,
+                      minWidth: `${nombreWidth}px`,
+                      maxWidth: `${nombreWidth}px`,
+                      boxSizing: 'border-box',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 500
+                    }}
+                    title={c.nombre}
+                  >
+                    {c.nombre}
+                  </td>
                   <td>
                     <span style={{
                       padding: '4px 8px',
