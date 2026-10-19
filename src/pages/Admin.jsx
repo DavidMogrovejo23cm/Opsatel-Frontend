@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { clienteService, configuracionService, hojaRutaService } from '../services/api';
+import { clienteService, configuracionService, hojaRutaService, backupService } from '../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
@@ -25,6 +25,12 @@ const Admin = () => {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedComentariosModal, setSelectedComentariosModal] = useState(null);
+
+  // Estados para Sistema de Backup y Restauración SQL (.sql)
+  const [exportingSql, setExportingSql] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [sqlFile, setSqlFile] = useState(null);
+  const [importingSql, setImportingSql] = useState(false);
 
   // Ancho ajustable horizontalmente para la columna 'Nombre' (estilo Excel) con persistencia
   const [nombreWidth, setNombreWidth] = useState(() => {
@@ -477,6 +483,69 @@ const Admin = () => {
     }
   };
 
+  // Funciones de Backup y Restauración de Base de Datos (.sql)
+  const handleExportarBackupSql = async () => {
+    setExportingSql(true);
+    try {
+      const response = await backupService.exportSql();
+      const blob = new Blob([response.data], { type: 'application/sql' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      link.setAttribute('download', `backup_opsatel_${stamp}.sql`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showSuccess('Respaldo SQL descargado correctamente.');
+    } catch (error) {
+      console.error(error);
+      showError('Error al exportar respaldo SQL: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setExportingSql(false);
+    }
+  };
+
+  const handleImportarBackupSql = async () => {
+    if (!sqlFile) {
+      showWarning('Por favor selecciona un archivo con extensión .sql');
+      return;
+    }
+
+    const confirmado = await showConfirm(
+      '¿Restaurar Base de Datos?',
+      '⚠️ Esta acción reemplazará la estructura y todos los datos actuales con los del archivo .sql seleccionado.<br/><br/><b>¿Estás totalmente seguro de continuar?</b>',
+      'Sí, restaurar ahora',
+      'Cancelar',
+      'warning'
+    );
+
+    if (!confirmado) return;
+
+    setImportingSql(true);
+    const formData = new FormData();
+    formData.append('file', sqlFile);
+
+    try {
+      const resp = await backupService.importSql(formData);
+      showSuccess(
+        `${resp.data.message}<br/><b>Sentencias ejecutadas:</b> ${resp.data.total_sentencias}<br/><b>Tablas afectadas:</b> ${resp.data.tablas_afectadas}`,
+        '¡Restauración Completada!'
+      );
+      setShowRestoreModal(false);
+      setSqlFile(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      showError('Error al restaurar la base de datos: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setImportingSql(false);
+    }
+  };
+
   const exportPdfSayausi = () => {
     const clientesSayausi = safeClientes
       .filter(c => {
@@ -680,6 +749,49 @@ const Admin = () => {
             }}
           >
             📄 PDF Sayausí
+          </button>
+
+          {/* Botones de Backup y Restauración de Base de Datos (.SQL) */}
+          <button
+            className="btn btn-secondary"
+            onClick={handleExportarBackupSql}
+            disabled={exportingSql}
+            title="Descargar respaldo completo de la base de datos en archivo .sql nativo"
+            style={{
+              background: '#065f46',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              color: '#ecfdf5',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: exportingSql ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {exportingSql ? "⏳ Exportando..." : "📥 Descargar Backup (.sql)"}
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setSqlFile(null);
+              setShowRestoreModal(true);
+            }}
+            title="Restaurar toda la base de datos desde un archivo .sql"
+            style={{
+              background: '#831843',
+              border: '1px solid rgba(244, 63, 94, 0.4)',
+              color: '#ffe4e6',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            📤 Restaurar Backup (.sql)
           </button>
 
           <select
@@ -1640,6 +1752,133 @@ const Admin = () => {
             <div style={{ marginTop: '16px', textAlign: 'right' }}>
               <button className="btn btn-secondary" onClick={() => setSelectedComentariosModal(null)} style={{ padding: '6px 16px', fontSize: '0.85rem' }}>
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal para Restaurar Base de Datos desde .sql */}
+      {showRestoreModal && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{
+            background: '#151030', border: '1px solid rgba(244, 63, 94, 0.4)',
+            borderRadius: '16px', padding: '24px', maxWidth: '580px', width: '100%',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.4rem' }}>🗄️</span>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#f43f5e', fontWeight: 'bold' }}>
+                  Restaurar Base de Datos Completa (.sql)
+                </h3>
+              </div>
+              {!importingSql && (
+                <button
+                  onClick={() => setShowRestoreModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '10px',
+              padding: '14px',
+              marginBottom: '18px'
+            }}>
+              <p style={{ margin: '0 0 6px 0', color: '#fca5a5', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                ⚠️ ADVERTENCIA CRÍTICA:
+              </p>
+              <p style={{ margin: 0, color: '#fecaca', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                Esta operación ejecutará las sentencias del archivo <b>.sql</b> seleccionado. Recreará todas las tablas e insertará todos los datos exactamente tal como estaban en el momento del respaldo, sin pérdidas ni duplicados.
+                <br /><br />
+                <b>Se recomienda descargar un respaldo previo (.sql) antes de proceder.</b>
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '8px' }}>
+                Selecciona el archivo de respaldo (.sql):
+              </label>
+              <input
+                id="admin-sql-backup-input"
+                type="file"
+                accept=".sql"
+                disabled={importingSql}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setSqlFile(e.target.files[0]);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px dashed rgba(244, 63, 94, 0.5)',
+                  borderRadius: '10px',
+                  color: 'white',
+                  cursor: importingSql ? 'not-allowed' : 'pointer'
+                }}
+              />
+              {sqlFile && (
+                <div style={{ marginTop: '10px', fontSize: '0.85rem', color: '#34d399', background: 'rgba(52, 211, 153, 0.1)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
+                  📄 <b>Archivo seleccionado:</b> {sqlFile.name} ({(sqlFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+
+            {importingSql && (
+              <div style={{
+                textAlign: 'center',
+                padding: '16px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                borderRadius: '10px',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                marginBottom: '16px'
+              }}>
+                <div style={{ fontSize: '1.2rem', marginBottom: '6px' }}>⏳ Restaurando base de datos...</div>
+                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+                  Ejecutando sentencias SQL, recreando tablas y verificando integridad. Por favor espere sin cerrar la ventana...
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+              <button
+                className="btn btn-secondary"
+                disabled={importingSql}
+                onClick={() => {
+                  setShowRestoreModal(false);
+                  setSqlFile(null);
+                }}
+                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!sqlFile || importingSql}
+                onClick={handleImportarBackupSql}
+                style={{
+                  background: (!sqlFile || importingSql) ? '#4b5563' : '#e11d48',
+                  borderColor: '#e11d48',
+                  padding: '8px 22px',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  cursor: (!sqlFile || importingSql) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {importingSql ? '⏳ Restaurando...' : '🚀 Iniciar Restauración (.sql)'}
               </button>
             </div>
           </div>

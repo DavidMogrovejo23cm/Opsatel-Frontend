@@ -7,13 +7,18 @@
  */
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { clienteService, extrasService } from '../services/api';
-import { showAlert, showSuccess, showError, showWarning } from '../utils/alerts';
+import { clienteService, extrasService, backupService } from '../services/api';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 const SubirBD = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  // Estados para Backup y Restauración SQL (.sql)
+  const [fileSql, setFileSql] = useState(null);
+  const [loadingSql, setLoadingSql] = useState(false);
+  const [downloadingSql, setDownloadingSql] = useState(false);
 
   // Estados para Sección Extras General (Completamente Separada)
   const [fileExtras, setFileExtras] = useState(null);
@@ -74,6 +79,67 @@ const SubirBD = () => {
       showError('Error al descargar la base de datos. Asegúrese de que el backend local esté activo.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDownloadSql = async () => {
+    setDownloadingSql(true);
+    try {
+      const response = await backupService.exportSql();
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/sql' }));
+      const link = document.createElement('a');
+      link.href = url;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      link.setAttribute('download', `backup_opsatel_${stamp}.sql`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showSuccess('Copia de seguridad completa (.sql) descargada exitosamente.');
+    } catch (error) {
+      console.error(error);
+      showError('Error al descargar el respaldo SQL: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setDownloadingSql(false);
+    }
+  };
+
+  const handleUploadSql = async () => {
+    if (!fileSql) {
+      showWarning('Por favor selecciona un archivo de respaldo con extensión .sql');
+      return;
+    }
+
+    const confirmado = await showConfirm(
+      '¿Restaurar Base de Datos Completa?',
+      '⚠️ Esta operación reemplazará todas las tablas y datos actuales con los del archivo .sql seleccionado. ¿Deseas continuar?',
+      'Sí, restaurar ahora',
+      'Cancelar',
+      'warning'
+    );
+
+    if (!confirmado) return;
+
+    setLoadingSql(true);
+    const formData = new FormData();
+    formData.append('file', fileSql);
+
+    try {
+      const resp = await backupService.importSql(formData);
+      showSuccess(
+        `${resp.data.message}\nSentencias ejecutadas: ${resp.data.total_sentencias}\nTablas procesadas: ${resp.data.tablas_afectadas}`,
+        '¡Restauración Exitosa!'
+      );
+      setFileSql(null);
+      const inputElem = document.getElementById('bd-sql-file-input');
+      if (inputElem) inputElem.value = '';
+    } catch (error) {
+      console.error(error);
+      showError('Error al restaurar base de datos: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoadingSql(false);
     }
   };
 
@@ -139,6 +205,124 @@ const SubirBD = () => {
         <span style={{ background: 'linear-gradient(90deg, #8b5cf6, #ec4899)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
           MANTENIMIENTO
         </span>
+      </div>
+
+      {/* SECCIÓN PRINCIPAL: BACKUP Y RESTAURACIÓN INTEGRAL (.SQL) */}
+      <div style={{
+        maxWidth: '1100px',
+        margin: '0 auto 36px auto',
+        background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.7), rgba(15, 23, 42, 0.8))',
+        border: '1px solid rgba(139, 92, 246, 0.3)',
+        borderRadius: '20px',
+        padding: '32px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2.2rem' }}>🗄️</span>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#f8fafc' }}>
+                Respaldo y Restauración Completa (.SQL)
+              </h2>
+              <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                Copia exacta de toda la base de datos MySQL (tablas, claves, índices y registros). Permite descargar e importar sin pérdidas ni duplicados.
+              </p>
+            </div>
+          </div>
+          <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '6px 14px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+            MySQL / MariaDB Nativo
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '24px' }}>
+          {/* Subcard Descargar .sql */}
+          <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '1.4rem' }}>📥</span>
+                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#34d399', fontWeight: 'bold' }}>Exportar Archivo .SQL</h3>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '20px' }}>
+                Genera al instante un archivo de texto SQL con sentencias <code>DROP</code>, <code>CREATE TABLE</code> e <code>INSERT</code> de todas las tablas existentes en el sistema.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadSql}
+              disabled={downloadingSql}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'linear-gradient(90deg, #059669, #10b981)',
+                border: 'none',
+                borderRadius: '10px',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: downloadingSql ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              {downloadingSql ? '⏳ Generando volcado .sql...' : '📥 Descargar Respaldo (.sql)'}
+            </button>
+          </div>
+
+          {/* Subcard Restaurar .sql */}
+          <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '1.4rem' }}>📤</span>
+                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#f43f5e', fontWeight: 'bold' }}>Restaurar desde .SQL</h3>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '16px' }}>
+                Selecciona un archivo <code>.sql</code> previamente descargado para restaurar la base de datos de manera íntegra.
+              </p>
+              <input
+                id="bd-sql-file-input"
+                type="file"
+                accept=".sql"
+                disabled={loadingSql}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setFileSql(e.target.files[0]);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px dashed rgba(244, 63, 94, 0.4)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  marginBottom: '16px',
+                  cursor: loadingSql ? 'not-allowed' : 'pointer'
+                }}
+              />
+            </div>
+            <button
+              onClick={handleUploadSql}
+              disabled={!fileSql || loadingSql}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: (!fileSql || loadingSql) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(90deg, #e11d48, #be123c)',
+                border: 'none',
+                borderRadius: '10px',
+                color: (!fileSql || loadingSql) ? 'rgba(255,255,255,0.3)' : 'white',
+                fontWeight: 'bold',
+                cursor: (!fileSql || loadingSql) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              {loadingSql ? '⏳ Restaurando base de datos...' : '🚀 Iniciar Restauración (.sql)'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div style={{
