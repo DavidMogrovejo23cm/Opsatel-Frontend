@@ -488,6 +488,9 @@ const Admin = () => {
     setExportingSql(true);
     try {
       const response = await backupService.exportSql();
+      if (response.data.type && response.data.type.includes('text/html')) {
+        throw new Error('El servidor web devolvió una página HTML en lugar del archivo SQL. Verifique la ruta del backend.');
+      }
       const blob = new Blob([response.data], { type: 'application/sql' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

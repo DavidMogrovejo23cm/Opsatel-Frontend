@@ -124,8 +124,8 @@ export const clienteService = {
   }),
   parseSmart: (text) => api.post('/clientes/parse-smart', { text }),
   borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
-  exportSqlBackup: () => api.get('/backup/export-sql', { responseType: 'blob' }),
-  importSqlBackup: (formData) => api.post('/backup/import-sql', formData, {
+  exportSqlBackup: () => api.get('/clientes/backup/export-sql', { responseType: 'blob' }),
+  importSqlBackup: (formData) => api.post('/clientes/backup/import-sql', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   eliminarCompletamente: (id, data) => api.post(`/clientes/${id}/eliminar-completamente`, data),
@@ -133,11 +133,11 @@ export const clienteService = {
 };
 
 export const backupService = {
-  exportSql: () => api.get('/backup/export-sql', { responseType: 'blob' }),
-  importSql: (formData) => api.post('/backup/import-sql', formData, {
+  exportSql: () => api.get('/clientes/backup/export-sql', { responseType: 'blob' }),
+  importSql: (formData) => api.post('/clientes/backup/import-sql', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  getInfo: () => api.get('/backup/info'),
+  getInfo: () => api.get('/clientes/backup/info'),
 };
 
 

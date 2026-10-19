@@ -86,6 +86,9 @@ const SubirBD = () => {
     setDownloadingSql(true);
     try {
       const response = await backupService.exportSql();
+      if (response.data.type && response.data.type.includes('text/html')) {
+        throw new Error('El servidor web devolvió una página HTML en lugar del archivo SQL. Verifique la ruta del backend.');
+      }
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/sql' }));
       const link = document.createElement('a');
       link.href = url;
