@@ -5,7 +5,7 @@
  * @notice Developed with AI assistance.‍​‌​​​‌​​​‌‌​​​​‌​‌‌‌​‌‌​​‌‌​‌​​‌​‌‌​​‌​​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​‌‌‌​​​‌​​​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​‌‌​​​​‌​​​​​​‌​‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​‌‌‌​​‌‌​​‌​​​​​​‌​‌​​‌​​‌‌​​‌​‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​​​​‌​‌‌‌​​​‌​​​​​​‌​​​‌​​​‌‌​​‌​‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌‌​​​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌​​‌​‌​‌‌​​‌​​​​‌​​​​​​‌‌‌​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌‌​‌​​​​​‌​​​​​​‌​​​​​‌​‌​​‌​​‌​​‌​​​​​​‌‌​​​​‌​‌‌‌​​‌‌​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌‌​​‌‌​‌‌‌​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​​‌‌​‌‌​​‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌‌​​‌‌‌​‌​​​‌‌​​​​‌​‌‌​​​‌‌​‌‌‌​‌​​​​‌‌‌​‌​​​‌​​​​​​‌‌​​‌​​​‌‌​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌‌‌​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​​‌‌‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌​‌​​‌​‌‌​‌‌​​​​‌​‌‌‌​​‌‌​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​‌‌​​‌‌​‌‌‌‌​‌‌‌​​‌​​‌‌​​‌​‌​‌‌​‌‌‌​​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌​​​‌‌​​‌​​​​​​‌​‌​​‌‌​‌‌​‌​​‌​‌‌​​‌‌‌​​‌‌‌​‌​​​‌​​​​​​‌‌​​​‌​​‌‌​​‌‌​​​‌‌​​‌​​​‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​‌​​‌‌​​​​​​‌‌​​‌‌​​‌‌​​‌‌​​‌‌​‌​​​​‌‌​​​‌​​‌‌‌​​​​‌‌​​‌​​​​‌‌​‌​‌​‌‌​​‌​​​‌‌​​​‌‌‍
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { clienteService, extrasService, backupService } from '../services/api';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
@@ -20,11 +20,186 @@ const SubirBD = () => {
   const [loadingSql, setLoadingSql] = useState(false);
   const [downloadingSql, setDownloadingSql] = useState(false);
 
+  // Estados para Respaldos Automáticos Programados
+  const [autoConfig, setAutoConfig] = useState({
+    enabled: true,
+    frecuencia: 'cada_dia',
+    hora: '02:00',
+    dia_semana: 6,
+    dia_mes: 1,
+    retencion_dias: 30,
+    telegram_enabled: false,
+    telegram_bot_token: '',
+    telegram_chat_id: '',
+    email_enabled: false,
+    smtp_host: 'smtp.gmail.com',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_password: '',
+    email_destinatario: '',
+    ultimo_respaldo: null,
+  });
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [runningAutoBackup, setRunningAutoBackup] = useState(false);
+  const [testingNotif, setTestingNotif] = useState(false);
+  const [canalActivo, setCanalActivo] = useState('telegram'); // 'telegram' | 'email'
+
+  // Estados para Lista de Archivos de Respaldo en el Servidor
+  const [archivosBackup, setArchivosBackup] = useState([]);
+  const [loadingArchivos, setLoadingArchivos] = useState(false);
+  const [downloadingServerFile, setDownloadingServerFile] = useState(null);
+  const [deletingServerFile, setDeletingServerFile] = useState(null);
+
   // Estados para Sección Extras General (Completamente Separada)
   const [fileExtras, setFileExtras] = useState(null);
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [downloadingExtras, setDownloadingExtras] = useState(false);
   const [modoExtras, setModoExtras] = useState('merge');
+
+  const cargarAutoConfig = async () => {
+    try {
+      setLoadingConfig(true);
+      const resp = await backupService.getAutoConfig();
+      if (resp.data) {
+        setAutoConfig(prev => ({ ...prev, ...resp.data }));
+      }
+    } catch (err) {
+      console.error('Error cargando configuración de respaldo automático:', err);
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
+  const cargarArchivosBackup = async () => {
+    try {
+      setLoadingArchivos(true);
+      const resp = await backupService.getArchivos();
+      setArchivosBackup(Array.isArray(resp.data) ? resp.data : []);
+    } catch (err) {
+      console.error('Error cargando lista de respaldos en el servidor:', err);
+    } finally {
+      setLoadingArchivos(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarAutoConfig();
+    cargarArchivosBackup();
+  }, []);
+
+  const handleSaveAutoConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const resp = await backupService.saveAutoConfig(autoConfig);
+      showSuccess(resp.data?.message || 'Configuración de respaldos automáticos guardada exitosamente.');
+      await cargarAutoConfig();
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.detail || 'Error al guardar la configuración de respaldo');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleEjecutarAutoBackupAhora = async () => {
+    const confirmado = await showConfirm(
+      '¿Ejecutar Respaldo Automático Ahora?',
+      'Esta acción generará inmediatamente una copia completa de la base de datos (.sql), la guardará en el servidor, limpiará respaldos viejos y enviará las notificaciones configuradas.',
+      'Sí, ejecutar ahora',
+      'Cancelar',
+      'question'
+    );
+    if (!confirmado) return;
+
+    setRunningAutoBackup(true);
+    try {
+      const resp = await backupService.ejecutarAhora();
+      let extraInfo = '';
+      if (resp.data?.telegram?.activo) {
+        extraInfo += resp.data.telegram.resultado?.ok ? '\n📱 Notificación y documento enviados a Telegram' : '\n⚠️ Aviso Telegram: ' + (resp.data.telegram.resultado?.error || 'No enviado');
+      }
+      if (resp.data?.email?.activo) {
+        extraInfo += resp.data.email.resultado?.ok ? '\n📧 Correo enviado exitosamente' : '\n⚠️ Aviso Correo: ' + (resp.data.email.resultado?.error || 'No enviado');
+      }
+      showSuccess(`${resp.data?.mensaje || 'Respaldo generado con éxito.'}${extraInfo}`, '¡Respaldo Exitoso!');
+      await cargarAutoConfig();
+      await cargarArchivosBackup();
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.detail || 'Error al ejecutar el respaldo automático');
+    } finally {
+      setRunningAutoBackup(false);
+    }
+  };
+
+  const handleDescargarArchivoServidor = async (nombre) => {
+    setDownloadingServerFile(nombre);
+    try {
+      const resp = await backupService.descargarArchivo(nombre);
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', nombre);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showSuccess(`Descarga iniciada para '${nombre}'.`);
+    } catch (err) {
+      console.error(err);
+      showError('Error al descargar el archivo de respaldo: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setDownloadingServerFile(null);
+    }
+  };
+
+  const handleEliminarArchivoServidor = async (nombre) => {
+    const confirmado = await showConfirm(
+      '¿Eliminar Respaldo del Servidor?',
+      `¿Estás seguro de que deseas eliminar permanentemente el archivo <b>${nombre}</b> del servidor? Esta acción no se puede deshacer.`,
+      'Sí, eliminar archivo',
+      'Cancelar',
+      'warning'
+    );
+    if (!confirmado) return;
+
+    setDeletingServerFile(nombre);
+    try {
+      const resp = await backupService.eliminarArchivo(nombre);
+      showSuccess(resp.data?.message || 'Archivo eliminado correctamente.');
+      await cargarArchivosBackup();
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.detail || 'Error al eliminar el archivo');
+    } finally {
+      setDeletingServerFile(null);
+    }
+  };
+
+  const handleProbarNotificacion = async (tipo) => {
+    setTestingNotif(true);
+    try {
+      const payload = {
+        tipo,
+        telegram_bot_token: autoConfig.telegram_bot_token,
+        telegram_chat_id: autoConfig.telegram_chat_id,
+        smtp_host: autoConfig.smtp_host,
+        smtp_port: parseInt(autoConfig.smtp_port || 587),
+        smtp_user: autoConfig.smtp_user,
+        smtp_password: autoConfig.smtp_password,
+        email_destinatario: autoConfig.email_destinatario
+      };
+      const resp = await backupService.probarNotificacion(payload);
+      showSuccess(resp.data?.message || 'Prueba enviada exitosamente.');
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.detail || 'Error al realizar la prueba de notificación');
+    } finally {
+      setTestingNotif(false);
+    }
+  };
+
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -328,6 +503,632 @@ const SubirBD = () => {
         </div>
       </div>
 
+      {/* SECCIÓN 2: RESPALDOS AUTOMÁTICOS PROGRAMADOS */}
+      <div style={{
+        maxWidth: '1100px',
+        margin: '0 auto 36px auto',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.85))',
+        border: '1px solid rgba(16, 185, 129, 0.3)',
+        borderRadius: '20px',
+        padding: '32px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2.4rem' }}>⏰</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#f8fafc' }}>
+                  Respaldos Automáticos Diarios (Sin Intervención)
+                </h2>
+                <span style={{
+                  background: autoConfig.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                  color: autoConfig.enabled ? '#34d399' : '#f87171',
+                  border: `1px solid ${autoConfig.enabled ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold'
+                }}>
+                  {autoConfig.enabled ? '● ACTIVO EN MADRUGADA' : '○ EN PAUSA'}
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                El servidor crea el archivo <code>.sql</code> automáticamente todos los días a la hora fijada, depura respaldos que superen los días de retención y te envía una copia o alerta a Telegram / Correo.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleEjecutarAutoBackupAhora}
+            disabled={runningAutoBackup}
+            style={{
+              padding: '10px 18px',
+              background: runningAutoBackup ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, #10b981, #059669)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '0.9rem',
+              cursor: runningAutoBackup ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            {runningAutoBackup ? '⏳ Ejecutando respaldo...' : '⚡ Ejecutar Respaldo Automático Ahora'}
+          </button>
+        </div>
+
+        {/* Fila de Parámetros Principales */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '20px',
+          background: 'rgba(0,0,0,0.25)',
+          padding: '20px',
+          borderRadius: '14px',
+          border: '1px solid rgba(255,255,255,0.06)',
+          marginBottom: '24px'
+        }}>
+          {/* Switch Activar */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+              Estado del Servicio Automático
+            </label>
+            <button
+              type="button"
+              onClick={() => setAutoConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                background: autoConfig.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                border: `1px solid ${autoConfig.enabled ? '#10b981' : '#ef4444'}`,
+                borderRadius: '8px',
+                color: autoConfig.enabled ? '#34d399' : '#f87171',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>{autoConfig.enabled ? '✅ Respaldo Automático Activado' : '❌ Respaldo Automático Desactivado'}</span>
+            </button>
+          </div>
+
+          {/* Selector de Frecuencia */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+              Frecuencia de Respaldo
+            </label>
+            <select
+              value={autoConfig.frecuencia || 'cada_dia'}
+              onChange={(e) => setAutoConfig(prev => ({ ...prev, frecuencia: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '0.95rem'
+              }}
+            >
+              <option value="cada_hora">⏱️ Cada Hora</option>
+              <option value="cada_dia">📅 Cada Día</option>
+              <option value="cada_semana">🗓️ Cada Semana</option>
+              <option value="cada_mes">📆 Cada Mes</option>
+            </select>
+          </div>
+
+          {/* Hora de Ejecución (si no es cada_hora) */}
+          {autoConfig.frecuencia !== 'cada_hora' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+                Hora de Ejecución (Ecuador / Servidor)
+              </label>
+              <input
+                type="time"
+                value={autoConfig.hora}
+                onChange={(e) => setAutoConfig(prev => ({ ...prev, hora: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.95rem'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Día de la semana (si es cada_semana) */}
+          {autoConfig.frecuencia === 'cada_semana' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+                Día de la Semana
+              </label>
+              <select
+                value={autoConfig.dia_semana ?? 6}
+                onChange={(e) => setAutoConfig(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <option value={0}>Lunes</option>
+                <option value={1}>Martes</option>
+                <option value={2}>Miércoles</option>
+                <option value={3}>Jueves</option>
+                <option value={4}>Viernes</option>
+                <option value={5}>Sábado</option>
+                <option value={6}>Domingo</option>
+              </select>
+            </div>
+          )}
+
+          {/* Día del mes (si es cada_mes) */}
+          {autoConfig.frecuencia === 'cada_mes' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+                Día del Mes
+              </label>
+              <select
+                value={autoConfig.dia_mes ?? 1}
+                onChange={(e) => setAutoConfig(prev => ({ ...prev, dia_mes: parseInt(e.target.value) }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.95rem'
+                }}
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={d}>Día {d} del mes</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Días de Retención */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold' }}>
+              Retención de Archivos (Rotación)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={autoConfig.retencion_dias}
+                onChange={(e) => setAutoConfig(prev => ({ ...prev, retencion_dias: parseInt(e.target.value) || 30 }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.95rem'
+                }}
+              />
+              <span style={{ color: '#cbd5e1', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Días</span>
+            </div>
+          </div>
+        </div>
+
+
+        {/* Sección Canales de Alerta y Notificación (Telegram / Correo) */}
+        <div style={{
+          background: 'rgba(0,0,0,0.25)',
+          borderRadius: '14px',
+          border: '1px solid rgba(255,255,255,0.06)',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>📬</span>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: '#e2e8f0' }}>
+                Notificaciones y Envío de Copia Remota (Opcional)
+              </h3>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setCanalActivo('telegram')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: canalActivo === 'telegram' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                  color: canalActivo === 'telegram' ? '#38bdf8' : '#94a3b8',
+                  fontWeight: 'bold',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer'
+                }}
+              >
+                📱 Telegram Bot {autoConfig.telegram_enabled && '●'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCanalActivo('email')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: canalActivo === 'email' ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
+                  color: canalActivo === 'email' ? '#c084fc' : '#94a3b8',
+                  fontWeight: 'bold',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer'
+                }}
+              >
+                📧 Correo SMTP {autoConfig.email_enabled && '●'}
+              </button>
+            </div>
+          </div>
+
+          {/* Contenido Canal Telegram */}
+          {canalActivo === 'telegram' && (
+            <div style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#cbd5e1', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoConfig.telegram_enabled}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, telegram_enabled: e.target.checked }))}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span>Habilitar alertas y envío del archivo .sql a Telegram</span>
+                </label>
+                {autoConfig.telegram_enabled && (
+                  <button
+                    type="button"
+                    onClick={() => handleProbarNotificacion('telegram')}
+                    disabled={testingNotif || !autoConfig.telegram_bot_token || !autoConfig.telegram_chat_id}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '8px',
+                      color: '#38bdf8',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      cursor: testingNotif ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {testingNotif ? 'Enviando...' : '🔔 Enviar Mensaje de Prueba'}
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '6px' }}>
+                    Telegram Bot Token (ej: <code>123456:ABC-DEF...</code>)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Obtenido en @BotFather"
+                    value={autoConfig.telegram_bot_token}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '6px' }}>
+                    Telegram Chat ID o Grupo (ej: <code>-100123456789</code> o tu ID personal)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Obtenido en @userinfobot o @myidbot"
+                    value={autoConfig.telegram_chat_id}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, telegram_chat_id: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                </div>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '10px', marginBottom: 0 }}>
+                💡 <b>Ventaja Telegram:</b> Si el respaldo pesa menos de 45 MB, el bot enviará el archivo <code>.sql</code> adjunto directamente a tu chat para que lo tengas respaldado en la nube de Telegram y en tu teléfono.
+              </p>
+            </div>
+          )}
+
+          {/* Contenido Canal Email */}
+          {canalActivo === 'email' && (
+            <div style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#cbd5e1', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoConfig.email_enabled}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, email_enabled: e.target.checked }))}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span>Habilitar alertas y envío por Correo Electrónico (SMTP)</span>
+                </label>
+                {autoConfig.email_enabled && (
+                  <button
+                    type="button"
+                    onClick={() => handleProbarNotificacion('email')}
+                    disabled={testingNotif || !autoConfig.smtp_host || !autoConfig.smtp_user || !autoConfig.email_destinatario}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'rgba(168, 85, 247, 0.15)',
+                      border: '1px solid #c084fc',
+                      borderRadius: '8px',
+                      color: '#c084fc',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      cursor: testingNotif ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {testingNotif ? 'Enviando...' : '✉️ Enviar Correo de Prueba'}
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Servidor SMTP</label>
+                  <input
+                    type="text"
+                    placeholder="smtp.gmail.com"
+                    value={autoConfig.smtp_host}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, smtp_host: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Puerto SMTP</label>
+                  <input
+                    type="number"
+                    placeholder="587"
+                    value={autoConfig.smtp_port}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, smtp_port: parseInt(e.target.value) || 587 }))}
+                    style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Usuario / Correo Remitente</label>
+                  <input
+                    type="text"
+                    placeholder="tu_correo@gmail.com"
+                    value={autoConfig.smtp_user}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, smtp_user: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Contraseña de Aplicación</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={autoConfig.smtp_password}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, smtp_password: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Correo Destinatario</label>
+                  <input
+                    type="email"
+                    placeholder="admin@opsatel.com"
+                    value={autoConfig.email_destinatario}
+                    onChange={(e) => setAutoConfig(prev => ({ ...prev, email_destinatario: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Botón Guardar Configuración y Widget de Último Respaldo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            {autoConfig.ultimo_respaldo ? (
+              <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                <span style={{ color: '#34d399', fontWeight: 'bold' }}>Último respaldo automático: </span>
+                <span>{autoConfig.ultimo_respaldo.fecha}</span> | <span>{autoConfig.ultimo_respaldo.archivo}</span> (<span>{autoConfig.ultimo_respaldo.tamano_mb} MB</span>)
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                Aún no se ha registrado una ejecución de respaldo automático.
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleSaveAutoConfig}
+            disabled={savingConfig}
+            style={{
+              padding: '12px 28px',
+              background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
+              border: 'none',
+              borderRadius: '10px',
+              color: 'white',
+              fontWeight: 'bold',
+              cursor: savingConfig ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {savingConfig ? 'Guardando...' : '💾 Guardar Configuración Programada'}
+          </button>
+        </div>
+      </div>
+
+      {/* SECCIÓN 3: BÓVEDA DE RESPALDOS GUARDADOS EN EL SERVIDOR */}
+      <div style={{
+        maxWidth: '1100px',
+        margin: '0 auto 36px auto',
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85))',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '20px',
+        padding: '32px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2.2rem' }}>🗄️</span>
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', margin: 0, color: '#f8fafc' }}>
+                Bóveda de Respaldos en el Servidor
+              </h2>
+              <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.88rem' }}>
+                Historial de copias de seguridad generadas automáticamente y almacenadas en el disco del servidor. Puedes descargarlas a tu PC o eliminarlas en cualquier momento.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ color: '#cbd5e1', fontSize: '0.85rem' }}>
+              Total: <b>{archivosBackup.length}</b> respaldo(s)
+            </span>
+            <button
+              onClick={cargarArchivosBackup}
+              disabled={loadingArchivos}
+              style={{
+                padding: '8px 14px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                color: '#cbd5e1',
+                fontSize: '0.82rem',
+                fontWeight: 'bold',
+                cursor: loadingArchivos ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loadingArchivos ? 'Actualizando...' : '🔄 Actualizar Lista'}
+            </button>
+          </div>
+        </div>
+
+        {loadingArchivos ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+            Cargando historial de respaldos...
+          </div>
+        ) : archivosBackup.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '36px',
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: '12px',
+            border: '1px dashed rgba(255,255,255,0.1)',
+            color: '#94a3b8'
+          }}>
+            <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>📂</span>
+            <p style={{ margin: 0, fontSize: '0.95rem' }}>No hay archivos de respaldo almacenados todavía en la bóveda del servidor.</p>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+              Puedes hacer clic en <b>"⚡ Ejecutar Respaldo Automático Ahora"</b> para generar el primero de inmediato.
+            </p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                  <th style={{ padding: '12px 14px' }}>Archivo de Respaldo</th>
+                  <th style={{ padding: '12px 14px' }}>Fecha y Hora</th>
+                  <th style={{ padding: '12px 14px' }}>Tamaño</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archivosBackup.map((item, index) => (
+                  <tr
+                    key={item.nombre}
+                    style={{
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      background: index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                    }}
+                  >
+                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#38bdf8' }}>
+                      💾 {item.nombre}
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#e2e8f0' }}>
+                      {item.fecha}
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#34d399', fontWeight: 'bold' }}>
+                      {item.tamano_mb} MB
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleDescargarArchivoServidor(item.nombre)}
+                          disabled={downloadingServerFile === item.nombre}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(16, 185, 129, 0.2)',
+                            border: '1px solid #10b981',
+                            borderRadius: '6px',
+                            color: '#34d399',
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            cursor: downloadingServerFile === item.nombre ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {downloadingServerFile === item.nombre ? 'Descargando...' : '📥 Descargar a PC'}
+                        </button>
+                        <button
+                          onClick={() => handleEliminarArchivoServidor(item.nombre)}
+                          disabled={deletingServerFile === item.nombre}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid #ef4444',
+                            borderRadius: '6px',
+                            color: '#f87171',
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            cursor: deletingServerFile === item.nombre ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {deletingServerFile === item.nombre ? 'Borrando...' : '🗑️ Eliminar'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
@@ -335,6 +1136,7 @@ const SubirBD = () => {
         maxWidth: '1100px',
         margin: '0 auto'
       }}>
+
         
         {/* CARD 1: EXPORTACIÓN (DESCARGA) */}
         <div style={{

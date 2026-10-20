@@ -138,7 +138,16 @@ export const backupService = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   getInfo: () => api.get('/clientes/backup/info'),
+  // Respaldos Automáticos Programados
+  getAutoConfig: () => api.get('/clientes/backup/config'),
+  saveAutoConfig: (data) => api.put('/clientes/backup/config', data),
+  getArchivos: () => api.get('/clientes/backup/archivos'),
+  descargarArchivo: (filename) => api.get(`/clientes/backup/descargar/${encodeURIComponent(filename)}`, { responseType: 'blob' }),
+  eliminarArchivo: (filename) => api.delete(`/clientes/backup/archivo/${encodeURIComponent(filename)}`),
+  ejecutarAhora: () => api.post('/clientes/backup/ejecutar-ahora'),
+  probarNotificacion: (data) => api.post('/clientes/backup/probar-notificacion', data),
 };
+
 
 
 export const extrasService = {

@@ -6,7 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useState, useEffect } from 'react';
-import { configuracionService, oltService, libreqosService, clienteService } from '../services/api';
+import { configuracionService, oltService, libreqosService, clienteService, backupService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
@@ -96,6 +96,153 @@ const Configuraciones = () => {
     const [allClientes, setAllClientes] = useState([]);
     const [selectedClienteExentoId, setSelectedClienteExentoId] = useState('');
     const [searchExentoText, setSearchExentoText] = useState('');
+
+    // --- Estados para Pestaña Backup / Respaldos Automáticos ---
+    const [backupConfig, setBackupConfig] = useState({
+        enabled: true,
+        frecuencia: 'cada_dia', // 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'
+        hora: '02:00',
+        dia_semana: 6, // 0=Lunes, 6=Domingo
+        dia_mes: 1,
+        retencion_dias: 30,
+        email_enabled: false,
+        email_destinatario: '',
+        smtp_host: 'smtp.gmail.com',
+        smtp_port: 587,
+        smtp_user: '',
+        smtp_password: '',
+        ultimo_respaldo: null
+    });
+    const [backupLoading, setBackupLoading] = useState(false);
+    const [backupSaving, setBackupSaving] = useState(false);
+    const [backupRunningNow, setBackupRunningNow] = useState(false);
+    const [testingEmail, setTestingEmail] = useState(false);
+    const [archivosBackup, setArchivosBackup] = useState([]);
+    const [loadingArchivosBackup, setLoadingArchivosBackup] = useState(false);
+    const [downloadingFile, setDownloadingFile] = useState(null);
+    const [deletingFile, setDeletingFile] = useState(null);
+
+    const fetchBackupData = async () => {
+        setBackupLoading(true);
+        try {
+            const [cfgRes, filesRes] = await Promise.all([
+                backupService.getAutoConfig().catch(() => ({ data: {} })),
+                backupService.getArchivos().catch(() => ({ data: [] }))
+            ]);
+            if (cfgRes.data) {
+                setBackupConfig(prev => ({ ...prev, ...cfgRes.data }));
+            }
+            if (filesRes.data) {
+                setArchivosBackup(Array.isArray(filesRes.data) ? filesRes.data : []);
+            }
+        } catch (e) {
+            console.error('Error al cargar configuración de backup', e);
+        } finally {
+            setBackupLoading(false);
+        }
+    };
+
+    const handleSaveBackupConfig = async () => {
+        setBackupSaving(true);
+        try {
+            const res = await backupService.saveAutoConfig(backupConfig);
+            showSuccess(res.data?.message || 'Configuración de respaldo guardada con éxito');
+            await fetchBackupData();
+        } catch (err) {
+            showError(err.response?.data?.detail || 'Error al guardar configuración de respaldo');
+        } finally {
+            setBackupSaving(false);
+        }
+    };
+
+    const handleRunBackupNow = async () => {
+        const confirmado = await showConfirm(
+            '¿Generar Respaldo Ahora?',
+            'Esta acción creará un respaldo .sql inmediatamente, lo guardará en el servidor y lo enviará al correo electrónico configurado.',
+            'Sí, generar ahora',
+            'Cancelar',
+            'question'
+        );
+        if (!confirmado) return;
+        setBackupRunningNow(true);
+        try {
+            const res = await backupService.ejecutarAhora();
+            let msg = res.data?.mensaje || 'Respaldo generado con éxito.';
+            if (res.data?.email?.activo) {
+                msg += res.data.email.resultado?.ok ? `\n📧 Respaldo enviado por correo a ${backupConfig.email_destinatario}` : `\n⚠️ No se pudo enviar el correo: ${res.data.email.resultado?.error || ''}`;
+            }
+            showSuccess(msg);
+            await fetchBackupData();
+        } catch (err) {
+            showError(err.response?.data?.detail || 'Error al ejecutar respaldo');
+        } finally {
+            setBackupRunningNow(false);
+        }
+    };
+
+    const handleTestEmailConfig = async () => {
+        if (!backupConfig.email_destinatario || !backupConfig.email_destinatario.includes('@')) {
+            return showWarning('Ingresa un correo electrónico de destino válido antes de probar.');
+        }
+        setTestingEmail(true);
+        try {
+            const res = await backupService.probarNotificacion({
+                tipo: 'email',
+                smtp_host: backupConfig.smtp_host || 'smtp.gmail.com',
+                smtp_port: parseInt(backupConfig.smtp_port || 587),
+                smtp_user: backupConfig.smtp_user || '',
+                smtp_password: backupConfig.smtp_password || '',
+                email_destinatario: backupConfig.email_destinatario
+            });
+            showSuccess(res.data?.message || 'Correo de prueba enviado exitosamente.');
+        } catch (err) {
+            showError(err.response?.data?.detail || 'Error al probar envío de correo');
+        } finally {
+            setTestingEmail(false);
+        }
+    };
+
+    const handleDownloadBackupFile = async (nombre) => {
+        setDownloadingFile(nombre);
+        try {
+            const res = await backupService.descargarArchivo(nombre);
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.setAttribute('download', nombre);
+            document.body.appendChild(a);
+            a.click();
+            a.parentNode.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showSuccess(`Descarga iniciada: ${nombre}`);
+        } catch (e) {
+            showError('Error al descargar archivo: ' + e.message);
+        } finally {
+            setDownloadingFile(null);
+        }
+    };
+
+    const handleDeleteBackupFile = async (nombre) => {
+        const confirmado = await showConfirm(
+            '¿Eliminar Respaldo?',
+            `¿Deseas eliminar permanentemente el archivo <b>${nombre}</b> del servidor?`,
+            'Sí, eliminar',
+            'Cancelar',
+            'warning'
+        );
+        if (!confirmado) return;
+        setDeletingFile(nombre);
+        try {
+            const res = await backupService.eliminarArchivo(nombre);
+            showSuccess(res.data?.message || 'Archivo eliminado correctamente');
+            await fetchBackupData();
+        } catch (e) {
+            showError(e.response?.data?.detail || 'Error al eliminar archivo');
+        } finally {
+            setDeletingFile(null);
+        }
+    };
+
 
     const fetchExentos = async () => {
         try {
@@ -189,6 +336,7 @@ const Configuraciones = () => {
     const [activeTab, setActiveTab] = useState('Nodos');
     useEffect(() => {
         if (activeTab === 'LibreQoS') fetchLqData();
+        if (activeTab === 'Backup') fetchBackupData();
     }, [activeTab]);
 
     const handleCreate = async (type) => {
@@ -559,7 +707,8 @@ const Configuraciones = () => {
     };
     // ======================================
 
-    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'LibreQoS', 'Finanzas Base', 'Administrar', 'Eliminar Clientes'];
+    const tabs = ['Nodos', 'Parroquias', 'Cajas NAP', 'Planes', 'Bancos', 'Puertos', 'Usuarios', 'OLTs Huawei', 'LibreQoS', 'Finanzas Base', 'Administrar', 'Eliminar Clientes', 'Backup'];
+
 
     const fetchLqData = async () => {
         const user = configuracionService.getCurrentUser();
@@ -2673,6 +2822,514 @@ const Configuraciones = () => {
                         </div>
                     </div>
                 )}
+
+                {/* ========================================================= */}
+                {/* PESTAÑA: BACKUP Y RESPALDOS AUTOMÁTICOS PROGRAMADOS */}
+                {/* ========================================================= */}
+                {activeTab === 'Backup' && (
+                    <div style={{ animation: 'fadeIn 0.25s ease-in-out' }}>
+                        {/* Cabecera de la Sección */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 14 }}>
+                            <div>
+                                <h3 style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 10, color: '#38bdf8', fontSize: '1.4rem' }}>
+                                    <span>💾</span> Respaldos Automáticos de Base de Datos
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: 850, margin: 0, lineHeight: 1.5 }}>
+                                    Configura la frecuencia de ejecución automática de las copias de seguridad de toda la base de datos (clientes, pagos, saldos, logs y configuraciones). Además, puedes ingresar el correo electrónico donde se enviarán los archivos de respaldo directamente.
+                                </p>
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleRunBackupNow}
+                                disabled={backupRunningNow}
+                                style={{
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    fontWeight: 700,
+                                    fontSize: '0.9rem',
+                                    padding: '10px 18px',
+                                    borderRadius: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+                                }}
+                            >
+                                {backupRunningNow ? '⏳ Generando y Enviando...' : '⚡ Generar y Enviar Respaldo Ahora'}
+                            </button>
+                        </div>
+
+                        {/* TARJETA 1: FRECUENCIA DEL RESPALDO */}
+                        <div style={{
+                            background: 'rgba(15, 23, 42, 0.65)',
+                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                            borderRadius: 16,
+                            padding: 24,
+                            marginBottom: 24,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: '1.4rem' }}>⏰</span>
+                                    <div>
+                                        <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>Frecuencia de Ejecución</h4>
+                                        <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>Selecciona cada cuánto tiempo el servidor generará el respaldo de manera automática</p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setBackupConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+                                    style={{
+                                        padding: '7px 14px',
+                                        borderRadius: 20,
+                                        border: `1px solid ${backupConfig.enabled ? '#10b981' : '#ef4444'}`,
+                                        background: backupConfig.enabled ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+                                        color: backupConfig.enabled ? '#34d399' : '#f87171',
+                                        fontWeight: 700,
+                                        fontSize: '0.82rem',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {backupConfig.enabled ? '● Servicio Activo' : '○ Servicio en Pausa'}
+                                </button>
+                            </div>
+
+                            {/* Opciones de Frecuencia (4 Botones / Tarjetas) */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+                                {[
+                                    { id: 'cada_hora', label: 'Cada Hora', desc: 'Se ejecuta en el minuto :00 de cada hora', icon: '⏱️' },
+                                    { id: 'cada_dia', label: 'Cada Día', desc: 'Se ejecuta una vez al día a la hora fijada', icon: '📅' },
+                                    { id: 'cada_semana', label: 'Cada Semana', desc: 'Se ejecuta el día de la semana elegido', icon: '🗓️' },
+                                    { id: 'cada_mes', label: 'Cada Mes', desc: 'Se ejecuta el día del mes especificado', icon: '📆' },
+                                ].map((opt) => {
+                                    const selected = backupConfig.frecuencia === opt.id;
+                                    return (
+                                        <div
+                                            key={opt.id}
+                                            onClick={() => setBackupConfig(prev => ({ ...prev, frecuencia: opt.id }))}
+                                            style={{
+                                                padding: '16px',
+                                                borderRadius: 12,
+                                                background: selected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                                                border: `2px solid ${selected ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}`,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                                <span style={{ fontSize: '1.3rem' }}>{opt.icon}</span>
+                                                <input
+                                                    type="radio"
+                                                    name="frecuenciaBackup"
+                                                    checked={selected}
+                                                    onChange={() => setBackupConfig(prev => ({ ...prev, frecuencia: opt.id }))}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                            <div style={{ color: selected ? '#38bdf8' : '#e2e8f0', fontWeight: 'bold', fontSize: '0.98rem' }}>
+                                                {opt.label}
+                                            </div>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: 4, lineHeight: 1.3 }}>
+                                                {opt.desc}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Parámetros Dinámicos según Frecuencia */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                gap: 16,
+                                background: 'rgba(0,0,0,0.25)',
+                                padding: 18,
+                                borderRadius: 12,
+                                border: '1px solid rgba(255,255,255,0.06)'
+                            }}>
+                                {/* Hora de Ejecución (Para Día, Semana o Mes) */}
+                                {backupConfig.frecuencia !== 'cada_hora' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                            Hora de Ejecución (Hora del Servidor / Ecuador)
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={backupConfig.hora || '02:00'}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, hora: e.target.value }))}
+                                            style={{
+                                                width: '100%',
+                                                padding: '9px 12px',
+                                                background: '#0f172a',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                borderRadius: 8,
+                                                color: '#fff',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Día de la semana (Si frecuencia es cada_semana) */}
+                                {backupConfig.frecuencia === 'cada_semana' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                            Día de la Semana
+                                        </label>
+                                        <select
+                                            value={backupConfig.dia_semana ?? 6}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
+                                            style={{
+                                                width: '100%',
+                                                padding: '9px 12px',
+                                                background: '#0f172a',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                borderRadius: 8,
+                                                color: '#fff',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            <option value={0}>Lunes</option>
+                                            <option value={1}>Martes</option>
+                                            <option value={2}>Miércoles</option>
+                                            <option value={3}>Jueves</option>
+                                            <option value={4}>Viernes</option>
+                                            <option value={5}>Sábado</option>
+                                            <option value={6}>Domingo</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* Día del mes (Si frecuencia es cada_mes) */}
+                                {backupConfig.frecuencia === 'cada_mes' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                            Día del Mes
+                                        </label>
+                                        <select
+                                            value={backupConfig.dia_mes ?? 1}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, dia_mes: parseInt(e.target.value) }))}
+                                            style={{
+                                                width: '100%',
+                                                padding: '9px 12px',
+                                                background: '#0f172a',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                borderRadius: 8,
+                                                color: '#fff',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                                                <option key={d} value={d}>Día {d} de cada mes</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* Retención en Días */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                        Retención de Respaldos (Días a conservar en disco)
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="365"
+                                            value={backupConfig.retencion_dias ?? 30}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, retencion_dias: parseInt(e.target.value) || 30 }))}
+                                            style={{
+                                                width: '100%',
+                                                padding: '9px 12px',
+                                                background: '#0f172a',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                borderRadius: 8,
+                                                color: '#fff',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        />
+                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Días</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TARJETA 2: ENVÍO AUTOMÁTICO POR CORREO ELECTRÓNICO */}
+                        <div style={{
+                            background: 'rgba(15, 23, 42, 0.65)',
+                            border: '1px solid rgba(168, 85, 247, 0.3)',
+                            borderRadius: 16,
+                            padding: 24,
+                            marginBottom: 24,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: '1.4rem' }}>📧</span>
+                                    <div>
+                                        <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>Envío por Correo Electrónico</h4>
+                                        <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                            Recibe la copia de seguridad adjunta en tu bandeja de entrada automáticamente
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleTestEmailConfig}
+                                    disabled={testingEmail || !backupConfig.email_destinatario}
+                                    style={{
+                                        padding: '7px 14px',
+                                        borderRadius: 8,
+                                        border: '1px solid #c084fc',
+                                        background: 'rgba(168, 85, 247, 0.18)',
+                                        color: '#c084fc',
+                                        fontWeight: 700,
+                                        fontSize: '0.82rem',
+                                        cursor: testingEmail ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6
+                                    }}
+                                >
+                                    {testingEmail ? '⏳ Enviando Prueba...' : '✉️ Probar Envío a este Correo'}
+                                </button>
+                            </div>
+
+                            {/* Campo Principal: Correo Destinatario */}
+                            <div style={{ marginBottom: 18 }}>
+                                <label style={{ display: 'block', fontSize: '0.88rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
+                                    Correo Electrónico de Destino (Donde se mandarán los backups) <span style={{ color: '#ec4899' }}>*</span>
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="email"
+                                        placeholder="ejemplo@gmail.com o admin@opsatel.com"
+                                        value={backupConfig.email_destinatario || ''}
+                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, email_destinatario: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 16px',
+                                            paddingLeft: '42px',
+                                            background: '#0f172a',
+                                            border: '2px solid rgba(168, 85, 247, 0.5)',
+                                            borderRadius: 10,
+                                            color: '#fff',
+                                            fontSize: '1rem',
+                                            fontWeight: 600
+                                        }}
+                                    />
+                                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: '1.1rem' }}>
+                                        📬
+                                    </span>
+                                </div>
+                                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '6px 0 0 0' }}>
+                                    Cada vez que se ejecute el respaldo (según la frecuencia seleccionada), se enviará el archivo <code>.sql</code> adjunto a este correo.
+                                </p>
+                            </div>
+
+                            {/* Configuración del Servidor SMTP Remitente */}
+                            <div style={{
+                                background: 'rgba(0,0,0,0.25)',
+                                padding: 18,
+                                borderRadius: 12,
+                                border: '1px solid rgba(255,255,255,0.06)'
+                            }}>
+                                <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span>⚙️</span> Parámetros del Servidor Remitente (SMTP)
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Servidor SMTP</label>
+                                        <input
+                                            type="text"
+                                            placeholder="smtp.gmail.com"
+                                            value={backupConfig.smtp_host || 'smtp.gmail.com'}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_host: e.target.value }))}
+                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Puerto SMTP</label>
+                                        <input
+                                            type="number"
+                                            placeholder="587"
+                                            value={backupConfig.smtp_port || 587}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_port: parseInt(e.target.value) || 587 }))}
+                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Correo Remitente (Usuario SMTP)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="opsatel.sistema@gmail.com"
+                                            value={backupConfig.smtp_user || ''}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_user: e.target.value }))}
+                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Contraseña de Aplicación</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Contraseña de 16 caracteres"
+                                            value={backupConfig.smtp_password || ''}
+                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_password: e.target.value }))}
+                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
+                                        />
+                                    </div>
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 10, marginBottom: 0 }}>
+                                    💡 <b>Nota para Gmail:</b> Se recomienda usar una <i>Contraseña de Aplicación</i> generada en tu cuenta de Google (Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones).
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* TARJETA 3: GUARDAR Y ESTADO DEL ÚLTIMO RESPALDO */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: 16,
+                            background: 'rgba(15, 23, 42, 0.5)',
+                            padding: '16px 20px',
+                            borderRadius: 14,
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            marginBottom: 28
+                        }}>
+                            <div>
+                                {backupConfig.ultimo_respaldo ? (
+                                    <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                                        <span style={{ color: '#34d399', fontWeight: 'bold' }}>Último respaldo ejecutado: </span>
+                                        <span style={{ color: '#f8fafc' }}>{backupConfig.ultimo_respaldo.fecha}</span> · <code>{backupConfig.ultimo_respaldo.archivo}</code> ({backupConfig.ultimo_respaldo.tamano_mb} MB)
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                        Aún no se registra una ejecución automática. Puedes hacer clic en "Generar y Enviar Respaldo Ahora".
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSaveBackupConfig}
+                                disabled={backupSaving}
+                                style={{
+                                    padding: '12px 28px',
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    fontWeight: 700,
+                                    borderRadius: 10,
+                                    fontSize: '0.95rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    cursor: backupSaving ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {backupSaving ? 'Guardando...' : '💾 Guardar Configuración de Backup'}
+                            </button>
+                        </div>
+
+                        {/* TARJETA 4: BÓVEDA DE ARCHIVOS EN EL SERVIDOR */}
+                        <div style={{
+                            background: 'rgba(15, 23, 42, 0.65)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: 16,
+                            padding: 24,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span>🗄️</span> Historial de Respaldos en el Servidor ({archivosBackup.length})
+                                    </h4>
+                                    <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                        Archivos .sql resguardados en el disco local del servidor disponibles para descarga directa a tu PC
+                                    </p>
+                                </div>
+
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={fetchBackupData}
+                                    disabled={backupLoading}
+                                    style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+                                >
+                                    {backupLoading ? 'Actualizando...' : '🔄 Actualizar Lista'}
+                                </button>
+                            </div>
+
+                            {archivosBackup.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', borderRadius: 10 }}>
+                                    No hay archivos de respaldo en el servidor aún. Se generarán según la frecuencia configurada.
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                                                <th style={{ padding: '10px 12px' }}>Archivo</th>
+                                                <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
+                                                <th style={{ padding: '10px 12px' }}>Tamaño</th>
+                                                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {archivosBackup.map((item, idx) => (
+                                                <tr
+                                                    key={item.nombre}
+                                                    style={{
+                                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                        background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#38bdf8' }}>
+                                                        💾 {item.nombre}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>
+                                                        {item.fecha}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#34d399', fontWeight: 'bold' }}>
+                                                        {item.tamano_mb} MB
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                                        <div style={{ display: 'inline-flex', gap: 6 }}>
+                                                            <button
+                                                                className="btn btn-secondary"
+                                                                onClick={() => handleDownloadBackupFile(item.nombre)}
+                                                                disabled={downloadingFile === item.nombre}
+                                                                style={{ padding: '5px 10px', fontSize: '0.78rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#34d399', borderRadius: 6 }}
+                                                            >
+                                                                {downloadingFile === item.nombre ? 'Descargando...' : '📥 Descargar'}
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-secondary"
+                                                                onClick={() => handleDeleteBackupFile(item.nombre)}
+                                                                disabled={deletingFile === item.nombre}
+                                                                style={{ padding: '5px 10px', fontSize: '0.78rem', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid #ef4444', color: '#f87171', borderRadius: 6 }}
+                                                            >
+                                                                {deletingFile === item.nombre ? 'Borrando...' : '🗑️'}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
 
                 {/* Modal emergente para Añadir IPs Sueltas */}
                 {showCustomIpModal && selectedServerForCustomIp && (

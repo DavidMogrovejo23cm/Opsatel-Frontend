@@ -797,6 +797,25 @@ const Admin = () => {
             📤 Restaurar Backup (.sql)
           </button>
 
+          <button
+            className="btn btn-secondary"
+            onClick={() => window.location.href = '/upload-db'}
+            title="Configurar respaldos automáticos programados diarios y ver la bóveda del servidor"
+            style={{
+              background: '#1e1b4b',
+              border: '1px solid rgba(139, 92, 246, 0.4)',
+              color: '#ddd6fe',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            ⏰ Respaldos Automáticos
+          </button>
+
           <select
             className="input"
             style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
