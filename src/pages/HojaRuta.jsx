@@ -9,7 +9,94 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { hojaRutaService, clienteService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
-import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+/**
+ * Helper para extraer únicamente el primer número telefónico y normalizarlo
+ * tanto para llamadas directas (tel:) como para WhatsApp (wa.me),
+ * admitiendo prefijos internacionales (+593, 593, +1, etc.), fijos locales y móviles (09...).
+ */
+const getPhoneInfo = (rawPhone) => {
+    if (!rawPhone) return { callPhone: '', waPhone: '', firstPhone: '' };
+
+    // 1. Separar por delimitadores comunes: /, ;, ,, |, \, saltos de línea, o " y ", " o ", o " - "
+    const parts = String(rawPhone)
+        .split(/[/,;|\\\n\r]|\s+(?:y|o|-)\s+/i)
+        .map(p => p.trim())
+        .filter(Boolean);
+
+    if (parts.length === 0) return { callPhone: '', waPhone: '', firstPhone: '' };
+
+    let candidate = parts[0];
+
+    // 2. Si la primera parte contiene múltiples números separados por espacio(s):
+    // Ej: "0994089449 0963182639" o "0986347428 0967759439 0985702275"
+    const spaceTokens = candidate.split(/\s+/).filter(Boolean);
+    let firstPart = candidate;
+
+    if (spaceTokens.length > 1) {
+        const firstTokenDigits = spaceTokens[0].replace(/\D/g, '');
+        // Si el primer token ya tiene 9 o más dígitos (ej: "0994089449", "593994089449", "994089449"),
+        // es un número completo independiente.
+        if (firstTokenDigits.length >= 9) {
+            firstPart = spaceTokens[0];
+        } else if (firstTokenDigits.length >= 7 && spaceTokens[1].replace(/\D/g, '').length >= 7) {
+            // Caso de números fijos separados por espacio: "4092792 2893644"
+            firstPart = spaceTokens[0];
+        } else {
+            // El número contiene espacios en su formato (ej: "+593 99 408 9449" o "099 408 9449" o "+1 609 9030762")
+            // Reconstruimos únicamente el primer número
+            let acc = '';
+            for (let i = 0; i < spaceTokens.length; i++) {
+                acc += (acc ? ' ' : '') + spaceTokens[i];
+                const accDigits = acc.replace(/\D/g, '');
+                if (accDigits.startsWith('09') && accDigits.length === 10) break;
+                if (accDigits.startsWith('593') && accDigits.length === 12) break;
+                if (acc.startsWith('+') && accDigits.length >= 11) break;
+                if (!acc.startsWith('+') && accDigits.length >= 10) break;
+            }
+            firstPart = acc || spaceTokens[0];
+        }
+    }
+
+    const hasPlus = firstPart.trim().startsWith('+');
+    const cleanDigits = firstPart.replace(/\D/g, '');
+
+    if (!cleanDigits) return { callPhone: '', waPhone: '', firstPhone: '' };
+
+    // Formatear para WhatsApp (wa.me): código de país sin '+'
+    let wa = '';
+    if (cleanDigits.startsWith('593')) {
+        wa = cleanDigits;
+    } else if (cleanDigits.startsWith('09') && cleanDigits.length === 10) {
+        wa = '593' + cleanDigits.slice(1);
+    } else if (cleanDigits.startsWith('9') && cleanDigits.length === 9) {
+        wa = '593' + cleanDigits;
+    } else {
+        wa = cleanDigits;
+    }
+
+    // Formatear para Llamar (tel:):
+    // Solo debe marcar el PRIMER número
+    // Si viene con 593 (ej: 593994089449) o tiene '+' explícito, se le antepone '+' para que el marcador
+    // del celular lo reconozca como marcación internacional válida (+593994089449 / +1...)
+    // Si empieza con 9 de 9 dígitos, se le antepone el 0 para Ecuador (09...)
+    // Si empieza con 09 o cualquier otro fijo local, se envía tal cual
+    let call = '';
+    if (hasPlus) {
+        call = '+' + cleanDigits;
+    } else if (cleanDigits.startsWith('593')) {
+        call = '+' + cleanDigits;
+    } else if (cleanDigits.startsWith('9') && cleanDigits.length === 9) {
+        call = '0' + cleanDigits;
+    } else {
+        call = cleanDigits;
+    }
+
+    return {
+        callPhone: call,
+        waPhone: wa,
+        firstPhone: firstPart
+    };
+};
 
 
 const HojaRuta = () => {
@@ -451,13 +538,10 @@ const HojaRuta = () => {
                                         <td>
                                             <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{r.nombre_cliente}</div>
                                             {r.celular_cliente ? (() => {
-                                                const firstPart = String(r.celular_cliente).split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+/i)[0] || '';
-                                                let clean = firstPart.replace(/\D/g, '');
-                                                if (clean.startsWith('09') && clean.length === 10) clean = '593' + clean.slice(1);
-                                                else if (clean.startsWith('9') && clean.length === 9) clean = '593' + clean;
-                                                return (
+                                                const { waPhone } = getPhoneInfo(r.celular_cliente);
+                                                return waPhone ? (
                                                     <a
-                                                        href={`https://wa.me/${clean}`}
+                                                        href={`https://wa.me/${waPhone}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ fontSize: '0.7rem', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -465,6 +549,8 @@ const HojaRuta = () => {
                                                     >
                                                         📱 {r.celular_cliente}
                                                     </a>
+                                                ) : (
+                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>📱 {r.celular_cliente}</div>
                                                 );
                                             })() : (
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</div>
@@ -683,10 +769,7 @@ const HojaRuta = () => {
                                 const fotoUrl = rawFoto ? (rawFoto.startsWith('http') || rawFoto.startsWith('data:') || rawFoto.startsWith('/') ? rawFoto : `/${rawFoto}`) : null;
 
                                 const rawPhone = r.celular_cliente || clientObj?.celular || '';
-                                const firstPhonePart = String(rawPhone).split(/[/,;|\\\n\r]|\s+y\s+|\s+o\s+/i)[0] || '';
-                                let cleanPhone = firstPhonePart.replace(/\D/g, '');
-                                if (cleanPhone.startsWith('09') && cleanPhone.length === 10) cleanPhone = '593' + cleanPhone.slice(1);
-                                else if (cleanPhone.startsWith('9') && cleanPhone.length === 9) cleanPhone = '593' + cleanPhone;
+                                const { callPhone, waPhone } = getPhoneInfo(rawPhone);
 
                                 let actIcon = '🛠️';
                                 const actLower = (r.actividad || '').toLowerCase();
@@ -829,19 +912,21 @@ const HojaRuta = () => {
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {cleanPhone ? (
+                                                {callPhone ? (
                                                     <>
+                                                        {waPhone && (
+                                                            <a
+                                                                href={`https://wa.me/${waPhone}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="hr-mc-btn-wa"
+                                                                title="WhatsApp"
+                                                            >
+                                                                💬
+                                                            </a>
+                                                        )}
                                                         <a
-                                                            href={`https://wa.me/${cleanPhone}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="hr-mc-btn-wa"
-                                                            title="WhatsApp"
-                                                        >
-                                                            💬
-                                                        </a>
-                                                        <a
-                                                            href={`tel:${cleanPhone}`}
+                                                            href={`tel:${callPhone}`}
                                                             className="hr-mc-btn-call"
                                                         >
                                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">

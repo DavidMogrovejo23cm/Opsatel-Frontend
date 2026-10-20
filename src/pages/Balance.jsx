@@ -1688,6 +1688,32 @@ function HistorialClientes({ mesTarget }) {
   const [filtro, setFiltro] = useState('');
   const [filtroCartera, setFiltroCartera] = useState('');
 
+  // Comentarios temporales para "Clientes Recién Activados (Nuevos este mes)"
+  // Se almacenan temporalmente y se borran si el cliente ya no está en la lista de activados recientes
+  const [comentariosRecientes, setComentariosRecientes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('opsatel_comentarios_recientes_temp');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const handleComentarioChange = (clienteId, texto) => {
+    setComentariosRecientes(prev => {
+      const next = { ...prev, [clienteId]: texto };
+      if (!texto || !texto.trim()) {
+        delete next[clienteId];
+      }
+      try {
+        localStorage.setItem('opsatel_comentarios_recientes_temp', JSON.stringify(next));
+      } catch (err) {
+        console.error('Error guardando comentario temporal:', err);
+      }
+      return next;
+    });
+  };
+
   const fetchHistorial = useCallback(async () => {
     setLoading(true);
     try {
@@ -1818,6 +1844,31 @@ function HistorialClientes({ mesTarget }) {
     return acc;
   }, {});
 
+  // Limpieza automática: Si un cliente ya no está en la lista de recién activados, su comentario temporal se borra automáticamente
+  useEffect(() => {
+    if (!loading && clientes.length > 0) {
+      setComentariosRecientes(prev => {
+        const validIds = new Set(filteredRecientes.map(c => String(c.id)));
+        let changed = false;
+        const cleaned = {};
+        for (const [id, val] of Object.entries(prev)) {
+          if (validIds.has(String(id))) {
+            cleaned[id] = val;
+          } else {
+            changed = true; // Cliente quitado de recién activados -> se borra
+          }
+        }
+        if (changed) {
+          try {
+            localStorage.setItem('opsatel_comentarios_recientes_temp', JSON.stringify(cleaned));
+          } catch (e) {}
+          return cleaned;
+        }
+        return prev;
+      });
+    }
+  }, [filteredRecientes, loading, clientes.length]);
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ paddingBottom: 40 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -1879,6 +1930,7 @@ function HistorialClientes({ mesTarget }) {
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Método Pago</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Proporcional</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>Deuda Actual</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem', minWidth: 220 }}>Comentario</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1899,6 +1951,48 @@ function HistorialClientes({ mesTarget }) {
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: parseFloat(c.saldo_total || 0) > 0 ? P.egreso : P.ingreso }}>
                         {fmt(c.saldo_total)}
                       </td>
+                      <td style={{ padding: '8px 16px', minWidth: 220 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input
+                            type="text"
+                            placeholder="Comentario temporal..."
+                            value={comentariosRecientes[c.id] || ''}
+                            onChange={(e) => handleComentarioChange(c.id, e.target.value)}
+                            title="Comentario temporal (solo se ve aquí, se borra automáticamente al quitarse de recién activados)"
+                            style={{
+                              width: '100%',
+                              padding: '6px 10px',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              borderRadius: 6,
+                              color: '#e2e8f0',
+                              fontSize: '0.8rem',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          {comentariosRecientes[c.id] && (
+                            <button
+                              type="button"
+                              onClick={() => handleComentarioChange(c.id, '')}
+                              title="Borrar comentario"
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'rgba(255, 255, 255, 0.4)',
+                                cursor: 'pointer',
+                                padding: '2px 4px',
+                                fontSize: '0.75rem',
+                                lineHeight: 1
+                              }}
+                              onMouseEnter={(e) => e.target.style.color = '#f43f5e'}
+                              onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.4)'}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {filteredRecientes.length > 0 && (
@@ -1912,11 +2006,12 @@ function HistorialClientes({ mesTarget }) {
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: filteredRecientes.reduce((acc, c) => acc + parseFloat(c.saldo_total || 0), 0) > 0 ? P.egreso : P.ingreso }}>
                         {fmt(filteredRecientes.reduce((acc, c) => acc + parseFloat(c.saldo_total || 0), 0))}
                       </td>
+                      <td style={{ padding: '12px 16px' }} />
                     </tr>
                   )}
                   {filteredRecientes.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                         ✨ No hay clientes activados recientemente en este mes.
                       </td>
                     </tr>
