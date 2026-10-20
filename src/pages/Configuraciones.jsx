@@ -100,23 +100,22 @@ const Configuraciones = () => {
     // --- Estados para Pestaña Backup / Respaldos Automáticos ---
     const [backupConfig, setBackupConfig] = useState({
         enabled: true,
-        frecuencia: 'cada_dia', // 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'
+        frecuencia: 'cada_dia', // 'cada_5min', 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'
         hora: '02:00',
         dia_semana: 6, // 0=Lunes, 6=Domingo
         dia_mes: 1,
         retencion_dias: 30,
-        email_enabled: false,
-        email_destinatario: '',
-        smtp_host: 'smtp.gmail.com',
-        smtp_port: 587,
-        smtp_user: '',
-        smtp_password: '',
-        ultimo_respaldo: null
+        telegram_enabled: true,
+        telegram_bot_token: '',
+        telegram_chat_id: '',
+        ultimo_respaldo: null,
+        historial: []
     });
     const [backupLoading, setBackupLoading] = useState(false);
     const [backupSaving, setBackupSaving] = useState(false);
     const [backupRunningNow, setBackupRunningNow] = useState(false);
-    const [testingEmail, setTestingEmail] = useState(false);
+    const [testingTelegram, setTestingTelegram] = useState(false);
+    const [clearingHistory, setClearingHistory] = useState(false);
     const [archivosBackup, setArchivosBackup] = useState([]);
     const [loadingArchivosBackup, setLoadingArchivosBackup] = useState(false);
     const [downloadingFile, setDownloadingFile] = useState(null);
@@ -145,8 +144,12 @@ const Configuraciones = () => {
     const handleSaveBackupConfig = async () => {
         setBackupSaving(true);
         try {
-            const res = await backupService.saveAutoConfig(backupConfig);
-            showSuccess(res.data?.message || 'Configuración de respaldo guardada con éxito');
+            const payload = {
+                ...backupConfig,
+                telegram_enabled: Boolean(backupConfig.telegram_bot_token && backupConfig.telegram_chat_id)
+            };
+            const res = await backupService.saveAutoConfig(payload);
+            showSuccess(res.data?.message || 'Configuración guardada exitosamente y programada.');
             await fetchBackupData();
         } catch (err) {
             showError(err.response?.data?.detail || 'Error al guardar configuración de respaldo');
@@ -157,9 +160,9 @@ const Configuraciones = () => {
 
     const handleRunBackupNow = async () => {
         const confirmado = await showConfirm(
-            '¿Generar Respaldo Ahora?',
-            'Esta acción creará un respaldo .sql inmediatamente, lo guardará en el servidor y lo enviará al correo electrónico configurado.',
-            'Sí, generar ahora',
+            '¿Generar y Enviar Respaldo Ahora?',
+            'Esta acción creará un respaldo .sql inmediatamente, lo guardará en el servidor y lo enviará a tu Telegram.',
+            'Sí, generar y enviar ahora',
             'Cancelar',
             'question'
         );
@@ -168,8 +171,10 @@ const Configuraciones = () => {
         try {
             const res = await backupService.ejecutarAhora();
             let msg = res.data?.mensaje || 'Respaldo generado con éxito.';
-            if (res.data?.email?.activo) {
-                msg += res.data.email.resultado?.ok ? `\n📧 Respaldo enviado por correo a ${backupConfig.email_destinatario}` : `\n⚠️ No se pudo enviar el correo: ${res.data.email.resultado?.error || ''}`;
+            if (res.data?.telegram?.activo) {
+                msg += res.data.telegram.resultado?.ok 
+                    ? '\n✈️ Archivo .sql enviado a Telegram con éxito.' 
+                    : `\n⚠️ Telegram: ${res.data.telegram.resultado?.doc_error || res.data.telegram.resultado?.error || 'No se pudo enviar archivo'}`;
             }
             showSuccess(msg);
             await fetchBackupData();
@@ -180,25 +185,45 @@ const Configuraciones = () => {
         }
     };
 
-    const handleTestEmailConfig = async () => {
-        if (!backupConfig.email_destinatario || !backupConfig.email_destinatario.includes('@')) {
-            return showWarning('Ingresa un correo electrónico de destino válido antes de probar.');
+    const handleTestTelegramConfig = async () => {
+        const token = (backupConfig.telegram_bot_token || '').trim();
+        const chat = (backupConfig.telegram_chat_id || '').trim();
+        if (!token || !chat) {
+            return showWarning('Ingresa el Bot Token y el Chat ID de Telegram antes de probar.');
         }
-        setTestingEmail(true);
+        setTestingTelegram(true);
         try {
             const res = await backupService.probarNotificacion({
-                tipo: 'email',
-                smtp_host: backupConfig.smtp_host || 'smtp.gmail.com',
-                smtp_port: parseInt(backupConfig.smtp_port || 587),
-                smtp_user: backupConfig.smtp_user || '',
-                smtp_password: backupConfig.smtp_password || '',
-                email_destinatario: backupConfig.email_destinatario
+                tipo: 'telegram',
+                telegram_bot_token: token,
+                telegram_chat_id: chat
             });
-            showSuccess(res.data?.message || 'Correo de prueba enviado exitosamente.');
+            showSuccess(res.data?.message || '✅ Mensaje de prueba enviado exitosamente a tu Telegram.');
         } catch (err) {
-            showError(err.response?.data?.detail || 'Error al probar envío de correo');
+            showError(err.response?.data?.detail || 'Error al conectar con el bot de Telegram. Verifica el Token y Chat ID.');
         } finally {
-            setTestingEmail(false);
+            setTestingTelegram(false);
+        }
+    };
+
+    const handleClearHistory = async () => {
+        const confirmado = await showConfirm(
+            '¿Limpiar Historial de Envíos?',
+            '¿Deseas vaciar el registro del historial de respaldos enviados a Telegram?',
+            'Sí, vaciar historial',
+            'Cancelar',
+            'warning'
+        );
+        if (!confirmado) return;
+        setClearingHistory(true);
+        try {
+            await backupService.limpiarHistorial();
+            showSuccess('Historial de envíos limpiado exitosamente.');
+            await fetchBackupData();
+        } catch (e) {
+            showError('Error al limpiar historial: ' + e.message);
+        } finally {
+            setClearingHistory(false);
         }
     };
 
@@ -2897,9 +2922,10 @@ const Configuraciones = () => {
                                 </button>
                             </div>
 
-                            {/* Opciones de Frecuencia (4 Botones / Tarjetas) */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+                            {/* Opciones de Frecuencia (5 Botones / Tarjetas) */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
                                 {[
+                                    { id: 'cada_5min', label: 'Cada 5 Minutos', desc: '⚡ Pruebas rápidas de ejecución automática', icon: '⚡' },
                                     { id: 'cada_hora', label: 'Cada Hora', desc: 'Se ejecuta en el minuto :00 de cada hora', icon: '⏱️' },
                                     { id: 'cada_dia', label: 'Cada Día', desc: 'Se ejecuta una vez al día a la hora fijada', icon: '📅' },
                                     { id: 'cada_semana', label: 'Cada Semana', desc: 'Se ejecuta el día de la semana elegido', icon: '🗓️' },
@@ -2930,10 +2956,10 @@ const Configuraciones = () => {
                                                     style={{ cursor: 'pointer' }}
                                                 />
                                             </div>
-                                            <div style={{ color: selected ? '#38bdf8' : '#e2e8f0', fontWeight: 'bold', fontSize: '0.98rem' }}>
+                                            <div style={{ color: selected ? '#38bdf8' : '#e2e8f0', fontWeight: 'bold', fontSize: '0.95rem' }}>
                                                 {opt.label}
                                             </div>
-                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: 4, lineHeight: 1.3 }}>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.76rem', marginTop: 4, lineHeight: 1.3 }}>
                                                 {opt.desc}
                                             </div>
                                         </div>
@@ -2951,8 +2977,8 @@ const Configuraciones = () => {
                                 borderRadius: 12,
                                 border: '1px solid rgba(255,255,255,0.06)'
                             }}>
-                                {/* Hora de Ejecución (Para Día, Semana o Mes) */}
-                                {backupConfig.frecuencia !== 'cada_hora' && (
+                                {/* Hora de Ejecución (Solo si no es cada_5min ni cada_hora) */}
+                                {!['cada_5min', 'cada_hora'].includes(backupConfig.frecuencia) && (
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
                                             Hora de Ejecución (Hora del Servidor / Ecuador)
@@ -3058,137 +3084,274 @@ const Configuraciones = () => {
                             </div>
                         </div>
 
-                        {/* TARJETA 2: ENVÍO AUTOMÁTICO POR CORREO ELECTRÓNICO */}
+                        {/* TARJETA 2: ENVÍO DIRECTO A TELEGRAM */}
+                        <div style={{
+                            background: 'linear-gradient(145deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.75))',
+                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                            borderRadius: 16,
+                            padding: 24,
+                            marginBottom: 24,
+                            boxShadow: '0 8px 30px rgba(14, 165, 233, 0.15)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: '1.7rem' }}>✈️</span>
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.15rem', fontWeight: 700 }}>Canal de Envío: Telegram Bot</h4>
+                                            <span style={{ background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: '0.72rem', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
+                                                Canal Oficial Activo
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: '3px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                            Envío directo y automático del archivo <code>.sql</code> adjunto a tu Telegram según la frecuencia elegida
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <button
+                                        type="button"
+                                        onClick={handleTestTelegramConfig}
+                                        disabled={testingTelegram || !backupConfig.telegram_bot_token || !backupConfig.telegram_chat_id}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: 8,
+                                            border: '1px solid #38bdf8',
+                                            background: 'rgba(14, 165, 233, 0.22)',
+                                            color: '#38bdf8',
+                                            fontWeight: 700,
+                                            fontSize: '0.84rem',
+                                            cursor: testingTelegram || !backupConfig.telegram_bot_token || !backupConfig.telegram_chat_id ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        {testingTelegram ? '⏳ Probando Bot...' : '✈️ Probar Conexión con Telegram'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleRunBackupNow}
+                                        disabled={backupRunningNow}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: 8,
+                                            border: 'none',
+                                            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                            color: '#fff',
+                                            fontWeight: 700,
+                                            fontSize: '0.84rem',
+                                            cursor: backupRunningNow ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                                        }}
+                                    >
+                                        {backupRunningNow ? '⏳ Generando...' : '⚡ Generar y Enviar Respaldo a Telegram Ahora'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Campos Principales de Telegram: Bot Token y Chat ID */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
+                                        🤖 Bot Token de Telegram <span style={{ color: '#38bdf8' }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 7123456789:AAHk1_xyzABCdef123456..."
+                                        value={backupConfig.telegram_bot_token || ''}
+                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '11px 14px',
+                                            background: '#0f172a',
+                                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                                            borderRadius: 10,
+                                            color: '#fff',
+                                            fontSize: '0.9rem',
+                                            fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
+                                        El token proporcionado por <b>@BotFather</b> al crear tu bot
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
+                                        💬 Chat ID de Destino (Donde se mandan los respaldos) <span style={{ color: '#38bdf8' }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 5987654321 o -100123456789"
+                                        value={backupConfig.telegram_chat_id || ''}
+                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, telegram_chat_id: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '11px 14px',
+                                            background: '#0f172a',
+                                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                                            borderRadius: 10,
+                                            color: '#38bdf8',
+                                            fontSize: '0.95rem',
+                                            fontWeight: 700,
+                                            fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
+                                        Tu ID numérico (de <b>@userinfobot</b>) o el ID del grupo de administradores
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Guía Rápida de Configuración de Telegram */}
+                            <div style={{
+                                background: 'rgba(15, 23, 42, 0.6)',
+                                border: '1px solid rgba(56, 189, 248, 0.2)',
+                                borderRadius: 10,
+                                padding: '12px 16px',
+                                fontSize: '0.8rem',
+                                color: '#94a3b8'
+                            }}>
+                                <div style={{ color: '#38bdf8', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span>💡</span> Pasos rápidos si aún no tienes los datos:
+                                </div>
+                                <ol style={{ margin: 0, paddingLeft: 18, lineHeight: '1.6' }}>
+                                    <li>En Telegram busca <b>@BotFather</b>, escribe <code>/newbot</code>, dale nombre y copia el <b>Token</b>.</li>
+                                    <li>Abre tu nuevo bot y dale a <b>Iniciar</b> (o envía <code>/start</code>).</li>
+                                    <li>Busca en Telegram <b>@userinfobot</b>, dale iniciar y copia el número de tu <b>Id:</b> para pegarlo en Chat ID.</li>
+                                    <li>Pégalos arriba, presiona <b>"Probar Conexión con Telegram"</b> y luego <b>"Guardar Configuración de Backup"</b>.</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        {/* TARJETA 3: HISTORIAL DE ENVÍOS REALIZADOS (CON ID DE A QUIÉN SE MANDÓ) */}
                         <div style={{
                             background: 'rgba(15, 23, 42, 0.65)',
-                            border: '1px solid rgba(168, 85, 247, 0.3)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
                             borderRadius: 16,
                             padding: 24,
                             marginBottom: 24,
                             boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
                         }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={{ fontSize: '1.4rem' }}>📧</span>
-                                    <div>
-                                        <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>Envío por Correo Electrónico</h4>
-                                        <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
-                                            Recibe la copia de seguridad adjunta en tu bandeja de entrada automáticamente
-                                        </p>
-                                    </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span>📋</span> Historial de Envíos Realizados ({backupConfig.historial?.length || 0})
+                                    </h4>
+                                    <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                        Registro de cada respaldo ejecutado, fecha, tamaño y el ID de Telegram a quien fue despachado
+                                    </p>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handleTestEmailConfig}
-                                    disabled={testingEmail || !backupConfig.email_destinatario}
-                                    style={{
-                                        padding: '7px 14px',
-                                        borderRadius: 8,
-                                        border: '1px solid #c084fc',
-                                        background: 'rgba(168, 85, 247, 0.18)',
-                                        color: '#c084fc',
-                                        fontWeight: 700,
-                                        fontSize: '0.82rem',
-                                        cursor: testingEmail ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6
-                                    }}
-                                >
-                                    {testingEmail ? '⏳ Enviando Prueba...' : '✉️ Probar Envío a este Correo'}
-                                </button>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={fetchBackupData}
+                                        disabled={backupLoading}
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+                                    >
+                                        {backupLoading ? 'Actualizando...' : '🔄 Actualizar'}
+                                    </button>
+                                    {backupConfig.historial && backupConfig.historial.length > 0 && (
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={handleClearHistory}
+                                            disabled={clearingHistory}
+                                            style={{
+                                                padding: '6px 12px',
+                                                fontSize: '0.8rem',
+                                                borderRadius: 8,
+                                                background: 'rgba(239, 68, 68, 0.15)',
+                                                border: '1px solid #ef4444',
+                                                color: '#f87171'
+                                            }}
+                                        >
+                                            {clearingHistory ? 'Limpiando...' : '🗑️ Limpiar Historial'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Campo Principal: Correo Destinatario */}
-                            <div style={{ marginBottom: 18 }}>
-                                <label style={{ display: 'block', fontSize: '0.88rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
-                                    Correo Electrónico de Destino (Donde se mandarán los backups) <span style={{ color: '#ec4899' }}>*</span>
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="email"
-                                        placeholder="ejemplo@gmail.com o admin@opsatel.com"
-                                        value={backupConfig.email_destinatario || ''}
-                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, email_destinatario: e.target.value }))}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 16px',
-                                            paddingLeft: '42px',
-                                            background: '#0f172a',
-                                            border: '2px solid rgba(168, 85, 247, 0.5)',
-                                            borderRadius: 10,
-                                            color: '#fff',
-                                            fontSize: '1rem',
-                                            fontWeight: 600
-                                        }}
-                                    />
-                                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: '1.1rem' }}>
-                                        📬
-                                    </span>
+                            {!backupConfig.historial || backupConfig.historial.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '28px', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', borderRadius: 10, fontSize: '0.88rem' }}>
+                                    No se registran envíos automáticos aún. Al ejecutar el respaldo se guardará el registro con el ID del destinatario.
                                 </div>
-                                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '6px 0 0 0' }}>
-                                    Cada vez que se ejecute el respaldo (según la frecuencia seleccionada), se enviará el archivo <code>.sql</code> adjunto a este correo.
-                                </p>
-                            </div>
-
-                            {/* Configuración del Servidor SMTP Remitente */}
-                            <div style={{
-                                background: 'rgba(0,0,0,0.25)',
-                                padding: 18,
-                                borderRadius: 12,
-                                border: '1px solid rgba(255,255,255,0.06)'
-                            }}>
-                                <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span>⚙️</span> Parámetros del Servidor Remitente (SMTP)
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                                                <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
+                                                <th style={{ padding: '10px 12px' }}>Archivo</th>
+                                                <th style={{ padding: '10px 12px' }}>Tamaño</th>
+                                                <th style={{ padding: '10px 12px' }}>Canal</th>
+                                                <th style={{ padding: '10px 12px' }}>Destinatario (Chat ID)</th>
+                                                <th style={{ padding: '10px 12px' }}>Estado</th>
+                                                <th style={{ padding: '10px 12px' }}>Motivo / Detalle</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {backupConfig.historial.map((item, idx) => (
+                                                <tr
+                                                    key={idx}
+                                                    style={{
+                                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                        background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>
+                                                        {item.fecha}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#38bdf8' }}>
+                                                        💾 {item.archivo}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#34d399', fontWeight: 'bold' }}>
+                                                        {item.tamano_mb} MB
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#38bdf8' }}>
+                                                        ✈️ {item.canal || 'Telegram'}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px' }}>
+                                                        <span style={{
+                                                            background: 'rgba(56, 189, 248, 0.15)',
+                                                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                                                            color: '#38bdf8',
+                                                            padding: '2px 8px',
+                                                            borderRadius: 6,
+                                                            fontWeight: 700,
+                                                            fontFamily: 'monospace',
+                                                            fontSize: '0.82rem'
+                                                        }}>
+                                                            ID: {item.destinatario_id || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px' }}>
+                                                        {item.estado === 'exitoso' ? (
+                                                            <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981', padding: '2px 8px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700 }}>
+                                                                ✅ Enviado
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444', padding: '2px 8px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700 }}>
+                                                                ❌ Error
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                                        {item.detalle || item.motivo || 'Ejecutado'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Servidor SMTP</label>
-                                        <input
-                                            type="text"
-                                            placeholder="smtp.gmail.com"
-                                            value={backupConfig.smtp_host || 'smtp.gmail.com'}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_host: e.target.value }))}
-                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Puerto SMTP</label>
-                                        <input
-                                            type="number"
-                                            placeholder="587"
-                                            value={backupConfig.smtp_port || 587}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_port: parseInt(e.target.value) || 587 }))}
-                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Correo Remitente (Usuario SMTP)</label>
-                                        <input
-                                            type="text"
-                                            placeholder="opsatel.sistema@gmail.com"
-                                            value={backupConfig.smtp_user || ''}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_user: e.target.value }))}
-                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>Contraseña de Aplicación</label>
-                                        <input
-                                            type="password"
-                                            placeholder="Contraseña de 16 caracteres"
-                                            value={backupConfig.smtp_password || ''}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, smtp_password: e.target.value }))}
-                                            style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: '0.85rem' }}
-                                        />
-                                    </div>
-                                </div>
-                                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 10, marginBottom: 0 }}>
-                                    💡 <b>Nota para Gmail:</b> Se recomienda usar una <i>Contraseña de Aplicación</i> generada en tu cuenta de Google (Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones).
-                                </p>
-                            </div>
+                            )}
                         </div>
 
                         {/* TARJETA 3: GUARDAR Y ESTADO DEL ÚLTIMO RESPALDO */}
