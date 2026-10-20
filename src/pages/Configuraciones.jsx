@@ -99,25 +99,30 @@ const Configuraciones = () => {
 
     // --- Estados para Pestaña Backup / Respaldos Automáticos ---
     const [backupConfig, setBackupConfig] = useState({
-        enabled: true,
+        enabled: false,
         frecuencia: 'cada_dia', // 'cada_5min', 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'
         hora: '02:00',
         dia_semana: 6, // 0=Lunes, 6=Domingo
         dia_mes: 1,
         retencion_dias: 30,
-        telegram_enabled: true,
+        telegram_enabled: false,
         telegram_bot_token: '',
         telegram_chat_id: '',
         ultimo_respaldo: null,
-        historial: []
+        historial: [],
+        historial_configuraciones: []
     });
+    const [isEditingBackupConfig, setIsEditingBackupConfig] = useState(false);
+    const [editBackupForm, setEditBackupForm] = useState(null);
+    const [showTelegramToken, setShowTelegramToken] = useState(false);
+    const [showTelegramTokenInCard, setShowTelegramTokenInCard] = useState(false);
     const [backupLoading, setBackupLoading] = useState(false);
     const [backupSaving, setBackupSaving] = useState(false);
     const [backupRunningNow, setBackupRunningNow] = useState(false);
     const [testingTelegram, setTestingTelegram] = useState(false);
     const [clearingHistory, setClearingHistory] = useState(false);
+    const [clearingConfigHistory, setClearingConfigHistory] = useState(false);
     const [archivosBackup, setArchivosBackup] = useState([]);
-    const [loadingArchivosBackup, setLoadingArchivosBackup] = useState(false);
     const [downloadingFile, setDownloadingFile] = useState(null);
     const [deletingFile, setDeletingFile] = useState(null);
 
@@ -141,15 +146,37 @@ const Configuraciones = () => {
         }
     };
 
+    const handleStartEditingBackup = () => {
+        setEditBackupForm({
+            enabled: backupConfig.enabled,
+            frecuencia: backupConfig.frecuencia || 'cada_dia',
+            hora: backupConfig.hora || '02:00',
+            dia_semana: backupConfig.dia_semana ?? 6,
+            dia_mes: backupConfig.dia_mes ?? 1,
+            retencion_dias: backupConfig.retencion_dias ?? 30,
+            telegram_bot_token: backupConfig.telegram_bot_token || '',
+            telegram_chat_id: backupConfig.telegram_chat_id || ''
+        });
+        setIsEditingBackupConfig(true);
+    };
+
+    const handleCancelEditingBackup = () => {
+        setIsEditingBackupConfig(false);
+        setEditBackupForm(null);
+    };
+
     const handleSaveBackupConfig = async () => {
+        const formToSave = editBackupForm || backupConfig;
         setBackupSaving(true);
         try {
             const payload = {
-                ...backupConfig,
-                telegram_enabled: Boolean(backupConfig.telegram_bot_token && backupConfig.telegram_chat_id)
+                ...formToSave,
+                telegram_enabled: Boolean(formToSave.telegram_bot_token && formToSave.telegram_chat_id)
             };
             const res = await backupService.saveAutoConfig(payload);
             showSuccess(res.data?.message || 'Configuración guardada exitosamente y programada.');
+            setIsEditingBackupConfig(false);
+            setEditBackupForm(null);
             await fetchBackupData();
         } catch (err) {
             showError(err.response?.data?.detail || 'Error al guardar configuración de respaldo');
@@ -186,8 +213,9 @@ const Configuraciones = () => {
     };
 
     const handleTestTelegramConfig = async () => {
-        const token = (backupConfig.telegram_bot_token || '').trim();
-        const chat = (backupConfig.telegram_chat_id || '').trim();
+        const currentForm = editBackupForm || backupConfig;
+        const token = (currentForm.telegram_bot_token || '').trim();
+        const chat = (currentForm.telegram_chat_id || '').trim();
         if (!token || !chat) {
             return showWarning('Ingresa el Bot Token y el Chat ID de Telegram antes de probar.');
         }
@@ -224,6 +252,27 @@ const Configuraciones = () => {
             showError('Error al limpiar historial: ' + e.message);
         } finally {
             setClearingHistory(false);
+        }
+    };
+
+    const handleClearConfigHistory = async () => {
+        const confirmado = await showConfirm(
+            '¿Limpiar Historial de Configuraciones?',
+            '¿Deseas vaciar el registro de cambios realizados a la configuración de respaldos?',
+            'Sí, vaciar historial',
+            'Cancelar',
+            'warning'
+        );
+        if (!confirmado) return;
+        setClearingConfigHistory(true);
+        try {
+            await backupService.limpiarHistorialConfiguraciones();
+            showSuccess('Historial de cambios de configuración limpiado exitosamente.');
+            await fetchBackupData();
+        } catch (e) {
+            showError('Error al limpiar historial: ' + e.message);
+        } finally {
+            setClearingConfigHistory(false);
         }
     };
 
@@ -2860,375 +2909,795 @@ const Configuraciones = () => {
                                     <span>💾</span> Respaldos Automáticos de Base de Datos
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: 850, margin: 0, lineHeight: 1.5 }}>
-                                    Configura la frecuencia de ejecución automática de las copias de seguridad de toda la base de datos (clientes, pagos, saldos, logs y configuraciones). Además, puedes ingresar el correo electrónico donde se enviarán los archivos de respaldo directamente.
+                                    Configura la frecuencia de ejecución automática de las copias de seguridad de toda la base de datos (clientes, pagos, saldos, logs y configuraciones) y el canal de Telegram donde se enviarán directamente los archivos .sql.
                                 </p>
                             </div>
 
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleRunBackupNow}
-                                disabled={backupRunningNow}
-                                style={{
-                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    fontWeight: 700,
-                                    fontSize: '0.9rem',
-                                    padding: '10px 18px',
-                                    borderRadius: 10,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
-                                }}
-                            >
-                                {backupRunningNow ? '⏳ Generando y Enviando...' : '⚡ Generar y Enviar Respaldo Ahora'}
-                            </button>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                {!isEditingBackupConfig ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={handleStartEditingBackup}
+                                            style={{
+                                                padding: '9px 18px',
+                                                borderRadius: 10,
+                                                background: 'rgba(56, 189, 248, 0.15)',
+                                                border: '1px solid #38bdf8',
+                                                color: '#38bdf8',
+                                                fontWeight: 700,
+                                                fontSize: '0.88rem',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 6
+                                            }}
+                                        >
+                                            ✏️ Editar Configuración
+                                        </button>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleRunBackupNow}
+                                            disabled={backupRunningNow}
+                                            style={{
+                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                color: '#fff',
+                                                border: 'none',
+                                                fontWeight: 700,
+                                                fontSize: '0.9rem',
+                                                padding: '9px 18px',
+                                                borderRadius: 10,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                                                cursor: backupRunningNow ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {backupRunningNow ? '⏳ Generando y Enviando...' : '⚡ Generar Respaldo Ahora'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={handleCancelEditingBackup}
+                                            style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.88rem', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)' }}
+                                        >
+                                            ✖️ Cancelar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary"
+                                            onClick={handleSaveBackupConfig}
+                                            disabled={backupSaving}
+                                            style={{
+                                                padding: '9px 20px',
+                                                borderRadius: 10,
+                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                color: '#fff',
+                                                border: 'none',
+                                                fontWeight: 700,
+                                                fontSize: '0.88rem',
+                                                cursor: backupSaving ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {backupSaving ? 'Guardando...' : '💾 Guardar Cambios'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
-                        {/* TARJETA 1: FRECUENCIA DEL RESPALDO */}
+                        {/* ========================================================= */}
+                        {/* SECCIÓN 1: VISTA DE CONFIGURACIÓN ACTUAL O FORMULARIO EDICIÓN */}
+                        {/* ========================================================= */}
+                        {!isEditingBackupConfig ? (
+                            /* --- MODO VISTA: RESUMEN DE LA CONFIGURACIÓN ACTIVA --- */
+                            (!backupConfig.telegram_chat_id && !backupConfig.telegram_bot_token && !backupConfig.enabled && (!backupConfig.historial_configuraciones || backupConfig.historial_configuraciones.length === 0)) ? (
+                                /* BANNER CUANDO NO HAY CONFIGURACIÓN GUARDADA AÚN */
+                                <div style={{
+                                    background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
+                                    border: '1.5px dashed rgba(56, 189, 248, 0.35)',
+                                    borderRadius: 16,
+                                    padding: '36px 24px',
+                                    textAlign: 'center',
+                                    marginBottom: 24
+                                }}>
+                                    <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>⚙️</div>
+                                    <h4 style={{ color: '#f8fafc', fontSize: '1.25rem', marginBottom: 8, fontWeight: 700 }}>
+                                        No hay una configuración de respaldos activa
+                                    </h4>
+                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: 620, margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+                                        Aún no has configurado la periodicidad ni las credenciales de Telegram para tus respaldos de base de datos.
+                                        Haz clic en el siguiente botón para programar la frecuencia y conectar tu bot.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={handleStartEditingBackup}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            fontWeight: 700,
+                                            padding: '12px 28px',
+                                            borderRadius: 10,
+                                            fontSize: '0.95rem',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+                                        }}
+                                    >
+                                        ⚙️ Configurar Respaldo Ahora
+                                    </button>
+                                </div>
+                            ) : (
+                                /* TARJETA PRINCIPAL: CONFIGURACIÓN ACTIVA GUARDADA */
+                                <div style={{
+                                    background: 'rgba(15, 23, 42, 0.75)',
+                                    border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                                    borderRadius: 16,
+                                    padding: 24,
+                                    marginBottom: 24,
+                                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <span style={{ fontSize: '1.8rem' }}>🛡️</span>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                    <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.2rem', fontWeight: 700 }}>
+                                                        Configuración Activa de Respaldos
+                                                    </h4>
+                                                    <span style={{
+                                                        background: backupConfig.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                        border: `1px solid ${backupConfig.enabled ? '#10b981' : '#ef4444'}`,
+                                                        color: backupConfig.enabled ? '#34d399' : '#f87171',
+                                                        padding: '3px 12px',
+                                                        borderRadius: 20,
+                                                        fontWeight: 700,
+                                                        fontSize: '0.8rem',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 6
+                                                    }}>
+                                                        <span>{backupConfig.enabled ? '●' : '○'}</span>
+                                                        {backupConfig.enabled ? 'Servicio Activo y Programado' : 'Servicio en Pausa'}
+                                                    </span>
+                                                </div>
+                                                <p style={{ margin: '3px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                                    Parámetros vigentes programados para la generación automática y envío de copias de seguridad
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={handleStartEditingBackup}
+                                            style={{
+                                                padding: '8px 18px',
+                                                borderRadius: 8,
+                                                background: 'rgba(56, 189, 248, 0.15)',
+                                                border: '1px solid #38bdf8',
+                                                color: '#38bdf8',
+                                                fontWeight: 700,
+                                                fontSize: '0.86rem',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 6
+                                            }}
+                                        >
+                                            ✏️ Editar Configuración
+                                        </button>
+                                    </div>
+
+                                    {/* Grid de 4 Bloques Clave de Configuración */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16 }}>
+                                        {/* Bloque 1: Frecuencia y Horario */}
+                                        <div style={{ background: 'rgba(0, 0, 0, 0.28)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 16 }}>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, fontWeight: 700 }}>
+                                                ⏰ Frecuencia de Ejecución
+                                            </div>
+                                            <div style={{ color: '#38bdf8', fontSize: '1.05rem', fontWeight: 700, marginBottom: 4 }}>
+                                                {backupConfig.frecuencia === 'cada_5min' && '⚡ Cada 5 Minutos'}
+                                                {backupConfig.frecuencia === 'cada_hora' && '⏱️ Cada Hora'}
+                                                {backupConfig.frecuencia === 'cada_dia' && '📅 Cada Día'}
+                                                {backupConfig.frecuencia === 'cada_semana' && '🗓️ Cada Semana'}
+                                                {backupConfig.frecuencia === 'cada_mes' && '📆 Cada Mes'}
+                                                {!['cada_5min', 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'].includes(backupConfig.frecuencia) && backupConfig.frecuencia}
+                                            </div>
+                                            <div style={{ color: '#cbd5e1', fontSize: '0.82rem' }}>
+                                                {backupConfig.frecuencia === 'cada_5min' && 'Pruebas rápidas automáticas'}
+                                                {backupConfig.frecuencia === 'cada_hora' && 'En el minuto :00 de cada hora'}
+                                                {backupConfig.frecuencia === 'cada_dia' && `Hora fijada: ${backupConfig.hora || '02:00'}`}
+                                                {backupConfig.frecuencia === 'cada_semana' && `${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][backupConfig.dia_semana ?? 6]} a las ${backupConfig.hora || '02:00'}`}
+                                                {backupConfig.frecuencia === 'cada_mes' && `Día ${backupConfig.dia_mes ?? 1} del mes a las ${backupConfig.hora || '02:00'}`}
+                                            </div>
+                                        </div>
+
+                                        {/* Bloque 2: Canal Telegram */}
+                                        <div style={{ background: 'rgba(0, 0, 0, 0.28)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 16 }}>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, fontWeight: 700 }}>
+                                                ✈️ Canal Telegram Bot
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                                                <span style={{
+                                                    background: 'rgba(56, 189, 248, 0.2)',
+                                                    border: '1px solid rgba(56, 189, 248, 0.5)',
+                                                    color: '#38bdf8',
+                                                    padding: '2px 8px',
+                                                    borderRadius: 6,
+                                                    fontSize: '0.84rem',
+                                                    fontFamily: 'monospace',
+                                                    fontWeight: 700
+                                                }}>
+                                                    ID: {backupConfig.telegram_chat_id || 'Sin configurar'}
+                                                </span>
+                                                {backupConfig.telegram_chat_id && backupConfig.telegram_bot_token && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleTestTelegramConfig}
+                                                        disabled={testingTelegram}
+                                                        style={{
+                                                            padding: '2px 8px',
+                                                            borderRadius: 6,
+                                                            border: '1px solid #38bdf8',
+                                                            background: 'rgba(56, 189, 248, 0.12)',
+                                                            color: '#38bdf8',
+                                                            fontSize: '0.74rem',
+                                                            cursor: testingTelegram ? 'not-allowed' : 'pointer',
+                                                            fontWeight: 600
+                                                        }}
+                                                    >
+                                                        {testingTelegram ? 'Probando...' : '✈️ Probar'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: '0.78rem' }}>
+                                                <span>Token:</span>
+                                                <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>
+                                                    {backupConfig.telegram_bot_token
+                                                        ? (showTelegramTokenInCard
+                                                            ? backupConfig.telegram_bot_token
+                                                            : `${backupConfig.telegram_bot_token.slice(0, 6)}••••••••••••••••${backupConfig.telegram_bot_token.slice(-4)}`
+                                                        )
+                                                        : 'No asignado'
+                                                    }
+                                                </span>
+                                                {backupConfig.telegram_bot_token && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowTelegramTokenInCard(v => !v)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}
+                                                        title={showTelegramTokenInCard ? 'Ocultar Token' : 'Mostrar Token'}
+                                                    >
+                                                        {showTelegramTokenInCard ? '🙈' : '👁️'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Bloque 3: Retención en Disco */}
+                                        <div style={{ background: 'rgba(0, 0, 0, 0.28)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 16 }}>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, fontWeight: 700 }}>
+                                                🗄️ Retención en Disco Local
+                                            </div>
+                                            <div style={{ color: '#34d399', fontSize: '1.05rem', fontWeight: 700, marginBottom: 4 }}>
+                                                {backupConfig.retencion_dias ?? 30} Días
+                                            </div>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                                Archivos de más de {backupConfig.retencion_dias ?? 30} días se depuran automáticamente
+                                            </div>
+                                        </div>
+
+                                        {/* Bloque 4: Último Respaldo Generado */}
+                                        <div style={{ background: 'rgba(0, 0, 0, 0.28)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 16 }}>
+                                            <div style={{ color: '#94a3b8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, fontWeight: 700 }}>
+                                                💾 Último Respaldo Generado
+                                            </div>
+                                            {backupConfig.ultimo_respaldo ? (
+                                                <>
+                                                    <div style={{ color: '#f8fafc', fontSize: '0.95rem', fontWeight: 700, marginBottom: 4 }}>
+                                                        {backupConfig.ultimo_respaldo.fecha}
+                                                    </div>
+                                                    <div style={{ color: '#94a3b8', fontSize: '0.78rem', fontFamily: 'monospace' }}>
+                                                        {backupConfig.ultimo_respaldo.archivo} ({backupConfig.ultimo_respaldo.tamano_mb} MB)
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div style={{ color: '#64748b', fontSize: '0.84rem' }}>
+                                                    Aún no se registra una ejecución automática
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        ) : (
+                            /* --- MODO EDICIÓN: FORMULARIO INTERACTIVO --- */
+                            <div style={{
+                                background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.85))',
+                                border: '1.5px solid rgba(56, 189, 248, 0.5)',
+                                borderRadius: 16,
+                                padding: 24,
+                                marginBottom: 24,
+                                boxShadow: '0 12px 36px rgba(14, 165, 233, 0.2)'
+                            }}>
+                                {/* Encabezado del Formulario de Edición */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20, borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: 16 }}>
+                                    <div>
+                                        <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                                            <span>✏️</span> Editando Configuración de Respaldos
+                                        </h4>
+                                        <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.84rem' }}>
+                                            Selecciona la frecuencia, horario y credenciales del bot de Telegram. Los cambios se aplicarán al guardar.
+                                        </p>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={handleCancelEditingBackup}
+                                            style={{ padding: '8px 16px', borderRadius: 8, fontSize: '0.86rem', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)' }}
+                                        >
+                                            ✖️ Cancelar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary"
+                                            onClick={handleSaveBackupConfig}
+                                            disabled={backupSaving}
+                                            style={{
+                                                padding: '8px 20px',
+                                                borderRadius: 8,
+                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                color: '#fff',
+                                                border: 'none',
+                                                fontWeight: 700,
+                                                fontSize: '0.86rem',
+                                                cursor: backupSaving ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {backupSaving ? 'Guardando...' : '💾 Guardar Configuración'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Subsección 1: Frecuencia de Ejecución */}
+                                <div style={{ marginBottom: 24 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                        <label style={{ fontSize: '0.95rem', color: '#f8fafc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span>⏰</span> Frecuencia de Ejecución
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditBackupForm(prev => ({ ...prev, enabled: !prev?.enabled }))}
+                                            style={{
+                                                padding: '6px 14px',
+                                                borderRadius: 20,
+                                                border: `1px solid ${editBackupForm?.enabled ? '#10b981' : '#ef4444'}`,
+                                                background: editBackupForm?.enabled ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+                                                color: editBackupForm?.enabled ? '#34d399' : '#f87171',
+                                                fontWeight: 700,
+                                                fontSize: '0.8rem',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {editBackupForm?.enabled ? '● Servicio Activo' : '○ Servicio en Pausa'}
+                                        </button>
+                                    </div>
+
+                                    {/* Tarjetas de Frecuencia */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+                                        {[
+                                            { id: 'cada_5min', label: 'Cada 5 Minutos', desc: '⚡ Pruebas rápidas de ejecución automática', icon: '⚡' },
+                                            { id: 'cada_hora', label: 'Cada Hora', desc: 'Se ejecuta en el minuto :00 de cada hora', icon: '⏱️' },
+                                            { id: 'cada_dia', label: 'Cada Día', desc: 'Se ejecuta una vez al día a la hora fijada', icon: '📅' },
+                                            { id: 'cada_semana', label: 'Cada Semana', desc: 'Se ejecuta el día de la semana elegido', icon: '🗓️' },
+                                            { id: 'cada_mes', label: 'Cada Mes', desc: 'Se ejecuta el día del mes especificado', icon: '📆' },
+                                        ].map((opt) => {
+                                            const selected = editBackupForm?.frecuencia === opt.id;
+                                            return (
+                                                <div
+                                                    key={opt.id}
+                                                    onClick={() => setEditBackupForm(prev => ({ ...prev, frecuencia: opt.id }))}
+                                                    style={{
+                                                        padding: '14px',
+                                                        borderRadius: 12,
+                                                        background: selected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                                                        border: `2px solid ${selected ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}`,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                        <span style={{ fontSize: '1.25rem' }}>{opt.icon}</span>
+                                                        <input
+                                                            type="radio"
+                                                            name="frecuenciaBackupEdit"
+                                                            checked={selected}
+                                                            onChange={() => setEditBackupForm(prev => ({ ...prev, frecuencia: opt.id }))}
+                                                            style={{ cursor: 'pointer' }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ color: selected ? '#38bdf8' : '#e2e8f0', fontWeight: 'bold', fontSize: '0.92rem' }}>
+                                                        {opt.label}
+                                                    </div>
+                                                    <div style={{ color: '#94a3b8', fontSize: '0.74rem', marginTop: 3, lineHeight: 1.3 }}>
+                                                        {opt.desc}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Parámetros Dinámicos según Frecuencia */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                        gap: 16,
+                                        background: 'rgba(0,0,0,0.25)',
+                                        padding: 16,
+                                        borderRadius: 12,
+                                        border: '1px solid rgba(255,255,255,0.06)'
+                                    }}>
+                                        {!['cada_5min', 'cada_hora'].includes(editBackupForm?.frecuencia) && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                                    Hora de Ejecución (Hora del Servidor / Ecuador)
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    value={editBackupForm?.hora || '02:00'}
+                                                    onChange={(e) => setEditBackupForm(prev => ({ ...prev, hora: e.target.value }))}
+                                                    style={{ width: '100%', padding: '9px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem' }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {editBackupForm?.frecuencia === 'cada_semana' && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                                    Día de la Semana
+                                                </label>
+                                                <select
+                                                    value={editBackupForm?.dia_semana ?? 6}
+                                                    onChange={(e) => setEditBackupForm(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
+                                                    style={{ width: '100%', padding: '9px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem' }}
+                                                >
+                                                    <option value={0}>Lunes</option>
+                                                    <option value={1}>Martes</option>
+                                                    <option value={2}>Miércoles</option>
+                                                    <option value={3}>Jueves</option>
+                                                    <option value={4}>Viernes</option>
+                                                    <option value={5}>Sábado</option>
+                                                    <option value={6}>Domingo</option>
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {editBackupForm?.frecuencia === 'cada_mes' && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                                    Día del Mes
+                                                </label>
+                                                <select
+                                                    value={editBackupForm?.dia_mes ?? 1}
+                                                    onChange={(e) => setEditBackupForm(prev => ({ ...prev, dia_mes: parseInt(e.target.value) }))}
+                                                    style={{ width: '100%', padding: '9px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem' }}
+                                                >
+                                                    {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                                                        <option key={d} value={d}>Día {d} de cada mes</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
+                                                Retención de Respaldos (Días a conservar en disco)
+                                            </label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="365"
+                                                    value={editBackupForm?.retencion_dias ?? 30}
+                                                    onChange={(e) => setEditBackupForm(prev => ({ ...prev, retencion_dias: parseInt(e.target.value) || 30 }))}
+                                                    style={{ width: '100%', padding: '9px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem' }}
+                                                />
+                                                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Días</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Subsección 2: Credenciales de Telegram */}
+                                <div style={{
+                                    background: 'rgba(14, 165, 233, 0.08)',
+                                    border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                                    borderRadius: 14,
+                                    padding: 20,
+                                    marginBottom: 20
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontSize: '1.5rem' }}>✈️</span>
+                                            <div>
+                                                <h5 style={{ margin: 0, color: '#f8fafc', fontSize: '1.05rem', fontWeight: 700 }}>Credenciales del Bot de Telegram</h5>
+                                                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Ingresa las credenciales de tu bot personal o de la empresa</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleTestTelegramConfig}
+                                            disabled={testingTelegram || !editBackupForm?.telegram_bot_token || !editBackupForm?.telegram_chat_id}
+                                            style={{
+                                                padding: '7px 14px',
+                                                borderRadius: 8,
+                                                border: '1px solid #38bdf8',
+                                                background: 'rgba(14, 165, 233, 0.2)',
+                                                color: '#38bdf8',
+                                                fontWeight: 700,
+                                                fontSize: '0.82rem',
+                                                cursor: testingTelegram || !editBackupForm?.telegram_bot_token || !editBackupForm?.telegram_chat_id ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            {testingTelegram ? '⏳ Probando Bot...' : '✈️ Probar Conexión con Telegram'}
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 14 }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
+                                                🤖 Bot Token de Telegram <span style={{ color: '#38bdf8' }}>*</span>
+                                            </label>
+                                            <div style={{ position: 'relative' }}>
+                                                <input
+                                                    type={showTelegramToken ? 'text' : 'password'}
+                                                    placeholder="Ej: 7123456789:AAHk1_xyzABCdef..."
+                                                    value={editBackupForm?.telegram_bot_token || ''}
+                                                    onChange={(e) => setEditBackupForm(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '11px 44px 11px 14px',
+                                                        background: '#0f172a',
+                                                        border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                                                        borderRadius: 10,
+                                                        color: '#fff',
+                                                        fontSize: '0.88rem',
+                                                        fontFamily: 'monospace'
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTelegramToken(v => !v)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        right: 12,
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: '#94a3b8',
+                                                        cursor: 'pointer',
+                                                        fontSize: '1.15rem',
+                                                        padding: 0
+                                                    }}
+                                                    title={showTelegramToken ? 'Ocultar token' : 'Ver token'}
+                                                >
+                                                    {showTelegramToken ? '🙈' : '👁️'}
+                                                </button>
+                                            </div>
+                                            <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
+                                                Token proporcionado por <b>@BotFather</b> al crear tu bot
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
+                                                💬 Chat ID de Destino <span style={{ color: '#38bdf8' }}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ej: 5987654321 o -100123456789"
+                                                value={editBackupForm?.telegram_chat_id || ''}
+                                                onChange={(e) => setEditBackupForm(prev => ({ ...prev, telegram_chat_id: e.target.value }))}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '11px 14px',
+                                                    background: '#0f172a',
+                                                    border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                                                    borderRadius: 10,
+                                                    color: '#38bdf8',
+                                                    fontSize: '0.92rem',
+                                                    fontWeight: 700,
+                                                    fontFamily: 'monospace'
+                                                }}
+                                            />
+                                            <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
+                                                ID numérico de tu chat privado (de <b>@userinfobot</b>) o de un grupo
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Pasos rápidos */}
+                                    <div style={{
+                                        background: 'rgba(15, 23, 42, 0.6)',
+                                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                                        borderRadius: 10,
+                                        padding: '10px 14px',
+                                        fontSize: '0.78rem',
+                                        color: '#94a3b8'
+                                    }}>
+                                        <div style={{ color: '#38bdf8', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span>💡</span> Pasos rápidos si aún no tienes los datos:
+                                        </div>
+                                        <ol style={{ margin: 0, paddingLeft: 18, lineHeight: '1.5' }}>
+                                            <li>En Telegram busca <b>@BotFather</b>, escribe <code>/newbot</code>, dale nombre y copia el <b>Token</b>.</li>
+                                            <li>Abre tu nuevo bot y dale a <b>Iniciar</b> (o envía <code>/start</code>).</li>
+                                            <li>Busca en Telegram <b>@userinfobot</b>, dale iniciar y copia el número de tu <b>Id:</b> para pegarlo en Chat ID.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+
+                                {/* Pie del Formulario de Edición */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={handleCancelEditingBackup}
+                                        style={{ padding: '10px 22px', borderRadius: 8, fontSize: '0.88rem', color: '#94a3b8' }}
+                                    >
+                                        ✖️ Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={handleSaveBackupConfig}
+                                        disabled={backupSaving}
+                                        style={{
+                                            padding: '10px 26px',
+                                            borderRadius: 8,
+                                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            fontWeight: 700,
+                                            fontSize: '0.92rem',
+                                            cursor: backupSaving ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        {backupSaving ? 'Guardando...' : '💾 Guardar y Aplicar Configuración'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ========================================================= */}
+                        {/* SECCIÓN 2: HISTORIAL DE CONFIGURACIONES REALIZADAS */}
+                        {/* ========================================================= */}
                         <div style={{
                             background: 'rgba(15, 23, 42, 0.65)',
-                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
                             borderRadius: 16,
                             padding: 24,
                             marginBottom: 24,
                             boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
                         }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={{ fontSize: '1.4rem' }}>⏰</span>
-                                    <div>
-                                        <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>Frecuencia de Ejecución</h4>
-                                        <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>Selecciona cada cuánto tiempo el servidor generará el respaldo de manera automática</p>
-                                    </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span>📜</span> Historial de Configuraciones de Backup Realizadas ({backupConfig.historial_configuraciones?.length || 0})
+                                    </h4>
+                                    <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
+                                        Registro cronológico de los ajustes y programaciones de respaldo guardados en el sistema
+                                    </p>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setBackupConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
-                                    style={{
-                                        padding: '7px 14px',
-                                        borderRadius: 20,
-                                        border: `1px solid ${backupConfig.enabled ? '#10b981' : '#ef4444'}`,
-                                        background: backupConfig.enabled ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
-                                        color: backupConfig.enabled ? '#34d399' : '#f87171',
-                                        fontWeight: 700,
-                                        fontSize: '0.82rem',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {backupConfig.enabled ? '● Servicio Activo' : '○ Servicio en Pausa'}
-                                </button>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={fetchBackupData}
+                                        disabled={backupLoading}
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+                                    >
+                                        {backupLoading ? 'Actualizando...' : '🔄 Actualizar'}
+                                    </button>
+                                    {backupConfig.historial_configuraciones && backupConfig.historial_configuraciones.length > 0 && (
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={handleClearConfigHistory}
+                                            disabled={clearingConfigHistory}
+                                            style={{
+                                                padding: '6px 12px',
+                                                fontSize: '0.8rem',
+                                                borderRadius: 8,
+                                                background: 'rgba(239, 68, 68, 0.15)',
+                                                border: '1px solid #ef4444',
+                                                color: '#f87171'
+                                            }}
+                                        >
+                                            {clearingConfigHistory ? 'Limpiando...' : '🗑️ Limpiar Historial'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Opciones de Frecuencia (5 Botones / Tarjetas) */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-                                {[
-                                    { id: 'cada_5min', label: 'Cada 5 Minutos', desc: '⚡ Pruebas rápidas de ejecución automática', icon: '⚡' },
-                                    { id: 'cada_hora', label: 'Cada Hora', desc: 'Se ejecuta en el minuto :00 de cada hora', icon: '⏱️' },
-                                    { id: 'cada_dia', label: 'Cada Día', desc: 'Se ejecuta una vez al día a la hora fijada', icon: '📅' },
-                                    { id: 'cada_semana', label: 'Cada Semana', desc: 'Se ejecuta el día de la semana elegido', icon: '🗓️' },
-                                    { id: 'cada_mes', label: 'Cada Mes', desc: 'Se ejecuta el día del mes especificado', icon: '📆' },
-                                ].map((opt) => {
-                                    const selected = backupConfig.frecuencia === opt.id;
-                                    return (
-                                        <div
-                                            key={opt.id}
-                                            onClick={() => setBackupConfig(prev => ({ ...prev, frecuencia: opt.id }))}
-                                            style={{
-                                                padding: '16px',
-                                                borderRadius: 12,
-                                                background: selected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.25)',
-                                                border: `2px solid ${selected ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}`,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease',
-                                                position: 'relative'
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                                                <span style={{ fontSize: '1.3rem' }}>{opt.icon}</span>
-                                                <input
-                                                    type="radio"
-                                                    name="frecuenciaBackup"
-                                                    checked={selected}
-                                                    onChange={() => setBackupConfig(prev => ({ ...prev, frecuencia: opt.id }))}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
-                                            </div>
-                                            <div style={{ color: selected ? '#38bdf8' : '#e2e8f0', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                                                {opt.label}
-                                            </div>
-                                            <div style={{ color: '#94a3b8', fontSize: '0.76rem', marginTop: 4, lineHeight: 1.3 }}>
-                                                {opt.desc}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Parámetros Dinámicos según Frecuencia */}
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                                gap: 16,
-                                background: 'rgba(0,0,0,0.25)',
-                                padding: 18,
-                                borderRadius: 12,
-                                border: '1px solid rgba(255,255,255,0.06)'
-                            }}>
-                                {/* Hora de Ejecución (Solo si no es cada_5min ni cada_hora) */}
-                                {!['cada_5min', 'cada_hora'].includes(backupConfig.frecuencia) && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
-                                            Hora de Ejecución (Hora del Servidor / Ecuador)
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={backupConfig.hora || '02:00'}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, hora: e.target.value }))}
-                                            style={{
-                                                width: '100%',
-                                                padding: '9px 12px',
-                                                background: '#0f172a',
-                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                borderRadius: 8,
-                                                color: '#fff',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Día de la semana (Si frecuencia es cada_semana) */}
-                                {backupConfig.frecuencia === 'cada_semana' && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
-                                            Día de la Semana
-                                        </label>
-                                        <select
-                                            value={backupConfig.dia_semana ?? 6}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
-                                            style={{
-                                                width: '100%',
-                                                padding: '9px 12px',
-                                                background: '#0f172a',
-                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                borderRadius: 8,
-                                                color: '#fff',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            <option value={0}>Lunes</option>
-                                            <option value={1}>Martes</option>
-                                            <option value={2}>Miércoles</option>
-                                            <option value={3}>Jueves</option>
-                                            <option value={4}>Viernes</option>
-                                            <option value={5}>Sábado</option>
-                                            <option value={6}>Domingo</option>
-                                        </select>
-                                    </div>
-                                )}
-
-                                {/* Día del mes (Si frecuencia es cada_mes) */}
-                                {backupConfig.frecuencia === 'cada_mes' && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
-                                            Día del Mes
-                                        </label>
-                                        <select
-                                            value={backupConfig.dia_mes ?? 1}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, dia_mes: parseInt(e.target.value) }))}
-                                            style={{
-                                                width: '100%',
-                                                padding: '9px 12px',
-                                                background: '#0f172a',
-                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                borderRadius: 8,
-                                                color: '#fff',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                                                <option key={d} value={d}>Día {d} de cada mes</option>
+                            {!backupConfig.historial_configuraciones || backupConfig.historial_configuraciones.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '24px', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', borderRadius: 10, fontSize: '0.88rem' }}>
+                                    No se registran cambios previos de configuración. Al guardar o modificar una configuración se registrará aquí automáticamente.
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                                                <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
+                                                <th style={{ padding: '10px 12px' }}>Frecuencia</th>
+                                                <th style={{ padding: '10px 12px' }}>Horario</th>
+                                                <th style={{ padding: '10px 12px' }}>Destinatario Chat ID</th>
+                                                <th style={{ padding: '10px 12px' }}>Token</th>
+                                                <th style={{ padding: '10px 12px' }}>Retención</th>
+                                                <th style={{ padding: '10px 12px' }}>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {backupConfig.historial_configuraciones.map((item, idx) => (
+                                                <tr
+                                                    key={idx}
+                                                    style={{
+                                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                        background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>{item.fecha}</td>
+                                                    <td style={{ padding: '10px 12px', color: '#38bdf8', fontWeight: 600 }}>
+                                                        {item.frecuencia === 'cada_5min' ? '⚡ Cada 5 Minutos' : (
+                                                            item.frecuencia === 'cada_hora' ? '⏱️ Cada Hora' : (
+                                                                item.frecuencia === 'cada_dia' ? '📅 Cada Día' : (
+                                                                    item.frecuencia === 'cada_semana' ? '🗓️ Cada Semana' : (
+                                                                        item.frecuencia === 'cada_mes' ? '📆 Cada Mes' : item.frecuencia
+                                                                    )
+                                                                )
+                                                            )
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{item.hora || '02:00'}</td>
+                                                    <td style={{ padding: '10px 12px' }}>
+                                                        <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8', padding: '2px 8px', borderRadius: 6, fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                                                            {item.telegram_chat_id || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                                        {item.telegram_token_enmascarado || '••••••••'}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: '#34d399' }}>{item.retencion_dias} días</td>
+                                                    <td style={{ padding: '10px 12px' }}>
+                                                        {item.enabled ? (
+                                                            <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981', padding: '2px 8px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700 }}>
+                                                                ● Activo
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444', padding: '2px 8px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700 }}>
+                                                                ○ Pausado
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
                                             ))}
-                                        </select>
-                                    </div>
-                                )}
-
-                                {/* Retención en Días */}
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.82rem', color: '#cbd5e1', marginBottom: 6, fontWeight: 600 }}>
-                                        Retención de Respaldos (Días a conservar en disco)
-                                    </label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="365"
-                                            value={backupConfig.retencion_dias ?? 30}
-                                            onChange={(e) => setBackupConfig(prev => ({ ...prev, retencion_dias: parseInt(e.target.value) || 30 }))}
-                                            style={{
-                                                width: '100%',
-                                                padding: '9px 12px',
-                                                background: '#0f172a',
-                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                borderRadius: 8,
-                                                color: '#fff',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        />
-                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Días</span>
-                                    </div>
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* TARJETA 2: ENVÍO DIRECTO A TELEGRAM */}
-                        <div style={{
-                            background: 'linear-gradient(145deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.75))',
-                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
-                            borderRadius: 16,
-                            padding: 24,
-                            marginBottom: 24,
-                            boxShadow: '0 8px 30px rgba(14, 165, 233, 0.15)'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={{ fontSize: '1.7rem' }}>✈️</span>
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '1.15rem', fontWeight: 700 }}>Canal de Envío: Telegram Bot</h4>
-                                            <span style={{ background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: '0.72rem', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
-                                                Canal Oficial Activo
-                                            </span>
-                                        </div>
-                                        <p style={{ margin: '3px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
-                                            Envío directo y automático del archivo <code>.sql</code> adjunto a tu Telegram según la frecuencia elegida
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <button
-                                        type="button"
-                                        onClick={handleTestTelegramConfig}
-                                        disabled={testingTelegram || !backupConfig.telegram_bot_token || !backupConfig.telegram_chat_id}
-                                        style={{
-                                            padding: '8px 16px',
-                                            borderRadius: 8,
-                                            border: '1px solid #38bdf8',
-                                            background: 'rgba(14, 165, 233, 0.22)',
-                                            color: '#38bdf8',
-                                            fontWeight: 700,
-                                            fontSize: '0.84rem',
-                                            cursor: testingTelegram || !backupConfig.telegram_bot_token || !backupConfig.telegram_chat_id ? 'not-allowed' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                    >
-                                        {testingTelegram ? '⏳ Probando Bot...' : '✈️ Probar Conexión con Telegram'}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={handleRunBackupNow}
-                                        disabled={backupRunningNow}
-                                        style={{
-                                            padding: '8px 16px',
-                                            borderRadius: 8,
-                                            border: 'none',
-                                            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-                                            color: '#fff',
-                                            fontWeight: 700,
-                                            fontSize: '0.84rem',
-                                            cursor: backupRunningNow ? 'not-allowed' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
-                                        }}
-                                    >
-                                        {backupRunningNow ? '⏳ Generando...' : '⚡ Generar y Enviar Respaldo a Telegram Ahora'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Campos Principales de Telegram: Bot Token y Chat ID */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
-                                        🤖 Bot Token de Telegram <span style={{ color: '#38bdf8' }}>*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: 7123456789:AAHk1_xyzABCdef123456..."
-                                        value={backupConfig.telegram_bot_token || ''}
-                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
-                                        style={{
-                                            width: '100%',
-                                            padding: '11px 14px',
-                                            background: '#0f172a',
-                                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
-                                            borderRadius: 10,
-                                            color: '#fff',
-                                            fontSize: '0.9rem',
-                                            fontFamily: 'monospace'
-                                        }}
-                                    />
-                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
-                                        El token proporcionado por <b>@BotFather</b> al crear tu bot
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.86rem', color: '#f1f5f9', marginBottom: 6, fontWeight: 700 }}>
-                                        💬 Chat ID de Destino (Donde se mandan los respaldos) <span style={{ color: '#38bdf8' }}>*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: 5987654321 o -100123456789"
-                                        value={backupConfig.telegram_chat_id || ''}
-                                        onChange={(e) => setBackupConfig(prev => ({ ...prev, telegram_chat_id: e.target.value }))}
-                                        style={{
-                                            width: '100%',
-                                            padding: '11px 14px',
-                                            background: '#0f172a',
-                                            border: '1.5px solid rgba(56, 189, 248, 0.4)',
-                                            borderRadius: 10,
-                                            color: '#38bdf8',
-                                            fontSize: '0.95rem',
-                                            fontWeight: 700,
-                                            fontFamily: 'monospace'
-                                        }}
-                                    />
-                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>
-                                        Tu ID numérico (de <b>@userinfobot</b>) o el ID del grupo de administradores
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Guía Rápida de Configuración de Telegram */}
-                            <div style={{
-                                background: 'rgba(15, 23, 42, 0.6)',
-                                border: '1px solid rgba(56, 189, 248, 0.2)',
-                                borderRadius: 10,
-                                padding: '12px 16px',
-                                fontSize: '0.8rem',
-                                color: '#94a3b8'
-                            }}>
-                                <div style={{ color: '#38bdf8', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span>💡</span> Pasos rápidos si aún no tienes los datos:
-                                </div>
-                                <ol style={{ margin: 0, paddingLeft: 18, lineHeight: '1.6' }}>
-                                    <li>En Telegram busca <b>@BotFather</b>, escribe <code>/newbot</code>, dale nombre y copia el <b>Token</b>.</li>
-                                    <li>Abre tu nuevo bot y dale a <b>Iniciar</b> (o envía <code>/start</code>).</li>
-                                    <li>Busca en Telegram <b>@userinfobot</b>, dale iniciar y copia el número de tu <b>Id:</b> para pegarlo en Chat ID.</li>
-                                    <li>Pégalos arriba, presiona <b>"Probar Conexión con Telegram"</b> y luego <b>"Guardar Configuración de Backup"</b>.</li>
-                                </ol>
-                            </div>
+                            )}
                         </div>
 
                         {/* TARJETA 3: HISTORIAL DE ENVÍOS REALIZADOS (CON ID DE A QUIÉN SE MANDÓ) */}
@@ -3352,54 +3821,6 @@ const Configuraciones = () => {
                                     </table>
                                 </div>
                             )}
-                        </div>
-
-                        {/* TARJETA 3: GUARDAR Y ESTADO DEL ÚLTIMO RESPALDO */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: 16,
-                            background: 'rgba(15, 23, 42, 0.5)',
-                            padding: '16px 20px',
-                            borderRadius: 14,
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            marginBottom: 28
-                        }}>
-                            <div>
-                                {backupConfig.ultimo_respaldo ? (
-                                    <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                                        <span style={{ color: '#34d399', fontWeight: 'bold' }}>Último respaldo ejecutado: </span>
-                                        <span style={{ color: '#f8fafc' }}>{backupConfig.ultimo_respaldo.fecha}</span> · <code>{backupConfig.ultimo_respaldo.archivo}</code> ({backupConfig.ultimo_respaldo.tamano_mb} MB)
-                                    </div>
-                                ) : (
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                        Aún no se registra una ejecución automática. Puedes hacer clic en "Generar y Enviar Respaldo Ahora".
-                                    </div>
-                                )}
-                            </div>
-
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSaveBackupConfig}
-                                disabled={backupSaving}
-                                style={{
-                                    padding: '12px 28px',
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    fontWeight: 700,
-                                    borderRadius: 10,
-                                    fontSize: '0.95rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    cursor: backupSaving ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                {backupSaving ? 'Guardando...' : '💾 Guardar Configuración de Backup'}
-                            </button>
                         </div>
 
                         {/* TARJETA 4: BÓVEDA DE ARCHIVOS EN EL SERVIDOR */}
