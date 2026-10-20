@@ -1687,6 +1687,8 @@ function HistorialClientes({ mesTarget }) {
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState('');
   const [filtroCartera, setFiltroCartera] = useState('');
+  const [paginaCartera, setPaginaCartera] = useState(1);
+  const [porPaginaCartera, setPorPaginaCartera] = useState(10);
 
   // Comentarios temporales para "Clientes Recién Activados (Nuevos este mes)"
   // Se almacenan temporalmente y se borran si el cliente ya no está en la lista de activados recientes
@@ -1801,6 +1803,31 @@ function HistorialClientes({ mesTarget }) {
       (c.id && String(c.id).toLowerCase().includes(filtroCartera.toLowerCase()));
     return isActivo && !isNew && matchesCartera;
   });
+
+  // Reiniciar a la página 1 cuando cambia algún filtro o la cantidad por página
+  useEffect(() => {
+    setPaginaCartera(1);
+  }, [filtro, filtroCartera, porPaginaCartera]);
+
+  const totalItemsCartera = filteredActivos.length;
+  const totalPaginasCartera = Math.max(1, Math.ceil(totalItemsCartera / porPaginaCartera));
+  const currentPageCartera = Math.min(Math.max(1, paginaCartera), totalPaginasCartera);
+  const inicioCartera = (currentPageCartera - 1) * porPaginaCartera;
+  const finCartera = Math.min(inicioCartera + porPaginaCartera, totalItemsCartera);
+  const paginatedActivos = filteredActivos.slice(inicioCartera, finCartera);
+
+  const getPageNumbers = (current, total) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
 
   const filteredRecientes = filtered.filter(c => {
     const isActivo = c.estado && c.estado.toLowerCase() === 'activo';
@@ -2037,7 +2064,7 @@ function HistorialClientes({ mesTarget }) {
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
               <div>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span>💰</span> Cartera General (Clientes Activos)
                   <span style={{
                     fontSize: '0.75rem',
@@ -2053,6 +2080,22 @@ function HistorialClientes({ mesTarget }) {
                   }}>
                     {filteredActivos.length} {filteredActivos.length === 1 ? 'cliente' : 'clientes'}
                   </span>
+                  {totalItemsCartera > 0 && (
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 12,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      Página {currentPageCartera} de {totalPaginasCartera}
+                    </span>
+                  )}
                 </h4>
                 <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                   Historial de deudas consolidadas y control de cartera de clientes activos.
@@ -2085,7 +2128,7 @@ function HistorialClientes({ mesTarget }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredActivos.map((c, idx) => {
+                  {paginatedActivos.map((c, idx) => {
                     let saldoPendiente = parseFloat(c.saldo_total || 0);
                     const tarifa = parseFloat(c.tarifa_mensual || 0);
                     const isDeudor = saldoPendiente > 0;
@@ -2143,6 +2186,185 @@ function HistorialClientes({ mesTarget }) {
                 </tbody>
               </table>
             </div>
+
+            {/* Barra de Paginación */}
+            {totalItemsCartera > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 12,
+                marginTop: 16,
+                padding: '12px 18px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: 12,
+                border: '1px solid rgba(255, 255, 255, 0.06)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.7)', flexWrap: 'wrap' }}>
+                  <span>
+                    Mostrando <strong style={{ color: '#fff' }}>{inicioCartera + 1}</strong> – <strong style={{ color: '#fff' }}>{finCartera}</strong> de <strong style={{ color: '#34d399' }}>{totalItemsCartera}</strong> clientes
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Mostrar:</span>
+                    <select
+                      value={porPaginaCartera}
+                      onChange={e => {
+                        setPorPaginaCartera(Number(e.target.value));
+                        setPaginaCartera(1);
+                      }}
+                      style={{
+                        background: '#131326',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: '0.78rem',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value={10} style={OS}>10 por pág.</option>
+                      <option value={20} style={OS}>20 por pág.</option>
+                      <option value={50} style={OS}>50 por pág.</option>
+                      <option value={100} style={OS}>100 por pág.</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPaginaCartera(1)}
+                    disabled={currentPageCartera === 1}
+                    title="Primera página"
+                    style={{
+                      height: 32,
+                      padding: '0 10px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      color: currentPageCartera === 1 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      cursor: currentPageCartera === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    « Primero
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaginaCartera(prev => Math.max(1, prev - 1))}
+                    disabled={currentPageCartera === 1}
+                    title="Página anterior"
+                    style={{
+                      height: 32,
+                      padding: '0 10px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      color: currentPageCartera === 1 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      cursor: currentPageCartera === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    ‹ Anterior
+                  </button>
+
+                  {getPageNumbers(currentPageCartera, totalPaginasCartera).map((num, i) => {
+                    if (num === '...') {
+                      return (
+                        <span key={`dots-${i}`} style={{ padding: '0 6px', color: 'rgba(255, 255, 255, 0.3)', fontSize: '0.8rem', userSelect: 'none' }}>
+                          ...
+                        </span>
+                      );
+                    }
+                    const isActive = num === currentPageCartera;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setPaginaCartera(num)}
+                        style={{
+                          minWidth: 32,
+                          height: 32,
+                          padding: '0 8px',
+                          borderRadius: 8,
+                          border: isActive ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                          background: isActive ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: isActive ? 700 : 500,
+                          boxShadow: isActive ? '0 2px 8px rgba(16, 185, 129, 0.35)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setPaginaCartera(prev => Math.min(totalPaginasCartera, prev + 1))}
+                    disabled={currentPageCartera === totalPaginasCartera}
+                    title="Página siguiente"
+                    style={{
+                      height: 32,
+                      padding: '0 10px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      color: currentPageCartera === totalPaginasCartera ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      cursor: currentPageCartera === totalPaginasCartera ? 'not-allowed' : 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Siguiente ›
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaginaCartera(totalPaginasCartera)}
+                    disabled={currentPageCartera === totalPaginasCartera}
+                    title="Última página"
+                    style={{
+                      height: 32,
+                      padding: '0 10px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      color: currentPageCartera === totalPaginasCartera ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      cursor: currentPageCartera === totalPaginasCartera ? 'not-allowed' : 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Último »
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
