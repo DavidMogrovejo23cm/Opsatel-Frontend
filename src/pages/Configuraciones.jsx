@@ -119,6 +119,7 @@ const Configuraciones = () => {
     const [backupLoading, setBackupLoading] = useState(false);
     const [backupSaving, setBackupSaving] = useState(false);
     const [backupRunningNow, setBackupRunningNow] = useState(false);
+    const [togglingStatus, setTogglingStatus] = useState(false);
     const [testingTelegram, setTestingTelegram] = useState(false);
     const [clearingHistory, setClearingHistory] = useState(false);
     const [clearingConfigHistory, setClearingConfigHistory] = useState(false);
@@ -148,7 +149,8 @@ const Configuraciones = () => {
 
     const handleStartEditingBackup = () => {
         setEditBackupForm({
-            enabled: backupConfig.enabled,
+            // Si ya tiene chat_id y estaba explícitamente configurado, respetar su valor; si no, por defecto activo (true)
+            enabled: backupConfig.telegram_chat_id ? Boolean(backupConfig.enabled) : true,
             frecuencia: backupConfig.frecuencia || 'cada_dia',
             hora: backupConfig.hora || '02:00',
             dia_semana: backupConfig.dia_semana ?? 6,
@@ -165,12 +167,26 @@ const Configuraciones = () => {
         setEditBackupForm(null);
     };
 
+    const handleToggleBackupStatus = async () => {
+        setTogglingStatus(true);
+        try {
+            const res = await backupService.toggleStatus();
+            showSuccess(res.data?.message || 'Estado del servicio de respaldos actualizado.');
+            await fetchBackupData();
+        } catch (err) {
+            showError(err.response?.data?.detail || 'Error al cambiar estado del servicio');
+        } finally {
+            setTogglingStatus(false);
+        }
+    };
+
     const handleSaveBackupConfig = async () => {
         const formToSave = editBackupForm || backupConfig;
         setBackupSaving(true);
         try {
             const payload = {
                 ...formToSave,
+                enabled: formToSave.enabled !== undefined ? Boolean(formToSave.enabled) : true,
                 telegram_enabled: Boolean(formToSave.telegram_bot_token && formToSave.telegram_chat_id)
             };
             const res = await backupService.saveAutoConfig(payload);
@@ -3067,7 +3083,7 @@ const Configuraciones = () => {
                                                         gap: 6
                                                     }}>
                                                         <span>{backupConfig.enabled ? '●' : '○'}</span>
-                                                        {backupConfig.enabled ? 'Servicio Activo y Programado' : 'Servicio en Pausa'}
+                                                        {backupConfig.enabled ? 'Servicio Activo y Corriendo' : 'Servicio en Pausa'}
                                                     </span>
                                                 </div>
                                                 <p style={{ margin: '3px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
@@ -3076,26 +3092,74 @@ const Configuraciones = () => {
                                             </div>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            className="btn btn-secondary"
-                                            onClick={handleStartEditingBackup}
-                                            style={{
-                                                padding: '8px 18px',
-                                                borderRadius: 8,
-                                                background: 'rgba(56, 189, 248, 0.15)',
-                                                border: '1px solid #38bdf8',
-                                                color: '#38bdf8',
-                                                fontWeight: 700,
-                                                fontSize: '0.86rem',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 6
-                                            }}
-                                        >
-                                            ✏️ Editar Configuración
-                                        </button>
+                                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                                            {backupConfig.enabled ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleToggleBackupStatus}
+                                                    disabled={togglingStatus}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: 8,
+                                                        background: 'rgba(239, 68, 68, 0.15)',
+                                                        border: '1px solid #ef4444',
+                                                        color: '#f87171',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.86rem',
+                                                        cursor: togglingStatus ? 'not-allowed' : 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 6
+                                                    }}
+                                                    title="Pausar temporalmente los respaldos automáticos"
+                                                >
+                                                    {togglingStatus ? '⏳ Actualizando...' : '⏸️ Pausar Servicio'}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleToggleBackupStatus}
+                                                    disabled={togglingStatus}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: 8,
+                                                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))',
+                                                        border: '1px solid #10b981',
+                                                        color: '#34d399',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.86rem',
+                                                        cursor: togglingStatus ? 'not-allowed' : 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 6,
+                                                        boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)'
+                                                    }}
+                                                    title="Activar y correr respaldos automáticos ahora"
+                                                >
+                                                    {togglingStatus ? '⏳ Activando...' : '▶️ Activar y Correr Servicio'}
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary"
+                                                onClick={handleStartEditingBackup}
+                                                style={{
+                                                    padding: '8px 18px',
+                                                    borderRadius: 8,
+                                                    background: 'rgba(56, 189, 248, 0.15)',
+                                                    border: '1px solid #38bdf8',
+                                                    color: '#38bdf8',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.86rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 6
+                                                }}
+                                            >
+                                                ✏️ Editar Configuración
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Grid de 4 Bloques Clave de Configuración */}
@@ -3120,6 +3184,16 @@ const Configuraciones = () => {
                                                 {backupConfig.frecuencia === 'cada_semana' && `${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][backupConfig.dia_semana ?? 6]} a las ${backupConfig.hora || '02:00'}`}
                                                 {backupConfig.frecuencia === 'cada_mes' && `Día ${backupConfig.dia_mes ?? 1} del mes a las ${backupConfig.hora || '02:00'}`}
                                             </div>
+                                            {backupConfig.enabled && backupConfig.proxima_ejecucion && (
+                                                <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '3px 8px', borderRadius: 6, fontSize: '0.76rem', color: '#34d399', fontWeight: 600 }}>
+                                                    <span>🚀 Próximo envío:</span> {backupConfig.proxima_ejecucion}
+                                                </div>
+                                            )}
+                                            {!backupConfig.enabled && (
+                                                <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '3px 8px', borderRadius: 6, fontSize: '0.76rem', color: '#f87171', fontWeight: 600 }}>
+                                                    <span>⏸️</span> Envíos automáticos en pausa
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Bloque 2: Canal Telegram */}
@@ -3271,28 +3345,86 @@ const Configuraciones = () => {
                                     </div>
                                 </div>
 
+                                {/* Subsección 0: Selector de Estado del Servicio (Activo vs Pausa) */}
+                                <div style={{ marginBottom: 24 }}>
+                                    <label style={{ fontSize: '0.95rem', color: '#f8fafc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                        <span>⚡</span> Estado del Servicio de Respaldo Automático
+                                    </label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+                                        {/* Opción 1: Activo y Corriendo */}
+                                        <div
+                                            onClick={() => setEditBackupForm(prev => ({ ...prev, enabled: true }))}
+                                            style={{
+                                                padding: '14px 18px',
+                                                borderRadius: 12,
+                                                cursor: 'pointer',
+                                                background: editBackupForm?.enabled ? 'rgba(16, 185, 129, 0.16)' : 'rgba(0, 0, 0, 0.25)',
+                                                border: `2px solid ${editBackupForm?.enabled ? '#10b981' : 'rgba(255, 255, 255, 0.08)'}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 14,
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: editBackupForm?.enabled ? '0 0 18px rgba(16, 185, 129, 0.22)' : 'none'
+                                            }}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="estadoBackupRadio"
+                                                checked={Boolean(editBackupForm?.enabled)}
+                                                onChange={() => setEditBackupForm(prev => ({ ...prev, enabled: true }))}
+                                                style={{ cursor: 'pointer', transform: 'scale(1.3)' }}
+                                            />
+                                            <div>
+                                                <div style={{ color: editBackupForm?.enabled ? '#34d399' : '#e2e8f0', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    🟢 Activo y Corriendo (Recomendado)
+                                                </div>
+                                                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: 3, lineHeight: 1.3 }}>
+                                                    Genera las copias y las envía a Telegram automáticamente según la frecuencia programada.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Opción 2: En Pausa */}
+                                        <div
+                                            onClick={() => setEditBackupForm(prev => ({ ...prev, enabled: false }))}
+                                            style={{
+                                                padding: '14px 18px',
+                                                borderRadius: 12,
+                                                cursor: 'pointer',
+                                                background: !editBackupForm?.enabled ? 'rgba(239, 68, 68, 0.16)' : 'rgba(0, 0, 0, 0.25)',
+                                                border: `2px solid ${!editBackupForm?.enabled ? '#ef4444' : 'rgba(255, 255, 255, 0.08)'}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 14,
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: !editBackupForm?.enabled ? '0 0 18px rgba(239, 68, 68, 0.22)' : 'none'
+                                            }}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="estadoBackupRadio"
+                                                checked={!editBackupForm?.enabled}
+                                                onChange={() => setEditBackupForm(prev => ({ ...prev, enabled: false }))}
+                                                style={{ cursor: 'pointer', transform: 'scale(1.3)' }}
+                                            />
+                                            <div>
+                                                <div style={{ color: !editBackupForm?.enabled ? '#f87171' : '#e2e8f0', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    ⏸️ Servicio en Pausa
+                                                </div>
+                                                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: 3, lineHeight: 1.3 }}>
+                                                    Guarda la configuración pero suspende temporalmente las ejecuciones y envíos automáticos.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Subsección 1: Frecuencia de Ejecución */}
                                 <div style={{ marginBottom: 24 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                                         <label style={{ fontSize: '0.95rem', color: '#f8fafc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <span>⏰</span> Frecuencia de Ejecución
                                         </label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEditBackupForm(prev => ({ ...prev, enabled: !prev?.enabled }))}
-                                            style={{
-                                                padding: '6px 14px',
-                                                borderRadius: 20,
-                                                border: `1px solid ${editBackupForm?.enabled ? '#10b981' : '#ef4444'}`,
-                                                background: editBackupForm?.enabled ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
-                                                color: editBackupForm?.enabled ? '#34d399' : '#f87171',
-                                                fontWeight: 700,
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {editBackupForm?.enabled ? '● Servicio Activo' : '○ Servicio en Pausa'}
-                                        </button>
                                     </div>
 
                                     {/* Tarjetas de Frecuencia */}

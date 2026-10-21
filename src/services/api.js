@@ -148,6 +148,7 @@ export const backupService = {
   probarNotificacion: (data) => api.post('/clientes/backup/probar-notificacion', data),
   limpiarHistorial: () => api.delete('/clientes/backup/historial'),
   limpiarHistorialConfiguraciones: () => api.delete('/clientes/backup/historial-configuraciones'),
+  toggleStatus: () => api.post('/clientes/backup/toggle-status'),
 };
 
 
