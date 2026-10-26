@@ -20,7 +20,7 @@ const Layout = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="layout-root" style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
       <button className="hamburger-btn" onClick={() => setIsSidebarOpen(true)}>☰</button>
 
       <div 
@@ -30,32 +30,78 @@ const Layout = () => {
 
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} onRefresh={handleRefresh} />
       
-      <main data-page={pageKey} style={{ 
-        marginLeft: 'var(--sidebar-width)', 
-        padding: '36px 48px', 
-        width: 'calc(100% - var(--sidebar-width))',
-        minHeight: '100vh',
-        background: 'transparent',
-        transition: 'all 0.3s ease'
-      }}>
-        <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+      <main data-page={pageKey} className="app-main-layout">
+        <div className="main-content-container">
           <Outlet key={refreshKey} />
         </div>
       </main>
 
       <style>{`
-        @media (max-width: 1024px) {
-          main {
-            margin-left: 0 !important;
-            width: 100% !important;
-            padding: 24px 20px !important;
-            padding-top: 76px !important;
+        .layout-root {
+          display: flex;
+          min-height: 100vh;
+          width: 100%;
+        }
+
+        .app-main-layout {
+          margin-left: var(--sidebar-width);
+          width: calc(100% - var(--sidebar-width));
+          min-height: 100vh;
+          background: transparent;
+          transition: all 0.3s ease;
+          padding: 32px 36px;
+          box-sizing: border-box;
+        }
+
+        .main-content-container {
+          width: 100%;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+
+        /* 1440px en adelante: contenedores centrados de 1140px a 1200px */
+        @media (min-width: 1440px) {
+          .main-content-container {
+            max-width: 1200px;
           }
         }
+
+        /* 1024px a 1366px: escritorios pequeños / portátiles */
+        @media (min-width: 1025px) and (max-width: 1439px) {
+          .app-main-layout {
+            padding: 24px 28px;
+          }
+          .main-content-container {
+            max-width: 1140px;
+          }
+        }
+
+        /* Tabletas y móvil: <= 1024px */
+        @media (max-width: 1024px) {
+          .app-main-layout {
+            margin-left: 0 !important;
+            width: 100% !important;
+            padding: 20px 16px !important;
+            padding-top: 76px !important;
+          }
+          .main-content-container {
+            max-width: 100% !important;
+          }
+        }
+
+        /* Smartphones estándar / móviles grandes: <= 480px */
         @media (max-width: 480px) {
-          main {
-            padding: 16px 12px !important;
+          .app-main-layout {
+            padding: 14px 10px !important;
             padding-top: 70px !important;
+          }
+        }
+
+        /* Móviles pequeños: <= 359px (ej. 320px) */
+        @media (max-width: 359px) {
+          .app-main-layout {
+            padding: 10px 6px !important;
+            padding-top: 66px !important;
           }
         }
       `}</style>

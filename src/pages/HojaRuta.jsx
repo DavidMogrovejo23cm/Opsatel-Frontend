@@ -2422,26 +2422,35 @@ const HojaRuta = () => {
                 .client-item:hover { background: rgba(255,255,255,0.1); }
 
                 /* RESPONSIVE */
-                @media (max-width: 1200px) {
-                    .hr-header { flex-direction: column; align-items: flex-start; gap: 20px; }
-                    .hr-actions { width: 100%; flex-wrap: wrap; }
-                    .hr-search { flex: 1; min-width: 200px; }
+                @media (max-width: 1366px) {
+                    .hr-header { gap: 16px; }
+                    .hr-actions { flex-wrap: wrap; }
+                    .hr-search { min-width: 180px; }
                 }
 
                 @media (max-width: 768px) {
-                    .hr-main-container { padding: 15px; }
-                    .hr-title { font-size: 1.8rem; }
-                    .hr-actions { flex-direction: column; align-items: stretch; }
+                    .hr-main-container { padding: 12px; }
+                    .hr-title { font-size: 1.6rem; }
+                    .hr-actions { flex-direction: column; align-items: stretch; width: 100% !important; }
                     .hr-search, .hr-date-filter, .hr-btn, .hr-btn-secondary { width: 100% !important; }
                     .hr-modal-grid { grid-template-columns: 1fr; }
-                    .modal-content { padding: 20px; border-radius: 15px; }
-                    .hr-table th, .hr-table td { font-size: 0.7rem; padding: 10px 5px; }
+                    .modal-content { padding: 18px 14px; border-radius: 16px; }
+                    .hr-table th, .hr-table td { font-size: 0.72rem; padding: 8px 5px; }
                 }
 
                 @media (max-width: 480px) {
-                    .hr-title { font-size: 1.5rem; }
+                    .hr-main-container { padding: 8px; }
+                    .hr-title { font-size: 1.35rem; }
                     .modal-header h2 { font-size: 1.1rem; }
-                    .modal-content { padding: 15px; }
+                    .modal-content { padding: 14px 12px; border-radius: 14px; }
+                }
+
+                @media (max-width: 359.98px) {
+                    .hr-main-container { padding: 4px; }
+                    .hr-title { font-size: 1.2rem; }
+                    .modal-header h2 { font-size: 1rem; }
+                    .modal-content { padding: 10px 8px; border-radius: 12px; }
+                    .hr-btn, .hr-btn-secondary { font-size: 0.78rem !important; padding: 6px 10px !important; min-height: 36px; }
                 }
             `}</style>
         </>

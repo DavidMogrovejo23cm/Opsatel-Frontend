@@ -1,17 +1,156 @@
 /* ═══════════════════════════════════════════════════════════════
-   OPSATEL — CAPA RESPONSIVE MÓVIL / TABLET
-   • Solo aplica a <= 1024px (escritorio intacto).
-   • La página "Contrato" (/ventas → data-page="ventas") queda EXCLUIDA.
-   • Se carga después de index.css y usa mayor especificidad que las
-     reglas globales con !important de index.css.
+   OPSATEL — SISTEMA DE RESPONSIVE DESIGN ESTÁNDAR
+   Breakpoints oficiales:
+   • Móviles pequeños: 320px (<= 359px)
+   • Smartphones estándar / móviles grandes: 360px – 480px
+   • Tabletas: 768px (481px – 768px / hasta 1024px)
+   • Ordenadores de sobremesa / portátiles pequeños: 1024px – 1366px
+   • Monitores grandes de escritorio: 1440px en adelante
+     (con contenedores principales centrados de 1140px a 1200px)
    ═══════════════════════════════════════════════════════════════ */
 
-/* Evita zoom/scroll lateral de toda la app en móvil */
+/* ─────────────────────────────────────────────────────────────
+   0. REGLAS BASE Y CONTENCIÓN GLOBAL
+   ───────────────────────────────────────────────────────────── */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Contenedor principal de Layout centrado */
+.main-content-container {
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. MONITORES GRANDES DE ESCRITORIO (1440px en adelante)
+   Contenedores de contenido principales centrados de 1140px a 1200px
+   ───────────────────────────────────────────────────────────── */
+@media (min-width: 1440px) {
+  .app-main-layout {
+    margin-left: var(--sidebar-width) !important;
+    width: calc(100% - var(--sidebar-width)) !important;
+    padding: 36px 40px !important;
+  }
+
+  .main-content-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+
+  /* Excepciones controladas para vistas con tablas ultra-anchas */
+  main[data-page="ventas"] .main-content-container,
+  main[data-page="general"] .main-content-container {
+    max-width: 1240px !important;
+  }
+
+  /* Barras de acciones y encabezados con alineación ergonómica */
+  .page-header, .hr-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .page-actions, .top-actions, .hr-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Botones accesibles con tamaño óptimo */
+  .btn, .hr-btn, .hr-btn-secondary {
+    min-height: 40px;
+    padding: 8px 18px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. ORDENADORES DE SOBREMESA / PORTÁTILES PEQUEÑOS (1024px – 1366px)
+   Contenedores centrados de 1140px, acoplamiento perfecto de controles
+   ───────────────────────────────────────────────────────────── */
+@media (min-width: 1025px) and (max-width: 1439px) {
+  .app-main-layout {
+    margin-left: var(--sidebar-width) !important;
+    width: calc(100% - var(--sidebar-width)) !important;
+    padding: 24px 28px !important;
+  }
+
+  .main-content-container {
+    max-width: 1140px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+
+  /* Encabezados y barras de acciones: flexibilidad para evitar saltos bruscos */
+  .page-header, .hr-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap !important;
+  }
+
+  .page-actions, .top-actions, .hr-actions {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    justify-content: flex-end;
+  }
+
+  .hr-title {
+    font-size: 1.9rem !important;
+  }
+
+  .hr-search {
+    width: 200px !important;
+    min-width: 160px;
+  }
+
+  /* Tablas: tamaño de celda optimizado para laptops */
+  .hr-table th, .hr-table td,
+  table th, table td {
+    padding: 10px 8px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .table-container,
+  div:has(> table) {
+    overflow-x: auto !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. TABLETAS (481px – 768px y 769px – 1024px)
+   Modo compacto, menú hamburguesa y scroll horizontal controlado
+   ───────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  html, body {
-    max-width: 100%;
-    overflow-x: hidden;
-    -webkit-text-size-adjust: 100%;
+  .app-main-layout {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 20px 16px !important;
+    padding-top: 76px !important;
+  }
+
+  .main-content-container {
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
   main[data-page]:not([data-page="ventas"]) {
@@ -32,109 +171,12 @@
     max-width: 100%;
   }
 
-  /* Tarjetas principales de cada página: sin ancho fijo */
   main[data-page]:not([data-page="ventas"]) .glass-card,
   main[data-page]:not([data-page="ventas"]) .glass {
     max-width: 100% !important;
   }
 
-  /* Elementos con ancho inline nunca deben desbordar la pantalla */
-  main[data-page]:not([data-page="ventas"]) div[style*="width"],
-  main[data-page]:not([data-page="ventas"]) section[style*="width"],
-  main[data-page]:not([data-page="ventas"]) form[style*="width"] {
-    max-width: 100%;
-  }
-
-  /* Los hijos flex pueden encogerse (evita desbordes por min-content) */
-  main[data-page]:not([data-page="ventas"]) div[style*="display: flex"] > * {
-    min-width: 0;
-  }
-}
-
-/* ───────────────────────── TABLET / MÓVIL ≤ 768px ───────────────────────── */
-@media (max-width: 768px) {
-  /* Encabezados de página y barras superiores */
-  main[data-page]:not([data-page="ventas"]) .page-header,
-  main[data-page]:not([data-page="ventas"]) .page-top-bar {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) h1 {
-    font-size: 1.45rem !important;
-    line-height: 1.25 !important;
-    white-space: normal !important;
-    word-break: break-word;
-  }
-
-  /* Barras de herramientas / filtros: ocupan todo el ancho y se acomodan en columna */
-  main[data-page]:not([data-page="ventas"]) .page-actions,
-  main[data-page]:not([data-page="ventas"]) .top-actions {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    width: 100% !important;
-    gap: 10px !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) .page-actions > *,
-  main[data-page]:not([data-page="ventas"]) .top-actions > * {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    flex: 0 0 auto !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) .page-actions input,
-  main[data-page]:not([data-page="ventas"]) .page-actions select,
-  main[data-page]:not([data-page="ventas"]) .top-actions input,
-  main[data-page]:not([data-page="ventas"]) .top-actions select {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-  }
-
-  /* Filas flex en línea: permitir salto de línea en vez de desbordar
-     (se excluyen celdas de tabla y la vista de chat de WhatsApp) */
-  main[data-page]:not([data-page="ventas"]):not([data-page="whatsapp"]) div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]) {
-    flex-wrap: wrap;
-  }
-
-  /* Controles de formulario cómodos al tacto (16px evita el zoom de iOS) */
-  main[data-page]:not([data-page="ventas"]) input:not([type="checkbox"]):not([type="radio"]),
-  main[data-page]:not([data-page="ventas"]) select,
-  main[data-page]:not([data-page="ventas"]) textarea {
-    font-size: 16px !important;
-    min-height: 42px;
-    max-width: 100%;
-  }
-
-  main[data-page]:not([data-page="ventas"]) input[type="checkbox"],
-  main[data-page]:not([data-page="ventas"]) input[type="radio"] {
-    width: 20px;
-    height: 20px;
-  }
-
-  main[data-page]:not([data-page="ventas"]) button {
-    min-height: 38px;
-    touch-action: manipulation;
-  }
-
-  /* Botones: ancho natural dentro de tablas y celdas; ancho completo en acciones */
-  main[data-page]:not([data-page="ventas"]) .btn {
-    width: auto !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) .page-actions .btn,
-  main[data-page]:not([data-page="ventas"]) .top-actions .btn,
-  main[data-page]:not([data-page="ventas"]) .modal-actions .btn,
-  main[data-page]:not([data-page="ventas"]) .modal-content form .btn {
-    width: 100% !important;
-  }
-
-  /* ── Tablas: scroll horizontal natural, sin columnas fijas ── */
+  /* Tablas: scroll horizontal natural con soporte táctil */
   main[data-page]:not([data-page="ventas"]) .table-container,
   main[data-page]:not([data-page="ventas"]) div:has(> table) {
     max-width: 100% !important;
@@ -145,15 +187,11 @@
     touch-action: pan-x pan-y;
   }
 
-  main[data-page]:not([data-page="ventas"]) .table-container {
-    max-height: 70vh !important;
-  }
-
   main[data-page]:not([data-page="ventas"]) table {
     min-width: max-content !important;
   }
 
-  /* Las columnas "pegadas" a la izquierda ocupaban media pantalla: se liberan */
+  /* Liberar columnas fijas en tablet/móvil para evitar solapamientos */
   main[data-page]:not([data-page="ventas"]) th[style*="sticky"],
   main[data-page]:not([data-page="ventas"]) td[style*="sticky"] {
     position: static !important;
@@ -161,17 +199,91 @@
     right: auto !important;
     box-shadow: none !important;
   }
+}
 
-  main[data-page]:not([data-page="ventas"]) th,
-  main[data-page]:not([data-page="ventas"]) td {
-    padding: 10px 10px !important;
-    font-size: 0.8rem !important;
+/* Tabletas estándar (<= 768px) */
+@media (max-width: 768px) {
+  /* Encabezados y barras superiores */
+  main[data-page]:not([data-page="ventas"]) .page-header,
+  main[data-page]:not([data-page="ventas"]) .page-top-bar,
+  .hr-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
   }
 
-  /* ── Modales: a pantalla casi completa y con scroll interno ── */
+  main[data-page]:not([data-page="ventas"]) h1,
+  .hr-title {
+    font-size: 1.55rem !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  /* Barras de acciones / filtros apiladas con botones 100% interactivos */
+  main[data-page]:not([data-page="ventas"]) .page-actions,
+  main[data-page]:not([data-page="ventas"]) .top-actions,
+  .hr-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .page-actions > *,
+  main[data-page]:not([data-page="ventas"]) .top-actions > *,
+  .hr-actions > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+  }
+
+  main[data-page]:not([data-page="ventas"]) .page-actions input,
+  main[data-page]:not([data-page="ventas"]) .page-actions select,
+  main[data-page]:not([data-page="ventas"]) .top-actions input,
+  main[data-page]:not([data-page="ventas"]) .top-actions select,
+  .hr-search, .hr-date-filter {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Evitar desbordes flex horizontales */
+  main[data-page]:not([data-page="ventas"]):not([data-page="whatsapp"]) div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]) {
+    flex-wrap: wrap;
+  }
+
+  /* Controles de formulario táctiles */
+  main[data-page]:not([data-page="ventas"]) input:not([type="checkbox"]):not([type="radio"]),
+  main[data-page]:not([data-page="ventas"]) select,
+  main[data-page]:not([data-page="ventas"]) textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+    max-width: 100%;
+  }
+
+  main[data-page]:not([data-page="ventas"]) button,
+  .hr-btn, .hr-btn-secondary {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  /* Botones principales en barras de acciones al ancho completo */
+  main[data-page]:not([data-page="ventas"]) .page-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .top-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .modal-actions .btn,
+  main[data-page]:not([data-page="ventas"]) .modal-content form .btn,
+  .hr-actions .btn, .hr-actions .hr-btn, .hr-actions .hr-btn-secondary {
+    width: 100% !important;
+  }
+
+  /* Modales en tablet y móvil */
   main[data-page]:not([data-page="ventas"]) .modal-overlay,
-  main[data-page]:not([data-page="ventas"]) div[style*="position: fixed"][style*="inset"],
-  main[data-page]:not([data-page="ventas"]) div[style*="position: fixed"][style*="top: 0"] {
+  div[style*="position: fixed"][style*="inset"],
+  div[style*="position: fixed"][style*="top: 0"] {
     padding: 10px 8px !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -183,39 +295,18 @@
   main[data-page]:not([data-page="ventas"]) .glass-modal {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: none !important;
     margin: 0 auto !important;
     padding: 18px 14px !important;
     border-radius: 18px !important;
-    overflow-y: visible !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) .modal-header {
-    gap: 10px;
-    margin-bottom: 14px !important;
-  }
-
-  main[data-page]:not([data-page="ventas"]) .modal-header h2 {
-    font-size: 1.1rem !important;
-    word-break: break-word;
   }
 
   main[data-page]:not([data-page="ventas"]) .modal-actions {
     flex-direction: column-reverse !important;
     align-items: stretch !important;
+    gap: 8px !important;
   }
 
-  /* Listas desplegables (selector de clientes, etc.) */
-  main[data-page]:not([data-page="ventas"]) .client-list {
-    max-height: 40vh !important;
-  }
-
-  /* Gráficas */
-  main[data-page]:not([data-page="ventas"]) .recharts-responsive-container {
-    max-width: 100% !important;
-  }
-
-  /* ══════════ HOJA DE RUTA: tabla → tarjetas ══════════ */
+  /* Hoja de Ruta: cambio automático a tarjetas móviles para técnicos */
   main[data-page="hoja-ruta"] .hr-main-container {
     padding: 12px !important;
   }
@@ -231,14 +322,6 @@
     width: 100% !important;
   }
 
-  main[data-page="hoja-ruta"] .hr-header {
-    margin-bottom: 16px !important;
-  }
-
-  main[data-page="hoja-ruta"] .hr-title {
-    white-space: normal !important;
-  }
-
   main[data-page="hoja-ruta"] .hr-date-filter {
     height: auto !important;
     min-height: 42px;
@@ -250,10 +333,19 @@
   }
 }
 
-/* ───────────────────────── MÓVIL PEQUEÑO ≤ 480px ───────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   4. SMARTPHONES ESTÁNDAR / MÓVILES GRANDES (360px – 480px)
+   Padding optimizado, tarjetas de bordes suaves y botones cómodos
+   ───────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
+  .app-main-layout {
+    padding: 14px 10px !important;
+    padding-top: 70px !important;
+  }
+
   main[data-page]:not([data-page="ventas"]) .glass-card {
-    padding: 12px 10px !important;
+    padding: 14px 12px !important;
+    border-radius: 16px !important;
   }
 
   main[data-page]:not([data-page="ventas"]) .modal-content,
@@ -265,7 +357,163 @@
 
   main[data-page]:not([data-page="ventas"]) th,
   main[data-page]:not([data-page="ventas"]) td {
-    padding: 8px 8px !important;
+    padding: 8px 6px !important;
     font-size: 0.76rem !important;
+  }
+
+  /* Hoja de Ruta móvil */
+  .hr-mobile-card {
+    padding: 14px 12px !important;
+    border-radius: 16px !important;
+    gap: 10px !important;
+  }
+
+  .hr-mc-grid-3 {
+    gap: 6px !important;
+  }
+
+  .hr-mc-box {
+    padding: 8px 6px !important;
+  }
+
+  .hr-mc-box-val {
+    font-size: 0.82rem !important;
+  }
+
+  .hr-mc-action-row {
+    padding: 9px 12px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. MÓVILES PEQUEÑOS (320px – 359px)
+   Diseñado para pantallas ultracompactas (iPhone SE 1ra gen, mini Androids)
+   Asegura que absolutamente todo se lea, se acople y sea clickeable
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 359.98px) {
+  .app-main-layout {
+    padding: 10px 6px !important;
+    padding-top: 66px !important;
+  }
+
+  .main-content-container {
+    padding: 0 !important;
+  }
+
+  /* Títulos más compactos pero nítidos */
+  main[data-page]:not([data-page="ventas"]) h1,
+  .hr-title {
+    font-size: 1.25rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .hr-subtitle {
+    font-size: 0.76rem !important;
+  }
+
+  /* Tarjetas compactas */
+  main[data-page]:not([data-page="ventas"]) .glass-card,
+  .hr-mobile-card {
+    padding: 10px 8px !important;
+    border-radius: 12px !important;
+  }
+
+  /* En 320px, 3 columnas quedarían con ~70px y se cortarían los textos:
+     se adapta elegantemente a 2 columnas automáticas */
+  .hr-mc-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .hr-mc-box {
+    padding: 7px 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .hr-mc-box-label {
+    font-size: 0.65rem !important;
+  }
+
+  .hr-mc-box-val {
+    font-size: 0.78rem !important;
+  }
+
+  /* Cabecera de la tarjeta: si el nombre es largo, el chip de estado cae ordenadamente */
+  .hr-mc-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .hr-mc-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .hr-mc-name {
+    font-size: 0.88rem !important;
+  }
+
+  .hr-mc-status-chip {
+    padding: 4px 10px !important;
+    font-size: 0.68rem !important;
+  }
+
+  /* Fila de acción (Llamar / WhatsApp / Teléfono) */
+  .hr-mc-action-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .hr-mc-row-left {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .hr-mc-btn-call {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .hr-mc-btn-wa {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .hr-mc-btn-maps {
+    padding: 5px 10px !important;
+    font-size: 0.74rem !important;
+  }
+
+  /* Botones del pie de administración (Editar / Eliminar) */
+  .hr-mc-admin-footer {
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  .hr-mc-admin-btn {
+    width: 100% !important;
+    padding: 8px 10px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Botones generales */
+  .btn, .hr-btn, .hr-btn-secondary {
+    font-size: 0.8rem !important;
+    padding: 7px 10px !important;
+    min-height: 36px !important;
+  }
+
+  /* Modales */
+  main[data-page]:not([data-page="ventas"]) .modal-content,
+  main[data-page]:not([data-page="ventas"]) .modal,
+  main[data-page]:not([data-page="ventas"]) .glass-modal {
+    padding: 12px 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .modal-header h2 {
+    font-size: 1rem !important;
   }
 }
