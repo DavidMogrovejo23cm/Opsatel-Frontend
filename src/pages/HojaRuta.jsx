@@ -6,9 +6,10 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { hojaRutaService, clienteService, configuracionService } from '../services/api';
+import { hojaRutaService, clienteService, configuracionService, callCenterService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 /**
  * Helper para extraer únicamente el primer número telefónico y normalizarlo
  * tanto para llamadas directas (tel:) como para WhatsApp (wa.me),
@@ -98,6 +99,18 @@ const getPhoneInfo = (rawPhone) => {
     };
 };
 
+/**
+ * Helper para detectar si un registro de Hoja de Ruta proviene de un ticket de Call Center
+ */
+const getCallCenterTicketId = (r) => {
+    if (!r) return null;
+    if (r.callcenter_ticket_id) return r.callcenter_ticket_id;
+    if (r.observacion) {
+        const match = String(r.observacion).match(/Ref Ticket Call Center #(\d+)/i);
+        if (match && match[1]) return parseInt(match[1], 10);
+    }
+    return null;
+};
 
 const HojaRuta = () => {
     const [registros, setRegistros] = useState([]);
@@ -372,8 +385,48 @@ const HojaRuta = () => {
         }
     };
 
-    const toggleEstado = async (id, currentEstado) => {
+    const handleCompletarActividadCallCenter = async (r) => {
+        const ccTicketId = getCallCenterTicketId(r);
+        const confirmado = await showConfirm(
+            "¿Marcar como Completado?",
+            `¿Deseas marcar la actividad de "${r.nombre_cliente || 'Cliente'}" como Realizada? ${ccTicketId ? `El ticket #${ccTicketId} de Call Center pasará a SOLUCIONADO automáticamente.` : ''}`,
+            "Sí, Completar",
+            "Cancelar"
+        );
+        if (!confirmado) return;
+
+        try {
+            setSubmitting(true);
+            // 1. Actualizar Hoja de Ruta a 'Realizado'
+            await hojaRutaService.actualizar(r.id, { estado: 'Realizado' });
+
+            // 2. Si tiene ticket de Call Center asociado, asegurar su actualización a SOLUCIONADO
+            if (ccTicketId) {
+                try {
+                    await callCenterService.actualizar(ccTicketId, { estado: 'SOLUCIONADO' });
+                } catch (err) {
+                    console.warn("Actualización directa de Call Center (el backend pudo haberlo actualizado):", err);
+                }
+            }
+
+            showSuccess("¡Actividad completada y ticket solucionado en Call Center!");
+            fetchData(true);
+        } catch (err) {
+            console.error("Error al completar actividad:", err);
+            const msg = err.response?.data?.detail || err.message;
+            showError("No se pudo completar la actividad: " + msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const toggleEstado = async (id, currentEstado, r = null) => {
+        const ccTicketId = r ? getCallCenterTicketId(r) : null;
         if (user.rol?.toLowerCase() !== 'administrador') {
+            if (ccTicketId && currentEstado !== 'Realizado' && r) {
+                await handleCompletarActividadCallCenter(r);
+                return;
+            }
             showWarning("Solo el administrador puede cambiar el estado de la hoja de ruta");
             return;
         }
@@ -553,16 +606,42 @@ const HojaRuta = () => {
                                                 const chipClass = estadoDisplay === 'Realizado' ? 'success' :
                                                                   estadoDisplay === 'En proceso' ? 'processing' :
                                                                   estadoDisplay === 'No completado' ? 'failed' : 'pending';
+                                                const ccTicketId = getCallCenterTicketId(r);
                                                 return (
-                                                    <button
-                                                        onClick={() => toggleEstado(r.id, estadoDisplay)}
-                                                        className={`status-chip ${chipClass}`}
-                                                        disabled={user.rol?.toLowerCase() !== 'administrador'}
-                                                        style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
-                                                        title={isOver24h ? 'Venció el plazo de 24 horas sin completarse' : ''}
-                                                    >
-                                                        {estadoDisplay}
-                                                    </button>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                                                        <button
+                                                            onClick={() => toggleEstado(r.id, estadoDisplay, r)}
+                                                            className={`status-chip ${chipClass}`}
+                                                            disabled={user.rol?.toLowerCase() !== 'administrador' && !ccTicketId}
+                                                            style={{ cursor: (user.rol?.toLowerCase() === 'administrador' || (ccTicketId && estadoDisplay !== 'Realizado')) ? 'pointer' : 'default' }}
+                                                            title={isOver24h ? 'Venció el plazo de 24 horas sin completarse' : (ccTicketId && estadoDisplay !== 'Realizado' ? 'Clic para completar actividad y solucionar ticket' : '')}
+                                                        >
+                                                            {estadoDisplay}
+                                                        </button>
+                                                        {ccTicketId && estadoDisplay !== 'Realizado' && (
+                                                            <button
+                                                                onClick={() => handleCompletarActividadCallCenter(r)}
+                                                                style={{
+                                                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                                    color: '#fff',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    padding: '4px 8px',
+                                                                    fontSize: '0.72rem',
+                                                                    fontWeight: '700',
+                                                                    cursor: 'pointer',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}
+                                                                title={`Ticket Call Center #${ccTicketId} -> Marcar como Realizado y Solucionado`}
+                                                            >
+                                                                ✅ Completado
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 );
                                             })()}
                                         </td>
@@ -752,7 +831,30 @@ const HojaRuta = () => {
                                             </button>
                                         </td>
                                         <td style={{ borderRadius: '0 12px 12px 0', textAlign: 'right', paddingRight: '20px', verticalAlign: 'middle' }}>
-                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                {getCallCenterTicketId(r) && r.estado !== 'Realizado' && (
+                                                    <button
+                                                        onClick={() => handleCompletarActividadCallCenter(r)}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '5px 10px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                        title="Marcar como Realizado y Solucionar en Call Center"
+                                                    >
+                                                        ✅ Completado
+                                                    </button>
+                                                )}
                                                 {user.rol?.toLowerCase() === 'administrador' ? (
                                                     <>
                                                         <button onClick={() => handleEdit(r)} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '1.1rem' }} title="Editar">✏️</button>
@@ -856,16 +958,39 @@ const HojaRuta = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => toggleEstado(r.id, estadoDisplay)}
-                                                className={`status-chip ${chipClass} hr-mc-status-chip`}
-                                                disabled={user.rol?.toLowerCase() !== 'administrador'}
-                                                style={{ cursor: user.rol?.toLowerCase() === 'administrador' ? 'pointer' : 'default' }}
-                                                title={user.rol?.toLowerCase() === 'administrador' ? 'Clic para cambiar estado' : estadoDisplay}
-                                            >
-                                                <span className="hr-mc-dot" />
-                                                {estadoDisplay}
-                                            </button>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                                                <button
+                                                    onClick={() => toggleEstado(r.id, estadoDisplay, r)}
+                                                    className={`status-chip ${chipClass} hr-mc-status-chip`}
+                                                    disabled={user.rol?.toLowerCase() !== 'administrador' && !getCallCenterTicketId(r)}
+                                                    style={{ cursor: (user.rol?.toLowerCase() === 'administrador' || (getCallCenterTicketId(r) && estadoDisplay !== 'Realizado')) ? 'pointer' : 'default' }}
+                                                    title={user.rol?.toLowerCase() === 'administrador' ? 'Clic para cambiar estado' : (getCallCenterTicketId(r) && estadoDisplay !== 'Realizado' ? 'Clic para completar actividad' : estadoDisplay)}
+                                                >
+                                                    <span className="hr-mc-dot" />
+                                                    {estadoDisplay}
+                                                </button>
+                                                {getCallCenterTicketId(r) && estadoDisplay !== 'Realizado' && (
+                                                    <button
+                                                        onClick={() => handleCompletarActividadCallCenter(r)}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                            color: '#ffffff',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '4px 10px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.4)'
+                                                        }}
+                                                    >
+                                                        ✅ Completado
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* 3-COLUMN METRICS */}
@@ -1167,6 +1292,36 @@ const HojaRuta = () => {
                                                         <line x1="3" y1="21" x2="10" y2="14"/>
                                                     </svg>
                                                 </button>
+                                            </div>
+                                        )}
+
+                                        {/* ACCIONES DE TÉCNICO / CALL CENTER */}
+                                        {getCallCenterTicketId(r) && estadoDisplay !== 'Realizado' && (
+                                            <div style={{ padding: '12px 16px', background: 'rgba(16, 185, 129, 0.08)', borderTop: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <button
+                                                    onClick={() => handleCompletarActividadCallCenter(r)}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                        color: '#ffffff',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        padding: '10px 16px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '700',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                        boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)'
+                                                    }}
+                                                >
+                                                    ✅ Marcar Completado (Pasar a Realizado y Solucionar Ticket)
+                                                </button>
+                                                <span style={{ fontSize: '0.7rem', color: '#10b981', textAlign: 'center', opacity: 0.9 }}>
+                                                    🔗 Vinculado a Ticket Call Center #{getCallCenterTicketId(r)}
+                                                </span>
                                             </div>
                                         )}
 

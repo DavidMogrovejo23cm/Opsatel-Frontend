@@ -269,6 +269,10 @@ const CallCenter = () => {
 
     setSubmittingHojaRuta(true);
     try {
+      const obsConRef = hojaRutaForm.ticket_id
+        ? `${hojaRutaForm.observacion}\n[Ref Ticket Call Center #${hojaRutaForm.ticket_id}]`
+        : hojaRutaForm.observacion;
+
       const payload = {
         fecha: hojaRutaForm.fecha,
         hora: hojaRutaForm.hora,
@@ -279,9 +283,10 @@ const CallCenter = () => {
         celular_cliente: hojaRutaForm.celular_cliente,
         ubicacion_caja: hojaRutaForm.ubicacion_caja,
         actividad: hojaRutaForm.actividad || 'VISITA TECNICA',
-        observacion: hojaRutaForm.observacion,
+        observacion: obsConRef,
         parroquia: hojaRutaForm.parroquia,
-        estado: 'Pendiente'
+        estado: 'Pendiente',
+        callcenter_ticket_id: hojaRutaForm.ticket_id ? Number(hojaRutaForm.ticket_id) : null
       };
 
       await hojaRutaService.crear(payload);
