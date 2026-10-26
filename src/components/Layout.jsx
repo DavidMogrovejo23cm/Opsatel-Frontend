@@ -19,6 +19,22 @@ const Layout = () => {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Bloquea el scroll del fondo en móviles cuando el menú está abierto
+  // para evitar que los gestos táctiles se traben o se trasladen a la página inferior
+  React.useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isSidebarOpen]);
+
   return (
     <div className="layout-root" style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
       <button className="hamburger-btn" onClick={() => setIsSidebarOpen(true)}>☰</button>

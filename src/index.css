@@ -581,11 +581,16 @@ body:has(.modal-overlay) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
+    bottom: 0 !important;
     height: 100vh !important;
-    width: 270px !important;
+    height: 100dvh !important;
+    width: min(295px, 84vw) !important;
     z-index: 1001 !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 15px 0 50px rgba(0, 0, 0, 0.7) !important;
+    overflow: hidden !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
   }
 
   .sidebar:not(.show-mobile) {
