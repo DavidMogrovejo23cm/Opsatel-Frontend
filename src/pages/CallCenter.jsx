@@ -16,15 +16,50 @@ import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../
    ESTADO CONFIG
 ────────────────────────────────────────────── */
 const ESTADOS = [
-  { value: 'PENDIENTE',                    label: 'Pendiente',               color: '#94a3b8', bg: 'rgba(100,116,139,0.15)', icon: '⏳' },
-  { value: 'SOLUCIONADO',                  label: 'Solucionado',             color: '#10b981', bg: 'rgba(16,185,129,0.15)',  icon: '✅' },
-  { value: 'ESPERA DE RESPUESTA DE CLIENTE', label: 'Espera Respuesta',     color: '#eab308', bg: 'rgba(234,179,8,0.15)',   icon: '⏰' },
-  { value: 'NO SOLUCIONADO',               label: 'No Solucionado',          color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: '❌' },
-  { value: 'VISITA TECNICA',               label: 'Visita Técnica',          color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: '🔧' },
+  { value: 'PENDIENTE',                      label: 'Pendiente',               sublabel: 'por atender', color: '#94a3b8', bg: 'rgba(100,116,139,0.15)', icon: '⏳' },
+  { value: 'SOLUCIONADO',                    label: 'Solucionado',             sublabel: 'cerrados',    color: '#10b981', bg: 'rgba(16,185,129,0.15)',  icon: '✅' },
+  { value: 'ESPERA DE RESPUESTA DE CLIENTE', label: 'Espera Respuesta',       sublabel: 'en proceso',  color: '#eab308', bg: 'rgba(234,179,8,0.15)',   icon: '⏰' },
+  { value: 'NO SOLUCIONADO',                 label: 'No Solucionado',          sublabel: 'sin resolver',color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: '❌' },
+  { value: 'VISITA TECNICA',                 label: 'Visita Técnica',          sublabel: 'programadas', color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: '🔧' },
+];
+
+const STAT_CARDS = [
+  { value: 'TODOS',                            label: 'Total',           sublabel: 'registros',   icon: '📞', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+  { value: 'PENDIENTE',                        label: 'Pendientes',      sublabel: 'por atender', icon: '⏳', color: '#94a3b8', bg: 'rgba(100,116,139,0.15)' },
+  { value: 'SOLUCIONADO',                      label: 'Solucionados',    sublabel: 'cerrados',    icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+  { value: 'ESPERA DE RESPUESTA DE CLIENTE',   label: 'En espera',       sublabel: 'en proceso',  icon: '⏰', color: '#eab308', bg: 'rgba(234,179,8,0.15)' },
+  { value: 'NO SOLUCIONADO',                   label: 'No solucionados', sublabel: 'sin resolver',icon: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: '❌' },
+  { value: 'VISITA TECNICA',                   label: 'Visita técnica',  sublabel: 'programadas', icon: '🔧', color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: '🔧' },
 ];
 
 const getEstado = (val) =>
   ESTADOS.find(e => e.value === (val || '').toUpperCase()) || ESTADOS[0];
+
+const getInitials = (name) => {
+  if (!name) return 'CL';
+  const clean = name.trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CL';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+const getAvatarColor = (name) => {
+  const gradients = [
+    'linear-gradient(135deg, #6366f1, #4338ca)',
+    'linear-gradient(135deg, #0ea5e9, #0369a1)',
+    'linear-gradient(135deg, #ec4899, #be185d)',
+    'linear-gradient(135deg, #10b981, #047857)',
+    'linear-gradient(135deg, #f59e0b, #b45309)',
+    'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+    'linear-gradient(135deg, #14b8a6, #0f766e)',
+  ];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return gradients[Math.abs(hash) % gradients.length];
+};
 
 /* ────────────────────────────────────────────
    BADGE ESTADO
@@ -58,6 +93,9 @@ const CallCenter = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('TODOS');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
   const [editingId, setEditingId]   = useState(null);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -154,6 +192,72 @@ const CallCenter = () => {
       })
       .sort((a, b) => new Date(b.fecha_ingreso || 0) - new Date(a.fecha_ingreso || 0));
   }, [tickets, searchTerm, dateFilter, statusFilter]);
+
+  /* Lookup de clientes para asociar ID e información */
+  const clientLookup = useMemo(() => {
+    const byName = new Map();
+    const byIp = new Map();
+    const byTel = new Map();
+    (clientes || []).forEach(c => {
+      if (c.nombre) byName.set(c.nombre.trim().toLowerCase(), c);
+      if (c.ip) byIp.set(c.ip.trim(), c);
+      if (c.celular) {
+        const clean = c.celular.replace(/\D/g, '');
+        if (clean) byTel.set(clean, c);
+      }
+    });
+    return { byName, byIp, byTel };
+  }, [clientes]);
+
+  const getClientMeta = (ticket) => {
+    if (!ticket) return null;
+    const nameKey = (ticket.cliente_nombre || '').trim().toLowerCase();
+    if (nameKey && clientLookup.byName.has(nameKey)) return clientLookup.byName.get(nameKey);
+    const ipKey = (ticket.ip || '').trim();
+    if (ipKey && clientLookup.byIp.has(ipKey)) return clientLookup.byIp.get(ipKey);
+    const telKey = (ticket.telefono || '').replace(/\D/g, '');
+    if (telKey && clientLookup.byTel.has(telKey)) return clientLookup.byTel.get(telKey);
+    return null;
+  };
+
+  /* Paginación */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter, statusFilter, itemsPerPage]);
+
+  const totalItems = filteredTickets.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  const paginatedTickets = useMemo(() => {
+    return filteredTickets.slice(startIndex, endIndex);
+  }, [filteredTickets, startIndex, endIndex]);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxButtons = 5;
+    if (totalPages <= maxButtons + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, safeCurrentPage - 1);
+      let end = Math.min(totalPages - 1, safeCurrentPage + 1);
+
+      if (safeCurrentPage <= 3) {
+        end = 4;
+      } else if (safeCurrentPage >= totalPages - 2) {
+        start = totalPages - 3;
+      }
+
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   /* Clientes filtrados en dropdown */
   const filteredClientes = useMemo(() => {
@@ -359,84 +463,330 @@ const CallCenter = () => {
 
       {/* ── HEADER ── */}
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        marginBottom: '28px', flexWrap: 'wrap', gap: '16px'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '22px', flexWrap: 'wrap', gap: '16px'
       }}>
         <div>
           <h1 style={{
-            fontSize: '2.2rem', fontWeight: '900', margin: 0,
+            fontSize: '2.1rem', fontWeight: '900', margin: 0,
             background: 'linear-gradient(90deg, #ec4899, #8b5cf6)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em'
           }}>
             📞 Call Center
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '6px' }}>
-            Registro y seguimiento de reclamos y soporte telefónico.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', marginTop: '4px' }}>
+            Registro, monitoreo y seguimiento de reclamos y soporte técnico telefónico.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="date"
-            className="input"
-            style={{ width: '160px', marginBottom: 0, padding: '10px 12px' }}
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            title="Filtrar por fecha"
-          />
-          <input
-            className="input"
-            placeholder="🔍 Buscar cliente, tel..."
-            style={{ width: '220px', marginBottom: 0 }}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
           <button
             onClick={() => handleOpenModal()}
             className="btn btn-primary"
             style={{
               background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-              padding: '10px 20px', fontWeight: '700', fontSize: '0.85rem'
+              padding: '10px 22px', fontWeight: '800', fontSize: '0.85rem',
+              borderRadius: '12px', border: 'none', color: '#fff',
+              boxShadow: '0 4px 16px rgba(139,92,246,0.3)',
+              display: 'flex', alignItems: 'center', gap: '8px'
             }}
           >
-            + Nuevo Ticket
+            <span>+</span> Nuevo Ticket
           </button>
         </div>
       </div>
 
-      {/* ── FILTROS POR ESTADO ── */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        {[{ value: 'TODOS', label: 'Todos', color: '#6366f1', icon: '📋' }, ...ESTADOS].map(e => {
-          const isActive = statusFilter === e.value;
-          const cnt = counts[e.value] ?? 0;
+      {/* ── KPI METRIC CARDS ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+        gap: '14px',
+        marginBottom: '20px'
+      }}>
+        {STAT_CARDS.map(card => {
+          const isActive = statusFilter === card.value;
+          const count = counts[card.value] ?? 0;
           return (
-            <button
-              key={e.value}
-              onClick={() => setStatusFilter(e.value)}
+            <div
+              key={card.value}
+              onClick={() => {
+                setStatusFilter(card.value);
+                setCurrentPage(1);
+              }}
               style={{
-                padding: '7px 16px',
-                borderRadius: '25px',
-                border: `1.5px solid ${isActive ? (e.color || '#6366f1') : 'rgba(255,255,255,0.1)'}`,
-                background: isActive ? `${e.color || '#6366f1'}22` : 'rgba(255,255,255,0.03)',
-                color: isActive ? (e.color || '#6366f1') : 'var(--text-muted)',
-                cursor: 'pointer', fontWeight: isActive ? '700' : '400',
-                fontSize: '0.78rem', transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', gap: '6px'
+                background: isActive
+                  ? `linear-gradient(145deg, ${card.color}20 0%, rgba(255,255,255,0.03) 100%)`
+                  : 'rgba(255,255,255,0.02)',
+                borderRadius: '18px',
+                border: `1.5px solid ${isActive ? card.color : 'rgba(255,255,255,0.07)'}`,
+                boxShadow: isActive ? `0 8px 24px ${card.color}24` : '0 4px 14px rgba(0,0,0,0.2)',
+                padding: '16px 18px',
+                cursor: 'pointer',
+                transition: 'all 0.22s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                userSelect: 'none'
+              }}
+              onMouseEnter={e => {
+                if (!isActive) e.currentTarget.style.borderColor = `${card.color}66`;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={e => {
+                if (!isActive) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              {e.icon} {e.label}
-              <span style={{
-                background: isActive ? (e.color || '#6366f1') : 'rgba(255,255,255,0.1)',
-                color: isActive ? '#fff' : 'var(--text-muted)',
-                borderRadius: '10px', padding: '1px 7px', fontSize: '0.68rem', fontWeight: '700'
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: card.bg || `${card.color}22`,
+                border: `1.5px solid ${card.color}55`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.25rem',
+                flexShrink: 0
               }}>
-                {cnt}
-              </span>
-            </button>
+                {card.icon}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  color: isActive ? card.color : 'var(--text-muted)',
+                  textTransform: 'capitalize',
+                  letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {card.label}
+                </div>
+                <div style={{
+                  fontSize: '1.65rem',
+                  fontWeight: '900',
+                  color: '#fff',
+                  lineHeight: '1.15',
+                  marginTop: '2px'
+                }}>
+                  {count}
+                </div>
+                <div style={{
+                  fontSize: '0.68rem',
+                  color: 'rgba(255,255,255,0.4)',
+                  marginTop: '2px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {card.sublabel}
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* ── TABLA ── */}
+      {/* ── BARRA DE PESTAÑAS Y BUSCADOR ── */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '16px',
+        flexWrap: 'wrap'
+      }}>
+        {/* Pills / Tabs por Estado */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {[{ value: 'TODOS', label: 'Todos', color: '#8b5cf6', icon: '📞' }, ...ESTADOS].map(e => {
+            const isActive = statusFilter === e.value;
+            const cnt = counts[e.value] ?? 0;
+            return (
+              <button
+                key={e.value}
+                onClick={() => {
+                  setStatusFilter(e.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '25px',
+                  border: `1.5px solid ${isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.08)'}`,
+                  background: isActive ? `${e.color || '#8b5cf6'}26` : 'rgba(255,255,255,0.03)',
+                  color: isActive ? (e.color || '#8b5cf6') : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: isActive ? '800' : '500',
+                  fontSize: '0.78rem',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>{e.icon}</span>
+                <span>{e.label}</span>
+                <span style={{
+                  background: isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.1)',
+                  color: isActive ? '#fff' : 'var(--text-muted)',
+                  borderRadius: '12px',
+                  padding: '1px 8px',
+                  fontSize: '0.68rem',
+                  fontWeight: '800'
+                }}>
+                  {cnt}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Buscador y Botón de Filtros */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              className="input"
+              placeholder="🔍 Buscar cliente, tel, IP..."
+              style={{
+                width: '230px',
+                marginBottom: 0,
+                padding: '8px 28px 8px 14px',
+                fontSize: '0.78rem',
+                borderRadius: '20px',
+                background: 'rgba(255,255,255,0.04)',
+                borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.1)'
+              }}
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  padding: 0
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowFilters(prev => !prev)}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '20px',
+              border: `1.5px solid ${showFilters || dateFilter ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`,
+              background: showFilters || dateFilter ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
+              color: showFilters || dateFilter ? '#c4b5fd' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontWeight: '700',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>🎛️</span>
+            <span>Filtros</span>
+            {dateFilter && (
+              <span style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: '#8b5cf6',
+                display: 'inline-block'
+              }} />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ── PANEL DESPLEGABLE DE FILTROS ── */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '16px',
+              padding: '12px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              flexWrap: 'wrap'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                📅 Filtrar por Fecha Ingreso:
+              </span>
+              <input
+                type="date"
+                className="input"
+                style={{ width: '160px', marginBottom: 0, padding: '6px 10px', fontSize: '0.78rem' }}
+                value={dateFilter}
+                onChange={e => setDateFilter(e.target.value)}
+              />
+            </div>
+            {dateFilter && (
+              <button
+                onClick={() => setDateFilter('')}
+                style={{
+                  background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  color: '#f87171',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Limpiar Fecha
+              </button>
+            )}
+            {(searchTerm || dateFilter || statusFilter !== 'TODOS') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setDateFilter('');
+                  setStatusFilter('TODOS');
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.7)',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '0.72rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginLeft: 'auto'
+                }}
+              >
+                Restablecer Filtros
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TABLA DE TICKETS ── */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
           Cargando registros...
@@ -466,174 +816,357 @@ const CallCenter = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.length === 0 ? (
+                {paginatedTickets.length === 0 ? (
                   <tr>
                     <td colSpan="8" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No hay registros con los filtros actuales.
                     </td>
                   </tr>
-                ) : filteredTickets.map((t, idx) => (
-                  <tr key={t.id} style={{
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
-                    transition: 'background 0.15s',
-                    verticalAlign: 'top',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.06)'}
-                    onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
-                  >
-                    <td style={{ padding: '14px 16px', minWidth: '130px' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#ec4899' }}>
-                        {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </div>
-                      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>
-                        Por: {t.registrado_por || 'N/A'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 8px', minWidth: '160px' }}>
-                      <div style={{ fontWeight: '800', fontSize: '0.82rem' }}>{t.cliente_nombre || '-'}</div>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        IP: {t.ip || 'N/A'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 8px', minWidth: '150px' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '600' }}>{t.telefono || '-'}</div>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.55, marginTop: '2px' }}>{t.direccion || '-'}</div>
-                    </td>
-                    <td style={{ padding: '14px 8px', minWidth: '180px', maxWidth: '200px' }}>
-                      <div className="preserve-breaks" style={{ fontSize: '0.73rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-                        {t.problema || '-'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 8px', minWidth: '220px', maxWidth: '260px' }}>
-                      {(() => {
-                        const obs = (t.observacion_revision || '').trim();
-                        if (!obs) {
-                          return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
-                        }
-                        const isLong = obs.length > 100 || obs.split('\n').length > 3;
-                        return (
+                ) : paginatedTickets.map((t, idx) => {
+                  const clientMeta = getClientMeta(t);
+                  return (
+                    <tr key={t.id} style={{
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                      transition: 'background 0.15s',
+                      verticalAlign: 'top',
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.06)'}
+                      onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
+                    >
+                      {/* FECHA INGRESO */}
+                      <td style={{ padding: '14px 16px', minWidth: '135px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <span style={{ fontSize: '0.95rem', color: '#8b5cf6', marginTop: '1px' }}>📅</span>
                           <div>
-                            <div
-                              className="preserve-breaks"
-                              style={{
-                                fontSize: '0.73rem',
-                                color: 'var(--text-main)',
-                                lineHeight: '1.5',
-                                ...(isLong ? {
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  wordBreak: 'break-word',
-                                  cursor: 'pointer',
-                                } : {
-                                  wordBreak: 'break-word',
-                                })
-                              }}
-                              onClick={isLong ? () => setObsModalTicket(t) : undefined}
-                              title={isLong ? "Clic para ver la información completa" : undefined}
-                            >
-                              {obs}
+                            <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#f1f5f9' }}>
+                              {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
                             </div>
-                            {isLong && (
-                              <button
-                                type="button"
-                                onClick={() => setObsModalTicket(t)}
-                                style={{
-                                  background: 'rgba(139, 92, 246, 0.12)',
-                                  border: '1px solid rgba(139, 92, 246, 0.25)',
-                                  color: '#a78bfa',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '0.68rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  marginTop: '6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  transition: 'all 0.2s',
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.25)';
-                                  e.currentTarget.style.color = '#c4b5fd';
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)';
-                                  e.currentTarget.style.color = '#a78bfa';
-                                }}
-                              >
-                                Ver más 👁️
-                              </button>
-                            )}
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '1px' }}>
+                              {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </div>
+                            <div style={{ fontSize: '0.62rem', color: '#64748b', marginTop: '2px' }}>
+                              Por: {t.registrado_por || 'N/A'}
+                            </div>
                           </div>
-                        );
-                      })()}
-                      {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
-                        <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '5px' }}>
-                          🕐 {t.fecha_cambio_estado}
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '14px 8px' }}>
-                      <EstadoBadge estado={t.estado} />
-                    </td>
-                    <td style={{ padding: '14px 8px' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{t.a_cargo || <span style={{ opacity: 0.4 }}>Sin asignar</span>}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      <button
-                        onClick={() => handleOpenModal(t)}
-                        style={{
-                          padding: '6px 14px', borderRadius: '10px',
-                          background: 'rgba(139,92,246,0.15)',
-                          border: '1px solid rgba(139,92,246,0.3)',
-                          color: '#a78bfa', cursor: 'pointer', fontSize: '0.72rem',
-                          fontWeight: '700', marginRight: '6px', transition: 'all 0.2s'
-                        }}
-                      >
-                        ⚙️ Gestionar
-                      </button>
-                      {t.estado === 'VISITA TECNICA' && (
+                      </td>
+
+                      {/* CLIENTE CON AVATAR */}
+                      <td style={{ padding: '14px 12px', minWidth: '200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            background: getAvatarColor(t.cliente_nombre),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '800',
+                            fontSize: '0.76rem',
+                            color: '#ffffff',
+                            flexShrink: 0,
+                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
+                          }}>
+                            {getInitials(t.cliente_nombre)}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: '800', fontSize: '0.82rem', color: '#f8fafc', lineHeight: '1.3' }}>
+                              {t.cliente_nombre || '-'}
+                              {clientMeta?.id && (
+                                <span style={{ color: '#818cf8', fontWeight: '800', marginLeft: '5px', fontSize: '0.75rem' }}>
+                                  ({clientMeta.id})
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              IP: {t.ip || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* CONTACTO */}
+                      <td style={{ padding: '14px 10px', minWidth: '160px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: '#cbd5e1' }}>
+                            <span style={{ color: '#818cf8', fontSize: '0.82rem' }}>📞</span>
+                            <span>{t.telefono || '-'}</span>
+                          </div>
+                          {t.direccion && (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.68rem', color: '#94a3b8', lineHeight: '1.3' }}>
+                              <span style={{ color: '#818cf8', fontSize: '0.82rem', flexShrink: 0 }}>📍</span>
+                              <span>{t.direccion}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* PROBLEMA */}
+                      <td style={{ padding: '14px 10px', minWidth: '180px', maxWidth: '220px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                          <span style={{ color: '#818cf8', fontSize: '0.85rem', marginTop: '1px', flexShrink: 0 }}>💬</span>
+                          <div className="preserve-breaks" style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: '1.45' }}>
+                            {t.problema || '-'}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* OBSERVACIÓN REVISIÓN */}
+                      <td style={{ padding: '14px 10px', minWidth: '220px', maxWidth: '270px' }}>
+                        {(() => {
+                          const obs = (t.observacion_revision || '').trim();
+                          if (!obs) {
+                            return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                          }
+                          const isLong = obs.length > 90 || obs.split('\n').length > 3;
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                              <span style={{ color: '#38bdf8', fontSize: '0.85rem', marginTop: '1px', flexShrink: 0 }}>📄</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  className="preserve-breaks"
+                                  style={{
+                                    fontSize: '0.73rem',
+                                    color: 'var(--text-main)',
+                                    lineHeight: '1.45',
+                                    ...(isLong ? {
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      wordBreak: 'break-word',
+                                      cursor: 'pointer',
+                                    } : {
+                                      wordBreak: 'break-word',
+                                    })
+                                  }}
+                                  onClick={isLong ? () => setObsModalTicket(t) : undefined}
+                                  title={isLong ? "Clic para ver la información completa" : undefined}
+                                >
+                                  {obs}
+                                </div>
+                                {isLong && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setObsModalTicket(t)}
+                                    style={{
+                                      background: 'rgba(139, 92, 246, 0.14)',
+                                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                                      color: '#a78bfa',
+                                      padding: '2px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '0.68rem',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      marginTop: '5px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      transition: 'all 0.2s',
+                                    }}
+                                  >
+                                    Ver más ▾
+                                  </button>
+                                )}
+                                {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
+                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>🕒</span> {t.fecha_cambio_estado}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+
+                      {/* ESTADO */}
+                      <td style={{ padding: '14px 10px' }}>
+                        <EstadoBadge estado={t.estado} />
+                      </td>
+
+                      {/* A CARGO */}
+                      <td style={{ padding: '14px 10px', minWidth: '120px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>👤</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: t.a_cargo ? '#f1f5f9' : '#64748b' }}>
+                            {t.a_cargo || 'Sin asignar'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* ACCIONES */}
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                         <button
-                          onClick={() => handleOpenHojaRutaModal(t)}
+                          onClick={() => handleOpenModal(t)}
                           style={{
-                            padding: '6px 12px', borderRadius: '10px',
-                            background: 'rgba(249,115,22,0.15)',
-                            border: '1px solid rgba(249,115,22,0.35)',
-                            color: '#fb923c', cursor: 'pointer', fontSize: '0.72rem',
+                            padding: '6px 14px', borderRadius: '10px',
+                            background: 'rgba(139,92,246,0.15)',
+                            border: '1px solid rgba(139,92,246,0.3)',
+                            color: '#a78bfa', cursor: 'pointer', fontSize: '0.72rem',
                             fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            display: 'inline-flex', alignItems: 'center', gap: '5px'
                           }}
-                          title="Enviar o re-agendar en Hoja de Ruta"
                         >
-                          🗓️ Hoja de Ruta
+                          <span>⚙️</span> Gestionar ▾
                         </button>
-                      )}
-                      {user.rol?.toLowerCase() === 'administrador' && (
-                        <button
-                          onClick={() => handleDelete(t.id)}
-                          style={{
-                            padding: '6px 10px', borderRadius: '10px',
-                            background: 'rgba(239,68,68,0.1)',
-                            border: '1px solid rgba(239,68,68,0.25)',
-                            color: '#f87171', cursor: 'pointer', fontSize: '0.85rem',
-                          }}
-                          title="Eliminar"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        {t.estado === 'VISITA TECNICA' && (
+                          <button
+                            onClick={() => handleOpenHojaRutaModal(t)}
+                            style={{
+                              padding: '6px 12px', borderRadius: '10px',
+                              background: 'rgba(249,115,22,0.15)',
+                              border: '1px solid rgba(249,115,22,0.35)',
+                              color: '#fb923c', cursor: 'pointer', fontSize: '0.72rem',
+                              fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}
+                            title="Enviar o re-agendar en Hoja de Ruta"
+                          >
+                            🗓️ Hoja de Ruta
+                          </button>
+                        )}
+                        {user.rol?.toLowerCase() === 'administrador' && (
+                          <button
+                            onClick={() => handleDelete(t.id)}
+                            style={{
+                              padding: '6px 10px', borderRadius: '10px',
+                              background: 'rgba(239,68,68,0.1)',
+                              border: '1px solid rgba(239,68,68,0.25)',
+                              color: '#f87171', cursor: 'pointer', fontSize: '0.82rem',
+                              fontWeight: '700', transition: 'all 0.2s'
+                            }}
+                            title="Eliminar ticket"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+
+          {/* ── BARRA INFERIOR DE PAGINACIÓN ── */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px 20px',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(255,255,255,0.01)',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Mostrando <strong style={{ color: '#fff' }}>{totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong style={{ color: '#fff' }}>{endIndex}</strong> de <strong style={{ color: '#fff' }}>{totalItems}</strong> registros
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                <span>Por página:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={e => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    background: '#1a1040',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '3px 8px',
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Controles de página */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: safeCurrentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+                  color: safeCurrentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
+                  cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+                title="Página anterior"
+              >
+                ‹
+              </button>
+
+              {getPageNumbers().map((p, pIdx) => (
+                p === '...' ? (
+                  <span key={`dots-${pIdx}`} style={{ color: 'var(--text-muted)', padding: '0 4px', fontSize: '0.8rem' }}>…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    style={{
+                      minWidth: '32px',
+                      height: '32px',
+                      padding: '0 8px',
+                      borderRadius: '8px',
+                      border: safeCurrentPage === p ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
+                      background: safeCurrentPage === p ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.04)',
+                      color: safeCurrentPage === p ? '#fff' : 'rgba(255,255,255,0.7)',
+                      fontWeight: safeCurrentPage === p ? '800' : '500',
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      transition: 'all 0.2s',
+                      boxShadow: safeCurrentPage === p ? '0 2px 8px rgba(139,92,246,0.35)' : 'none'
+                    }}
+                  >
+                    {p}
+                  </button>
+                )
+              ))}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage >= totalPages || totalItems === 0}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+                  color: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
+                  cursor: (safeCurrentPage >= totalPages || totalItems === 0) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+                title="Página siguiente"
+              >
+                ›
+              </button>
+            </div>
           </div>
         </div>
       )}
