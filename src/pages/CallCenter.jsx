@@ -6,7 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { callCenterService, clienteService } from '../services/api';
+import { callCenterService, clienteService, hojaRutaService, configuracionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
@@ -51,6 +51,7 @@ const EstadoBadge = ({ estado }) => {
 const CallCenter = () => {
   const [tickets, setTickets]       = useState([]);
   const [clientes, setClientes]     = useState([]);
+  const [tecnicos, setTecnicos]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -63,6 +64,24 @@ const CallCenter = () => {
   const [obsModalTicket, setObsModalTicket] = useState(null);
   const [copiedObs, setCopiedObs] = useState(false);
   const clientRef = useRef(null);
+
+  // Estados para modal "Enviar a Hoja de Ruta"
+  const [showHojaRutaModal, setShowHojaRutaModal] = useState(false);
+  const [submittingHojaRuta, setSubmittingHojaRuta] = useState(false);
+  const [hojaRutaForm, setHojaRutaForm] = useState({
+    ticket_id: null,
+    cliente_id: null,
+    nombre_cliente: '',
+    fecha: new Date().toISOString().split('T')[0],
+    hora: '',
+    tecnico: '',
+    actividad: 'VISITA TECNICA',
+    observacion: '',
+    ubicacion_cliente: '',
+    celular_cliente: '',
+    parroquia: '',
+    ubicacion_caja: '',
+  });
 
   const user = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
 
@@ -84,12 +103,16 @@ const CallCenter = () => {
   const fetchData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [tkRes, clRes] = await Promise.all([
+      const [tkRes, clRes, usrRes] = await Promise.all([
         callCenterService.listar(),
         clienteService.listar(),
+        configuracionService.getUsuarios().catch(() => ({ data: [] })),
       ]);
       setTickets(tkRes.data || []);
       setClientes(clRes.data || []);
+      const allUsers = usrRes.data || [];
+      const tecs = allUsers.filter(u => u.rol?.toLowerCase() === 'tecnico');
+      setTecnicos(tecs.length > 0 ? tecs : allUsers);
     } catch (err) {
       console.error("Error cargando Call Center:", err);
     } finally {
@@ -180,18 +203,121 @@ const CallCenter = () => {
     setShowClientDropdown(false);
   };
 
+  /* Abrir modal para Enviar a Hoja de Ruta */
+  const handleOpenHojaRutaModal = (ticket) => {
+    if (!ticket) return;
+
+    const tNombre = (ticket.cliente_nombre || '').trim().toLowerCase();
+    const tIp = (ticket.ip || '').trim();
+    const tTel = (ticket.telefono || '').replace(/\D/g, '');
+
+    const matchedClient = clientes.find(c => {
+      if (tNombre && c.nombre && c.nombre.trim().toLowerCase() === tNombre) return true;
+      if (tIp && c.ip && c.ip.trim() === tIp) return true;
+      if (tTel && c.celular) {
+        const cTel = c.celular.replace(/\D/g, '');
+        if (cTel && (cTel.includes(tTel) || tTel.includes(cTel))) return true;
+      }
+      return false;
+    });
+
+    const now = new Date();
+    const currentHora = now.toTimeString().slice(0, 5);
+
+    // Las observaciones para Hoja de Ruta deben ser prioritariamente la Observación Revisión
+    const obsRevision = (ticket.observacion_revision || '').trim();
+    const problemaTxt = (ticket.problema || '').trim();
+    let obsFinal = obsRevision;
+    if (!obsFinal && problemaTxt) {
+      obsFinal = `Problema reportado: ${problemaTxt}`;
+    }
+
+    const matchedTecnico = tecnicos.find(t => 
+      ticket.a_cargo && t.username && t.username.toLowerCase() === ticket.a_cargo.trim().toLowerCase()
+    );
+    const tecDefault = matchedTecnico ? matchedTecnico.username : (ticket.a_cargo || (tecnicos[0]?.username || ''));
+
+    setHojaRutaForm({
+      ticket_id: ticket.id || null,
+      cliente_id: matchedClient?.id || null,
+      nombre_cliente: ticket.cliente_nombre || matchedClient?.nombre || '',
+      fecha: new Date().toISOString().split('T')[0],
+      hora: currentHora,
+      tecnico: tecDefault,
+      actividad: 'VISITA TECNICA',
+      observacion: obsFinal,
+      ubicacion_cliente: ticket.direccion || matchedClient?.ubicacion || matchedClient?.direccion || '',
+      celular_cliente: ticket.telefono || matchedClient?.celular || '',
+      parroquia: matchedClient?.parroquia || '',
+      ubicacion_caja: matchedClient?.nap || matchedClient?.caja_nap || '',
+    });
+
+    setShowHojaRutaModal(true);
+  };
+
+  /* Submit Hoja de Ruta */
+  const handleSubmitHojaRuta = async (e) => {
+    e.preventDefault();
+    if (!hojaRutaForm.hora) {
+      showWarning("Por favor ingrese la hora de la visita técnica");
+      return;
+    }
+    if (!hojaRutaForm.tecnico) {
+      showWarning("Por favor seleccione un técnico responsable");
+      return;
+    }
+
+    setSubmittingHojaRuta(true);
+    try {
+      const payload = {
+        fecha: hojaRutaForm.fecha,
+        hora: hojaRutaForm.hora,
+        tecnico: hojaRutaForm.tecnico,
+        cliente_id: hojaRutaForm.cliente_id ? Number(hojaRutaForm.cliente_id) : null,
+        nombre_cliente: hojaRutaForm.nombre_cliente,
+        ubicacion_cliente: hojaRutaForm.ubicacion_cliente,
+        celular_cliente: hojaRutaForm.celular_cliente,
+        ubicacion_caja: hojaRutaForm.ubicacion_caja,
+        actividad: hojaRutaForm.actividad || 'VISITA TECNICA',
+        observacion: hojaRutaForm.observacion,
+        parroquia: hojaRutaForm.parroquia,
+        estado: 'Pendiente'
+      };
+
+      await hojaRutaService.crear(payload);
+      setShowHojaRutaModal(false);
+      showSuccess("¡Visita técnica agendada exitosamente en la Hoja de Ruta!");
+    } catch (err) {
+      console.error("Error al agendar en Hoja de Ruta:", err);
+      const detail = err.response?.data?.detail;
+      showError(typeof detail === 'string' ? detail : "Error al registrar en Hoja de Ruta");
+    } finally {
+      setSubmittingHojaRuta(false);
+    }
+  };
+
   /* Submit */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      let savedTicket = null;
       if (editingId) {
-        await callCenterService.actualizar(editingId, formData);
+        const res = await callCenterService.actualizar(editingId, formData);
+        savedTicket = res.data;
       } else {
-        await callCenterService.crear(formData);
+        const res = await callCenterService.crear(formData);
+        savedTicket = res.data;
       }
       setShowModal(false);
-      fetchData(true);
+      await fetchData(true);
+
+      // Si el ticket se marcó como VISITA TECNICA, abrir automáticamente el modal para enviar a Hoja de Ruta
+      if (formData.estado === 'VISITA TECNICA') {
+        handleOpenHojaRutaModal(savedTicket || { ...formData, id: editingId });
+      } else {
+        showSuccess(editingId ? "Ticket actualizado correctamente" : "Ticket registrado correctamente");
+      }
     } catch (err) {
       showError(err.response?.data?.detail || "Error al procesar el registro");
     } finally {
@@ -468,6 +594,22 @@ const CallCenter = () => {
                       >
                         ⚙️ Gestionar
                       </button>
+                      {t.estado === 'VISITA TECNICA' && (
+                        <button
+                          onClick={() => handleOpenHojaRutaModal(t)}
+                          style={{
+                            padding: '6px 12px', borderRadius: '10px',
+                            background: 'rgba(249,115,22,0.15)',
+                            border: '1px solid rgba(249,115,22,0.35)',
+                            color: '#fb923c', cursor: 'pointer', fontSize: '0.72rem',
+                            fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}
+                          title="Enviar o re-agendar en Hoja de Ruta"
+                        >
+                          🗓️ Hoja de Ruta
+                        </button>
+                      )}
                       {user.rol?.toLowerCase() === 'administrador' && (
                         <button
                           onClick={() => handleDelete(t.id)}
@@ -1054,6 +1196,265 @@ const CallCenter = () => {
                 </button>
               </div>
 
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* ── MODAL: ENVIAR A HOJA DE RUTA ── */}
+      <AnimatePresence>
+        {showHojaRutaModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1100,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px',
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowHojaRutaModal(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 25 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 25 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 280 }}
+              style={{
+                width: '100%', maxWidth: '680px',
+                maxHeight: '90vh',
+                background: 'linear-gradient(145deg, #181136 0%, #1e144a 60%, #130e2f 100%)',
+                borderRadius: '24px',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(249, 115, 22, 0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: '22px 28px 18px',
+                background: 'linear-gradient(90deg, rgba(249,115,22,0.15), rgba(139,92,246,0.15))',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    background: 'rgba(249,115,22,0.2)', border: '1px solid rgba(249,115,22,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.4rem'
+                  }}>
+                    🗓️
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>
+                      Enviar a Hoja de Ruta
+                    </h2>
+                    <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#fed7aa' }}>
+                      Configura la hora, técnico y observaciones para la visita técnica.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHojaRutaModal(false)}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.7)', width: '34px', height: '34px', borderRadius: '10px',
+                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleSubmitHojaRuta} style={{ padding: '22px 28px', flex: 1 }}>
+                
+                {/* Resumen del cliente */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '14px',
+                  padding: '14px 18px',
+                  marginBottom: '18px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '10px',
+                  fontSize: '0.78rem'
+                }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Cliente:</span>
+                    <strong style={{ color: '#fff' }}>{hojaRutaForm.nombre_cliente || 'Sin nombre'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Teléfono:</span>
+                    <strong style={{ color: '#a78bfa' }}>{hojaRutaForm.celular_cliente || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Dirección / Sector:</span>
+                    <span style={{ color: '#cbd5e1' }}>{hojaRutaForm.ubicacion_cliente || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Fecha y Hora */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#cbd5e1' }}>
+                      📅 Fecha Programada *
+                    </label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={hojaRutaForm.fecha}
+                      onChange={e => setHojaRutaForm({ ...hojaRutaForm, fecha: e.target.value })}
+                      style={{ marginBottom: 0, width: '100%' }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#f59e0b' }}>
+                      ⏰ Hora Programada *
+                    </label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={hojaRutaForm.hora}
+                      onChange={e => setHojaRutaForm({ ...hojaRutaForm, hora: e.target.value })}
+                      style={{
+                        marginBottom: 0, width: '100%',
+                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                        background: '#1e1842',
+                        color: '#fef3c7',
+                        fontWeight: '700'
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Técnico y Actividad */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#38bdf8' }}>
+                      👨‍🔧 Técnico Responsable *
+                    </label>
+                    <select
+                      className="input"
+                      value={hojaRutaForm.tecnico}
+                      onChange={e => setHojaRutaForm({ ...hojaRutaForm, tecnico: e.target.value })}
+                      style={{
+                        marginBottom: 0, width: '100%',
+                        background: '#1e1842',
+                        color: '#ffffff',
+                        fontWeight: '700',
+                        border: '1px solid rgba(56, 189, 248, 0.4)'
+                      }}
+                      required
+                    >
+                      <option value="">-- Seleccionar Técnico --</option>
+                      {tecnicos.map(t => (
+                        <option key={t.id || t.username} value={t.username}>
+                          👨‍🔧 {t.username} {t.rol ? `(${t.rol})` : ''}
+                        </option>
+                      ))}
+                      {hojaRutaForm.tecnico && !tecnicos.some(t => t.username === hojaRutaForm.tecnico) && (
+                        <option value={hojaRutaForm.tecnico}>
+                          👨‍🔧 {hojaRutaForm.tecnico}
+                        </option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#cbd5e1' }}>
+                      Actividad
+                    </label>
+                    <input
+                      className="input"
+                      value={hojaRutaForm.actividad}
+                      onChange={e => setHojaRutaForm({ ...hojaRutaForm, actividad: e.target.value })}
+                      placeholder="Ej: VISITA TECNICA"
+                      style={{ marginBottom: 0, width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Observaciones (Observación Revisión) */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fcd34d' }}>
+                      📝 Observaciones para el Técnico (Observación Revisión) *
+                    </label>
+                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                      Pre-llenado de Call Center
+                    </span>
+                  </div>
+                  <textarea
+                    className="input"
+                    rows="5"
+                    value={hojaRutaForm.observacion}
+                    onChange={e => setHojaRutaForm({ ...hojaRutaForm, observacion: e.target.value })}
+                    placeholder="Detalle técnico de la visita, instrucciones para el técnico..."
+                    style={{
+                      fontFamily: 'inherit', resize: 'vertical', marginBottom: 0,
+                      minHeight: '90px', width: '100%',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(252, 211, 77, 0.35)',
+                      color: '#f8fafc',
+                      lineHeight: '1.5'
+                    }}
+                    required
+                  />
+                  <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                    Esta observación se registrará en la Hoja de Ruta para que el técnico la visualice en campo.
+                  </div>
+                </div>
+
+                {/* Botones de acción */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowHojaRutaModal(false)}
+                    className="btn"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: '0.8rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingHojaRuta}
+                    className="btn"
+                    style={{
+                      background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                      border: 'none',
+                      color: '#fff',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      padding: '10px 22px',
+                      borderRadius: '12px',
+                      cursor: submittingHojaRuta ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 15px rgba(249, 115, 22, 0.35)'
+                    }}
+                  >
+                    {submittingHojaRuta ? 'Enviando...' : '🚀 Confirmar y Enviar a Hoja de Ruta'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
