@@ -10,6 +10,7 @@ import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
+import { processImage, compressImage } from '../utils/imageCompressor';
 
 
 
@@ -254,101 +255,13 @@ const General = () => {
     }
   }, [deviceModalRouterFile]);
 
-  const compressImage = (file, maxWidth = 2048, quality = 0.88) => {
-    return new Promise((resolve) => {
-      if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const attemptCompress = (wMax, qual) => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            if (width > wMax || height > wMax) {
-              if (width > height) {
-                height = Math.round((height * wMax) / width);
-                width = wMax;
-              } else {
-                width = Math.round((width * wMax) / height);
-                height = wMax;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob(
-              (blob) => {
-                if (!blob) return resolve(file);
-                // Asegurar que ninguna foto supere 1.5 MB (1,572,864 bytes)
-                if (blob.size > 1.5 * 1024 * 1024 && qual > 0.45) {
-                  return attemptCompress(Math.round(wMax * 0.85), qual - 0.12);
-                }
-                const rawName = file.name || 'foto.jpg';
-                const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
-                const compressedFile = new File([blob], `${baseName}.jpg`, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now()
-                });
-                resolve(compressedFile);
-              },
-              'image/jpeg',
-              qual
-            );
-          };
-          attemptCompress(maxWidth, quality);
-        };
-        img.onerror = () => resolve(file);
-        img.src = event.target.result;
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
-    });
-  };
-
   const processModalImage = async (itemOrFile, defaultName = 'foto.jpg') => {
-    if (!itemOrFile) return null;
-    let file = null;
-    let mimeType = 'image/jpeg';
-    let fileName = defaultName;
-
-    if (itemOrFile instanceof File) {
-      file = itemOrFile;
-      mimeType = file.type || 'image/jpeg';
-      fileName = file.name || defaultName;
-    } else if (itemOrFile instanceof Blob) {
-      file = itemOrFile;
-      mimeType = file.type || 'image/jpeg';
-    } else if (typeof itemOrFile === 'string') {
-      const str = itemOrFile.trim();
-      if (str.startsWith('data:image/')) {
-        try {
-          const arr = str.split(',');
-          const mimeMatch = arr[0].match(/:(.*?);/);
-          mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-          const bstr = atob(arr[1]);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          file = new Blob([u8arr], { type: mimeType });
-        } catch (err) {
-          console.error("Error al procesar data URL:", err);
-          return null;
-        }
-      }
-    }
-
-    if (!file) return null;
-    const baseFile = file instanceof File ? file : new File([file], fileName, { type: mimeType });
-    const compressed = await compressImage(baseFile);
-    if (compressed && compressed.size > 1.6 * 1024 * 1024) {
-      showError('La imagen supera el límite máximo permitido de 1.5 MB.');
+    const res = await processImage(itemOrFile, defaultName, 25);
+    if (res.error) {
+      showError(res.error);
       return null;
     }
-    return compressed;
+    return res.file;
   };
 
   const handleModalPaste = async (e, setFile, defaultName) => {
@@ -559,20 +472,10 @@ const General = () => {
       const uploadData = new FormData();
       if (deviceModalOntFile) {
         const compOnt = await compressImage(deviceModalOntFile);
-        if (compOnt && compOnt.size > 1.6 * 1024 * 1024) {
-          showError('La foto de Equipo Bridge/ONT supera el límite de 1.5 MB.');
-          setDeviceModalUploading(false);
-          return;
-        }
         uploadData.append('equipo_ont', compOnt, compOnt.name || 'ont.jpg');
       }
       if (deviceModalRouterFile) {
         const compRouter = await compressImage(deviceModalRouterFile);
-        if (compRouter && compRouter.size > 1.6 * 1024 * 1024) {
-          showError('La foto de Router supera el límite de 1.5 MB.');
-          setDeviceModalUploading(false);
-          return;
-        }
         uploadData.append('equipo_router', compRouter, compRouter.name || 'router.jpg');
       }
       if (deviceModalRemoveOnt) {
@@ -1744,15 +1647,30 @@ const General = () => {
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
                                       {fileFrontal ? '✅ Front.' : '📸 Front.'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFileFrontal(e.target.files[0])} />
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        if (e.target.files?.[0]) {
+                                          const f = await processModalImage(e.target.files[0], 'frontal.jpg');
+                                          if (f) setFileFrontal(f);
+                                        }
+                                      }} />
                                     </label>
                                     <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
                                       {filePosterior ? '✅ Post.' : '📸 Post.'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFilePosterior(e.target.files[0])} />
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        if (e.target.files?.[0]) {
+                                          const f = await processModalImage(e.target.files[0], 'posterior.jpg');
+                                          if (f) setFilePosterior(f);
+                                        }
+                                      }} />
                                     </label>
                                     <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFachada ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFachada ? '#000' : '#fff' }}>
                                       {fileFachada ? '✅ Fachada' : '📸 Fachada'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFileFachada(e.target.files[0])} />
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        if (e.target.files?.[0]) {
+                                          const f = await processModalImage(e.target.files[0], 'fachada.jpg');
+                                          if (f) setFileFachada(f);
+                                        }
+                                      }} />
                                     </label>
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
@@ -2545,7 +2463,7 @@ const General = () => {
                   <span>📸</span> Fotografías del Contrato
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedPhotoClient.nombre}</strong> (ID: {selectedPhotoClient.id}) • Máx 1.5 MB por foto
+                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedPhotoClient.nombre}</strong> (ID: {selectedPhotoClient.id}) • Máx 20 MB por foto (auto-comprimida)
                 </p>
               </div>
               <button
@@ -2780,7 +2698,7 @@ const General = () => {
                   <span>📸</span> Fotografías de Equipos (Dispositivo)
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedDeviceClient.nombre}</strong> (ID: {selectedDeviceClient.id}) • Máx 1.5 MB por foto
+                  Cliente: <strong style={{ color: '#e2e8f0' }}>{selectedDeviceClient.nombre}</strong> (ID: {selectedDeviceClient.id}) • Máx 20 MB por foto (auto-comprimida)
                 </p>
               </div>
               <button

@@ -10,6 +10,7 @@ import { clienteService, configuracionService, hojaRutaService } from '../servic
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeDateInput, toISODate } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { processImage, compressImage } from '../utils/imageCompressor';
 
 
 const Ventas = () => {
@@ -110,112 +111,13 @@ const Ventas = () => {
     }
   }, [fileFachada]);
 
-  const compressImage = (file, maxWidth = 2048, quality = 0.88) => {
-    return new Promise((resolve) => {
-      if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const attemptCompress = (wMax, qual) => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            if (width > wMax || height > wMax) {
-              if (width > height) {
-                height = Math.round((height * wMax) / width);
-                width = wMax;
-              } else {
-                width = Math.round((width * wMax) / height);
-                height = wMax;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob(
-              (blob) => {
-                if (!blob) return resolve(file);
-                // Si la imagen comprimida supera 1.5 MB (1,572,864 bytes), reducir dimensiones/calidad de forma adaptativa
-                if (blob.size > 1.5 * 1024 * 1024 && qual > 0.45) {
-                  return attemptCompress(Math.round(wMax * 0.85), qual - 0.12);
-                }
-                const rawName = file.name || 'foto.jpg';
-                const baseName = rawName.includes('.') ? rawName.substring(0, rawName.lastIndexOf('.')) : rawName;
-                const compressedFile = new File([blob], `${baseName}.jpg`, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now()
-                });
-                resolve(compressedFile);
-              },
-              'image/jpeg',
-              qual
-            );
-          };
-          attemptCompress(maxWidth, quality);
-        };
-        img.onerror = () => resolve(file);
-        img.src = event.target.result;
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
-    });
-  };
-
   const processImageFile = async (itemOrFile, defaultName = 'cedula.jpg') => {
-    if (!itemOrFile) return null;
-    let file = null;
-    let mimeType = 'image/jpeg';
-    let fileName = defaultName;
-
-    if (itemOrFile instanceof File) {
-      file = itemOrFile;
-      mimeType = file.type || 'image/jpeg';
-      fileName = file.name || defaultName;
-    } else if (itemOrFile instanceof Blob) {
-      file = itemOrFile;
-      mimeType = file.type || 'image/jpeg';
-    } else if (typeof itemOrFile === 'string') {
-      const str = itemOrFile.trim();
-      if (str.startsWith('data:image/')) {
-        try {
-          const arr = str.split(',');
-          const mimeMatch = arr[0].match(/:(.*?);/);
-          mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-          const bstr = atob(arr[1]);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          file = new Blob([u8arr], { type: mimeType });
-        } catch (err) {
-          console.error("Error al procesar data URL:", err);
-          return null;
-        }
-      } else if (str.startsWith('http://') || str.startsWith('https://')) {
-        try {
-          const res = await fetch(str);
-          const blob = await res.blob();
-          file = blob;
-          mimeType = blob.type || 'image/jpeg';
-        } catch (err) {
-          console.error("Error al descargar imagen desde URL:", err);
-          return null;
-        }
-      }
-    }
-
-    if (!file) return null;
-
-    const baseFile = file instanceof File ? file : new File([file], fileName, { type: mimeType });
-    const compressed = await compressImage(baseFile);
-    if (compressed && compressed.size > 1.6 * 1024 * 1024) {
-      setMessage({ type: 'error', text: `La imagen "${fileName}" supera el límite máximo permitido de 1.5 MB.` });
+    const res = await processImage(itemOrFile, defaultName, 25);
+    if (res.error) {
+      setMessage({ type: 'error', text: res.error });
       return null;
     }
-    return compressed;
+    return res.file;
   };
 
   const handlePaste = async (e, setFile, defaultName = 'cedula_pegada.png') => {
@@ -1119,7 +1021,7 @@ const Ventas = () => {
               <div className="contrato-input-group">
                 <label className="contrato-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Subir foto de la fachada</span>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 'normal' }}>Opcional (Máx 1.5MB)</span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 'normal' }}>Opcional (Máx 20MB)</span>
                 </label>
                 <div className="contrato-file-row">
                   <input
