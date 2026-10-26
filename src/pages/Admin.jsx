@@ -143,10 +143,10 @@ const Admin = () => {
     try {
       if (!silent) setLoading(true);
       const [clientesRes, bancosRes, planesRes, hrRes] = await Promise.all([
-        clienteService.listar(),
-        configuracionService.getBancos(),
-        configuracionService.getPlanes(),
-        hojaRutaService.listar()
+        clienteService.listar().catch(err => { console.error("Error clientes:", err); return { data: [] }; }),
+        configuracionService.getBancos().catch(err => { console.error("Error bancos:", err); return { data: [] }; }),
+        configuracionService.getPlanes().catch(err => { console.error("Error planes:", err); return { data: [] }; }),
+        hojaRutaService.listar().catch(err => { console.error("Error hoja ruta:", err); return { data: [] }; })
       ]);
       setClientes(clientesRes.data);
       setBancosList(bancosRes.data);
