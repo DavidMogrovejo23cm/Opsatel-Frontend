@@ -600,12 +600,42 @@ const Activacion = () => {
     }
   };
 
+  const handleBypassRemoteCheck = () => {
+    if (window.confirm('¿Desea omitir la comprobación remota automática y aprobar el acceso manualmente para finalizar la instalación?')) {
+      const manualRes = {
+        success: true,
+        url: `${remoteProtocol}://${remoteIp || '172.16.x.x'}${remotePort ? `:${remotePort}` : ''}`,
+        device_detected: 'Aprobado Manualmente por Técnico (Omitido)',
+        status_code: 200,
+        latency_ms: 0,
+        snippet: 'Aprobación manual autorizada por el instalador en campo.'
+      };
+      setRemoteAccessResult(manualRes);
+      setRemoteAccessVerified(true);
+      setShowRemoteModal(false);
+      notify('✓ Acceso remoto aprobado manualmente. Ya puede finalizar la instalación.', 'info');
+      return true;
+    }
+    return false;
+  };
+
   const handleSaveDevicePhotos = async () => {
     if (!wifiData.clienteId) return;
     if (!remoteAccessVerified) {
-      notify('⚠️ Verificación requerida: Debe probar el acceso remoto del equipo antes de finalizar.', 'warning');
-      setShowRemoteModal(true);
-      return;
+      const proceed = window.confirm('⚠️ El acceso remoto aún no ha sido verificado automáticamente.\n\n¿Desea aprobarlo manualmente y finalizar la instalación de todas formas?');
+      if (proceed) {
+        setRemoteAccessVerified(true);
+        setRemoteAccessResult({
+          success: true,
+          url: `${remoteProtocol}://${remoteIp || '172.16.x.x'}${remotePort ? `:${remotePort}` : ''}`,
+          device_detected: 'Aprobado Manualmente por Técnico (Omitido)',
+          status_code: 200,
+          latency_ms: 0
+        });
+      } else {
+        setShowRemoteModal(true);
+        return;
+      }
     }
     setSavingDevicePhotos(true);
     try {
@@ -634,9 +664,20 @@ const Activacion = () => {
 
   const handleFinalizarInstalacion = () => {
     if (!remoteAccessVerified) {
-      notify('⚠️ Acceso remoto obligatorio: Debe probar y verificar la conexión remota del equipo antes de finalizar.', 'warning');
-      setShowRemoteModal(true);
-      return;
+      const proceed = window.confirm('⚠️ El acceso remoto aún no ha sido verificado automáticamente.\n\n¿Desea aprobarlo manualmente y finalizar la instalación de todas formas?');
+      if (proceed) {
+        setRemoteAccessVerified(true);
+        setRemoteAccessResult({
+          success: true,
+          url: `${remoteProtocol}://${remoteIp || '172.16.x.x'}${remotePort ? `:${remotePort}` : ''}`,
+          device_detected: 'Aprobado Manualmente por Técnico (Omitido)',
+          status_code: 200,
+          latency_ms: 0
+        });
+      } else {
+        setShowRemoteModal(true);
+        return;
+      }
     }
     notify('✓ Instalación finalizada y verificada con éxito.', 'success');
     closePostActivationModal(true);
@@ -644,9 +685,10 @@ const Activacion = () => {
 
   const closePostActivationModal = (force = false) => {
     if (!force && !remoteAccessVerified) {
-      notify('⚠️ Debe verificar el acceso remoto del equipo antes de poder finalizar la instalación.', 'warning');
-      setShowRemoteModal(true);
-      return;
+      if (!window.confirm('⚠️ La conexión remota aún no está verificada. ¿Desea cerrar el asistente y finalizar más tarde?')) {
+        setShowRemoteModal(true);
+        return;
+      }
     }
     setShowWifiModal(false);
     setShowRemoteModal(false);
@@ -1786,9 +1828,9 @@ const Activacion = () => {
                         alignItems: 'center',
                         gap: 6
                       }}
-                      title={!remoteAccessVerified ? "Debe verificar el acceso remoto primero" : "Finalizar sin fotos adicionales"}
+                      title="Finalizar instalación sin fotos adicionales"
                     >
-                      {!remoteAccessVerified && <span>🔒</span>}
+                      {!remoteAccessVerified && <span title="Acceso remoto pendiente de verificación">⚠️</span>}
                       <span>Omitir Fotos / Finalizar</span>
                     </button>
 
@@ -1798,22 +1840,21 @@ const Activacion = () => {
                       onClick={handleSaveDevicePhotos}
                       disabled={savingDevicePhotos}
                       style={{
-                        backgroundColor: remoteAccessVerified ? '#2ecc71' : '#334155',
+                        backgroundColor: remoteAccessVerified ? '#2ecc71' : '#0284c7',
                         color: '#fff',
                         border: 'none',
                         padding: '9px 20px',
                         borderRadius: 6,
                         fontWeight: 'bold',
                         cursor: savingDevicePhotos ? 'not-allowed' : 'pointer',
-                        opacity: remoteAccessVerified ? 1 : 0.8,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
                         fontSize: '13px'
                       }}
-                      title={!remoteAccessVerified ? "Debe verificar el acceso remoto primero" : "Guardar fotos y finalizar"}
+                      title="Guardar fotos y finalizar"
                     >
-                      {!remoteAccessVerified && <span>🔒</span>}
+                      {!remoteAccessVerified && <span title="Acceso remoto pendiente de verificación">⚠️</span>}
                       <span>{savingDevicePhotos ? 'Guardando Fotos...' : (deviceOntFile || deviceRouterFile) ? '💾 Guardar Equipos y Finalizar' : 'Finalizar Instalación'}</span>
                     </button>
                   </div>
@@ -2086,8 +2127,31 @@ const Activacion = () => {
                     <div style={{ fontSize: '12px', color: '#cbd5e1', lineHeight: 1.4 }}>
                       {remoteErrorMsg || remoteAccessResult.message || 'El equipo no devolvió respuesta. Verifique que la IP y el puerto sean los correctos y que el equipo esté encendido.'}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#f87171', marginTop: 6, fontWeight: 600 }}>
-                      ⚠️ Debe verificar el acceso remoto hasta que reciba una respuesta válida para poder finalizar la instalación.
+                    <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: 6, border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ fontSize: '11px', color: '#fde68a', lineHeight: 1.3 }}>
+                        ⚠️ <strong>¿El equipo ya está navegando y conectado?</strong><br />
+                        Si el router no responde al puerto web pero tiene internet, puede autorizar la aprobación manual:
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleBypassRemoteCheck}
+                        style={{
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '7px 14px',
+                          borderRadius: 6,
+                          fontWeight: 'bold',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
+                        }}
+                      >
+                        🔓 Aprobar Manualmente
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2095,46 +2159,73 @@ const Activacion = () => {
             )}
 
             {/* Botones de acción modal de prueba */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => setShowRemoteModal(false)}
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  color: '#cbd5e1',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  padding: '9px 18px',
-                  borderRadius: 6,
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                Volver a Fotos
-              </button>
-              {remoteAccessVerified && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                {!remoteAccessVerified && (
+                  <button
+                    type="button"
+                    onClick={handleBypassRemoteCheck}
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      color: '#fbbf24',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      padding: '8px 14px',
+                      borderRadius: 6,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                    title="Omitir comprobación y finalizar si el equipo está activo"
+                  >
+                    🔓 Omitir / Aprobar Manual
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowRemoteModal(false);
-                    notify('✓ Acceso remoto verificado. Ahora puede finalizar la instalación.', 'success');
-                  }}
+                  onClick={() => setShowRemoteModal(false)}
                   style={{
-                    background: '#2ecc71',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '9px 20px',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#cbd5e1',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '9px 18px',
                     borderRadius: 6,
                     fontSize: '13px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
+                    cursor: 'pointer'
                   }}
                 >
-                  ✅ Aceptar y Continuar
+                  Volver a Fotos
                 </button>
-              )}
+                {remoteAccessVerified && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRemoteModal(false);
+                      notify('✓ Acceso remoto verificado. Ahora puede finalizar la instalación.', 'success');
+                    }}
+                    style={{
+                      background: '#2ecc71',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '9px 20px',
+                      borderRadius: 6,
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    ✅ Aceptar y Continuar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
