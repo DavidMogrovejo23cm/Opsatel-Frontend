@@ -88,7 +88,7 @@ const Configuraciones = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [diasPermanencia, setDiasPermanencia] = useState(7);
     const [diasSaving, setDiasSaving] = useState(false);
-    const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true });
+    const [suspensionForm, setSuspensionForm] = useState({ dia_corte: 20, hora_corte: '01:00', auto_suspension_enabled: true, nodo_corte: 'TODOS' });
     const [suspensionSaving, setSuspensionSaving] = useState(false);
     const [executingCorteManual, setExecutingCorteManual] = useState(false);
     const [exentosCorte, setExentosCorte] = useState([]);
@@ -369,7 +369,8 @@ const Configuraciones = () => {
                 setSuspensionForm({
                     dia_corte: suspRes.data.dia_corte || 20,
                     hora_corte: suspRes.data.hora_corte || '01:00',
-                    auto_suspension_enabled: suspRes.data.auto_suspension_enabled !== false
+                    auto_suspension_enabled: suspRes.data.auto_suspension_enabled !== false,
+                    nodo_corte: suspRes.data.nodo_corte || 'TODOS'
                 });
             }
             if (exentosRes.data?.exentos) setExentosCorte(exentosRes.data.exentos);
@@ -1187,10 +1188,19 @@ const Configuraciones = () => {
     };
 
     const handleEjecutarCorteManual = async () => {
-        if (!window.confirm("¿Estás seguro de que deseas ejecutar el corte masivo de morosos en MikroTik en este momento?")) return;
+        const nodoLabel = !suspensionForm.nodo_corte || suspensionForm.nodo_corte === 'TODOS'
+            ? 'TODOS los nodos'
+            : `el nodo "${suspensionForm.nodo_corte}"`;
+
+        const confirmed = await showConfirm(
+            'Ejecutar Corte Inmediato en MikroTik',
+            `¿Estás seguro de que deseas ejecutar el corte masivo de morosos en MikroTik en este momento para ${nodoLabel}?`
+        );
+        if (!confirmed) return;
+
         setExecutingCorteManual(true);
         try {
-            const res = await configuracionService.ejecutarCorteManual();
+            const res = await configuracionService.ejecutarCorteManual({ nodo: suspensionForm.nodo_corte || 'TODOS' });
             showSuccess(res.data?.message || 'Corte masivo en MikroTik ejecutado con éxito');
         } catch (error) {
             showError('Error al ejecutar corte manual: ' + (error.response?.data?.detail || error.message));
@@ -1677,20 +1687,73 @@ const Configuraciones = () => {
                                     </div>
                                 </div>
 
-                                <div className="input-group" style={{ margin: 0, marginBottom: '20px' }}>
-                                    <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
-                                        ⚡ Suspensión Automática
-                                    </label>
-                                    <select
-                                        className="input"
-                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
-                                        value={suspensionForm.auto_suspension_enabled ? 'true' : 'false'}
-                                        onChange={e => setSuspensionForm({ ...suspensionForm, auto_suspension_enabled: e.target.value === 'true' })}
-                                    >
-                                        <option value="true" style={{ background: '#1e1b4b' }}>✅ Activado (Corte masivo en fecha)</option>
-                                        <option value="false" style={{ background: '#1e1b4b' }}>❌ Desactivado</option>
-                                    </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                            ⚡ Suspensión Automática
+                                        </label>
+                                        <select
+                                            className="input"
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                            value={suspensionForm.auto_suspension_enabled ? 'true' : 'false'}
+                                            onChange={e => setSuspensionForm({ ...suspensionForm, auto_suspension_enabled: e.target.value === 'true' })}
+                                        >
+                                            <option value="true" style={{ background: '#1e1b4b' }}>✅ Activado</option>
+                                            <option value="false" style={{ background: '#1e1b4b' }}>❌ Desactivado</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="input-group" style={{ margin: 0 }}>
+                                        <label className="label" style={{ fontSize: '0.82rem', marginBottom: '6px' }}>
+                                            🌐 Nodo a Cortar
+                                        </label>
+                                        <select
+                                            className="input"
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', margin: 0 }}
+                                            value={suspensionForm.nodo_corte || 'TODOS'}
+                                            onChange={e => setSuspensionForm({ ...suspensionForm, nodo_corte: e.target.value })}
+                                        >
+                                            <option value="TODOS" style={{ background: '#1e1b4b' }}>🌐 Todos los Nodos</option>
+                                            {nodos && nodos.map(n => (
+                                                <option key={n.id || n.nombre} value={n.nombre} style={{ background: '#1e1b4b' }}>
+                                                    📍 Nodo {n.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
+
+                                {suspensionForm.nodo_corte && suspensionForm.nodo_corte !== 'TODOS' ? (
+                                    <div style={{
+                                        fontSize: '0.78rem',
+                                        padding: '7px 12px',
+                                        borderRadius: '6px',
+                                        background: 'rgba(239, 68, 68, 0.12)',
+                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                        color: '#fca5a5',
+                                        marginBottom: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}>
+                                        ⚠️ El corte afectará <strong>únicamente</strong> a los clientes del nodo <strong>{suspensionForm.nodo_corte}</strong>.
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        fontSize: '0.78rem',
+                                        padding: '7px 12px',
+                                        borderRadius: '6px',
+                                        background: 'rgba(59, 130, 246, 0.1)',
+                                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                                        color: '#93c5fd',
+                                        marginBottom: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}>
+                                        ℹ️ El corte afectará a <strong>todos los clientes morosos</strong> de todos los nodos.
+                                    </div>
+                                )}
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <button
@@ -1717,7 +1780,10 @@ const Configuraciones = () => {
                                             fontWeight: '600'
                                         }}
                                     >
-                                        {executingCorteManual ? '⏳ Ejecutando corte en MikroTik...' : '⚡ Ejecutar Corte en MikroTik Ahora'}
+                                        {executingCorteManual
+                                            ? '⏳ Ejecutando corte en MikroTik...'
+                                            : `⚡ Ejecutar Corte en MikroTik Ahora (${!suspensionForm.nodo_corte || suspensionForm.nodo_corte === 'TODOS' ? 'Todos los Nodos' : 'Nodo ' + suspensionForm.nodo_corte})`
+                                        }
                                     </button>
                                 </div>
                             </div>

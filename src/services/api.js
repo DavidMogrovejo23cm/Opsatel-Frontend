@@ -225,7 +225,7 @@ export const configuracionService = {
   // Suspensión de servicio por fecha de corte
   getSuspensionCorteConfig: () => api.get('/configuraciones/suspension-corte'),
   setSuspensionCorteConfig: (data) => api.put('/configuraciones/suspension-corte', data),
-  ejecutarCorteManual: () => api.post('/configuraciones/suspension-corte/ejecutar-corte-manual'),
+  ejecutarCorteManual: (payload) => api.post('/configuraciones/suspension-corte/ejecutar-corte-manual', payload || {}),
   // Clientes exentos de corte (Excepciones)
   getExentosCorte: () => api.get('/configuraciones/clientes-exentos-corte'),
   addExentoCorte: (id) => api.post(`/configuraciones/clientes-exentos-corte/${id}`),
