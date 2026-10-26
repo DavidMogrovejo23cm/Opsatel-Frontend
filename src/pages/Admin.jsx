@@ -194,12 +194,12 @@ const Admin = () => {
 
     let netFee = 0;
     if (cliente.saldo !== null && cliente.saldo !== undefined) {
-      netFee = Math.max(0, parseFloat(cliente.saldo || 0));
+      netFee = parseFloat(cliente.saldo || 0);
     } else {
-      netFee = currentMonthlyFee > 0 ? currentMonthlyFee : Math.max(0, parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
+      netFee = currentMonthlyFee > 0 ? currentMonthlyFee : (parseFloat(cliente.total_pago || 0) - parseFloat(cliente.plus || 0) - parseFloat(cliente.adicional || 0));
     }
 
-    const priorDebt = Math.max(0, netFee - currentMonthlyFee);
+    const priorDebt = netFee > currentMonthlyFee ? (netFee - currentMonthlyFee) : 0;
     const internetSugerido = netFee.toFixed(2);
 
     const deudaPlus = parseFloat(cliente.plus || 0);
@@ -219,7 +219,7 @@ const Admin = () => {
       monto: isCortesiaTotal ? "0" : (parseFloat(totalPendiente) > 0 ? totalPendiente : "0"),
       metodo: bancosList.length > 0 ? bancosList[0].nombre : 'EFECTIVO',
       facturas: ((cliente.cod && String(cliente.cod).trim() !== '' && String(cliente.cod).trim().toUpperCase() !== 'NONE') || (cliente.facturas && String(cliente.facturas).trim().toUpperCase() === 'SI')) ? 'SI' : 'NONE',
-      internet_payment: isCortesiaTotal ? "0" : internetSugerido,
+      internet_payment: isCortesiaTotal ? "0" : (parseFloat(internetSugerido) > 0 ? internetSugerido : "0.00"),
       app: cliente.app || '',
       payment_date: new Date().toISOString().split('T')[0],
       client_payment_date: cliente.client_payment_date || '',
@@ -236,7 +236,7 @@ const Admin = () => {
       isMantenimiento: isMantenimiento,
       isCustomPlan: isCustomPlan,
       precio_plan_especial: customPriceVal,
-      customPlanPriceInput: customPriceVal > 0 ? customPriceVal.toString() : (basePlanPrice > 0 ? basePlanPrice.toString() : internetSugerido),
+      customPlanPriceInput: customPriceVal > 0 ? customPriceVal.toString() : (basePlanPrice > 0 ? basePlanPrice.toString() : (parseFloat(internetSugerido) > 0 ? internetSugerido : basePlanPrice.toString())),
       original_internet: internetSugerido,
       original_plus: cliente.plus || '0',
       original_adicional: cliente.adicional || '0',
@@ -346,8 +346,8 @@ const Admin = () => {
     // Calcular valores a guardar en updateAdmin antes de registrar el pago
     // pagar() restará abonoInternet, abonoPlus y abonoAdicional
     const nuevoSaldoAdmin = creditoInternet > 0
-      ? -creditoInternet + abonoInternet
-      : parseFloat((pendienteInternet + abonoInternet).toFixed(2));
+      ? parseFloat((-creditoInternet + abonoInternet).toFixed(2))
+      : parseFloat((valInternet < 0 ? valInternet + abonoInternet : valInternet).toFixed(2));
 
     let nuevoPlusAdmin = "0";
     if (creditoPlus > 0) {
@@ -1380,12 +1380,18 @@ const Admin = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Monto Plan Base (Internet):</span>
-                      <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                        ${(parseFloat(pagoData.priorDebt || 0) > 0
-                          ? Math.max(0, parseFloat(pagoData.original_internet || 0) - parseFloat(pagoData.priorDebt || 0))
-                          : parseFloat(pagoData.original_internet || 0)
-                        ).toFixed(2)}
-                      </span>
+                      {parseFloat(pagoData.original_internet || 0) < 0 ? (
+                        <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                          Excedente (${Math.abs(parseFloat(pagoData.original_internet || 0)).toFixed(2)})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                          ${(parseFloat(pagoData.priorDebt || 0) > 0
+                            ? Math.max(0, parseFloat(pagoData.original_internet || 0) - parseFloat(pagoData.priorDebt || 0))
+                            : parseFloat(pagoData.original_internet || 0)
+                          ).toFixed(2)}
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '6px', paddingTop: '6px' }}>
