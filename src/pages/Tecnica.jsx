@@ -321,8 +321,6 @@ const Tecnica = () => {
     }
 
     try {
-      console.log("Activando cliente con ID:", selectedCliente.id);
-      console.log("Datos enviados (formData):", formData);
       await clienteService.activar(selectedCliente.id, formData);
       showSuccess('Configuración exitosa. Cliente activado.');
       setSelectedCliente(null);

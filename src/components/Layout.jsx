@@ -75,20 +75,25 @@ const Layout = () => {
           box-sizing: border-box;
         }
 
-        /* 1440px en adelante: contenedores centrados de 1140px a 1200px */
+        /* Monitores grandes y escritorios: 100% fluido para aprovechar todo el ancho de pantalla */
         @media (min-width: 1440px) {
+          .app-main-layout {
+            padding: 28px 36px;
+          }
           .main-content-container {
-            max-width: 1200px;
+            max-width: 100%;
+            width: 100%;
           }
         }
 
-        /* 1024px a 1366px: escritorios pequeños / portátiles */
+        /* 1025px a 1439px: escritorios medianos y portátiles */
         @media (min-width: 1025px) and (max-width: 1439px) {
           .app-main-layout {
-            padding: 24px 28px;
+            padding: 22px 28px;
           }
           .main-content-container {
-            max-width: 1140px;
+            max-width: 100%;
+            width: 100%;
           }
         }
 

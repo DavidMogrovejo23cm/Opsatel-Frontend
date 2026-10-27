@@ -61,6 +61,18 @@ const getAvatarColor = (name) => {
   return gradients[Math.abs(hash) % gradients.length];
 };
 
+const getPhoneInfo = (rawPhone) => {
+  if (!rawPhone) return { callPhone: '', waPhone: '' };
+  const parts = String(rawPhone).split(/[/,;|\\\n\r]|\s+(?:y|o|-)\s+/i).map(p => p.trim()).filter(Boolean);
+  if (parts.length === 0) return { callPhone: '', waPhone: '' };
+  const firstPart = parts[0].split(/\s+/)[0] || parts[0];
+  const cleanDigits = firstPart.replace(/\D/g, '');
+  let wa = cleanDigits;
+  if (cleanDigits.startsWith('09')) wa = '593' + cleanDigits.slice(1);
+  else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) wa = '593' + cleanDigits;
+  return { callPhone: firstPart, waPhone: wa };
+};
+
 /* ────────────────────────────────────────────
    BADGE ESTADO
 ────────────────────────────────────────────── */
@@ -798,8 +810,9 @@ const CallCenter = () => {
           border: '1px solid rgba(255,255,255,0.06)',
           overflow: 'hidden'
         }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ minWidth: '1200px', width: '100%', borderCollapse: 'collapse' }}>
+          {/* ── VISTA ESCRITORIO (TABLA EXPANDIDA) ── */}
+          <div className="cc-desktop-view" style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ minWidth: '1000px', width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{
                   background: 'rgba(255,255,255,0.04)',
@@ -1052,6 +1065,188 @@ const CallCenter = () => {
             </table>
           </div>
 
+          {/* ── VISTA MÓVIL (TARJETAS ADAPTADAS) ── */}
+          <div className="cc-mobile-view" style={{ padding: '12px' }}>
+            {paginatedTickets.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '2rem' }}>📋</span>
+                <p style={{ marginTop: '8px', fontSize: '0.85rem' }}>No hay registros con los filtros actuales</p>
+              </div>
+            ) : paginatedTickets.map((t) => {
+              const clientMeta = getClientMeta(t);
+              const { callPhone, waPhone } = getPhoneInfo(t.telefono);
+              const obs = (t.observacion_revision || '').trim();
+
+              return (
+                <div key={`m-${t.id}`} className="cc-card-mobile">
+                  {/* Header de la tarjeta móvil */}
+                  <div className="cc-card-mobile-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                      <div className="cc-card-mobile-avatar" style={{ background: getAvatarColor(t.cliente_nombre) }}>
+                        {getInitials(t.cliente_nombre)}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#f8fafc', wordBreak: 'break-word', lineHeight: '1.25' }}>
+                          {t.cliente_nombre || 'Sin Nombre'}
+                          {clientMeta?.id && (
+                            <span style={{ color: '#a78bfa', marginLeft: '6px', fontSize: '0.74rem', fontWeight: '800' }}>
+                              (ID: {clientMeta.id})
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          IP: <span style={{ color: '#cbd5e1' }}>{t.ip || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <EstadoBadge estado={t.estado} />
+                  </div>
+
+                  {/* Grid de metadata */}
+                  <div className="cc-card-mobile-details">
+                    <div>
+                      <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>📅 Ingreso</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#f1f5f9', marginTop: '2px' }}>
+                        {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
+                      </div>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginTop: '1px' }}>
+                        Por: {t.registrado_por || 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>👤 A Cargo</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: t.a_cargo ? '#818cf8' : '#94a3b8', marginTop: '2px' }}>
+                        {t.a_cargo || 'Sin asignar'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contacto & Ubicación con accesos rápidos */}
+                  {(t.telefono || t.direccion) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
+                      {t.telefono && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#818cf8' }}>📞</span>
+                          <span style={{ fontWeight: '700', color: '#e2e8f0' }}>{t.telefono}</span>
+                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                            {callPhone && (
+                              <a
+                                href={`tel:${callPhone}`}
+                                style={{
+                                  padding: '4px 10px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.16)',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8',
+                                  fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
+                                }}
+                              >
+                                📞 Llamar
+                              </a>
+                            )}
+                            {waPhone && (
+                              <a
+                                href={`https://wa.me/${waPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  padding: '4px 10px', borderRadius: '8px', background: 'rgba(37, 211, 102, 0.16)',
+                                  border: '1px solid rgba(37, 211, 102, 0.3)', color: '#25d366',
+                                  fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
+                                }}
+                              >
+                                💬 WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {t.direccion && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#94a3b8', fontSize: '0.72rem', lineHeight: '1.3' }}>
+                          <span style={{ color: '#818cf8', flexShrink: 0 }}>📍</span>
+                          <span>{t.direccion}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Problema Reportado */}
+                  {t.problema && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '3px' }}>
+                        💬 Problema Reportado:
+                      </div>
+                      <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: '#e2e8f0', lineHeight: '1.4' }}>
+                        {t.problema}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observación Revisión */}
+                  {obs && (
+                    <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#c4b5fd', fontWeight: '700', marginBottom: '3px' }}>
+                        📄 Observación Revisión:
+                      </div>
+                      <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: '#f1f5f9', lineHeight: '1.4' }}>
+                        {obs}
+                      </div>
+                      {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
+                        <div style={{ fontSize: '0.64rem', color: '#a78bfa', marginTop: '4px' }}>
+                          🕒 {t.fecha_cambio_estado}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fila de Acciones táctiles */}
+                  <div className="cc-card-mobile-actions">
+                    <button
+                      onClick={() => handleOpenModal(t)}
+                      style={{
+                        flex: 1, padding: '9px 14px', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                        border: 'none', color: '#fff', cursor: 'pointer',
+                        fontSize: '0.78rem', fontWeight: '800', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        boxShadow: '0 2px 8px rgba(139,92,246,0.3)'
+                      }}
+                    >
+                      <span>⚙️</span> Gestionar
+                    </button>
+                    {t.estado === 'VISITA TECNICA' && (
+                      <button
+                        onClick={() => handleOpenHojaRutaModal(t)}
+                        style={{
+                          padding: '9px 12px', borderRadius: '10px',
+                          background: 'rgba(249,115,22,0.18)',
+                          border: '1px solid rgba(249,115,22,0.35)',
+                          color: '#fb923c', cursor: 'pointer',
+                          fontSize: '0.76rem', fontWeight: '700', display: 'flex',
+                          alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        🗓️ Hoja Ruta
+                      </button>
+                    )}
+                    {user.rol?.toLowerCase() === 'administrador' && (
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        style={{
+                          padding: '9px 12px', borderRadius: '10px',
+                          background: 'rgba(239,68,68,0.14)',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          color: '#f87171', cursor: 'pointer',
+                          fontSize: '0.78rem', fontWeight: '700'
+                        }}
+                        title="Eliminar"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* ── BARRA INFERIOR DE PAGINACIÓN ── */}
           <div style={{
             display: 'flex',
@@ -1189,6 +1384,7 @@ const CallCenter = () => {
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
           >
             <motion.div
+              className="cc-modal-dialog"
               initial={{ scale: 0.88, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.88, opacity: 0, y: 30 }}
@@ -1247,7 +1443,7 @@ const CallCenter = () => {
                     </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
                     {/* Dropdown cliente */}
                     <div ref={clientRef} style={{ position: 'relative' }}>
                       <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1335,7 +1531,7 @@ const CallCenter = () => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+                  <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
                     <div>
                       <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         Teléfono(s) de Contacto
@@ -1400,7 +1596,7 @@ const CallCenter = () => {
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                    <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
                       <div>
                         <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           Estado del Ticket
@@ -1756,6 +1952,7 @@ const CallCenter = () => {
             onClick={(e) => { if (e.target === e.currentTarget) setShowHojaRutaModal(false); }}
           >
             <motion.div
+              className="cc-modal-dialog"
               initial={{ scale: 0.9, opacity: 0, y: 25 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 25 }}
@@ -1842,7 +2039,7 @@ const CallCenter = () => {
                 </div>
 
                 {/* Fecha y Hora */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#cbd5e1' }}>
                       📅 Fecha Programada *
@@ -1878,7 +2075,7 @@ const CallCenter = () => {
                 </div>
 
                 {/* Técnico y Actividad */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#38bdf8' }}>
                       👨‍🔧 Técnico Responsable *

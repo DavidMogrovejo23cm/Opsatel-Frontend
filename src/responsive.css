@@ -22,34 +22,38 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Contenedor principal de Layout centrado */
+/* Contenedor principal de Layout fluido */
 .main-content-container {
   width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 }
 
+/* Call Center vistas base */
+.cc-desktop-view {
+  display: block;
+  width: 100%;
+}
+.cc-mobile-view {
+  display: none;
+}
+
 /* ─────────────────────────────────────────────────────────────
    1. MONITORES GRANDES DE ESCRITORIO (1440px en adelante)
-   Contenedores de contenido principales centrados de 1140px a 1200px
+   Diseño fluido al 100%: rellena toda la pantalla eliminando espacios vacíos
    ───────────────────────────────────────────────────────────── */
 @media (min-width: 1440px) {
   .app-main-layout {
     margin-left: var(--sidebar-width) !important;
     width: calc(100% - var(--sidebar-width)) !important;
-    padding: 36px 40px !important;
+    padding: 28px 36px !important;
   }
 
   .main-content-container {
-    max-width: 1200px !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     width: 100% !important;
-  }
-
-  /* Excepciones controladas para vistas con tablas ultra-anchas */
-  main[data-page="ventas"] .main-content-container,
-  main[data-page="general"] .main-content-container {
-    max-width: 1240px !important;
   }
 
   /* Barras de acciones y encabezados con alineación ergonómica */
@@ -79,18 +83,18 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   2. ORDENADORES DE SOBREMESA / PORTÁTILES PEQUEÑOS (1024px – 1366px)
-   Contenedores centrados de 1140px, acoplamiento perfecto de controles
+   2. ORDENADORES DE SOBREMESA / PORTÁTILES (1025px – 1439px)
+   Aprovechamiento total del ancho disponible
    ───────────────────────────────────────────────────────────── */
 @media (min-width: 1025px) and (max-width: 1439px) {
   .app-main-layout {
     margin-left: var(--sidebar-width) !important;
     width: calc(100% - var(--sidebar-width)) !important;
-    padding: 24px 28px !important;
+    padding: 22px 28px !important;
   }
 
   .main-content-container {
-    max-width: 1140px !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     width: 100% !important;
   }
@@ -330,6 +334,82 @@ html, body {
   main[data-page="hoja-ruta"] .hr-date-filter input {
     flex: 1;
     width: auto !important;
+  }
+
+  /* Call Center: cambio automático a tarjetas móviles */
+  .cc-desktop-view {
+    display: none !important;
+  }
+
+  .cc-mobile-view {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  .cc-card-mobile {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .cc-card-mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cc-card-mobile-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.78rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .cc-card-mobile-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .cc-card-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .cc-modal-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 16px !important;
+  }
+
+  .cc-modal-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
 

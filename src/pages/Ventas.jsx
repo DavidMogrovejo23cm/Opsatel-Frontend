@@ -355,7 +355,6 @@ const Ventas = () => {
 
     setLoading(true);
     setMessage(null);
-    console.log("Enviando contrato con parroquia:", formData.parroquia);
     const nowTimeStr = new Date().toTimeString().split(' ')[0];
     let fechaFirmaVal = normalizeDateInput(formData.fecha_firma);
     if (fechaFirmaVal && !fechaFirmaVal.includes(':')) {
