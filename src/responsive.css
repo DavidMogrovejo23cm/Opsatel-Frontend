@@ -45,9 +45,9 @@ html, body {
    ───────────────────────────────────────────────────────────── */
 @media (min-width: 1440px) {
   .app-main-layout {
-    margin-left: var(--sidebar-width) !important;
-    width: calc(100% - var(--sidebar-width)) !important;
-    padding: 28px 36px !important;
+    margin-left: 270px !important;
+    width: calc(100% - 270px) !important;
+    padding: 0 !important;
   }
 
   .main-content-container {
@@ -88,9 +88,9 @@ html, body {
    ───────────────────────────────────────────────────────────── */
 @media (min-width: 1025px) and (max-width: 1439px) {
   .app-main-layout {
-    margin-left: var(--sidebar-width) !important;
-    width: calc(100% - var(--sidebar-width)) !important;
-    padding: 22px 28px !important;
+    margin-left: 270px !important;
+    width: calc(100% - 270px) !important;
+    padding: 0 !important;
   }
 
   .main-content-container {
@@ -148,8 +148,7 @@ html, body {
   .app-main-layout {
     margin-left: 0 !important;
     width: 100% !important;
-    padding: 20px 16px !important;
-    padding-top: 76px !important;
+    padding: 0 !important;
   }
 
   .main-content-container {

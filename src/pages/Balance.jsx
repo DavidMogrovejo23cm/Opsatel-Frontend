@@ -5555,17 +5555,130 @@ const Balance = () => {
         </div>
       </div>
 
-      <div className="page-actions" style={{ marginBottom: 28, padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Tab id="mensual" label="Resumen Mensual" icon="📊" />
-        <Tab id="plataforma" label="Plataforma (IPTV)" icon="🚀" />
-        <Tab id="movimientos-internos" label="Movimientos Internos" icon="🔄" />
-        <Tab id="colchon" label="Fondo Reserva (Colchón)" icon="🏛️" />
-        <Tab id="anual" label="Evolución Anual" icon="📈" />
-        <Tab id="egresos" label="Libro de Egresos" icon="📖" />
-        <Tab id="gastos-fijos" label="Egresos Fijos" icon="🔒" />
-        <Tab id="proyectos" label="Proyectos & Obras" icon="🏗️" />
-        <Tab id="reporte" label="Reporte" icon="📑" />
-      </div>
+      {/* SEGMENTED TABS Y NAVEGACIÓN MODULAR DE BALANCE */}
+      {(() => {
+        const TAB_CATEGORIES = [
+          {
+            id: 'operaciones',
+            title: 'Operación Mensual',
+            icon: '💳',
+            tabs: [
+              { id: 'mensual', label: 'Resumen Mensual', icon: '📊' },
+              { id: 'plataforma', label: 'Plataforma (IPTV)', icon: '🚀' },
+              { id: 'egresos', label: 'Libro de Egresos', icon: '📖' },
+              { id: 'gastos-fijos', label: 'Egresos Fijos', icon: '🔒' }
+            ]
+          },
+          {
+            id: 'tesoreria',
+            title: 'Cajas & Tesorería',
+            icon: '🏛️',
+            tabs: [
+              { id: 'movimientos-internos', label: 'Movimientos Internos', icon: '🔄' },
+              { id: 'colchon', label: 'Fondo Reserva (Colchón)', icon: '🏛️' },
+              { id: 'proyectos', label: 'Proyectos & Obras', icon: '🏗️' }
+            ]
+          },
+          {
+            id: 'reportes',
+            title: 'Informes & Auditoría',
+            icon: '📑',
+            tabs: [
+              { id: 'anual', label: 'Evolución Anual', icon: '📈' },
+              { id: 'reporte', label: 'Reporte ARCOTEL', icon: '📑' }
+            ]
+          }
+        ];
+
+        const activeCat = TAB_CATEGORIES.find(c => c.tabs.some(t => t.id === vista)) || TAB_CATEGORIES[0];
+
+        return (
+          <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Nivel 1: Selector de Módulo Financiero */}
+            <div style={{
+              display: 'flex',
+              background: 'rgba(0, 0, 0, 0.35)',
+              padding: '4px',
+              borderRadius: 14,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              gap: 4,
+              width: 'fit-content',
+              flexWrap: 'wrap'
+            }}>
+              {TAB_CATEGORIES.map(cat => {
+                const isCatActive = activeCat.id === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setVista(cat.tabs[0].id)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 10,
+                      border: isCatActive ? '1px solid rgba(99, 102, 241, 0.45)' : '1px solid transparent',
+                      background: isCatActive ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.28) 0%, rgba(56, 189, 248, 0.18) 100%)' : 'transparent',
+                      color: isCatActive ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
+                      fontWeight: isCatActive ? 800 : 500,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      transition: 'all 0.15s ease',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Nivel 2: Sub-pestañas activas */}
+            <div style={{
+              display: 'flex',
+              gap: 6,
+              flexWrap: 'wrap',
+              padding: '6px 10px',
+              background: 'rgba(255, 255, 255, 0.025)',
+              borderRadius: 12,
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              width: 'fit-content'
+            }}>
+              {activeCat.tabs.map(tab => {
+                const isTabActive = vista === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`tab-balance-${tab.id}`}
+                    type="button"
+                    onClick={() => setVista(tab.id)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: 9,
+                      border: isTabActive ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
+                      background: isTabActive ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                      color: isTabActive ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
+                      fontWeight: isTabActive ? 700 : 500,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.15s ease',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       <AnimatePresence mode="wait">
         <motion.div key={vista} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
