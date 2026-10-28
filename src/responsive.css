@@ -204,8 +204,26 @@ html, body {
   }
 }
 
-/* Tabletas estándar (<= 768px) */
+/* Tabletas estándar y Smartphones (<= 768px) */
 @media (max-width: 768px) {
+  /* Ocultar barra superior corporativa en móviles para eliminar el espacio y duplicidad */
+  .app-top-header {
+    display: none !important;
+  }
+
+  /* Eliminar espaciado excesivo en contenedor principal y tarjetas en móvil */
+  .main-content-container {
+    padding: 8px 10px 40px 10px !important;
+  }
+
+  .glass-card,
+  .glass {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
   /* Encabezados y barras superiores */
   main[data-page]:not([data-page="ventas"]) .page-header,
   main[data-page]:not([data-page="ventas"]) .page-top-bar,

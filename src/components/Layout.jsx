@@ -74,6 +74,13 @@ const Layout = () => {
     };
   }, [isSidebarOpen]);
 
+  // Permite abrir el sidebar desde cualquier vista móvil (por ejemplo desde el icono de TECdt)
+  useEffect(() => {
+    const handleOpenSidebar = () => setIsSidebarOpen(true);
+    window.addEventListener('open-opsatel-sidebar', handleOpenSidebar);
+    return () => window.removeEventListener('open-opsatel-sidebar', handleOpenSidebar);
+  }, []);
+
   return (
     <div className="layout-root">
       {/* Overlay oscuro para móvil cuando el sidebar está abierto */}
@@ -92,7 +99,19 @@ const Layout = () => {
       
       {/* Contenedor principal con Header Superior */}
       <div className="app-main-layout">
-        {/* TOP ENTERPRISE HEADER */}
+        {/* Botón flotante para abrir el menú en móviles sin consumir espacio vertical */}
+        {!isSidebarOpen && (
+          <button 
+            className="mobile-floating-menu-btn" 
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir Menú"
+            type="button"
+          >
+            ☰
+          </button>
+        )}
+
+        {/* TOP ENTERPRISE HEADER (Visible en escritorio, oculto en móvil) */}
         <header className="app-top-header">
           {/* Lado Izquierdo: Botón Hamburguesa móvil + Breadcrumbs */}
           <div className="top-header-left">
@@ -461,6 +480,44 @@ const Layout = () => {
 
           .quick-action-pill {
             padding: 7px 9px;
+          }
+        }
+
+        .mobile-floating-menu-btn {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .app-top-header {
+            display: none !important;
+          }
+
+          .main-content-container {
+            padding: 8px 10px 40px 10px !important;
+          }
+
+          .mobile-floating-menu-btn {
+            display: flex;
+            position: fixed;
+            bottom: 20px;
+            right: 18px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            font-size: 1.25rem;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            z-index: 995;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: transform 0.15s ease;
+          }
+          .mobile-floating-menu-btn:active {
+            transform: scale(0.92);
           }
         }
 

@@ -764,7 +764,12 @@ const TECdt = () => {
           {/* Topbar fija con marca TECdt y botón refrescar */}
           <div className="tecdt-mobile-topbar">
             <div className="tecdt-mobile-brand">
-              <div className="tecdt-mobile-brand-icon">
+              <div 
+                className="tecdt-mobile-brand-icon"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-opsatel-sidebar'))}
+                title="Abrir menú"
+                style={{ cursor: 'pointer' }}
+              >
                 🛠️
               </div>
               <div className="tecdt-mobile-brand-text">
