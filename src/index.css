@@ -32,12 +32,16 @@
   --sidebar-width: 260px;
 
   /* Theme Tokens */
-  --sticky-col-bg: #131526;
+  --table-bg-solid: #0e1320;
+  --table-hover-bg: #182033;
+  --table-header-solid: #0a0e18;
+  --sticky-col-bg: #0e1320;
+  --sticky-col-hover: #182033;
   --sticky-sub-bg: #0f172a;
   --table-border: rgba(255, 255, 255, 0.22);
   --grid-border: rgba(255, 255, 255, 0.22);
   --grid-border-highlight: rgba(255, 255, 255, 0.45);
-  --table-row-hover: rgba(255, 255, 255, 0.05);
+  --table-row-hover: #182033;
   --input-select-bg: #1e1b4b;
   --sidebar-text-color: rgba(255, 255, 255, 0.75);
   --sidebar-active-color: #ffffff;
@@ -322,6 +326,7 @@ tr:hover td {
 .general-table-grid {
   border-collapse: collapse !important;
   border: 1px solid var(--grid-border, rgba(255, 255, 255, 0.22)) !important;
+  background-color: var(--table-bg-solid, #0e1320) !important;
 }
 
 .general-table-grid th,
@@ -332,14 +337,33 @@ tr:hover td {
 
 .general-table-grid thead th {
   border-bottom: 2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45)) !important;
+  background-color: var(--table-header-solid, #0a0e18) !important;
 }
 
+/* Hover en filas: fondo 100% opaco para que NUNCA se transparente el contenido al desplazarse */
 .general-table-grid tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background-color: var(--table-hover-bg, #182033);
+}
+
+/* Columnas fijas (Sticky): 100% SÓLIDAS Y OPACAS EN CUALQUIER ESTADO */
+.general-table-grid .sticky-col {
+  background-color: var(--sticky-col-bg, #0e1320) !important;
+  position: sticky !important;
+  z-index: 10 !important;
+}
+
+.general-table-grid thead th.sticky-col {
+  background-color: var(--table-header-solid, #0a0e18) !important;
+  z-index: 30 !important;
+}
+
+.general-table-grid tbody tr:hover td.sticky-col {
+  background-color: var(--sticky-col-hover, #182033) !important;
 }
 
 [data-theme="light"] .general-table-grid {
   border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
 }
 
 [data-theme="light"] .general-table-grid th,
@@ -350,8 +374,24 @@ tr:hover td {
 
 [data-theme="light"] .general-table-grid thead th {
   border-bottom-color: #94a3b8 !important;
-  background: #f8fafc !important;
+  background-color: #f8fafc !important;
   color: #1e293b !important;
+}
+
+[data-theme="light"] .general-table-grid tbody tr:hover td {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .general-table-grid .sticky-col {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .general-table-grid thead th.sticky-col {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="light"] .general-table-grid tbody tr:hover td.sticky-col {
+  background-color: #f1f5f9 !important;
 }
 
 /* ─────────────────────────────────────────────

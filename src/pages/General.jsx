@@ -1402,41 +1402,43 @@ const General = () => {
       {loading ? <p>Cargando datos...</p> : (
         <div className="table-container" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
           <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
-            <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg, rgba(15, 23, 42, 0.95))', backdropFilter: 'blur(10px)', zIndex: 20 }}>
+            <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-solid, #0a0e18)', zIndex: 20 }}>
               <tr>
                 {allColumns.map(col => {
                   const isId = col === 'id';
                   const isNombre = col === 'nombre';
                   const isIp = col === 'ip';
+                  const isSticky = isId || isNombre || isIp;
 
-                  // Posiciones sticky para ID, Nombre e IP
+                  // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
                   let stickyStyle = {};
                   if (isId) {
                     stickyStyle = {
                       position: 'sticky',
                       left: 0,
-                      zIndex: 22,
-                      background: 'var(--sticky-col-bg, #131526)'
+                      zIndex: 30,
+                      background: 'var(--table-header-solid, #0a0e18)'
                     };
                   } else if (isNombre) {
                     stickyStyle = {
                       position: 'sticky',
                       left: colWidths['id'] || 60,
-                      zIndex: 22,
-                      background: 'var(--sticky-col-bg, #131526)'
+                      zIndex: 30,
+                      background: 'var(--table-header-solid, #0a0e18)'
                     };
                   } else if (isIp) {
                     stickyStyle = {
                       position: 'sticky',
                       left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
-                      zIndex: 22,
-                      background: 'var(--sticky-col-bg, #131526)',
-                      borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                      zIndex: 30,
+                      background: 'var(--table-header-solid, #0a0e18)',
+                      borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                      boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
                     };
                   }
 
                   return (
-                    <th key={col} style={{
+                    <th key={col} className={isSticky ? 'sticky-col' : ''} style={{
                       padding: '12px',
                       borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
                       borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
@@ -1551,30 +1553,32 @@ const General = () => {
                       const isId = col === 'id';
                       const isNombre = col === 'nombre';
                       const isIp = col === 'ip';
+                      const isSticky = isId || isNombre || isIp;
 
-                      // Posiciones sticky para ID, Nombre e IP
+                      // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
                       let stickyStyle = {};
                       if (isId) {
                         stickyStyle = {
                           position: 'sticky',
                           left: 0,
-                          zIndex: 12,
-                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
+                          zIndex: 10,
+                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
                         };
                       } else if (isNombre) {
                         stickyStyle = {
                           position: 'sticky',
                           left: colWidths['id'] || 60,
-                          zIndex: 12,
-                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)')
+                          zIndex: 10,
+                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
                         };
                       } else if (isIp) {
                         stickyStyle = {
                           position: 'sticky',
                           left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
-                          zIndex: 12,
-                          background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)'),
-                          borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                          zIndex: 10,
+                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)'),
+                          borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                          boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
                         };
                       }
 
@@ -1584,6 +1588,7 @@ const General = () => {
                       return (
                         <td
                           key={col}
+                          className={isSticky ? 'sticky-col' : ''}
                           onClick={() => {
                             if (!isCellEditable) return;
                             if (col === 'fotos_cedula' || col === 'dispositivo' || col === 'iptv_cuenta') {
@@ -1624,7 +1629,7 @@ const General = () => {
                             maxWidth: colWidths[col] || 150,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                            background: isSticky ? (isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')) : (isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent'),
                             cursor: isCellEditable ? 'pointer' : 'default',
                             borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                             borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
