@@ -6,8 +6,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { clienteService } from '../services/api';
+import { clienteService, notificacionService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificacionesModal from './NotificacionesModal';
 
 // Definición de Grupos y Módulos de Trabajo
 const MENU_SECTIONS = [
@@ -69,6 +70,8 @@ const MENU_SECTIONS = [
 const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
   const { user, logout } = useAuth();
   const [pendientesCount, setPendientesCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -104,6 +107,13 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  const fetchNotifCount = async () => {
+    try {
+      const res = await notificacionService.getCount();
+      setUnreadNotifCount(res.data?.count || 0);
+    } catch (e) { }
+  };
+
   useEffect(() => {
     const fetchCount = async () => {
       try {
@@ -114,7 +124,11 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
       }
     };
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    fetchNotifCount();
+    const interval = setInterval(() => {
+      fetchCount();
+      fetchNotifCount();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -125,6 +139,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
     } catch (e) {
       console.error('Error fetching pendientes count on refresh:', e);
     }
+    fetchNotifCount();
     if (typeof onRefresh === 'function') {
       onRefresh();
     }
@@ -189,12 +204,19 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
                 🔄
               </button>
               <button
-                onClick={toggleTheme}
-                title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
-                className="sidebar-icon-btn"
+                onClick={() => setIsNotifModalOpen(true)}
+                title={unreadNotifCount > 0 ? `Tienes ${unreadNotifCount} notificación(es) sin leer` : 'Notificaciones de cambios'}
+                className="sidebar-icon-btn notification-bell-btn"
                 type="button"
+                style={{ position: 'relative' }}
               >
-                {theme === 'dark' ? '☀️' : '🌙'}
+                <span className="bell-emoji-icon">🔔</span>
+                {unreadNotifCount > 0 && (
+                  <span
+                    className="sidebar-notif-dot"
+                    title={`${unreadNotifCount} cambio(s) sin leer en comentarios/observaciones`}
+                  />
+                )}
               </button>
             </div>
 
@@ -299,6 +321,14 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
           </button>
         </div>
       </aside>
+
+      {/* Modal de Notificaciones de Cambios */}
+      <NotificacionesModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        unreadCount={unreadNotifCount}
+        onNotificationRead={(newCount) => setUnreadNotifCount(newCount)}
+      />
 
       <style>{`
         /* Sidebar base container */
@@ -409,6 +439,49 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
         .sidebar-icon-btn:hover {
           background: rgba(255, 255, 255, 0.14);
           transform: translateY(-1px);
+        }
+
+        .notification-bell-btn {
+          position: relative;
+        }
+
+        .bell-emoji-icon {
+          font-size: 0.85rem;
+          line-height: 1;
+          display: inline-block;
+          transition: transform 0.2s ease;
+        }
+
+        .notification-bell-btn:hover .bell-emoji-icon {
+          transform: rotate(15deg) scale(1.15);
+        }
+
+        .sidebar-notif-dot {
+          position: absolute;
+          top: 3px;
+          right: 3px;
+          width: 8px;
+          height: 8px;
+          background: #ef4444;
+          border-radius: 50%;
+          border: 1.5px solid #0e1320;
+          box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+          animation: bellDotPulse 1.8s infinite;
+        }
+
+        @keyframes bellDotPulse {
+          0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+          }
+          70% {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+          }
+          100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+          }
         }
 
         .sidebar-close-btn {

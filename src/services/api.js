@@ -379,4 +379,13 @@ export const libreqosService = {
   syncClientNow: (id)       => api.post(`/libreqos/clients/${id}/sync-now`),
 };
 
+export const notificacionService = {
+  listar: (soloNoLeidas = true, limit = 100) =>
+    api.get('/clientes/notificaciones', { params: { solo_no_leidas: soloNoLeidas, limit } }),
+  getCount: () => api.get('/clientes/notificaciones/count'),
+  marcarLeida: (id) => api.patch(`/clientes/notificaciones/${id}/marcar-leida`),
+  marcarTodasLeidas: () => api.patch('/clientes/notificaciones/marcar-todas-leidas'),
+  eliminar: (id) => api.delete(`/clientes/notificaciones/${id}`),
+};
+
 export default api;

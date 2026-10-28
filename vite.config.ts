@@ -31,7 +31,8 @@ export default defineConfig({
       '/callcenter': 'http://127.0.0.1:8000',
       '/tickets': 'http://127.0.0.1:8000',
       '/asistencia': 'http://127.0.0.1:8000',
-      '/backup': 'http://127.0.0.1:8000'
+      '/backup': 'http://127.0.0.1:8000',
+      '/notificaciones': 'http://127.0.0.1:8000'
     }
   }
 })
