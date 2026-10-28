@@ -143,6 +143,10 @@ const General = () => {
   const [iptvModalScreens, setIptvModalScreens] = useState(1);
   const [iptvModalSaving, setIptvModalSaving] = useState(false);
 
+  // Estados para modal de visualización completa de Observaciones / Comentarios
+  const [detailModal, setDetailModal] = useState(null); // { title: string, text: string, clientName: string, id: number, type: 'obs' | 'com' }
+  const [detailCopied, setDetailCopied] = useState(false);
+
   // Definición de las columnas del sistema
   const allColumns = [
     "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
@@ -2036,9 +2040,82 @@ const General = () => {
                                   );
                                 }
                                 if (col === 'observaciones') {
+                                  const rawObs = (c.observaciones || '').trim();
+                                  if (!rawObs) {
+                                    return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                                  }
+                                  const textClean = rawObs.split('/').join('\n');
+                                  const isLong = textClean.length > 40 || textClean.includes('\n');
                                   return (
-                                    <div style={{ fontStyle: 'italic', opacity: 0.8, color: '#a78bfa', whiteSpace: 'pre-line' }}>
-                                      {c.observaciones ? c.observaciones.split('/').join('\n') : '-'}
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
+                                      <span style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>📝</span>
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div
+                                          style={{
+                                            fontSize: '0.74rem',
+                                            color: '#c4b5fd',
+                                            lineHeight: '1.4',
+                                            ...(isLong ? {
+                                              display: '-webkit-box',
+                                              WebkitLineClamp: 2,
+                                              WebkitBoxOrient: 'vertical',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              wordBreak: 'break-word',
+                                              cursor: 'pointer'
+                                            } : {
+                                              whiteSpace: 'pre-line',
+                                              wordBreak: 'break-word'
+                                            })
+                                          }}
+                                          onClick={isLong ? () => setDetailModal({
+                                            title: 'Observaciones del Cliente',
+                                            text: textClean,
+                                            clientName: c.nombre,
+                                            id: c.id,
+                                            ip: c.ip,
+                                            type: 'obs'
+                                          }) : undefined}
+                                          title={isLong ? "Clic para ver la observación completa" : undefined}
+                                        >
+                                          {textClean}
+                                        </div>
+                                        {isLong && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDetailModal({
+                                                title: 'Observaciones del Cliente',
+                                                text: textClean,
+                                                clientName: c.nombre,
+                                                id: c.id,
+                                                ip: c.ip,
+                                                type: 'obs'
+                                              });
+                                            }}
+                                            style={{
+                                              background: 'rgba(139, 92, 246, 0.15)',
+                                              border: '1px solid rgba(139, 92, 246, 0.35)',
+                                              color: '#c4b5fd',
+                                              padding: '2px 7px',
+                                              borderRadius: '6px',
+                                              fontSize: '0.67rem',
+                                              fontWeight: '700',
+                                              cursor: 'pointer',
+                                              marginTop: '4px',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              transition: 'all 0.15s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.28)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'}
+                                          >
+                                            Ver más ▾
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 }
@@ -2103,9 +2180,82 @@ const General = () => {
                                   );
                                 }
                                 if (col === 'comentarios') {
+                                  const rawCom = (c.comentarios || '').trim();
+                                  if (!rawCom) {
+                                    return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                                  }
+                                  const textClean = rawCom.split('/').join('\n');
+                                  const isLong = textClean.length > 40 || textClean.includes('\n');
                                   return (
-                                    <div style={{ color: '#60a5fa', whiteSpace: 'pre-line', fontSize: '0.75rem' }}>
-                                      {c.comentarios ? c.comentarios.split('/').join('\n') : '-'}
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
+                                      <span style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>💬</span>
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div
+                                          style={{
+                                            fontSize: '0.74rem',
+                                            color: '#93c5fd',
+                                            lineHeight: '1.4',
+                                            ...(isLong ? {
+                                              display: '-webkit-box',
+                                              WebkitLineClamp: 2,
+                                              WebkitBoxOrient: 'vertical',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              wordBreak: 'break-word',
+                                              cursor: 'pointer'
+                                            } : {
+                                              whiteSpace: 'pre-line',
+                                              wordBreak: 'break-word'
+                                            })
+                                          }}
+                                          onClick={isLong ? () => setDetailModal({
+                                            title: 'Comentarios del Cliente',
+                                            text: textClean,
+                                            clientName: c.nombre,
+                                            id: c.id,
+                                            ip: c.ip,
+                                            type: 'com'
+                                          }) : undefined}
+                                          title={isLong ? "Clic para ver el comentario completo" : undefined}
+                                        >
+                                          {textClean}
+                                        </div>
+                                        {isLong && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDetailModal({
+                                                title: 'Comentarios del Cliente',
+                                                text: textClean,
+                                                clientName: c.nombre,
+                                                id: c.id,
+                                                ip: c.ip,
+                                                type: 'com'
+                                              });
+                                            }}
+                                            style={{
+                                              background: 'rgba(56, 189, 248, 0.15)',
+                                              border: '1px solid rgba(56, 189, 248, 0.35)',
+                                              color: '#7dd3fc',
+                                              padding: '2px 7px',
+                                              borderRadius: '6px',
+                                              fontSize: '0.67rem',
+                                              fontWeight: '700',
+                                              cursor: 'pointer',
+                                              marginTop: '4px',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              transition: 'all 0.15s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.28)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)'}
+                                          >
+                                            Ver más ▾
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 }
@@ -3158,6 +3308,134 @@ const General = () => {
                 </div>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── MODAL: VER DETALLE COMPLETO (OBSERVACIONES / COMENTARIOS) ── */}
+      {detailModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10005, padding: '16px'
+        }}
+          onClick={() => { setDetailModal(null); setDetailCopied(false); }}
+        >
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 15 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            style={{
+              background: 'linear-gradient(145deg, #131728 0%, #1a2035 100%)',
+              border: `1px solid ${detailModal.type === 'obs' ? 'rgba(168, 85, 247, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`,
+              borderRadius: '20px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '560px',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(99, 102, 241, 0.15)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera del modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  background: detailModal.type === 'obs' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem'
+                }}>
+                  {detailModal.type === 'obs' ? '📝' : '💬'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fff' }}>
+                    {detailModal.title}
+                  </h3>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                    Cliente: <strong style={{ color: '#fff' }}>{detailModal.clientName}</strong> #{detailModal.id} {detailModal.ip ? `• IP: ${detailModal.ip}` : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setDetailModal(null); setDetailCopied(false); }}
+                style={{
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#94a3b8', width: '30px', height: '30px', borderRadius: '8px',
+                  fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+                title="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido con barra de herramientas */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>
+                Texto Completo Registrado
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(detailModal.text);
+                  setDetailCopied(true);
+                  setTimeout(() => setDetailCopied(false), 2000);
+                }}
+                style={{
+                  background: detailCopied ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${detailCopied ? '#4ade80' : 'rgba(255,255,255,0.15)'}`,
+                  color: detailCopied ? '#4ade80' : '#e2e8f0',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {detailCopied ? '✓ ¡Copiado!' : '📋 Copiar'}
+              </button>
+            </div>
+
+            <div style={{
+              background: 'rgba(10, 14, 26, 0.75)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              padding: '16px',
+              fontSize: '0.85rem',
+              lineHeight: '1.6',
+              color: '#f1f5f9',
+              maxHeight: '360px',
+              overflowY: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+            }}>
+              {detailModal.text}
+            </div>
+
+            {/* Pie del modal */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => { setDetailModal(null); setDetailCopied(false); }}
+                style={{
+                  padding: '8px 20px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  borderRadius: '10px'
+                }}
+              >
+                Entendido / Cerrar
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

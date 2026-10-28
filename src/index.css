@@ -321,33 +321,40 @@ tr:hover td {
 }
 
 /* ─────────────────────────────────────────────
-   CUADRÍCULA VISIBLE DE TABLA GENERAL
+   TABLA GENERAL MODERNA Y ELEGANTE (ESTILO SAAS / CALL CENTER)
 ───────────────────────────────────────────── */
 .general-table-grid {
-  border-collapse: collapse !important;
-  border: 1px solid var(--grid-border, rgba(255, 255, 255, 0.22)) !important;
-  background-color: var(--table-bg-solid, #0e1320) !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--table-bg-solid, #0d121f) !important;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .general-table-grid th,
 .general-table-grid td {
-  border-right: 1px solid var(--grid-border, rgba(255, 255, 255, 0.22)) !important;
-  border-bottom: 1px solid var(--grid-border, rgba(255, 255, 255, 0.22)) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .general-table-grid thead th {
-  border-bottom: 2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
   background-color: var(--table-header-solid, #0a0e18) !important;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #94a3b8;
+  font-size: 0.73rem;
 }
 
 /* Hover en filas: fondo 100% opaco para que NUNCA se transparente el contenido al desplazarse */
 .general-table-grid tbody tr:hover td {
-  background-color: var(--table-hover-bg, #182033);
+  background-color: var(--table-hover-bg, #182033) !important;
 }
 
 /* Columnas fijas (Sticky): 100% SÓLIDAS Y OPACAS EN CUALQUIER ESTADO */
 .general-table-grid .sticky-col {
-  background-color: var(--sticky-col-bg, #0e1320) !important;
+  background-color: var(--sticky-col-bg, #0d121f) !important;
   position: sticky !important;
   z-index: 10 !important;
 }
@@ -362,20 +369,20 @@ tr:hover td {
 }
 
 [data-theme="light"] .general-table-grid {
-  border-color: #cbd5e1 !important;
+  border-color: #e2e8f0 !important;
   background-color: #ffffff !important;
 }
 
 [data-theme="light"] .general-table-grid th,
 [data-theme="light"] .general-table-grid td {
-  border-right-color: #cbd5e1 !important;
-  border-bottom-color: #cbd5e1 !important;
+  border-right-color: #f1f5f9 !important;
+  border-bottom-color: #f1f5f9 !important;
 }
 
 [data-theme="light"] .general-table-grid thead th {
-  border-bottom-color: #94a3b8 !important;
+  border-bottom-color: #cbd5e1 !important;
   background-color: #f8fafc !important;
-  color: #1e293b !important;
+  color: #475569 !important;
 }
 
 [data-theme="light"] .general-table-grid tbody tr:hover td {
