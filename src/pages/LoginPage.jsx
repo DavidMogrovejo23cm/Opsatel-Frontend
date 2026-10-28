@@ -47,7 +47,7 @@ const LoginPage = () => {
         {/* 3D Mascot Peeking around the top-left edge */}
         <div className="login-mascot-wrapper">
           <img
-            src="/mascot-peeking.png"
+            src="/mascot-peeking-hq.png"
             alt="Mascota OPSATEL"
             className="login-mascot-img"
           />
