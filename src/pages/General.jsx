@@ -6,20 +6,85 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { clienteService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 import { processImage, compressImage } from '../utils/imageCompressor';
 
-
-
 const General = () => {
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search');
+
+  // Recuperar filtros previamente guardados por el usuario en localStorage
+  const savedFilters = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('opsatel_general_filters');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [fechaInstalacionFilter, setFechaInstalacionFilter] = useState('');
-  const [ipFilter, setIpFilter] = useState('');
+
+  // Filtros con persistencia automática
+  const [searchTerm, setSearchTerm] = useState(() => (urlSearch !== null && urlSearch !== undefined) ? urlSearch : (savedFilters?.searchTerm || ''));
+  const [fechaInstalacionFilter, setFechaInstalacionFilter] = useState(() => savedFilters?.fechaInstalacionFilter || '');
+  const [ipFilter, setIpFilter] = useState(() => savedFilters?.ipFilter || '');
+  const [statusFilter, setStatusFilter] = useState(() => savedFilters?.statusFilter || 'TODOS');
+  const [pagoFilter, setPagoFilter] = useState(() => savedFilters?.pagoFilter || 'TODOS');
+  const [planFilter, setPlanFilter] = useState(() => savedFilters?.planFilter || 'TODOS');
+  const [selectedAction, setSelectedAction] = useState(() => savedFilters?.selectedAction || 'VER');
+
+  // Sincronizar parámetro search si proviene desde el Buscador Global (Ctrl + K)
+  useEffect(() => {
+    if (urlSearch !== null && urlSearch !== undefined) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
+
+  // Guardar en localStorage cada vez que el usuario modifica algún filtro
+  useEffect(() => {
+    try {
+      const filtersToSave = {
+        searchTerm,
+        fechaInstalacionFilter,
+        ipFilter,
+        statusFilter,
+        pagoFilter,
+        planFilter,
+        selectedAction
+      };
+      localStorage.setItem('opsatel_general_filters', JSON.stringify(filtersToSave));
+    } catch (e) {
+      console.error('Error guardando filtros de General:', e);
+    }
+  }, [searchTerm, fechaInstalacionFilter, ipFilter, statusFilter, pagoFilter, planFilter, selectedAction]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    fechaInstalacionFilter ||
+    ipFilter ||
+    statusFilter !== 'TODOS' ||
+    pagoFilter !== 'TODOS' ||
+    planFilter !== 'TODOS'
+  );
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setFechaInstalacionFilter('');
+    setIpFilter('');
+    setStatusFilter('TODOS');
+    setPagoFilter('TODOS');
+    setPlanFilter('TODOS');
+    try {
+      localStorage.removeItem('opsatel_general_filters');
+    } catch (e) { }
+    showToast('Filtros restablecidos', 'info');
+  };
 
   // Actúa como el motor de edición "en vivo" (Inline Editing)
   const [editingCell, setEditingCell] = useState(null);
@@ -907,11 +972,6 @@ const General = () => {
     }
   };
 
-  const [statusFilter, setStatusFilter] = useState('TODOS');
-  const [pagoFilter, setPagoFilter] = useState('TODOS'); // 'TODOS', 'PAGADO', 'PENDIENTE_PAGO'
-  const [planFilter, setPlanFilter] = useState('TODOS');
-  const [selectedAction, setSelectedAction] = useState('VER'); // 'VER' o 'BORRAR'
-
   // Contador de clientes en general según el estado
   const statusCounts = useMemo(() => {
     const counts = {
@@ -1309,12 +1369,39 @@ const General = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="btn"
+              style={{
+                padding: '6px 14px',
+                fontSize: '0.8rem',
+                background: 'rgba(239, 68, 68, 0.16)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#fca5a5',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                height: '38px',
+                fontWeight: '700',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+              title="Restablecer todos los filtros guardados"
+            >
+              <span>🧹</span>
+              <span>Limpiar Filtros</span>
+            </button>
+          )}
         </div>
       </div>
 
       {loading ? <p>Cargando datos...</p> : (
         <div className="table-container" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
-          <table style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+          <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
             <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg, rgba(15, 23, 42, 0.95))', backdropFilter: 'blur(10px)', zIndex: 20 }}>
               <tr>
                 {allColumns.map(col => {
@@ -1344,15 +1431,15 @@ const General = () => {
                       left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                       zIndex: 22,
                       background: 'var(--sticky-col-bg, #131526)',
-                      borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                      borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                     };
                   }
 
                   return (
                     <th key={col} style={{
                       padding: '12px',
-                      borderBottom: '1px solid var(--glass-border)',
-                      borderRight: '1px solid var(--glass-border)',
+                      borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                      borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       textTransform: 'uppercase',
                       whiteSpace: 'nowrap',
                       textAlign: 'left',
@@ -1387,8 +1474,8 @@ const General = () => {
                 {selectedAction === 'MIGRAR' && (
                   <th key="acciones-migrar" style={{
                     padding: '12px',
-                    borderBottom: '1px solid var(--glass-border)',
-                    borderRight: '1px solid var(--glass-border)',
+                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
@@ -1399,7 +1486,7 @@ const General = () => {
                     right: 0,
                     background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
-                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                   }}>
                     Acción (Migrar)
                   </th>
@@ -1407,8 +1494,8 @@ const General = () => {
                 {selectedAction === 'ELIMINAR' && (
                   <th key="acciones-eliminar" style={{
                     padding: '12px',
-                    borderBottom: '1px solid var(--glass-border)',
-                    borderRight: '1px solid var(--glass-border)',
+                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
@@ -1419,7 +1506,7 @@ const General = () => {
                     right: 0,
                     background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
-                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                   }}>
                     Acción (Eliminar)
                   </th>
@@ -1427,8 +1514,8 @@ const General = () => {
                 {selectedAction === 'BORRAR' && (
                   <th key="acciones-borrar" style={{
                     padding: '12px',
-                    borderBottom: '1px solid var(--glass-border)',
-                    borderRight: '1px solid var(--glass-border)',
+                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
@@ -1439,7 +1526,7 @@ const General = () => {
                     right: 0,
                     background: 'var(--sticky-col-bg, #131526)',
                     zIndex: 22,
-                    borderLeft: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                   }}>
                     Acción (Borrar Todo)
                   </th>
@@ -1453,7 +1540,7 @@ const General = () => {
                   <tr
                     key={c.id}
                     style={{
-                      borderBottom: '1px solid var(--glass-border, rgba(255,255,255,0.05))',
+                      borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       opacity: isFiniquito ? 0.65 : 1,
                       background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
                       transition: 'opacity 0.2s ease'
@@ -1487,7 +1574,7 @@ const General = () => {
                           left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
                           zIndex: 12,
                           background: isEditing ? 'rgba(99, 102, 241, 0.2)' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #131526)'),
-                          borderRight: '2px solid var(--glass-border, rgba(255, 255, 255, 0.15))'
+                          borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                         };
                       }
 
@@ -1539,8 +1626,8 @@ const General = () => {
                             textOverflow: 'ellipsis',
                             background: isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                             cursor: isCellEditable ? 'pointer' : 'default',
-                            borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                            borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                             ...stickyStyle
                           }}
                         >
@@ -2125,8 +2212,9 @@ const General = () => {
                         right: 0,
                         background: '#131526',
                         zIndex: 12,
-                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       }}>
                         <button
                           onClick={() => handleMigrarCliente(c)}
@@ -2172,8 +2260,9 @@ const General = () => {
                         right: 0,
                         background: '#131526',
                         zIndex: 12,
-                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       }}>
                         <button
                           onClick={() => handleDeleteCliente(c)}
@@ -2219,8 +2308,9 @@ const General = () => {
                         right: 0,
                         background: '#131526',
                         zIndex: 12,
-                        borderLeft: '2px solid rgba(255, 255, 255, 0.15)',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       }}>
                         <button
                           onClick={() => handleDeleteCompleto(c)}
