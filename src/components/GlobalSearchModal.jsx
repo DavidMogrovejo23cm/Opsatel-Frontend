@@ -135,12 +135,9 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
 
   const handleSelect = (item) => {
     if (!item) return;
-    onClose();
     if (item.type === 'page') {
+      onClose();
       navigate(item.data.path);
-    } else if (item.type === 'cliente') {
-      // Redirigir directamente por ID exacto para filtrar únicamente a este cliente
-      navigate(`/admin?search=${encodeURIComponent(item.data.id)}&openPago=true`);
     }
   };
 
@@ -236,7 +233,6 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                     <div
                       key={`cli-${c.id || idx}`}
                       className={`search-result-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => handleSelect({ type: 'cliente', data: c })}
                       onMouseEnter={() => setSelectedIndex(globalIdx)}
                     >
                       <div className="search-item-avatar">
@@ -296,8 +292,8 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             onClose();
-                            // Usar ID único para filtrar exactamente a este cliente
-                            navigate(`/admin?search=${encodeURIComponent(c.id)}&openPago=true`);
+                            // Filtrar por el nombre exacto del cliente
+                            navigate(`/admin?search=${encodeURIComponent(c.nombre)}&openPago=true`);
                           }}
                           className="search-quick-btn pay"
                         >
@@ -309,8 +305,8 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             onClose();
-                            // Usar ID único para filtrar exactamente en General
-                            navigate(`/general?search=${encodeURIComponent(c.id)}`);
+                            // Filtrar por el nombre exacto del cliente
+                            navigate(`/general?search=${encodeURIComponent(c.nombre)}`);
                           }}
                           className="search-quick-btn view"
                         >
