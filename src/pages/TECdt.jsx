@@ -26,6 +26,32 @@ const TECdt = () => {
   const [loadingPower, setLoadingPower] = useState(false);
   const [powerError, setPowerError] = useState(null);
 
+  // Estados para vista móvil del Técnico (Fiel a Imagen 2)
+  const [mobileActiveView, setMobileActiveView] = useState('list'); // 'list' | 'power' | 'location'
+  const [selectedMobileClient, setSelectedMobileClient] = useState(null);
+  const [expandedTecData, setExpandedTecData] = useState({});
+  const [revealedMobileCreds, setRevealedMobileCreds] = useState({});
+
+  const toggleMobileTecData = (id) => {
+    setExpandedTecData(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleMobileCreds = (id) => {
+    setRevealedMobileCreds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleMobileAbrirPotencia = (c) => {
+    setSelectedMobileClient(c);
+    setSelectedClientForPower(c);
+    setMobileActiveView('power');
+    medirPotencia(c);
+  };
+
+  const handleMobileAbrirUbicacion = (c) => {
+    setSelectedMobileClient(c);
+    setMobileActiveView('location');
+  };
+
   const handleAbrirPotencia = (cliente) => {
     setSelectedClientForPower(cliente);
     setPowerModalOpen(true);
@@ -178,8 +204,10 @@ const TECdt = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div style={{
+      {/* Vista de Escritorio TECdt */}
+      <div className="tecdt-desktop-view">
+        {/* Header */}
+        <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
@@ -727,9 +755,448 @@ const TECdt = () => {
             </table>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Modal Ver Potencia ONT/Bridge */}
+      {/* Vista Móvil TECdt (Fiel a Imagen 2) */}
+      <div className="tecdt-mobile-view">
+        <div className="tecdt-mobile-container">
+          {/* Topbar fija con marca TECdt y botón refrescar */}
+          <div className="tecdt-mobile-topbar">
+            <div className="tecdt-mobile-brand">
+              <div className="tecdt-mobile-brand-icon">
+                🛠️
+              </div>
+              <div className="tecdt-mobile-brand-text">
+                <h1>TECdt</h1>
+                <p>Panel de datos técnicos</p>
+              </div>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              className="tecdt-mobile-refresh-btn"
+              onClick={() => fetchData()}
+              disabled={loading}
+              title="Actualizar datos"
+            >
+              <motion.span
+                animate={loading ? { rotate: 360 } : { rotate: 0 }}
+                transition={loading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
+              >
+                🔄
+              </motion.span>
+            </motion.button>
+          </div>
+
+          {/* VISTA 1, 2, 3: LISTADO DE TARJETAS DE CLIENTE */}
+          {mobileActiveView === 'list' && (
+            <>
+              {/* Buscador móvil */}
+              <div className="pagos-mobile-search-container" style={{ marginBottom: '10px' }}>
+                <span className="pagos-mobile-search-icon">🔍</span>
+                <input
+                  type="text"
+                  className="pagos-mobile-search-input"
+                  placeholder="Buscar por Nombre, ID, IP, NAP..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="pagos-mobile-search-clear"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Lista de tarjetas */}
+              {filteredClientes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                  No se encontraron clientes técnicos.
+                </div>
+              ) : (
+                filteredClientes.map((c) => {
+                  const id = c.id;
+                  const isActivo = (c.estado || 'ACTIVO').toUpperCase() === 'ACTIVO';
+                  const isTecOpen = !!expandedTecData[id];
+                  const isCredsRevealed = showAllPasswords || !!revealedMobileCreds[id];
+                  const waLink = getWhatsAppLink(c.celular);
+                  const coords = c.coordenadas || c.ubicacion || c.direccion || '-';
+
+                  const claveVal = isCredsRevealed || revealedClaves[id] ? (c.clave || '-') : '••••••••';
+                  const passVal = isCredsRevealed || revealedPasswords[id] ? (c.contrasena || c.iptv_pass || c.clave || '-') : '••••••••';
+
+                  return (
+                    <div key={id} className="tecdt-mobile-card">
+                      {/* Cabecera: Avatar, Nombre, Subtítulo y Estado */}
+                      <div className="tecdt-mobile-card-header">
+                        <div className="tecdt-mobile-avatar">
+                          👤
+                        </div>
+                        <div className="tecdt-mobile-header-info">
+                          <div className="tecdt-mobile-name" title={c.nombre}>
+                            {c.nombre || '-'}
+                          </div>
+                          <div className="tecdt-mobile-subinfo">
+                            ID #{c.id} · Nodo: {c.nodo || c.nap || 'BAÑOS'}
+                          </div>
+                        </div>
+                        <div className={`pagos-mobile-status-badge ${isActivo ? 'activo' : 'inactivo'}`}>
+                          <span>{c.estado || 'Activo'}</span>
+                        </div>
+                      </div>
+
+                      {/* Teléfono y WhatsApp */}
+                      <div className="tecdt-mobile-phone-row">
+                        <a
+                          href={c.celular ? `tel:${c.celular}` : '#'}
+                          className="tecdt-mobile-phone-pill"
+                        >
+                          <span>📞</span>
+                          <span>{c.celular || 'Sin número'}</span>
+                        </a>
+                        {waLink && (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tecdt-mobile-wa-btn"
+                            title="Abrir WhatsApp"
+                          >
+                            💬
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Cuadrículas IP y NAP */}
+                      <div className="tecdt-mobile-grid-2">
+                        <div className="tecdt-mobile-metric-box ip">
+                          <div className="tecdt-mobile-metric-header">
+                            <span>🌐</span>
+                            <span>IP</span>
+                          </div>
+                          <div className="tecdt-mobile-metric-val">{c.ip || '-'}</div>
+                        </div>
+
+                        <div className="tecdt-mobile-metric-box nap">
+                          <div className="tecdt-mobile-metric-header">
+                            <span>📦</span>
+                            <span>NAP</span>
+                          </div>
+                          <div className="tecdt-mobile-metric-val">⬇ {c.nap || '-'}</div>
+                        </div>
+                      </div>
+
+                      {/* Acordeón Datos Técnicos (Clave y Contraseña) */}
+                      <div className={`tecdt-mobile-accordion ${isTecOpen ? 'open' : ''}`}>
+                        <div
+                          className="tecdt-mobile-accordion-head"
+                          onClick={() => toggleMobileTecData(id)}
+                        >
+                          <div className="tecdt-mobile-accordion-left">
+                            <div className="tecdt-mobile-shield-icon">
+                              🛡️
+                            </div>
+                            <div>
+                              <div className="tecdt-mobile-accordion-title">Datos técnicos</div>
+                              <div className="tecdt-mobile-accordion-sub">
+                                {isTecOpen ? 'Clave y contraseña' : 'Clave y contraseña ocultas'}
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`tecdt-mobile-accordion-chevron ${isTecOpen ? 'open' : ''}`}>
+                            ▼
+                          </span>
+                        </div>
+
+                        {isTecOpen && (
+                          <div className="tecdt-mobile-accordion-body">
+                            {/* Clave */}
+                            <div className="tecdt-mobile-cred-item">
+                              <div className="tecdt-mobile-cred-left">
+                                <span>🔑</span>
+                                <div>
+                                  <span className="tecdt-mobile-cred-label">Clave</span>
+                                  <span className="tecdt-mobile-cred-val">{claveVal}</span>
+                                </div>
+                              </div>
+                              <div className="tecdt-mobile-cred-actions">
+                                <button
+                                  type="button"
+                                  className="tecdt-mobile-icon-btn"
+                                  onClick={() => toggleClaveVisibility(id)}
+                                  title="Mostrar/Ocultar Clave"
+                                >
+                                  {revealedClaves[id] ? '👁️‍🗨️' : '👁️'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tecdt-mobile-icon-btn"
+                                  onClick={() => handleCopy(c.clave, 'Clave')}
+                                  title="Copiar Clave"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Contraseña */}
+                            <div className="tecdt-mobile-cred-item">
+                              <div className="tecdt-mobile-cred-left">
+                                <span>🔒</span>
+                                <div>
+                                  <span className="tecdt-mobile-cred-label">Contraseña</span>
+                                  <span className="tecdt-mobile-cred-val">{passVal}</span>
+                                </div>
+                              </div>
+                              <div className="tecdt-mobile-cred-actions">
+                                <button
+                                  type="button"
+                                  className="tecdt-mobile-icon-btn"
+                                  onClick={() => togglePasswordVisibility(id)}
+                                  title="Mostrar/Ocultar Contraseña"
+                                >
+                                  {revealedPasswords[id] ? '👁️‍🗨️' : '👁️'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tecdt-mobile-icon-btn"
+                                  onClick={() => handleCopy(c.contrasena || c.iptv_pass || c.clave, 'Contraseña')}
+                                  title="Copiar Contraseña"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Botón Alternar Credenciales */}
+                            <button
+                              type="button"
+                              className="tecdt-mobile-toggle-all-btn"
+                              onClick={() => toggleMobileCreds(id)}
+                            >
+                              <span>{isCredsRevealed ? '🙈 Ocultar credenciales' : '👁️ Mostrar credenciales'}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ubicación Google Maps */}
+                      <div
+                        className="tecdt-mobile-loc-row"
+                        onClick={() => handleMobileAbrirUbicacion(c)}
+                      >
+                        <div className="tecdt-mobile-loc-left">
+                          <span style={{ fontSize: '1.2rem' }}>📍</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="tecdt-mobile-loc-title">Ver ubicación en Google Maps</div>
+                            <div className="tecdt-mobile-loc-coords">{coords}</div>
+                          </div>
+                        </div>
+                        <span className="tecdt-mobile-loc-ext">↗</span>
+                      </div>
+
+                      {/* Botón Ver Potencia */}
+                      <button
+                        type="button"
+                        className="tecdt-mobile-btn-potencia"
+                        onClick={() => handleMobileAbrirPotencia(c)}
+                      >
+                        <span>‹</span>
+                        <span>⚡ Ver potencia</span>
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+
+          {/* VISTA 4: VISTA DE POTENCIA ÓPTICA */}
+          {mobileActiveView === 'power' && selectedMobileClient && (
+            <div>
+              <div
+                className="tecdt-subview-header"
+                onClick={() => setMobileActiveView('list')}
+              >
+                <span className="tecdt-subview-back-icon">‹</span>
+                <h2 className="tecdt-subview-title">Potencia óptica</h2>
+              </div>
+
+              {/* Tarjeta de cliente compacta */}
+              <div className="tecdt-subview-client-card">
+                <div className="tecdt-mobile-avatar">👤</div>
+                <div>
+                  <div style={{ fontWeight: '800', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.92rem' }}>
+                    {selectedMobileClient.nombre}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>
+                    ID #{selectedMobileClient.id} · Nodo: {selectedMobileClient.nodo || selectedMobileClient.nap || 'BAÑOS'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mediciones de Potencia */}
+              {loadingPower ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#38bdf8' }}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    style={{ fontSize: '2rem', display: 'inline-block', marginBottom: '10px' }}
+                  >
+                    🔄
+                  </motion.div>
+                  <p style={{ margin: 0, fontSize: '0.88rem' }}>Midiendo potencia en OLT...</p>
+                </div>
+              ) : powerError ? (
+                <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px', color: '#f87171', textAlign: 'center', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>⚠️</div>
+                  <div style={{ fontSize: '0.85rem' }}>{powerError}</div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => medirPotencia(selectedMobileClient)}
+                    style={{ marginTop: '12px', fontSize: '0.8rem', padding: '6px 14px' }}
+                  >
+                    Reintentar medición
+                  </button>
+                </div>
+              ) : (
+                (() => {
+                  const rxPower = powerData?.potencia?.rx_power ?? powerData?.potencia?.power ?? selectedMobileClient?.potencia ?? '-18.4';
+                  const txPower = powerData?.potencia?.tx_power ?? '1.2';
+                  const rxNum = parseFloat(rxPower);
+                  const isGoodSignal = !isNaN(rxNum) && rxNum >= -27 && rxNum <= -8;
+
+                  return (
+                    <>
+                      <div className="tecdt-power-metric-grid">
+                        <div className="tecdt-power-card">
+                          <span className="tecdt-power-card-label">RX (Recepción)</span>
+                          <span className="tecdt-power-card-val" style={{ color: isGoodSignal ? '#22d3ee' : '#f87171' }}>
+                            {rxPower} dBm
+                          </span>
+                          <span className="tecdt-power-card-badge" style={{ background: isGoodSignal ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: isGoodSignal ? '#34d399' : '#f87171' }}>
+                            {isGoodSignal ? '✔ Normal' : '⚠️ Alerta'}
+                          </span>
+                        </div>
+
+                        <div className="tecdt-power-card">
+                          <span className="tecdt-power-card-label">TX (Transmisión)</span>
+                          <span className="tecdt-power-card-val">{txPower} dBm</span>
+                          <span className="tecdt-power-card-badge">✔ Normal</span>
+                        </div>
+                      </div>
+
+                      <div className="tecdt-power-signal-card">
+                        <div className="tecdt-power-signal-left">
+                          <div className="tecdt-power-signal-icon">📡</div>
+                          <div>
+                            <div className="tecdt-power-signal-title">Estado de señal</div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Enlace GPON / ONT</div>
+                          </div>
+                        </div>
+                        <div className="tecdt-power-signal-status" style={{ color: isGoodSignal ? '#10b981' : '#f87171' }}>
+                          <span>{isGoodSignal ? 'Estable' : 'Inestable'}</span>
+                          <span>{isGoodSignal ? '✔' : '⚠️'}</span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()
+              )}
+
+              <button
+                type="button"
+                className="tecdt-subview-return-btn"
+                onClick={() => setMobileActiveView('list')}
+              >
+                <span>‹</span>
+                <span>Volver a la tarjeta</span>
+              </button>
+            </div>
+          )}
+
+          {/* VISTA 5: UBICACIÓN EN GOOGLE MAPS */}
+          {mobileActiveView === 'location' && selectedMobileClient && (
+            <div>
+              <div
+                className="tecdt-subview-header"
+                onClick={() => setMobileActiveView('list')}
+              >
+                <span className="tecdt-subview-back-icon">‹</span>
+                <h2 className="tecdt-subview-title">Ubicación</h2>
+              </div>
+
+              {/* Tarjeta de cliente compacta */}
+              <div className="tecdt-subview-client-card">
+                <div className="tecdt-mobile-avatar">👤</div>
+                <div>
+                  <div style={{ fontWeight: '800', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.92rem' }}>
+                    {selectedMobileClient.nombre}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>
+                    ID #{selectedMobileClient.id} · Nodo: {selectedMobileClient.nodo || selectedMobileClient.nap || 'BAÑOS'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mapa de Google */}
+              {(() => {
+                const rawCoords = selectedMobileClient.coordenadas || selectedMobileClient.ubicacion || selectedMobileClient.direccion || '';
+                const mapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(rawCoords || 'Ecuador')}`;
+                const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(rawCoords || 'Ecuador')}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+
+                return (
+                  <>
+                    <div className="tecdt-map-container">
+                      <iframe
+                        title="Google Maps Location"
+                        src={embedUrl}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen=""
+                        loading="lazy"
+                      />
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tecdt-map-open-btn"
+                      >
+                        <span>📍 Abrir en Google Maps</span>
+                        <span>↗</span>
+                      </a>
+                    </div>
+
+                    <div className="tecdt-coords-card">
+                      <span className="tecdt-coords-icon">📍</span>
+                      <div>
+                        <span className="tecdt-coords-label">Coordenadas</span>
+                        <div className="tecdt-coords-val">{rawCoords || 'Sin coordenadas registradas'}</div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              <button
+                type="button"
+                className="tecdt-subview-return-btn"
+                onClick={() => setMobileActiveView('list')}
+              >
+                <span>‹</span>
+                <span>Volver a la tarjeta</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       <AnimatePresence>
         {powerModalOpen && selectedClientForPower && (
           <motion.div

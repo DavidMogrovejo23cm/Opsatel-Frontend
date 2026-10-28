@@ -596,3 +596,1023 @@ html, body {
     font-size: 1rem !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   PAGOS Y COBROS — VISTA MÓVIL (IMAGEN 1) & MODAL RESPONSIVE
+   ───────────────────────────────────────────────────────────── */
+
+/* Control de visibilidad Escritorio vs Móvil */
+.pagos-desktop-view {
+  display: block;
+  width: 100%;
+}
+.pagos-mobile-view {
+  display: none;
+  width: 100%;
+}
+
+.tecdt-desktop-view {
+  display: block;
+  width: 100%;
+}
+.tecdt-mobile-view {
+  display: none;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .pagos-desktop-view {
+    display: none !important;
+  }
+  .pagos-mobile-view {
+    display: block !important;
+  }
+  .tecdt-desktop-view {
+    display: none !important;
+  }
+  .tecdt-mobile-view {
+    display: block !important;
+  }
+}
+
+/* Estilos de Pagos Móvil (Fiel a Imagen 1) */
+.pagos-mobile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding-bottom: 30px;
+}
+
+.pagos-mobile-header {
+  margin-bottom: 4px;
+}
+
+.pagos-mobile-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.pagos-mobile-title-accent {
+  background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Buscador móvil con icono de lupa */
+.pagos-mobile-search-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.pagos-mobile-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+
+.pagos-mobile-search-input {
+  width: 100% !important;
+  height: 44px !important;
+  background: rgba(18, 22, 38, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 10px 38px 10px 40px !important;
+  color: #ffffff !important;
+  font-size: 0.92rem !important;
+  outline: none !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.pagos-mobile-search-input:focus {
+  border-color: #6366f1 !important;
+}
+
+.pagos-mobile-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+/* Tarjeta individual de pago (Imagen 1) */
+.pagos-mobile-card {
+  background: #0f1222;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.pagos-mobile-card:active {
+  transform: scale(0.99);
+}
+
+.pagos-mobile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pagos-mobile-client-name {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.pagos-mobile-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pagos-mobile-status-badge.activo {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.pagos-mobile-status-badge.inactivo {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.pagos-mobile-status-badge.other {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.pagos-mobile-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Grilla de información de planes */
+.pagos-mobile-info-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.pagos-mobile-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pagos-mobile-info-label {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagos-mobile-info-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Caja de Pendiente / Deuda */
+.pagos-mobile-debt-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.pagos-mobile-debt-badge {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 6px 14px;
+  border-radius: 8px;
+  min-width: 96px;
+}
+
+.pagos-mobile-debt-badge.no-debt {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pagos-mobile-debt-badge.no-debt .pagos-mobile-debt-label {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pagos-mobile-debt-badge.no-debt .pagos-mobile-debt-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.pagos-mobile-debt-badge.has-debt {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.pagos-mobile-debt-badge.has-debt .pagos-mobile-debt-label {
+  font-size: 0.65rem;
+  color: rgba(248, 113, 113, 0.85);
+}
+
+.pagos-mobile-debt-badge.has-debt .pagos-mobile-debt-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f87171;
+}
+
+/* Pie de tarjeta: Fechas y Botón Pagar */
+.pagos-mobile-card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.pagos-mobile-dates {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.35;
+}
+
+.pagos-mobile-btn-pagar {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 8px 22px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+}
+
+.pagos-mobile-btn-pagar:active {
+  transform: scale(0.96) !important;
+}
+
+.pagos-mobile-btn-pagar:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODAL DE PAGO — REFACTORIZACIÓN RESPONSIVE ADAPTABLE
+   ───────────────────────────────────────────────────────────── */
+.pago-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 9999;
+  overflow-y: auto;
+  padding: 30px 16px;
+}
+
+.pago-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 20px;
+  max-width: 1500px;
+  width: 100%;
+  margin: auto;
+}
+
+.pago-modal-card-notes {
+  width: 100%;
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  background: #151030;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.pago-modal-card-main {
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  position: relative;
+  background: #130f26;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.pago-modal-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .pago-modal-overlay {
+    padding: 10px 8px !important;
+  }
+  .pago-modal-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  .pago-modal-card-notes {
+    order: 2 !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+    max-height: none !important;
+  }
+  .pago-modal-card-main {
+    order: 1 !important;
+    padding: 16px 12px !important;
+    border-radius: 16px !important;
+    max-height: none !important;
+  }
+  .pago-modal-columns {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TECDT — VISTA MÓVIL DEL TÉCNICO (IMAGEN 2)
+   ───────────────────────────────────────────────────────────── */
+.tecdt-mobile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding-bottom: 30px;
+}
+
+/* Top bar móvil */
+.tecdt-mobile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 8px 2px;
+}
+
+.tecdt-mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tecdt-mobile-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.tecdt-mobile-brand-text h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.tecdt-mobile-brand-text p {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 2px 0 0 0;
+}
+
+.tecdt-mobile-refresh-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #818cf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tecdt-mobile-refresh-btn:active {
+  transform: rotate(180deg);
+}
+
+/* Tarjeta de Cliente TECdt (Fiel a Imagen 2) */
+.tecdt-mobile-card {
+  background: #0b1124;
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tecdt-mobile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tecdt-mobile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.tecdt-mobile-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tecdt-mobile-name {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+.tecdt-mobile-subinfo {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+}
+
+/* Fila de Teléfono y WhatsApp */
+.tecdt-mobile-phone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tecdt-mobile-phone-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: #38bdf8;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  flex: 1;
+}
+
+.tecdt-mobile-wa-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  color: #25d366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  text-decoration: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.tecdt-mobile-wa-btn:active {
+  transform: scale(0.92);
+}
+
+/* Cuadrículas IP y NAP */
+.tecdt-mobile-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tecdt-mobile-metric-box {
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tecdt-mobile-metric-box.ip {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.22);
+}
+
+.tecdt-mobile-metric-box.nap {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+.tecdt-mobile-metric-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.tecdt-mobile-metric-box.ip .tecdt-mobile-metric-header {
+  color: #22d3ee;
+}
+
+.tecdt-mobile-metric-box.nap .tecdt-mobile-metric-header {
+  color: #fbbf24;
+}
+
+.tecdt-mobile-metric-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tecdt-mobile-metric-box.ip .tecdt-mobile-metric-val {
+  color: #22d3ee;
+}
+
+.tecdt-mobile-metric-box.nap .tecdt-mobile-metric-val {
+  color: #fbbf24;
+}
+
+/* Acordeón "Datos técnicos" */
+.tecdt-mobile-accordion {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.tecdt-mobile-accordion.open {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.04);
+}
+
+.tecdt-mobile-accordion-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.tecdt-mobile-accordion-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tecdt-mobile-shield-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.tecdt-mobile-accordion-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tecdt-mobile-accordion-sub {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.tecdt-mobile-accordion-chevron {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  transition: transform 0.25s ease;
+}
+
+.tecdt-mobile-accordion-chevron.open {
+  transform: rotate(180deg);
+}
+
+.tecdt-mobile-accordion-body {
+  padding: 0 14px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.tecdt-mobile-cred-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tecdt-mobile-cred-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tecdt-mobile-cred-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+  display: block;
+}
+
+.tecdt-mobile-cred-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tecdt-mobile-cred-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tecdt-mobile-icon-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 0.88rem;
+}
+
+.tecdt-mobile-icon-btn:hover, .tecdt-mobile-icon-btn:active {
+  color: #38bdf8;
+}
+
+.tecdt-mobile-toggle-all-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 9px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  margin-top: 4px;
+}
+
+/* Fila de Ubicación */
+.tecdt-mobile-loc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(244, 63, 94, 0.06);
+  border: 1px solid rgba(244, 63, 94, 0.18);
+  cursor: pointer;
+  gap: 8px;
+}
+
+.tecdt-mobile-loc-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tecdt-mobile-loc-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f43f5e;
+}
+
+.tecdt-mobile-loc-coords {
+  font-size: 0.72rem;
+  color: #f43f5e;
+  text-decoration: underline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tecdt-mobile-loc-ext {
+  color: #f43f5e;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* Botón Ver Potencia */
+.tecdt-mobile-btn-potencia {
+  width: 100%;
+  background: rgba(6, 182, 212, 0.12) !important;
+  border: 1px solid rgba(6, 182, 212, 0.35) !important;
+  color: #22d3ee !important;
+  border-radius: 12px !important;
+  padding: 11px !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.18) !important;
+  transition: all 0.2s ease !important;
+}
+
+.tecdt-mobile-btn-potencia:active {
+  transform: scale(0.98) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   VISTAS SECUNDARIAS TECDT: POTENCIA (VIEW 4) & UBICACIÓN (VIEW 5)
+   ───────────────────────────────────────────────────────────── */
+.tecdt-subview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 2px 14px 2px;
+  cursor: pointer;
+}
+
+.tecdt-subview-back-icon {
+  font-size: 1.4rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.tecdt-subview-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.tecdt-subview-client-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0f162c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+/* Cajas de Potencia */
+.tecdt-power-metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tecdt-power-card {
+  background: #0b1124;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tecdt-power-card-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.tecdt-power-card-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #22d3ee;
+}
+
+.tecdt-power-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.tecdt-power-signal-card {
+  background: #0b1124;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.tecdt-power-signal-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tecdt-power-signal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.tecdt-power-signal-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tecdt-power-signal-status {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tecdt-subview-return-btn {
+  width: 100%;
+  background: rgba(14, 165, 233, 0.12) !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  color: #38bdf8 !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  margin-top: 10px;
+}
+
+/* Ubicación View 5 */
+.tecdt-map-container {
+  width: 100%;
+  height: 250px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  margin-bottom: 12px;
+  background: #090e1f;
+}
+
+.tecdt-map-open-btn {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.tecdt-coords-card {
+  background: #0b1124;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tecdt-coords-icon {
+  font-size: 1.25rem;
+}
+
+.tecdt-coords-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.tecdt-coords-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f43f5e;
+}
+

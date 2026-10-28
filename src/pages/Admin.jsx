@@ -759,7 +759,7 @@ const Admin = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div className="page-header">
+      <div className="page-header pagos-desktop-view">
         <div className="page-header-info">
           <h1>Pagos y Cobros</h1>
         </div>
@@ -898,8 +898,10 @@ const Admin = () => {
       </div>
 
       {loading ? <p>Cargando clientes...</p> : (
-        <div className="table-container" style={{ maxHeight: 'calc(100vh - 210px)', overflowY: 'auto', overflowX: 'auto', borderRadius: '12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left' }}>
+        <>
+          <div className="pagos-desktop-view">
+            <div className="table-container" style={{ maxHeight: 'calc(100vh - 210px)', overflowY: 'auto', overflowX: 'auto', borderRadius: '12px' }}>
+              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left' }}>
             <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
               <tr style={{ background: '#15122e' }}>
                 <th style={{ position: 'sticky', top: 0, left: 0, background: '#15122e', zIndex: 25, padding: '12px 10px', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', color: 'var(--text-muted)', whiteSpace: 'nowrap', width: '60px', minWidth: '60px' }}>ID</th>
@@ -1194,42 +1196,152 @@ const Admin = () => {
             <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No se encontraron clientes.</p>
           )}
         </div>
-      )}
+      </div>
+
+      {/* Vista Móvil de Pagos y Cobros (Fiel a Imagen 1) */}
+      <div className="pagos-mobile-view">
+        <div className="pagos-mobile-container">
+          {/* Cabecera idéntica a Imagen 1 */}
+          <div className="pagos-mobile-header">
+            <h1 className="pagos-mobile-title">
+              Pagos y <span className="pagos-mobile-title-accent">Cobros</span>
+            </h1>
+          </div>
+
+          {/* Buscador idéntico a Imagen 1 */}
+          <div className="pagos-mobile-search-container">
+            <span className="pagos-mobile-search-icon">🔍</span>
+            <input
+              type="text"
+              className="pagos-mobile-search-input"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="pagos-mobile-search-clear"
+                onClick={() => setSearchTerm('')}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Listado de Tarjetas Móviles */}
+          {filteredClientes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+              No se encontraron clientes.
+            </div>
+          ) : (
+            filteredClientes.map((c) => {
+              const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
+              const instRecord = clientHR.find(h => h.actividad?.toUpperCase() === 'INSTALACION');
+              const fInstalacion = instRecord ? instRecord.fecha : (c.instalation_date || '-');
+
+              const visitRecords = clientHR
+                .filter(h => h.actividad?.toUpperCase() === 'VISITA TECNICA' && h.fecha)
+                .sort((a, b) => b.fecha.localeCompare(a.fecha));
+              const fVisita = visitRecords.length > 0 ? visitRecords[0].fecha : '-';
+
+              const totalPagoNum = parseFloat(c.total_pago || 0);
+              const hasDebt = totalPagoNum > 0;
+              const isActivo = c.estado?.toUpperCase() === 'ACTIVO';
+              const isPendiente = c.estado?.toUpperCase() === 'PENDIENTE';
+
+              const screensVal = (() => {
+                if (c.iptv_max_conn !== undefined && c.iptv_max_conn !== null && c.iptv_max_conn !== 0) {
+                  return c.iptv_max_conn;
+                }
+                const planData = planesList.find(p => p.nombre === c.plan);
+                const base = planData ? (planData.pantallas ?? 0) : 0;
+                return base + Math.round(parseFloat(c.plus || 0) / 2);
+              })();
+
+              return (
+                <div key={c.id} className="pagos-mobile-card">
+                  {/* Encabezado: Nombre y Estado */}
+                  <div className="pagos-mobile-card-header">
+                    <div className="pagos-mobile-client-name" title={c.nombre}>
+                      {c.nombre}
+                    </div>
+                    <div className={`pagos-mobile-status-badge ${isActivo ? 'activo' : (c.estado?.toUpperCase() === 'INACTIVO' ? 'inactivo' : 'other')}`}>
+                      <span className="pagos-mobile-status-dot" />
+                      <span>{c.estado || 'Activo'}</span>
+                    </div>
+                  </div>
+
+                  {/* Grilla de información de Planes */}
+                  <div className="pagos-mobile-info-grid">
+                    <div className="pagos-mobile-info-col">
+                      <span className="pagos-mobile-info-label">Plan Base</span>
+                      <span className="pagos-mobile-info-val">{c.plan || '-'}</span>
+                    </div>
+                    <div className="pagos-mobile-info-col">
+                      <span className="pagos-mobile-info-label">Pantallas IPTV</span>
+                      <span className="pagos-mobile-info-val">{screensVal !== undefined && screensVal !== null ? screensVal : '-'}</span>
+                    </div>
+                    <div className="pagos-mobile-info-col">
+                      <span className="pagos-mobile-info-label">IPTV (TV)</span>
+                      <span className="pagos-mobile-info-val">
+                        ${parseFloat(c.plus || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="pagos-mobile-info-col">
+                      <span className="pagos-mobile-info-label">Adicionales</span>
+                      <span className="pagos-mobile-info-val">
+                        ${parseFloat(c.adicional || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Pendiente / Deuda */}
+                  <div className="pagos-mobile-debt-wrapper">
+                    <div className={`pagos-mobile-debt-badge ${hasDebt ? 'has-debt' : 'no-debt'}`}>
+                      <span className="pagos-mobile-debt-label">Pendiente</span>
+                      <span className="pagos-mobile-debt-amount">
+                        {totalPagoNum < 0
+                          ? `Excedente ($${Math.abs(totalPagoNum).toFixed(2)})`
+                          : `$${totalPagoNum.toFixed(2)}${hasDebt ? ' Deuda' : ''}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Fechas e instalación + Botón Pagar */}
+                  <div className="pagos-mobile-card-footer">
+                    <div className="pagos-mobile-dates">
+                      <div>Instalación: {fInstalacion}</div>
+                      <div>Visita: {fVisita}</div>
+                    </div>
+                    <button
+                      className="pagos-mobile-btn-pagar"
+                      disabled={isPendiente}
+                      onClick={() => {
+                        if (!isPendiente) openPagoModal(c);
+                      }}
+                    >
+                      Pagar
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </>
+  )}
 
       {/* Portal/Modal: Intercepta la pantalla para ejecutar el pago sin cambiar de ruta */}
       {showPagoModal && createPortal(
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-          zIndex: 9999, overflowY: 'auto', padding: '40px 20px'
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(300px, 360px) 1fr',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            gap: '24px',
-            maxWidth: '1550px',
-            width: '98%',
-            margin: 'auto'
-          }}>
+        <div className="pago-modal-overlay">
+          <div className="pago-modal-grid">
             {/* Panel de Observaciones Lateral (IZQUIERDA) */}
             <motion.div
-              initial={{ x: -50, opacity: 0 }}
+              initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              style={{
-                width: '100%',
-                padding: '24px',
-                borderRadius: '24px',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
-                display: 'flex',
-                flexDirection: 'column',
-                background: '#151030',
-                maxHeight: '92vh',
-                overflowY: 'auto'
-              }}
+              className="pago-modal-card-notes"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: '#60a5fa' }}>
                 <span style={{ fontSize: '1.5rem' }}>📝</span>
@@ -1333,20 +1445,9 @@ const Admin = () => {
             </motion.div>
             {/* Modal de Pago Principal (DERECHA) */}
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              className="glass glass-card"
-              style={{
-                width: '100%',
-                maxWidth: '100%',
-                padding: '24px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
-                position: 'relative',
-                background: '#130f26',
-                borderRadius: '24px',
-                maxHeight: '92vh',
-                overflowY: 'auto'
-              }}
+              className="glass glass-card pago-modal-card-main"
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Registrar Pago / Administrar Cuenta</h2>
@@ -1384,13 +1485,7 @@ const Admin = () => {
                 )}
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                gap: '20px',
-                alignItems: 'start',
-                marginTop: '16px'
-              }}>
+              <div className="pago-modal-columns">
                 {/* 📊 COLUMNA IZQUIERDA: RESUMEN DE SALDOS Y MODIFICACIONES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Resumen de saldos */}
