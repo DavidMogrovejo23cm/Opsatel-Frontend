@@ -6,6 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { clienteService, configuracionService, hojaRutaService, backupService } from '../services/api';
 import { motion } from 'framer-motion';
@@ -14,6 +15,10 @@ import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../
 
 
 const Admin = () => {
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search');
+  const autoOpen = searchParams.get('openPago') === 'true';
+
   const { user } = useAuth();
   const isAdmin = user?.rol === 'administrador';
   const [clientes, setClientes] = useState([]);
@@ -21,7 +26,7 @@ const Admin = () => {
   const [planesList, setPlanesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hojaRutaList, setHojaRutaList] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => urlSearch || '');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedComentariosModal, setSelectedComentariosModal] = useState(null);
@@ -164,6 +169,29 @@ const Admin = () => {
     const interval = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Sincronizar parámetro search si proviene desde el Buscador Global (Ctrl + K)
+  useEffect(() => {
+    if (urlSearch !== null && urlSearch !== undefined) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
+
+  // Si se solicita abrir modal de pago automáticamente para el cliente
+  useEffect(() => {
+    if (autoOpen && urlSearch && clientes.length > 0 && !showPagoModal) {
+      const q = urlSearch.trim().toLowerCase();
+      const matched = clientes.find(c =>
+        c.cedula?.toLowerCase() === q ||
+        c.nombre?.toLowerCase() === q ||
+        String(c.id) === q ||
+        c.ip?.toLowerCase() === q
+      );
+      if (matched) {
+        openPagoModal(matched);
+      }
+    }
+  }, [autoOpen, urlSearch, clientes]);
 
   // Bloquea el scroll del cuerpo cuando el modal está abierto
   useEffect(() => {

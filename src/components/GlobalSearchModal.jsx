@@ -139,9 +139,8 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
     if (item.type === 'page') {
       navigate(item.data.path);
     } else if (item.type === 'cliente') {
-      // Redirigir por defecto a cobros con el cliente seleccionado o a general
-      const queryParam = encodeURIComponent(item.data.cedula || item.data.nombre || item.data.id);
-      navigate(`/admin?search=${queryParam}`);
+      // Redirigir directamente por ID exacto para filtrar únicamente a este cliente
+      navigate(`/admin?search=${encodeURIComponent(item.data.id)}&openPago=true`);
     }
   };
 
@@ -254,32 +253,64 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                           )}
                         </div>
                         <div className="search-item-meta">
-                          {c.cedula && <span>🆔 {c.cedula}</span>}
-                          {c.ip && <span>🌐 IP: {c.ip}</span>}
-                          {c.nodo && <span>📍 {c.nodo}</span>}
-                          {c.telefono && <span>📞 {c.telefono}</span>}
+                          {/* Contacto & Red Básica */}
+                          {(c.celular || c.telefono) && (
+                            <span className="search-tech-badge">📞 {c.celular || c.telefono}</span>
+                          )}
+                          {c.ip && (
+                            <span className="search-tech-badge highlight" title="Dirección IP">🌐 {c.ip}</span>
+                          )}
+                          {c.nodo && (
+                            <span className="search-tech-badge" title="Nodo">📍 Nodo: {c.nodo}</span>
+                          )}
+                          {(c.nap || c.caja) && (
+                            <span className="search-tech-badge" title="Caja / NAP">📦 NAP: {c.nap || c.caja}</span>
+                          )}
+                          
+                          {/* Datos Técnicos de Fibra & Puertos */}
+                          {c.service_port && (
+                            <span className="search-tech-badge" title="Service Port">🔌 S.Port: {c.service_port}</span>
+                          )}
+                          {c.id_port && (
+                            <span className="search-tech-badge" title="ID Port">⚡ ID Port: {c.id_port}</span>
+                          )}
+
+                          {/* Clave / Contraseña WiFi o PPPoE */}
+                          {(c.clave || c.password || c.contrasena) && (
+                            <span className="search-tech-badge key" title="Clave / Contraseña">
+                              🔑 Clave: {c.clave || c.password || c.contrasena}
+                            </span>
+                          )}
+
+                          {c.cedula && (
+                            <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>🆔 {c.cedula}</span>
+                          )}
                         </div>
                       </div>
 
                       {/* Botones de acción rápida por cliente */}
                       <div className="search-item-actions">
                         <button
-                          title="Cobrar / Registrar Pago"
+                          type="button"
+                          title="Cobrar / Registrar Pago para este cliente"
                           onClick={(e) => {
                             e.stopPropagation();
                             onClose();
-                            navigate(`/admin?search=${encodeURIComponent(c.cedula || c.nombre)}`);
+                            // Usar ID único para filtrar exactamente a este cliente
+                            navigate(`/admin?search=${encodeURIComponent(c.id)}&openPago=true`);
                           }}
                           className="search-quick-btn pay"
                         >
-                          💵 Cobrar
+                          💵 Pagar
                         </button>
                         <button
+                          type="button"
                           title="Ver en Ficha General"
                           onClick={(e) => {
                             e.stopPropagation();
                             onClose();
-                            navigate(`/general?search=${encodeURIComponent(c.cedula || c.nombre)}`);
+                            // Usar ID único para filtrar exactamente en General
+                            navigate(`/general?search=${encodeURIComponent(c.id)}`);
                           }}
                           className="search-quick-btn view"
                         >

@@ -26,7 +26,7 @@ const MENU_SECTIONS = [
     items: [
       { path: '/general', label: 'Clientes (General)', icon: '📋', roles: ['administrador'] },
       { path: '/ventas', label: 'Nuevo Contrato', icon: '📝', roles: ['administrador', 'secretario'] },
-      { path: '/call-center', label: 'Call Center', icon: '📞', roles: ['administrador', 'secretario', 'tecnico'] },
+      { path: '/call-center', label: 'Call Center', icon: '📞', roles: ['administrador', 'secretario'] },
       { path: '/whatsapp', label: 'Notificaciones WhatsApp', icon: '📱', roles: ['administrador', 'secretario'] }
     ]
   },
@@ -37,7 +37,6 @@ const MENU_SECTIONS = [
     items: [
       { path: '/hoja-ruta', label: 'Hoja de Ruta', icon: '🗓️', roles: ['administrador', 'tecnico'] },
       { path: '/activacion', label: 'Activación de Fibra', icon: '⚡', roles: ['administrador', 'tecnico', 'instalador'] },
-      { path: '/ont', label: 'Equipos ONT', icon: '📡', roles: ['administrador', 'tecnico', 'instalador'] },
       { path: '/tecdt', label: 'Portal Técnico (TECdt)', icon: '🔧', roles: ['tecnico'] }
     ]
   },

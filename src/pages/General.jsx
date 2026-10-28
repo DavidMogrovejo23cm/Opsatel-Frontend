@@ -43,6 +43,12 @@ const General = () => {
   useEffect(() => {
     if (urlSearch !== null && urlSearch !== undefined) {
       setSearchTerm(urlSearch);
+      // Limpiar filtros restrictivos para garantizar que aparezca el cliente buscado
+      setStatusFilter('TODOS');
+      setPagoFilter('TODOS');
+      setPlanFilter('TODOS');
+      setIpFilter('');
+      setFechaInstalacionFilter('');
     }
   }, [urlSearch]);
 
