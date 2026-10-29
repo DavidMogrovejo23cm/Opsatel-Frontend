@@ -140,6 +140,7 @@ const General = () => {
   const [deviceModalOntPreview, setDeviceModalOntPreview] = useState(null);
   const [deviceModalRouterPreview, setDeviceModalRouterPreview] = useState(null);
   const [deviceModalRemoveOnt, setDeviceModalRemoveOnt] = useState(false);
+  const [deviceModalRemoveRouter, setDeviceModalRemoveRouter] = useState(false);
   const [deviceModalUploading, setDeviceModalUploading] = useState(false);
 
   // Estados para modal de cuenta IPTV externa (solo datos en General)
