@@ -204,7 +204,7 @@ const Configuraciones = () => {
     const handleRunBackupNow = async () => {
         const confirmado = await showConfirm(
             '¿Generar y Enviar Respaldo Ahora?',
-            'Esta acción creará un respaldo .sql inmediatamente, lo guardará en el servidor y lo enviará a tu Telegram.',
+            'Esta acción creará un paquete completo .zip (Base de Datos + Fotos) inmediatamente, lo guardará en el servidor y lo enviará a tu Telegram.',
             'Sí, generar y enviar ahora',
             'Cancelar',
             'question'
@@ -216,7 +216,7 @@ const Configuraciones = () => {
             let msg = res.data?.mensaje || 'Respaldo generado con éxito.';
             if (res.data?.telegram?.activo) {
                 msg += res.data.telegram.resultado?.ok 
-                    ? '\n✈️ Archivo .sql enviado a Telegram con éxito.' 
+                    ? '\n✈️ Archivo .zip enviado a Telegram con éxito.' 
                     : `\n⚠️ Telegram: ${res.data.telegram.resultado?.doc_error || res.data.telegram.resultado?.error || 'No se pudo enviar archivo'}`;
             }
             showSuccess(msg);
@@ -2988,10 +2988,10 @@ const Configuraciones = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 14 }}>
                             <div>
                                 <h3 style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 10, color: '#38bdf8', fontSize: '1.4rem' }}>
-                                    <span>💾</span> Respaldos Automáticos de Base de Datos
+                                    <span>💾</span> Respaldos Automáticos Completos (BD + Fotos)
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: 850, margin: 0, lineHeight: 1.5 }}>
-                                    Configura la frecuencia de ejecución automática de las copias de seguridad de toda la base de datos (clientes, pagos, saldos, logs y configuraciones) y el canal de Telegram donde se enviarán directamente los archivos .sql.
+                                    Configura la frecuencia de ejecución automática de las copias de seguridad integrales de toda la base de datos (clientes, pagos, saldos, logs) junto con todas las fotografías (cédulas, fachadas, dispositivos) y el canal de Telegram donde se enviará el paquete .zip.
                                 </p>
                             </div>
 
@@ -4035,7 +4035,7 @@ const Configuraciones = () => {
                                         <span>🗄️</span> Historial de Respaldos en el Servidor ({archivosBackup.length})
                                     </h4>
                                     <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
-                                        Archivos .sql resguardados en el disco local del servidor disponibles para descarga directa a tu PC
+                                        Paquetes .zip y archivos de respaldo resguardados en el disco local del servidor disponibles para descarga directa a tu PC
                                     </p>
                                 </div>
 

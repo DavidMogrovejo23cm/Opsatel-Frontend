@@ -260,25 +260,25 @@ const SubirBD = () => {
   const handleDownloadSql = async () => {
     setDownloadingSql(true);
     try {
-      const response = await backupService.exportSql();
+      const response = await backupService.exportZip();
       if (response.data.type && response.data.type.includes('text/html')) {
-        throw new Error('El servidor web devolvió una página HTML en lugar del archivo SQL. Verifique la ruta del backend.');
+        throw new Error('El servidor web devolvió una página HTML en lugar del archivo de respaldo. Verifique la ruta del backend.');
       }
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/sql' }));
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
       const link = document.createElement('a');
       link.href = url;
       const now = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-      link.setAttribute('download', `backup_opsatel_${stamp}.sql`);
+      link.setAttribute('download', `backup_opsatel_${stamp}.zip`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-      showSuccess('Copia de seguridad completa (.sql) descargada exitosamente.');
+      showSuccess('Copia de seguridad completa (.zip: Base de Datos + Fotos) descargada exitosamente.');
     } catch (error) {
       console.error(error);
-      showError('Error al descargar el respaldo SQL: ' + (error.response?.data?.detail || error.message));
+      showError('Error al descargar el respaldo: ' + (error.response?.data?.detail || error.message));
     } finally {
       setDownloadingSql(false);
     }
@@ -286,13 +286,13 @@ const SubirBD = () => {
 
   const handleUploadSql = async () => {
     if (!fileSql) {
-      showWarning('Por favor selecciona un archivo de respaldo con extensión .sql');
+      showWarning('Por favor selecciona un archivo de respaldo con extensión .zip o .sql');
       return;
     }
 
     const confirmado = await showConfirm(
-      '¿Restaurar Base de Datos Completa?',
-      '⚠️ Esta operación reemplazará todas las tablas y datos actuales con los del archivo .sql seleccionado. ¿Deseas continuar?',
+      '¿Restaurar Respaldo Completo?',
+      '⚠️ Esta operación restaurará la base de datos y todas las imágenes (cédulas, fachadas, dispositivos) del archivo seleccionado. ¿Deseas continuar?',
       'Sí, restaurar ahora',
       'Cancelar',
       'warning'
@@ -305,9 +305,10 @@ const SubirBD = () => {
     formData.append('file', fileSql);
 
     try {
-      const resp = await backupService.importSql(formData);
+      const resp = await backupService.importZip(formData);
+      const fotosTxt = resp.data.imagenes_restauradas !== undefined ? `\nImágenes restauradas: ${resp.data.imagenes_restauradas}` : '';
       showSuccess(
-        `${resp.data.message}\nSentencias ejecutadas: ${resp.data.total_sentencias}\nTablas procesadas: ${resp.data.tablas_afectadas}`,
+        `${resp.data.message}\nSentencias ejecutadas: ${resp.data.total_sentencias}\nTablas procesadas: ${resp.data.tablas_afectadas}${fotosTxt}`,
         '¡Restauración Exitosa!'
       );
       setFileSql(null);
@@ -315,7 +316,7 @@ const SubirBD = () => {
       if (inputElem) inputElem.value = '';
     } catch (error) {
       console.error(error);
-      showError('Error al restaurar base de datos: ' + (error.response?.data?.detail || error.message));
+      showError('Error al restaurar respaldo: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoadingSql(false);
     }
@@ -413,15 +414,15 @@ const SubirBD = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '24px' }}>
-          {/* Subcard Descargar .sql */}
+          {/* Subcard Descargar .zip */}
           <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '1.4rem' }}>📥</span>
-                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#34d399', fontWeight: 'bold' }}>Exportar Archivo .SQL</h3>
+                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#34d399', fontWeight: 'bold' }}>Exportar Paquete Completo (.ZIP)</h3>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '20px' }}>
-                Genera al instante un archivo de texto SQL con sentencias <code>DROP</code>, <code>CREATE TABLE</code> e <code>INSERT</code> de todas las tablas existentes en el sistema.
+                Genera al instante un archivo comprimido <code>.zip</code> con el volcado íntegro de la base de datos (<code>database.sql</code>) y todas las fotografías del sistema (cédulas, fachadas, dispositivos, comprobantes).
               </p>
             </div>
             <button
@@ -442,24 +443,24 @@ const SubirBD = () => {
                 gap: '8px'
               }}
             >
-              {downloadingSql ? '⏳ Generando volcado .sql...' : '📥 Descargar Respaldo (.sql)'}
+              {downloadingSql ? '⏳ Generando paquete .zip...' : '📥 Descargar Respaldo Completo (.zip)'}
             </button>
           </div>
 
-          {/* Subcard Restaurar .sql */}
+          {/* Subcard Restaurar .zip */}
           <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '1.4rem' }}>📤</span>
-                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#f43f5e', fontWeight: 'bold' }}>Restaurar desde .SQL</h3>
+                <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#f43f5e', fontWeight: 'bold' }}>Restaurar desde .ZIP / .SQL</h3>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '16px' }}>
-                Selecciona un archivo <code>.sql</code> previamente descargado para restaurar la base de datos de manera íntegra.
+                Selecciona un archivo <code>.zip</code> previamente descargado para restaurar la base de datos y desempacar todas las imágenes automáticamente (también compatible con archivos <code>.sql</code>).
               </p>
               <input
                 id="bd-sql-file-input"
                 type="file"
-                accept=".sql"
+                accept=".zip,.sql"
                 disabled={loadingSql}
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
@@ -497,7 +498,7 @@ const SubirBD = () => {
                 gap: '8px'
               }}
             >
-              {loadingSql ? '⏳ Restaurando base de datos...' : '🚀 Iniciar Restauración (.sql)'}
+              {loadingSql ? '⏳ Restaurando base de datos e imágenes...' : '🚀 Iniciar Restauración (.zip)'}
             </button>
           </div>
         </div>
@@ -534,7 +535,7 @@ const SubirBD = () => {
                 </span>
               </div>
               <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-                El servidor crea el archivo <code>.sql</code> automáticamente todos los días a la hora fijada, depura respaldos que superen los días de retención y te envía una copia o alerta a Telegram / Correo.
+                El servidor genera el paquete <code>.zip</code> (Base de datos + Todas las Fotos) automáticamente a la hora fijada, depura respaldos que superen los días de retención y te envía el archivo a Telegram / Correo.
               </p>
             </div>
           </div>

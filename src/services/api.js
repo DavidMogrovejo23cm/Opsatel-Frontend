@@ -133,8 +133,12 @@ export const clienteService = {
 };
 
 export const backupService = {
-  exportSql: () => api.get('/clientes/backup/export-sql', { responseType: 'blob' }),
-  importSql: (formData) => api.post('/clientes/backup/import-sql', formData, {
+  exportZip: () => api.get('/clientes/backup/export-zip', { responseType: 'blob' }),
+  importZip: (formData) => api.post('/clientes/backup/import-zip', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  exportSql: () => api.get('/clientes/backup/export-zip', { responseType: 'blob' }),
+  importSql: (formData) => api.post('/clientes/backup/import-zip', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   getInfo: () => api.get('/clientes/backup/info'),

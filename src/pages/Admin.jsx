@@ -511,30 +511,30 @@ const Admin = () => {
     }
   };
 
-  // Funciones de Backup y Restauración de Base de Datos (.sql)
+  // Funciones de Backup y Restauración Integral (.zip / .sql)
   const handleExportarBackupSql = async () => {
     setExportingSql(true);
     try {
-      const response = await backupService.exportSql();
+      const response = await backupService.exportZip();
       if (response.data.type && response.data.type.includes('text/html')) {
-        throw new Error('El servidor web devolvió una página HTML en lugar del archivo SQL. Verifique la ruta del backend.');
+        throw new Error('El servidor web devolvió una página HTML en lugar del archivo de respaldo. Verifique la ruta del backend.');
       }
-      const blob = new Blob([response.data], { type: 'application/sql' });
+      const blob = new Blob([response.data], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       const now = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-      link.setAttribute('download', `backup_opsatel_${stamp}.sql`);
+      link.setAttribute('download', `backup_opsatel_${stamp}.zip`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-      showSuccess('Respaldo SQL descargado correctamente.');
+      showSuccess('Copia de Seguridad Completa (.zip: Base de Datos + Fotos) descargada correctamente.');
     } catch (error) {
       console.error(error);
-      showError('Error al exportar respaldo SQL: ' + (error.response?.data?.detail || error.message));
+      showError('Error al exportar respaldo: ' + (error.response?.data?.detail || error.message));
     } finally {
       setExportingSql(false);
     }
@@ -542,13 +542,13 @@ const Admin = () => {
 
   const handleImportarBackupSql = async () => {
     if (!sqlFile) {
-      showWarning('Por favor selecciona un archivo con extensión .sql');
+      showWarning('Por favor selecciona un archivo con extensión .zip o .sql');
       return;
     }
 
     const confirmado = await showConfirm(
-      '¿Restaurar Base de Datos?',
-      '⚠️ Esta acción reemplazará la estructura y todos los datos actuales con los del archivo .sql seleccionado.<br/><br/><b>¿Estás totalmente seguro de continuar?</b>',
+      '¿Restaurar Respaldo Completo?',
+      '⚠️ Esta acción restaurará la base de datos y todas las imágenes (cédulas, fotos de fachadas, dispositivos).<br/><br/><b>¿Estás totalmente seguro de continuar?</b>',
       'Sí, restaurar ahora',
       'Cancelar',
       'warning'
@@ -561,9 +561,12 @@ const Admin = () => {
     formData.append('file', sqlFile);
 
     try {
-      const resp = await backupService.importSql(formData);
+      const resp = await backupService.importZip(formData);
+      const fotosDetalle = resp.data.imagenes_restauradas !== undefined 
+        ? `<br/><b>Imágenes restauradas:</b> ${resp.data.imagenes_restauradas}` 
+        : '';
       showSuccess(
-        `${resp.data.message}<br/><b>Sentencias ejecutadas:</b> ${resp.data.total_sentencias}<br/><b>Tablas afectadas:</b> ${resp.data.tablas_afectadas}`,
+        `${resp.data.message}<br/><b>Sentencias ejecutadas:</b> ${resp.data.total_sentencias}<br/><b>Tablas afectadas:</b> ${resp.data.tablas_afectadas}${fotosDetalle}`,
         '¡Restauración Completada!'
       );
       setShowRestoreModal(false);
@@ -571,7 +574,7 @@ const Admin = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-      showError('Error al restaurar la base de datos: ' + (error.response?.data?.detail || error.message));
+      showError('Error al restaurar respaldo: ' + (error.response?.data?.detail || error.message));
     } finally {
       setImportingSql(false);
     }
@@ -782,12 +785,12 @@ const Admin = () => {
             📄 PDF Sayausí
           </button>
 
-          {/* Botones de Backup y Restauración de Base de Datos (.SQL) */}
+          {/* Botones de Backup y Restauración de Sistema Completo (.ZIP) */}
           <button
             className="btn btn-secondary"
             onClick={handleExportarBackupSql}
             disabled={exportingSql}
-            title="Descargar respaldo completo de la base de datos en archivo .sql nativo"
+            title="Descargar respaldo completo (Base de Datos + Todas las Fotos) en archivo .zip"
             style={{
               background: '#065f46',
               border: '1px solid rgba(16, 185, 129, 0.4)',
@@ -800,7 +803,7 @@ const Admin = () => {
               whiteSpace: 'nowrap'
             }}
           >
-            {exportingSql ? "⏳ Exportando..." : "📥 Descargar Backup (.sql)"}
+            {exportingSql ? "⏳ Exportando..." : "📥 Descargar Backup (.zip)"}
           </button>
 
           <button
@@ -809,7 +812,7 @@ const Admin = () => {
               setSqlFile(null);
               setShowRestoreModal(true);
             }}
-            title="Restaurar toda la base de datos desde un archivo .sql"
+            title="Restaurar toda la base de datos y fotos desde un archivo .zip o .sql"
             style={{
               background: '#831843',
               border: '1px solid rgba(244, 63, 94, 0.4)',
@@ -822,7 +825,7 @@ const Admin = () => {
               whiteSpace: 'nowrap'
             }}
           >
-            📤 Restaurar Backup (.sql)
+            📤 Restaurar Backup (.zip / .sql)
           </button>
 
           <button
@@ -1927,7 +1930,7 @@ const Admin = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.4rem' }}>🗄️</span>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#f43f5e', fontWeight: 'bold' }}>
-                  Restaurar Base de Datos Completa (.sql)
+                  Restaurar Sistema Completo (.zip / .sql)
                 </h3>
               </div>
               {!importingSql && (
@@ -1948,23 +1951,23 @@ const Admin = () => {
               marginBottom: '18px'
             }}>
               <p style={{ margin: '0 0 6px 0', color: '#fca5a5', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                ⚠️ ADVERTENCIA CRÍTICA:
+                ⚠️ ADVERTENCIA DE RESTAURACIÓN:
               </p>
               <p style={{ margin: 0, color: '#fecaca', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                Esta operación ejecutará las sentencias del archivo <b>.sql</b> seleccionado. Recreará todas las tablas e insertará todos los datos exactamente tal como estaban en el momento del respaldo, sin pérdidas ni duplicados.
+                Si seleccionas un archivo <b>.zip</b>, se restaurará toda la base de datos y se desempacarán automáticamente todas las fotos e imágenes (cédulas, fachadas, dispositivos). También se aceptan archivos <b>.sql</b> tradicionales.
                 <br /><br />
-                <b>Se recomienda descargar un respaldo previo (.sql) antes de proceder.</b>
+                <b>Se recomienda descargar un respaldo previo (.zip) antes de proceder.</b>
               </p>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '8px' }}>
-                Selecciona el archivo de respaldo (.sql):
+                Selecciona el archivo de respaldo (.zip o .sql):
               </label>
               <input
                 id="admin-sql-backup-input"
                 type="file"
-                accept=".sql"
+                accept=".zip,.sql"
                 disabled={importingSql}
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
@@ -1997,9 +2000,9 @@ const Admin = () => {
                 border: '1px solid rgba(99, 102, 241, 0.3)',
                 marginBottom: '16px'
               }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: '6px' }}>⏳ Restaurando base de datos...</div>
+                <div style={{ fontSize: '1.2rem', marginBottom: '6px' }}>⏳ Restaurando base de datos e imágenes...</div>
                 <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-                  Ejecutando sentencias SQL, recreando tablas y verificando integridad. Por favor espere sin cerrar la ventana...
+                  Desempacando archivos, ejecutando sentencias SQL y verificando integridad. Por favor espere sin cerrar la ventana...
                 </div>
               </div>
             )}
@@ -2029,7 +2032,7 @@ const Admin = () => {
                   cursor: (!sqlFile || importingSql) ? 'not-allowed' : 'pointer'
                 }}
               >
-                {importingSql ? '⏳ Restaurando...' : '🚀 Iniciar Restauración (.sql)'}
+                {importingSql ? '⏳ Restaurando...' : '🚀 Iniciar Restauración (.zip)'}
               </button>
             </div>
           </div>
