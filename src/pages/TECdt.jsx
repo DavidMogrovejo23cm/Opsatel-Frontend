@@ -504,10 +504,10 @@ const TECdt = () => {
               borderColor: showAllPasswords ? 'var(--primary)' : 'var(--glass-border)',
               color: showAllPasswords ? '#a5b4fc' : 'var(--text-main)'
             }}
-            title={showAllPasswords ? 'Ocultar todas las claves y contraseñas' : 'Mostrar todas las claves y contraseñas'}
+            title={showAllPasswords ? 'Ocultar todas las redes y contraseñas' : 'Mostrar todas las redes y contraseñas'}
           >
             <span>{showAllPasswords ? '🙈' : '👁️'}</span>
-            <span>{showAllPasswords ? 'Ocultar Claves' : 'Mostrar Claves'}</span>
+            <span>{showAllPasswords ? 'Ocultar Redes' : 'Mostrar Redes'}</span>
           </button>
 
           <motion.button
@@ -558,7 +558,7 @@ const TECdt = () => {
             <input
               type="text"
               className="input"
-              placeholder="Buscar por Nombre, ID, Número, Clave, Contraseña, IP, NAP o Ubicación..."
+              placeholder="Buscar por Nombre, ID, Número, Red, Contraseña, IP, NAP o Ubicación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -668,7 +668,7 @@ const TECdt = () => {
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', width: '70px' }}>ID</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '220px' }}>CLIENTE</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>NÚMERO</th>
-                  <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>CLAVE</th>
+                  <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>RED</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>CONTRASEÑA</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '140px' }}>IP</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '100px' }}>NAP</th>
@@ -784,7 +784,7 @@ const TECdt = () => {
                         {clave !== '-' ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span
-                              onClick={() => handleCopy(clave, `Clave de ${nombre}`)}
+                              onClick={() => handleCopy(clave, `Red de ${nombre}`)}
                               style={{
                                 fontFamily: 'monospace',
                                 color: '#38bdf8',
@@ -795,7 +795,7 @@ const TECdt = () => {
                                 cursor: 'pointer',
                                 letterSpacing: isClaveVisible ? 'normal' : '0.15em'
                               }}
-                              title="Click para copiar clave"
+                              title="Click para copiar red"
                             >
                               {isClaveVisible ? clave : '••••••••'}
                             </span>
@@ -1144,7 +1144,7 @@ const TECdt = () => {
                         </div>
                       </div>
 
-                      {/* Acordeón Datos Técnicos (Clave y Contraseña) */}
+                      {/* Acordeón Datos Técnicos (Red y Contraseña) */}
                       <div className={`tecdt-mobile-accordion ${isTecOpen ? 'open' : ''}`}>
                         <div
                           className="tecdt-mobile-accordion-head"
@@ -1157,7 +1157,7 @@ const TECdt = () => {
                             <div>
                               <div className="tecdt-mobile-accordion-title">Datos técnicos</div>
                               <div className="tecdt-mobile-accordion-sub">
-                                {isTecOpen ? 'Clave y contraseña' : 'Clave y contraseña ocultas'}
+                                {isTecOpen ? 'Red y contraseña' : 'Red y contraseña ocultas'}
                               </div>
                             </div>
                           </div>
@@ -1168,12 +1168,12 @@ const TECdt = () => {
 
                         {isTecOpen && (
                           <div className="tecdt-mobile-accordion-body">
-                            {/* Clave */}
+                            {/* Red */}
                             <div className="tecdt-mobile-cred-item">
                               <div className="tecdt-mobile-cred-left">
-                                <span>🔑</span>
+                                <span>📶</span>
                                 <div>
-                                  <span className="tecdt-mobile-cred-label">Clave</span>
+                                  <span className="tecdt-mobile-cred-label">Red</span>
                                   <span className="tecdt-mobile-cred-val">{claveVal}</span>
                                 </div>
                               </div>
@@ -1182,15 +1182,15 @@ const TECdt = () => {
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
                                   onClick={() => toggleClaveVisibility(id)}
-                                  title="Mostrar/Ocultar Clave"
+                                  title="Mostrar/Ocultar Red"
                                 >
                                   {revealedClaves[id] ? '👁️‍🗨️' : '👁️'}
                                 </button>
                                 <button
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
-                                  onClick={() => handleCopy(c.clave, 'Clave')}
-                                  title="Copiar Clave"
+                                  onClick={() => handleCopy(c.clave, 'Red')}
+                                  title="Copiar Red"
                                 >
                                   📋
                                 </button>
