@@ -596,7 +596,7 @@ body:has(.modal-overlay) {
     radial-gradient(circle at 75% 75%, rgba(35, 45, 110, 0.2) 0%, rgba(9, 12, 29, 0) 60%);
   position: relative;
   overflow: hidden;
-  padding: 60px 40px 40px 140px;
+  padding: 80px 40px 40px 190px;
 }
 
 .login-bg-glow {
@@ -622,10 +622,10 @@ body:has(.modal-overlay) {
 /* 3D Mascot Peeking around the top-left edge */
 .login-mascot-wrapper {
   position: absolute;
-  top: -197px;
-  left: -291px;
-  width: 480px;
-  height: 500px;
+  top: -257px;
+  left: -351px;
+  width: 595px;
+  height: 780px;
   z-index: 10;
   pointer-events: none;
   user-select: none;
@@ -892,16 +892,16 @@ body:has(.modal-overlay) {
 /* Medium Desktop Viewports */
 @media (max-width: 1280px) and (min-width: 901px) {
   .login-wrapper {
-    padding: 50px 30px 30px 110px;
+    padding: 60px 30px 30px 160px;
   }
   .login-card-container {
-    max-width: 880px;
+    max-width: 860px;
   }
   .login-mascot-wrapper {
-    top: -170px;
-    left: -250px;
-    width: 415px;
-    height: 430px;
+    top: -224px;
+    left: -306px;
+    width: 518px;
+    height: 680px;
   }
 }
 

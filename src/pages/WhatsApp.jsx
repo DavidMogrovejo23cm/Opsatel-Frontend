@@ -47,7 +47,7 @@ const WhatsApp = () => {
     const [listaClientes, setListaClientes] = useState([]);
     const [puertosConfigList, setPuertosConfigList] = useState([]);
     const [nodosConfigList, setNodosConfigList] = useState([]);
-    const [puertosSeleccionados, setPuertosSeleccionados] = useState([]);
+    const [puertosInput, setPuertosInput] = useState('');
 
     // Estado del puente (Conexión QR)
     const [connectionStatus, setConnectionStatus] = useState('OFFLINE');
@@ -286,9 +286,39 @@ const WhatsApp = () => {
         }).length;
     };
 
+    const parsePuertosInput = (str) => {
+        if (!str || !String(str).trim()) return [];
+        return String(str)
+            .split(/[,;]+|\s+y\s+|\s+e\s+/i)
+            .map(p => p.trim())
+            .filter(Boolean);
+    };
+
+    const puertosParsed = parsePuertosInput(puertosInput);
+
+    const togglePuertoEnInput = (puertoNum) => {
+        const pStr = String(puertoNum).trim();
+        const currentList = parsePuertosInput(puertosInput);
+        const pNum = extractPortNumber(pStr) || pStr;
+        const exists = currentList.some(item => {
+            const itemNum = extractPortNumber(item) || item;
+            return itemNum.toLowerCase() === pNum.toLowerCase();
+        });
+        let newList;
+        if (exists) {
+            newList = currentList.filter(item => {
+                const itemNum = extractPortNumber(item) || item;
+                return itemNum.toLowerCase() !== pNum.toLowerCase();
+            });
+        } else {
+            newList = [...currentList, pNum];
+        }
+        setPuertosInput(newList.join(', '));
+    };
+
     const handleNodoChange = (nuevoNodo) => {
         setNodoSeleccionado(nuevoNodo);
-        setPuertosSeleccionados([]); // Limpiar selección de puertos al cambiar de nodo
+        setPuertosInput(''); // Limpiar campo de puertos al cambiar de nodo
     };
 
     // Extraer únicamente el PRIMER número de WhatsApp válido de una cadena con uno o múltiples teléfonos
@@ -356,9 +386,9 @@ const WhatsApp = () => {
                 }
             }
 
-            // Filtro por Puertos seleccionados
-            if (puertosSeleccionados.length > 0) {
-                if (!matchesPuerto(c.puerto, puertosSeleccionados)) {
+            // Filtro por Puertos especificados (si se escribió al menos un puerto)
+            if (puertosParsed.length > 0) {
+                if (!matchesPuerto(c.puerto, puertosParsed)) {
                     return false;
                 }
             }
@@ -437,8 +467,8 @@ const WhatsApp = () => {
                 const parroquiaKey = normalizeLocationKey(c.parroquia);
                 if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) return false;
             }
-            if (puertosSeleccionados.length > 0) {
-                if (!matchesPuerto(c.puerto, puertosSeleccionados)) return false;
+            if (puertosParsed.length > 0) {
+                if (!matchesPuerto(c.puerto, puertosParsed)) return false;
             }
             return true;
         });
@@ -1120,7 +1150,9 @@ const WhatsApp = () => {
         };
         const estadoLabel = nombresEstado[estadoSeleccionado] || estadoSeleccionado;
         const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
-        const puertosTexto = puertosSeleccionados.length > 0 ? ` [Puertos: ${puertosSeleccionados.join(', ')}]` : '';
+        const puertosTexto = puertosParsed.length > 0 
+            ? ` [Puertos: ${puertosParsed.map(p => p.toLowerCase().includes('puerto') ? p : `Puerto ${p}`).join(', ')}]` 
+            : '';
         const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel}${puertosTexto} ${rangoIdsTexto}`.trim();
 
         let delayMin = 25.0;
@@ -1160,8 +1192,8 @@ const WhatsApp = () => {
             ritmoTexto = '⏱️ Modo Rápido Seguro: Grupos de 10 clientes (15 a 30 seg entre mensajes) con descanso de 2 a 3 minutos';
         }
 
-        const puertosInfoConfirm = puertosSeleccionados.length > 0 
-            ? `\n🔌 Puertos seleccionados: ${puertosSeleccionados.join(', ')} (${puertosSeleccionados.length} puertos)` 
+        const puertosInfoConfirm = puertosParsed.length > 0 
+            ? `\n🔌 Puertos filtrados: ${puertosParsed.map(p => p.toLowerCase().includes('puerto') ? p : `Puerto ${p}`).join(', ')}` 
             : '';
 
         const confirmacion1 = await showConfirm(
@@ -1186,7 +1218,7 @@ const WhatsApp = () => {
             const desdeIdInt = desdeId && !isNaN(parseInt(desdeId, 10)) ? parseInt(desdeId, 10) : null;
             const hastaIdInt = hastaId && !isNaN(parseInt(hastaId, 10)) ? parseInt(hastaId, 10) : null;
             const limiteInt = limiteMensajes && !isNaN(parseInt(limiteMensajes, 10)) ? parseInt(limiteMensajes, 10) : null;
-            const puertosParam = puertosSeleccionados.length > 0 ? puertosSeleccionados : null;
+            const puertosParam = puertosParsed.length > 0 ? puertosParsed : null;
 
             await whatsappService.enviarGlobal(
                 mensajeGlobal,
@@ -2522,7 +2554,90 @@ const WhatsApp = () => {
                                     </select>
                                 </div>
 
-                                {/* 3. Continuar desde ID inicial */}
+                                {/* 3. Filtro por Puertos (Texto con Atajos) */}
+                                <div style={{ 
+                                    background: 'rgba(15, 23, 42, 0.65)', 
+                                    padding: '14px 16px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid rgba(56, 189, 248, 0.3)' 
+                                }}>
+                                    <label className="label" style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>🔌</span> Puertos (ej: 4, 8)
+                                        </span>
+                                        {puertosInput && (
+                                            <span 
+                                                onClick={() => setPuertosInput('')}
+                                                style={{ fontSize: '0.72rem', color: '#f87171', cursor: 'pointer', textDecoration: 'underline' }}
+                                                title="Limpiar puertos para enviar a todos"
+                                            >
+                                                Limpiar (Todos)
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="Ej: 4, 8 (vacío = todos)"
+                                        value={puertosInput}
+                                        onChange={(e) => setPuertosInput(e.target.value)}
+                                        style={{ 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(56, 189, 248, 0.4)', 
+                                            borderRadius: '6px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    />
+                                    <div style={{ marginTop: '6px', fontSize: '0.74rem', color: puertosParsed.length > 0 ? '#38bdf8' : 'var(--text-muted)' }}>
+                                        {puertosParsed.length > 0 
+                                            ? `🎯 Filtrando: ${puertosParsed.map(p => p.toLowerCase().includes('puerto') ? p : `Puerto ${p}`).join(', ')}` 
+                                            : '🌐 Vacío = Se enviará a todos los puertos'}
+                                    </div>
+                                    {/* Atajos de Puertos disponibles según el Nodo */}
+                                    {(() => {
+                                        const disponibles = getPuertosParaNodo(nodoSeleccionado);
+                                        if (disponibles.length === 0) return null;
+                                        return (
+                                            <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.68rem', color: '#64748b', marginRight: '2px' }}>
+                                                    Atajos:
+                                                </span>
+                                                {disponibles.map(p => {
+                                                    const pNum = extractPortNumber(p) || p;
+                                                    const isSelected = puertosParsed.some(sp => (extractPortNumber(sp) || sp) === pNum);
+                                                    return (
+                                                        <button
+                                                            key={p}
+                                                            type="button"
+                                                            onClick={() => togglePuertoEnInput(pNum)}
+                                                            style={{
+                                                                padding: '1px 5px',
+                                                                fontSize: '0.68rem',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                background: isSelected ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                                                                border: `1px solid ${isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}`,
+                                                                color: isSelected ? '#fff' : '#94a3b8',
+                                                                fontWeight: isSelected ? 'bold' : 'normal',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                            title={`Clic para agregar/quitar Puerto ${pNum}`}
+                                                        >
+                                                            {pNum}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* 4. Continuar desde ID inicial */}
                                 <div style={{ 
                                     background: 'rgba(15, 23, 42, 0.65)', 
                                     padding: '14px 16px', 
@@ -2564,7 +2679,7 @@ const WhatsApp = () => {
                                     />
                                 </div>
 
-                                {/* 4. Límite de mensajes por tanda / día */}
+                                {/* 5. Límite de mensajes por tanda / día */}
                                 <div style={{ 
                                     background: 'rgba(15, 23, 42, 0.65)', 
                                     padding: '14px 16px', 
@@ -2599,176 +2714,6 @@ const WhatsApp = () => {
                                         }}
                                     />
                                 </div>
-
-                                {/* 5. Selector de Puertos (Multi-selección) */}
-                                {(() => {
-                                    const puertosDisponibles = getPuertosParaNodo(nodoSeleccionado);
-                                    const todosSeleccionados = puertosDisponibles.length > 0 && puertosDisponibles.every(p => puertosSeleccionados.includes(p));
-                                    const ningunoSeleccionado = puertosSeleccionados.length === 0;
-
-                                    return (
-                                        <div style={{ 
-                                            background: 'rgba(15, 23, 42, 0.75)', 
-                                            padding: '16px 18px', 
-                                            borderRadius: '8px', 
-                                            border: '1px solid rgba(56, 189, 248, 0.35)',
-                                            gridColumn: '1 / -1',
-                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-                                                <div>
-                                                    <label className="label" style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span>🔌</span> Filtrar por Puertos ({nodoSeleccionado === 'todos' ? 'Todos los Nodos' : `Zona: ${nodoSeleccionado}`})
-                                                    </label>
-                                                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                                        Selecciona uno o más puertos para segmentar la difusión masiva. Si ninguno está marcado, se enviará a todos los puertos.
-                                                    </p>
-                                                </div>
-
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (todosSeleccionados) {
-                                                                setPuertosSeleccionados([]);
-                                                            } else {
-                                                                setPuertosSeleccionados([...puertosDisponibles]);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            background: todosSeleccionados ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                                                            border: '1px solid rgba(56, 189, 248, 0.4)',
-                                                            color: '#38bdf8',
-                                                            borderRadius: '6px',
-                                                            padding: '4px 10px',
-                                                            fontSize: '0.78rem',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px'
-                                                        }}
-                                                    >
-                                                        {todosSeleccionados ? 'Deseleccionar Todos' : '✓ Seleccionar Todos'}
-                                                    </button>
-
-                                                    {!ningunoSeleccionado && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setPuertosSeleccionados([])}
-                                                            style={{
-                                                                background: 'rgba(239, 68, 68, 0.15)',
-                                                                border: '1px solid rgba(239, 68, 68, 0.35)',
-                                                                color: '#fca5a5',
-                                                                borderRadius: '6px',
-                                                                padding: '4px 10px',
-                                                                fontSize: '0.78rem',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            title="Desmarcar todos los puertos para enviar a todos"
-                                                        >
-                                                            ✕ Limpiar Filtro ({puertosSeleccionados.length})
-                                                        </button>
-                                                    )}
-
-                                                    <span style={{
-                                                        fontSize: '0.76rem',
-                                                        padding: '4px 10px',
-                                                        borderRadius: '6px',
-                                                        background: ningunoSeleccionado ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                                                        color: ningunoSeleccionado ? '#93c5fd' : '#6ee7b7',
-                                                        border: `1px solid ${ningunoSeleccionado ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                                                        fontWeight: '600'
-                                                    }}>
-                                                        {ningunoSeleccionado 
-                                                            ? '🌐 Todos los puertos incluidos' 
-                                                            : `🎯 ${puertosSeleccionados.length} puerto(s) seleccionado(s)`}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Grid de Puertos */}
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                                                gap: '8px',
-                                                marginTop: '10px',
-                                                maxHeight: '220px',
-                                                overflowY: 'auto',
-                                                padding: '4px',
-                                                background: 'rgba(0, 0, 0, 0.2)',
-                                                borderRadius: '6px',
-                                                border: '1px solid rgba(255, 255, 255, 0.05)'
-                                            }}>
-                                                {puertosDisponibles.map((puerto) => {
-                                                    const isChecked = puertosSeleccionados.includes(puerto);
-                                                    const conteo = getConteoClientesPorPuerto(puerto);
-
-                                                    return (
-                                                        <div
-                                                            key={puerto}
-                                                            onClick={() => {
-                                                                setPuertosSeleccionados(prev => 
-                                                                    prev.includes(puerto) 
-                                                                        ? prev.filter(p => p !== puerto) 
-                                                                        : [...prev, puerto]
-                                                                );
-                                                            }}
-                                                            style={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
-                                                                padding: '6px 10px',
-                                                                borderRadius: '6px',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.15s ease',
-                                                                background: isChecked ? 'rgba(14, 165, 233, 0.25)' : 'rgba(255, 255, 255, 0.03)',
-                                                                border: isChecked ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-                                                                color: isChecked ? '#fff' : '#cbd5e1',
-                                                                userSelect: 'none'
-                                                            }}
-                                                        >
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isChecked}
-                                                                    onChange={() => {}} // Manejado por el click del div contenedor
-                                                                    style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
-                                                                />
-                                                                <span style={{ 
-                                                                    fontSize: '0.84rem', 
-                                                                    fontWeight: isChecked ? '700' : '500',
-                                                                    whiteSpace: 'nowrap',
-                                                                    textOverflow: 'ellipsis',
-                                                                    overflow: 'hidden'
-                                                                }}>
-                                                                    {puerto}
-                                                                </span>
-                                                            </div>
-                                                            <span style={{
-                                                                fontSize: '0.72rem',
-                                                                padding: '1px 6px',
-                                                                borderRadius: '10px',
-                                                                background: isChecked ? 'rgba(56, 189, 248, 0.4)' : (conteo > 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)'),
-                                                                color: isChecked ? '#fff' : (conteo > 0 ? '#93c5fd' : '#64748b'),
-                                                                fontWeight: 'bold'
-                                                            }}>
-                                                                {conteo}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {puertosDisponibles.length === 0 && (
-                                                <div style={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', padding: '12px' }}>
-                                                    No se encontraron puertos registrados para este nodo.
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
 
                                 {/* 6. Selector de Ritmo Anti-Baneo */}
                                 <div style={{ 
@@ -2833,9 +2778,9 @@ const WhatsApp = () => {
                                                     🆔 Rango: Cliente #{primer.id} ({primer.nombre}) ➡️ #{ultimo.id} ({ultimo.nombre})
                                                 </span>
                                             )}
-                                            {puertosSeleccionados.length > 0 && (
+                                            {puertosParsed.length > 0 && (
                                                 <span style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(56, 189, 248, 0.35)', fontWeight: '600' }}>
-                                                    🔌 Puertos: {puertosSeleccionados.join(', ')} ({puertosSeleccionados.length})
+                                                    🔌 Puertos: {puertosParsed.map(p => p.toLowerCase().includes('puerto') ? p : `Puerto ${p}`).join(', ')}
                                                 </span>
                                             )}
                                             {limiteMensajes && parseInt(limiteMensajes, 10) < totalSinLimite && (
