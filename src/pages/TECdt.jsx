@@ -395,13 +395,13 @@ const TECdt = () => {
       const idMatch = String(c.id || '').toLowerCase().includes(term);
       const nombreMatch = String(c.nombre || '').toLowerCase().includes(term);
       const celularMatch = String(c.celular || '').toLowerCase().includes(term);
-      const claveMatch = String(c.clave || '').toLowerCase().includes(term);
-      const contrasenaMatch = String(c.contrasena || c.iptv_pass || '').toLowerCase().includes(term);
+      const redMatch = String(c.red || c.RED || c.wifi || c.ssid || '').toLowerCase().includes(term);
+      const passMatch = String(c.clave || c.CLAVE || c.contrasena || c.iptv_pass || '').toLowerCase().includes(term);
       const ipMatch = String(c.ip || '').toLowerCase().includes(term);
       const napMatch = String(c.nap || '').toLowerCase().includes(term);
       const ubicacionMatch = String(c.ubicacion || c.direccion || '').toLowerCase().includes(term);
 
-      return idMatch || nombreMatch || celularMatch || claveMatch || contrasenaMatch || ipMatch || napMatch || ubicacionMatch;
+      return idMatch || nombreMatch || celularMatch || redMatch || passMatch || ipMatch || napMatch || ubicacionMatch;
     });
   }, [clientes, searchTerm, napFilter]);
 
@@ -504,10 +504,10 @@ const TECdt = () => {
               borderColor: showAllPasswords ? 'var(--primary)' : 'var(--glass-border)',
               color: showAllPasswords ? '#a5b4fc' : 'var(--text-main)'
             }}
-            title={showAllPasswords ? 'Ocultar todas las redes y contraseñas' : 'Mostrar todas las redes y contraseñas'}
+            title={showAllPasswords ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
           >
             <span>{showAllPasswords ? '🙈' : '👁️'}</span>
-            <span>{showAllPasswords ? 'Ocultar Redes' : 'Mostrar Redes'}</span>
+            <span>{showAllPasswords ? 'Ocultar Contraseñas' : 'Mostrar Contraseñas'}</span>
           </button>
 
           <motion.button
@@ -681,8 +681,8 @@ const TECdt = () => {
                   const id = c.id;
                   const nombre = c.nombre || '-';
                   const numero = c.celular || '-';
-                  const clave = c.clave || '-';
-                  const contrasena = c.contrasena || c.iptv_pass || c.clave || '-';
+                  const redWifi = c.red || c.RED || c.wifi || c.ssid || '-';
+                  const contrasena = c.clave || c.CLAVE || c.contrasena || c.iptv_pass || '-';
                   const ip = c.ip || '-';
                   const nap = c.nap || '-';
                   const ubicacion = c.ubicacion || c.direccion || '';
@@ -779,42 +779,29 @@ const TECdt = () => {
                         )}
                       </td>
 
-                      {/* CLAVE */}
+                      {/* RED (Coincide con campo 'red' de General) */}
                       <td style={{ padding: '12px 16px' }}>
-                        {clave !== '-' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span
-                              onClick={() => handleCopy(clave, `Red de ${nombre}`)}
-                              style={{
-                                fontFamily: 'monospace',
-                                color: '#38bdf8',
-                                background: 'rgba(56, 189, 248, 0.08)',
-                                padding: '2px 6px',
-                                borderRadius: '6px',
-                                border: '1px solid rgba(56, 189, 248, 0.2)',
-                                cursor: 'pointer',
-                                letterSpacing: isClaveVisible ? 'normal' : '0.15em'
-                              }}
-                              title="Click para copiar red"
-                            >
-                              {isClaveVisible ? clave : '••••••••'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleClaveVisibility(id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: 'var(--text-muted)',
-                                fontSize: '0.85rem',
-                                padding: '2px'
-                              }}
-                              title={isClaveVisible ? 'Ocultar' : 'Mostrar'}
-                            >
-                              {isClaveVisible ? '🙈' : '👁️'}
-                            </button>
-                          </div>
+                        {redWifi !== '-' ? (
+                          <span
+                            onClick={() => handleCopy(redWifi, `Red Wi-Fi ${redWifi}`)}
+                            style={{
+                              fontFamily: 'monospace',
+                              color: '#38bdf8',
+                              background: 'rgba(56, 189, 248, 0.08)',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(56, 189, 248, 0.2)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontWeight: '600'
+                            }}
+                            title="Click para copiar red Wi-Fi"
+                          >
+                            <span>📶</span>
+                            <span>{redWifi}</span>
+                          </span>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>-</span>
                         )}
@@ -1080,8 +1067,8 @@ const TECdt = () => {
                   const waLink = getWhatsAppLink(c.celular);
                   const coords = c.coordenadas || c.ubicacion || c.direccion || '-';
 
-                  const claveVal = isCredsRevealed || revealedClaves[id] ? (c.clave || '-') : '••••••••';
-                  const passVal = isCredsRevealed || revealedPasswords[id] ? (c.contrasena || c.iptv_pass || c.clave || '-') : '••••••••';
+                  const redWifiMobile = c.red || c.RED || c.wifi || c.ssid || '-';
+                  const passVal = isCredsRevealed || revealedPasswords[id] ? (c.clave || c.CLAVE || c.contrasena || c.iptv_pass || '-') : '••••••••';
 
                   return (
                     <div key={id} className="tecdt-mobile-card">
@@ -1174,7 +1161,7 @@ const TECdt = () => {
                                 <span>📶</span>
                                 <div>
                                   <span className="tecdt-mobile-cred-label">Red</span>
-                                  <span className="tecdt-mobile-cred-val">{claveVal}</span>
+                                  <span className="tecdt-mobile-cred-val">{redVal}</span>
                                 </div>
                               </div>
                               <div className="tecdt-mobile-cred-actions">
@@ -1189,7 +1176,7 @@ const TECdt = () => {
                                 <button
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
-                                  onClick={() => handleCopy(c.clave, 'Red')}
+                                  onClick={() => handleCopy(c.red, 'Red')}
                                   title="Copiar Red"
                                 >
                                   📋
@@ -1218,7 +1205,7 @@ const TECdt = () => {
                                 <button
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
-                                  onClick={() => handleCopy(c.contrasena || c.iptv_pass || c.clave, 'Contraseña')}
+                                  onClick={() => handleCopy(c.clave || c.contrasena || c.iptv_pass, 'Contraseña')}
                                   title="Copiar Contraseña"
                                 >
                                   📋
