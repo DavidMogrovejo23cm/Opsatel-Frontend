@@ -243,10 +243,10 @@ const HojaRuta = () => {
     }, [clientes, clientSearchTerm, modalSource, registros, editingId]);
 
     const [dateFilter, setDateFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('TODOS');
+    const [statusFilter, setStatusFilter] = useState('PENDIENTES');
 
     const statusCounts = useMemo(() => {
-        const counts = { TODOS: 0, PENDIENTE: 0, 'EN PROCESO': 0, REALIZADO: 0, 'NO COMPLETADO': 0, CANCELADO: 0 };
+        const counts = { TODOS: 0, PENDIENTES: 0, PENDIENTE: 0, 'EN PROCESO': 0, REALIZADO: 0, 'NO COMPLETADO': 0, CANCELADO: 0 };
         if (!Array.isArray(registros)) return counts;
         counts.TODOS = registros.length;
         registros.forEach(r => {
@@ -260,6 +260,7 @@ const HojaRuta = () => {
                 counts[est]++;
             }
         });
+        counts.PENDIENTES = (counts.PENDIENTE || 0) + (counts['NO COMPLETADO'] || 0) + (counts['EN PROCESO'] || 0);
         return counts;
     }, [registros]);
 
@@ -282,8 +283,18 @@ const HojaRuta = () => {
                 (Date.now() - new Date(r.created_at).getTime() > 24 * 60 * 60 * 1000)
             );
             const estadoActual = isNoCompletado ? 'No completado' : (r.estado || 'Pendiente');
+            const estadoUpper = estadoActual.toUpperCase();
 
-            if (statusFilter !== 'TODOS' && estadoActual.toUpperCase() !== statusFilter) return false;
+            // Por defecto solo aparecen pendientes o no completados (y en proceso).
+            // Las actividades realizadas solo aparecen cuando se las busca en el filtro o explícitamente en el buscador
+            if (statusFilter === 'PENDIENTES') {
+                const searchExplicitRealizado = search.includes('realizado');
+                if (!searchExplicitRealizado && (estadoUpper === 'REALIZADO' || estadoUpper === 'CANCELADO')) {
+                    return false;
+                }
+            } else if (statusFilter !== 'TODOS') {
+                if (estadoUpper !== statusFilter) return false;
+            }
 
             return true;
         });
@@ -510,32 +521,31 @@ const HojaRuta = () => {
                                 <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>&times;</button>
                             )}
                         </div>
-                        {user.rol?.toLowerCase() === 'administrador' && (
-                            <select
-                                className="input"
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                style={{
-                                    width: 'auto',
-                                    marginBottom: 0,
-                                    background: '#1e293b',
-                                    color: '#f8fafc',
-                                    border: '1px solid rgba(139, 92, 246, 0.4)',
-                                    borderRadius: '10px',
-                                    padding: '7px 12px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer'
-                                }}
-                                title="Filtro de estados (Visible solo para Administradores)"
-                            >
-                                <option value="TODOS">📋 Todos los estados ({statusCounts.TODOS})</option>
-                                <option value="PENDIENTE">⏳ Pendiente ({statusCounts.PENDIENTE})</option>
-                                <option value="EN PROCESO">🔄 En proceso ({statusCounts['EN PROCESO']})</option>
-                                <option value="REALIZADO">✅ Realizado ({statusCounts.REALIZADO})</option>
-                                <option value="NO COMPLETADO">❌ No completado ({statusCounts['NO COMPLETADO']})</option>
-                                <option value="CANCELADO">🚫 Cancelado ({statusCounts.CANCELADO})</option>
-                            </select>
-                        )}
+                        <select
+                            className="input hr-status-filter"
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                            style={{
+                                width: 'auto',
+                                marginBottom: 0,
+                                background: '#1e293b',
+                                color: '#f8fafc',
+                                border: '1px solid rgba(139, 92, 246, 0.4)',
+                                borderRadius: '10px',
+                                padding: '7px 12px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                            }}
+                            title="Filtro de estados de actividades"
+                        >
+                            <option value="PENDIENTES">⏳ Pendientes y No completados ({statusCounts.PENDIENTES || (statusCounts.PENDIENTE + statusCounts['NO COMPLETADO'] + (statusCounts['EN PROCESO'] || 0))})</option>
+                            <option value="REALIZADO">✅ Realizado ({statusCounts.REALIZADO})</option>
+                            <option value="PENDIENTE">⏳ Solo Pendiente ({statusCounts.PENDIENTE})</option>
+                            <option value="EN PROCESO">🔄 Solo En proceso ({statusCounts['EN PROCESO']})</option>
+                            <option value="NO COMPLETADO">❌ Solo No completado ({statusCounts['NO COMPLETADO']})</option>
+                            <option value="CANCELADO">🚫 Cancelado ({statusCounts.CANCELADO})</option>
+                            <option value="TODOS">📋 Todos los estados ({statusCounts.TODOS})</option>
+                        </select>
                         <input
                             className="input hr-search"
                             placeholder="Buscar técnico, cliente o zona..."

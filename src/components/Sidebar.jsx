@@ -135,18 +135,32 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
     navigate('/login');
   };
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Filtrar ítems y grupos según el rol del usuario conectado
   const visibleSections = useMemo(() => {
     return MENU_SECTIONS.map(section => {
-      const allowedItems = section.items.filter(item => {
+      let allowedItems = section.items.filter(item => {
         if (item.path === '/general') {
           return user && (user.rol === 'administrador' || user.acceso_general_sin_clave);
         }
         return !item.roles || (user && item.roles.includes(user.rol));
       });
+
+      // En vista móvil: no mostrar el overview / panel de control
+      if (isMobile) {
+        allowedItems = allowedItems.filter(item => item.path !== '/');
+      }
+
       return { ...section, items: allowedItems };
     }).filter(section => section.items.length > 0);
-  }, [user]);
+  }, [user, isMobile]);
 
   // Asegura que el grupo que contiene la ruta activa esté abierto
   useEffect(() => {

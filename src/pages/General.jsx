@@ -8,7 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { clienteService, configuracionService } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 import { processImage, compressImage } from '../utils/imageCompressor';
@@ -153,6 +153,23 @@ const General = () => {
   // Estados para modal de visualización completa de Observaciones / Comentarios
   const [detailModal, setDetailModal] = useState(null); // { title: string, text: string, clientName: string, id: number, type: 'obs' | 'com' }
   const [detailCopied, setDetailCopied] = useState(false);
+  const [selectedMobileClient, setSelectedMobileClient] = useState(null);
+
+  const getClientePendiente = (c) => {
+    if (!c) return '$0.00';
+    if (c.pendiente !== undefined && c.pendiente !== null && c.pendiente !== '') {
+      return typeof c.pendiente === 'number' ? `$${c.pendiente.toFixed(2)}` : String(c.pendiente);
+    }
+    const saldoVal = (c.saldo !== null && c.saldo !== undefined) 
+      ? parseFloat(c.saldo || 0) 
+      : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
+    const plusVal = parseFloat(c.plus || 0);
+    const adicVal = parseFloat(c.adicional || 0);
+    const total = (c.total_pago !== undefined && c.total_pago !== null) 
+      ? parseFloat(c.total_pago) 
+      : (saldoVal + plusVal + adicVal);
+    return `$${total.toFixed(2)}`;
+  };
 
   // Definición de las columnas del sistema
   const allColumns = [
@@ -228,13 +245,14 @@ const General = () => {
   useEffect(() => {
     const handleKeyClose = (e) => {
       if (e.key === 'Escape') {
+        if (selectedMobileClient) setSelectedMobileClient(null);
         if (showEntryPinModal) setShowEntryPinModal(false);
         if (showPinModal) setShowPinModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyClose);
     return () => window.removeEventListener('keydown', handleKeyClose);
-  }, [showEntryPinModal, showPinModal]);
+  }, [showEntryPinModal, showPinModal, selectedMobileClient]);
 
   const handleStartEdit = (id, col, value) => {
     // Si el usuario no tiene permisos para modificar la tabla, no se permite editar
@@ -1059,6 +1077,11 @@ const General = () => {
 
       if (!matchSearch) return false;
 
+      // En vista móvil solo dejamos el search general (los demás filtros se ignoran para no restringir la lista)
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        return true;
+      }
+
       // Filtro específico por IP
       if (ipFilter.trim()) {
         const targetIp = ipFilter.trim().toLowerCase();
@@ -1224,13 +1247,13 @@ const General = () => {
               )}
             </div>
           </div>
-          <p style={{ marginTop: '6px' }}>
+          <p className="general-desktop-only" style={{ marginTop: '6px' }}>
             💡 Haz doble clic en cualquier celda para editar el valor.
           </p>
         </div>
         <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
-            className="input"
+            className="input general-desktop-only"
             style={{ width: 'auto', minWidth: '190px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
@@ -1241,7 +1264,7 @@ const General = () => {
             <option value="BORRAR">💥 Borrar (Todo: OLT, MikroTik, XUI, LibreQoS)</option>
           </select>
           <select
-            className="input"
+            className="input general-desktop-only"
             style={{ width: 'auto', minWidth: '170px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--text-main)', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1257,7 +1280,7 @@ const General = () => {
             <option value="FINIQUITO">👻 Finiquitos ({statusCounts.FINIQUITO})</option>
           </select>
           <select
-            className="input"
+            className="input general-desktop-only"
             style={{ width: 'auto', minWidth: '180px', marginBottom: 0, background: 'var(--input-select-bg, #1e1b4b)', color: 'var(--primary)', fontWeight: '600', fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={pagoFilter}
             onChange={(e) => setPagoFilter(e.target.value)}
@@ -1267,7 +1290,7 @@ const General = () => {
             <option value="PENDIENTE_PAGO">⚠️ Con Deuda Pendiente</option>
           </select>
           <select
-            className="input"
+            className="input general-desktop-only"
             style={{
               width: 'auto',
               minWidth: '175px',
@@ -1297,7 +1320,7 @@ const General = () => {
               <option value="SIN_PLAN">⚠️ Sin Plan Asignado ({planCounts['__sin_plan__']})</option>
             )}
           </select>
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <div className="general-desktop-only" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <input
               className="input"
               placeholder="📅 Fecha Instalación (ej: 14/09)..."
@@ -1335,7 +1358,7 @@ const General = () => {
               </button>
             )}
           </div>
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <div className="general-desktop-only" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <input
               className="input"
               placeholder="🌐 Filtrar por IP..."
@@ -1374,7 +1397,7 @@ const General = () => {
             )}
           </div>
           <input
-            className="input"
+            className="input general-search-input"
             placeholder="Buscar por ID, Nombre, Cédula o IP..."
             style={{ width: 'auto', minWidth: '220px', maxWidth: '300px', flex: 1, marginBottom: 0, fontSize: '0.82rem', height: '38px', padding: '4px 10px' }}
             value={searchTerm}
@@ -1384,7 +1407,7 @@ const General = () => {
             <button
               type="button"
               onClick={handleResetFilters}
-              className="btn"
+              className="btn general-desktop-only"
               style={{
                 padding: '6px 14px',
                 fontSize: '0.8rem',
@@ -1411,7 +1434,8 @@ const General = () => {
       </div>
 
       {loading ? <p>Cargando datos...</p> : (
-        <div className="table-container" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
+        <>
+          <div className="table-container general-desktop-view" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
           <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
             <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-solid, #0a0e18)', zIndex: 20 }}>
               <tr>
@@ -2512,8 +2536,39 @@ const General = () => {
             </tbody>
           </table>
         </div>
+
+        {/* VISTA MÓVIL: Tarjetas compactas mostrando únicamente ID y Nombre del Cliente */}
+        <div className="general-mobile-view">
+          {filteredClientes.length === 0 ? (
+            <div className="general-mobile-empty">
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>🔍</span>
+              <p style={{ margin: 0, fontWeight: 500 }}>No se encontraron clientes</p>
+            </div>
+          ) : (
+            <div className="general-mobile-list">
+              {filteredClientes.map(cliente => (
+                <div
+                  key={cliente.id}
+                  className="general-mobile-card"
+                  onClick={() => setSelectedMobileClient(cliente)}
+                >
+                  <div className="general-mobile-card-id">
+                    #{cliente.id}
+                  </div>
+                  <div className="general-mobile-card-name">
+                    {cliente.nombre || 'Sin Nombre'}
+                  </div>
+                  <div className="general-mobile-card-arrow">
+                    ›
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
       )}
-      <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="general-desktop-only" style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span>
           Total: {filteredClientes.length} clientes encontrados.
           {fechaInstalacionFilter && (
@@ -3446,6 +3501,242 @@ const General = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Modal móvil con detalle completo del cliente seleccionado */}
+      <AnimatePresence>
+        {selectedMobileClient && (
+          <div
+            className="general-mobile-modal-overlay"
+            onClick={() => setSelectedMobileClient(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="general-mobile-modal-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del Modal */}
+              <div className="general-mobile-modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'rgba(99, 102, 241, 0.2)',
+                    color: '#818cf8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.1rem'
+                  }}>
+                    👤
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: '#fff', lineHeight: 1.2 }}>
+                      {selectedMobileClient.nombre || 'Sin Nombre'}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      ID Cliente: <strong style={{ color: '#a5b4fc' }}>#{selectedMobileClient.id}</strong>
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMobileClient(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#94a3b8',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    fontSize: '1.1rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Cerrar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Cuerpo del Modal con la información solicitada:
+                  id, nombre, ip, celular, cedula, nodo, estado, puerto, id port, service port, potencia, nap, pendiente */}
+              <div className="general-mobile-modal-body">
+                {/* 1. ID */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">ID</span>
+                  <span className="general-mobile-detail-value" style={{ color: '#a5b4fc', fontWeight: '800' }}>
+                    #{selectedMobileClient.id}
+                  </span>
+                </div>
+
+                {/* 2. Nombre */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Nombre</span>
+                  <span className="general-mobile-detail-value" style={{ fontWeight: '700' }}>
+                    {selectedMobileClient.nombre || '—'}
+                  </span>
+                </div>
+
+                {/* 3. IP */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">IP</span>
+                  <span className="general-mobile-detail-value" style={{ fontFamily: 'monospace', color: '#38bdf8' }}>
+                    {selectedMobileClient.ip || '—'}
+                  </span>
+                </div>
+
+                {/* 4. Celular */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Celular</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="general-mobile-detail-value" style={{ color: '#4ade80' }}>
+                      {selectedMobileClient.celular || '—'}
+                    </span>
+                    {selectedMobileClient.celular && (
+                      <a
+                        href={`tel:${String(selectedMobileClient.celular).replace(/\D/g, '')}`}
+                        style={{
+                          textDecoration: 'none',
+                          padding: '2px 6px',
+                          background: 'rgba(34, 197, 94, 0.15)',
+                          border: '1px solid rgba(34, 197, 94, 0.3)',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          color: '#4ade80'
+                        }}
+                        title="Llamar"
+                      >
+                        📞
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Cédula */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Cédula</span>
+                  <span className="general-mobile-detail-value">
+                    {selectedMobileClient.cedula || '—'}
+                  </span>
+                </div>
+
+                {/* 6. Nodo */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Nodo</span>
+                  <span className="general-mobile-detail-value" style={{ color: '#fbbf24' }}>
+                    {selectedMobileClient.nodo || '—'}
+                  </span>
+                </div>
+
+                {/* 7. Estado */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Estado</span>
+                  <span style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    background: (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : 'rgba(245, 158, 11, 0.15)',
+                    color: (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
+                      ? '#34d399'
+                      : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
+                      ? '#f87171'
+                      : '#fbbf24',
+                    border: `1px solid ${
+                      (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
+                        ? 'rgba(16, 185, 129, 0.3)'
+                        : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
+                        ? 'rgba(239, 68, 68, 0.3)'
+                        : 'rgba(245, 158, 11, 0.3)'
+                    }`
+                  }}>
+                    {selectedMobileClient.estado || '—'}
+                  </span>
+                </div>
+
+                {/* 8. Puerto */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Puerto</span>
+                  <span className="general-mobile-detail-value">
+                    {selectedMobileClient.puerto || '—'}
+                  </span>
+                </div>
+
+                {/* 9. ID Port */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">ID Port</span>
+                  <span className="general-mobile-detail-value" style={{ fontFamily: 'monospace' }}>
+                    {selectedMobileClient.id_port || selectedMobileClient['ID_PORT'] || '—'}
+                  </span>
+                </div>
+
+                {/* 10. Service Port */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Service Port</span>
+                  <span className="general-mobile-detail-value" style={{ fontFamily: 'monospace' }}>
+                    {selectedMobileClient.service_port || selectedMobileClient['SERVICE PORT'] || '—'}
+                  </span>
+                </div>
+
+                {/* 11. Potencia */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">Potencia</span>
+                  <span className="general-mobile-detail-value" style={{ color: '#c084fc' }}>
+                    {selectedMobileClient.potencia || '—'}
+                  </span>
+                </div>
+
+                {/* 12. NAP */}
+                <div className="general-mobile-detail-row">
+                  <span className="general-mobile-detail-label">NAP</span>
+                  <span className="general-mobile-detail-value" style={{ color: '#38bdf8' }}>
+                    {selectedMobileClient.nap || '—'}
+                  </span>
+                </div>
+
+                {/* 13. Pendiente */}
+                <div className="general-mobile-detail-row" style={{ background: 'rgba(239, 68, 68, 0.08)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                  <span className="general-mobile-detail-label" style={{ color: '#fca5a5' }}>Pendiente</span>
+                  <span className="general-mobile-detail-value" style={{
+                    color: getClientePendiente(selectedMobileClient) === '$0.00' ? '#34d399' : '#f87171',
+                    fontSize: '1rem',
+                    fontWeight: '800'
+                  }}>
+                    {getClientePendiente(selectedMobileClient)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer del Modal */}
+              <div className="general-mobile-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setSelectedMobileClient(null)}
+                  style={{
+                    padding: '8px 24px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    borderRadius: '10px',
+                    width: '100%'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

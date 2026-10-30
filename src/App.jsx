@@ -37,6 +37,9 @@ function HomeRedirect() {
   if (user?.rol === 'tecnico') {
     return <Navigate to="/hoja-ruta" replace />;
   }
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    return <Navigate to="/general" replace />;
+  }
   return <Dashboard />;
 }
 

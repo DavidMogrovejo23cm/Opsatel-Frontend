@@ -6,6 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { clienteService, configuracionService, extrasService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError } from '../utils/alerts';
@@ -13,6 +14,17 @@ import { showAlert, showSuccess, showError } from '../utils/alerts';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, LabelList } from 'recharts';
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      navigate('/general', { replace: true });
+    }
+  }, [navigate]);
+
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    return null;
+  }
   const [stats, setStats] = useState({
     total: 0,
     activos: 0,

@@ -1858,3 +1858,213 @@ html, body {
   }
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════
+   VISTA GENERAL Y NAVEGACIÓN MÓVIL (OPSATEL v2.0 MOBILE UPDATE)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Reglas base por defecto (Escritorio / Tablet) */
+.general-desktop-only {
+  display: inline-flex !important;
+}
+p.general-desktop-only {
+  display: block !important;
+}
+div.general-desktop-only {
+  display: flex !important;
+}
+.general-desktop-view {
+  display: block !important;
+  width: 100% !important;
+}
+.general-mobile-view {
+  display: none !important;
+}
+
+/* Reglas para Pantallas Móviles (<= 768px) */
+@media (max-width: 768px) {
+  /* Ocultar Overview / Resumen / Panel de Control en menú móvil */
+  .sidebar-section-group a.sidebar-nav-link[href="/"],
+  .sidebar-section-group a.sidebar-nav-link[href=""] {
+    display: none !important;
+  }
+
+  /* Ocultar filtros secundarios en vista general móvil (acciones, estados, planes, pagos, fecha de insta, filtrar por ip, limpiar filtro) */
+  .general-desktop-only,
+  p.general-desktop-only,
+  div.general-desktop-only,
+  select.general-desktop-only,
+  button.general-desktop-only {
+    display: none !important;
+  }
+
+  /* Ocultar tabla de cuadrícula grande en móviles */
+  .general-desktop-view {
+    display: none !important;
+  }
+
+  /* Mostrar vista móvil simplificada con ID y Nombre */
+  .general-mobile-view {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    padding-bottom: 30px !important;
+  }
+
+  /* El buscador general ocupa todo el ancho ergonómico en móvil */
+  .general-search-input {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    height: 42px !important;
+    font-size: 0.9rem !important;
+    border-radius: 12px !important;
+  }
+
+  .general-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .general-mobile-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #0d121f;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 13px 15px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .general-mobile-card:active {
+    transform: scale(0.985);
+    background: #1e293b;
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+
+  .general-mobile-card-id {
+    background: rgba(99, 102, 241, 0.16);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  .general-mobile-card-name {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f8fafc;
+    word-break: break-word;
+    line-height: 1.35;
+  }
+
+  .general-mobile-card-arrow {
+    color: #64748b;
+    font-size: 1.4rem;
+    font-weight: 300;
+    line-height: 1;
+    padding-left: 4px;
+  }
+
+  .general-mobile-empty {
+    text-align: center;
+    padding: 36px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+  }
+}
+
+/* Modales móviles de detalle */
+.general-mobile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.general-mobile-modal-card {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+.general-mobile-modal-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.general-mobile-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.general-mobile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.general-mobile-detail-label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.general-mobile-detail-value {
+  font-size: 0.88rem;
+  color: #f1f5f9;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+}
+
+.general-mobile-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.98);
+}
