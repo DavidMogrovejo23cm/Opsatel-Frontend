@@ -45,6 +45,9 @@ const WhatsApp = () => {
     const [limiteMensajes, setLimiteMensajes] = useState('20'); // Límite de mensajes a enviar en la tanda (ej. 20)
     const [listaNodos, setListaNodos] = useState([]);
     const [listaClientes, setListaClientes] = useState([]);
+    const [puertosConfigList, setPuertosConfigList] = useState([]);
+    const [nodosConfigList, setNodosConfigList] = useState([]);
+    const [puertosSeleccionados, setPuertosSeleccionados] = useState([]);
 
     // Estado del puente (Conexión QR)
     const [connectionStatus, setConnectionStatus] = useState('OFFLINE');
@@ -128,13 +131,18 @@ const WhatsApp = () => {
 
     const cargarDatosNodosYClientes = async () => {
         try {
-            const [resNodos, resClientes] = await Promise.all([
-                configuracionService.getNodos(),
-                clienteService.listar()
+            const [resNodos, resPuertos, resClientes] = await Promise.all([
+                configuracionService.getNodos().catch(() => ({ data: [] })),
+                configuracionService.getPuertos().catch(() => ({ data: [] })),
+                clienteService.listar().catch(() => ({ data: [] }))
             ]);
             
             const rawNodos = resNodos.data || resNodos || [];
+            const rawPuertos = resPuertos.data || resPuertos || [];
             const rawClientes = resClientes.data || resClientes || [];
+
+            setNodosConfigList(rawNodos);
+            setPuertosConfigList(rawPuertos);
 
             const map = new Map(); // key -> canonical display name
             map.set("SAYAUSI", "Sayausí");
@@ -162,6 +170,125 @@ const WhatsApp = () => {
         } catch (error) {
             console.error("Error cargando nodos/clientes:", error);
         }
+    };
+
+    const extractPortNumber = (str) => {
+        if (!str) return null;
+        const s = String(str).trim();
+        if (s.includes('/')) {
+            const parts = s.split('/').filter(Boolean);
+            if (parts.length > 0) {
+                const last = parts[parts.length - 1];
+                const m = last.match(/\d+/);
+                return m ? m[0] : null;
+            }
+        }
+        const m = s.match(/\d+/);
+        return m ? m[0] : null;
+    };
+
+    const matchesPuerto = (clientPuerto, selectedPorts) => {
+        if (!selectedPorts || selectedPorts.length === 0) return true;
+        if (!clientPuerto) return false;
+        const clientStr = String(clientPuerto).trim().toLowerCase();
+        const clientNum = extractPortNumber(clientStr);
+
+        return selectedPorts.some(sp => {
+            const selStr = String(sp).trim().toLowerCase();
+            if (clientStr === selStr) return true;
+            const selNum = extractPortNumber(selStr);
+            if (selNum !== null && clientNum !== null) {
+                return selNum === clientNum;
+            }
+            return clientStr.includes(selStr) || selStr.includes(clientStr);
+        });
+    };
+
+    const getPuertosParaNodo = (nodoNombre) => {
+        const puertosSet = new Set();
+        const targetKey = normalizeLocationKey(nodoNombre);
+
+        if (nodoNombre && nodoNombre !== 'todos') {
+            // 1. De la tabla configuraciones/puertos
+            const nodoObj = nodosConfigList.find(n => normalizeLocationKey(n.nombre) === targetKey);
+            if (nodoObj) {
+                puertosConfigList
+                    .filter(p => p.nodo_id === nodoObj.id)
+                    .forEach(p => { if (p.nombre && p.nombre.trim()) puertosSet.add(p.nombre.trim()); });
+            }
+
+            // 2. De los clientes con ese nodo o parroquia
+            listaClientes.forEach(c => {
+                const cNodoKey = normalizeLocationKey(c.nodo);
+                const cParroquiaKey = normalizeLocationKey(c.parroquia);
+                if (cNodoKey.includes(targetKey) || cParroquiaKey.includes(targetKey)) {
+                    if (c.puerto && String(c.puerto).trim()) {
+                        puertosSet.add(String(c.puerto).trim());
+                    }
+                }
+            });
+
+            // 3. Fallback inteligente estándar si aún está vacío
+            if (puertosSet.size === 0) {
+                if (targetKey.includes("BANOS")) {
+                    for (let i = 1; i <= 15; i++) puertosSet.add(`Puerto ${i}`);
+                } else if (targetKey.includes("SAYAUSI")) {
+                    for (let i = 1; i <= 11; i++) puertosSet.add(`Puerto ${i}`);
+                }
+            }
+        } else {
+            // 'todos' los nodos
+            puertosConfigList.forEach(p => { if (p.nombre && p.nombre.trim()) puertosSet.add(p.nombre.trim()); });
+            listaClientes.forEach(c => {
+                if (c.puerto && String(c.puerto).trim()) {
+                    puertosSet.add(String(c.puerto).trim());
+                }
+            });
+            if (puertosSet.size === 0) {
+                for (let i = 1; i <= 15; i++) puertosSet.add(`Puerto ${i}`);
+            }
+        }
+
+        return Array.from(puertosSet).sort((a, b) => {
+            const numA = parseInt((a.match(/\d+/) || [0])[0], 10);
+            const numB = parseInt((b.match(/\d+/) || [0])[0], 10);
+            if (numA !== numB) return numA - numB;
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    };
+
+    const getConteoClientesPorPuerto = (puertoNombre) => {
+        return listaClientes.filter(c => {
+            const hasCelular = c.celular && String(c.celular).trim() !== '';
+            if (!hasCelular) return false;
+
+            if (estadoSeleccionado !== 'TODOS') {
+                const estUpper = (c.estado || '').trim().toUpperCase();
+                if (estadoSeleccionado === 'ACTIVO' && !['ACTIVO', 'ACTIVA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'INACTIVO' && !['INACTIVO', 'INACTIVA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'SUSPENDIDO' && !['SUSPENDIDO', 'SUSPENDIDA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'PROCESO' && !['PROCESO', 'EN PROCESO'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'JURIDICO' && !['JURIDICO', 'JURÍDICO'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'PENDIENTE' && !['PENDIENTE', 'EN ACTIVACIÓN', 'EN ACTIVACION'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'FINIQUITO' && estUpper !== 'FINIQUITO') return false;
+                if (estadoSeleccionado === 'CORTESIA' && !['CORTESIA', 'CORTESÍA'].includes(estUpper)) return false;
+                if (estadoSeleccionado === 'TRASLADO' && estUpper !== 'TRASLADO') return false;
+            }
+
+            if (nodoSeleccionado !== 'todos') {
+                const targetKey = normalizeLocationKey(nodoSeleccionado);
+                const nodoKey = normalizeLocationKey(c.nodo);
+                const parroquiaKey = normalizeLocationKey(c.parroquia);
+                if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) return false;
+            }
+
+            return matchesPuerto(c.puerto, [puertoNombre]);
+        }).length;
+    };
+
+    const handleNodoChange = (nuevoNodo) => {
+        setNodoSeleccionado(nuevoNodo);
+        setPuertosSeleccionados([]); // Limpiar selección de puertos al cambiar de nodo
     };
 
     // Extraer únicamente el PRIMER número de WhatsApp válido de una cadena con uno o múltiples teléfonos
@@ -225,6 +352,13 @@ const WhatsApp = () => {
                 const nodoKey = normalizeLocationKey(c.nodo);
                 const parroquiaKey = normalizeLocationKey(c.parroquia);
                 if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) {
+                    return false;
+                }
+            }
+
+            // Filtro por Puertos seleccionados
+            if (puertosSeleccionados.length > 0) {
+                if (!matchesPuerto(c.puerto, puertosSeleccionados)) {
                     return false;
                 }
             }
@@ -302,6 +436,9 @@ const WhatsApp = () => {
                 const nodoKey = normalizeLocationKey(c.nodo);
                 const parroquiaKey = normalizeLocationKey(c.parroquia);
                 if (!nodoKey.includes(targetKey) && !parroquiaKey.includes(targetKey)) return false;
+            }
+            if (puertosSeleccionados.length > 0) {
+                if (!matchesPuerto(c.puerto, puertosSeleccionados)) return false;
             }
             return true;
         });
@@ -983,7 +1120,8 @@ const WhatsApp = () => {
         };
         const estadoLabel = nombresEstado[estadoSeleccionado] || estadoSeleccionado;
         const nodoLabel = nodoSeleccionado === 'todos' ? 'TODOS los nodos' : `el nodo "${nodoSeleccionado}"`;
-        const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel} ${rangoIdsTexto}`.trim();
+        const puertosTexto = puertosSeleccionados.length > 0 ? ` [Puertos: ${puertosSeleccionados.join(', ')}]` : '';
+        const descripcionDestino = `a ${count} clientes [${estadoLabel}] en ${nodoLabel}${puertosTexto} ${rangoIdsTexto}`.trim();
 
         let delayMin = 25.0;
         let delayMax = 45.0;
@@ -1022,9 +1160,13 @@ const WhatsApp = () => {
             ritmoTexto = '⏱️ Modo Rápido Seguro: Grupos de 10 clientes (15 a 30 seg entre mensajes) con descanso de 2 a 3 minutos';
         }
 
+        const puertosInfoConfirm = puertosSeleccionados.length > 0 
+            ? `\n🔌 Puertos seleccionados: ${puertosSeleccionados.join(', ')} (${puertosSeleccionados.length} puertos)` 
+            : '';
+
         const confirmacion1 = await showConfirm(
             '⚠️ ADVERTENCIA DE SEGURIDAD ANTI-BANEO',
-            `Estás a punto de despachar una difusión masiva ${descripcionDestino}.\n\n🛡️ Estrategia de Envío Seleccionada:\n${ritmoTexto}\n\n🔢 Cantidad de clientes a enviar en esta tanda: ${count}\n\n¿Deseas continuar?`,
+            `Estás a punto de despachar una difusión masiva ${descripcionDestino}.\n\n🛡️ Estrategia de Envío Seleccionada:\n${ritmoTexto}\n\n🔢 Cantidad de clientes a enviar en esta tanda: ${count}${puertosInfoConfirm}\n\n¿Deseas continuar?`,
             'Continuar',
             'Cancelar'
         );
@@ -1032,7 +1174,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.\n\n💡 Podrás cancelar el envío en cualquier momento desde la pestaña de Historial.`,
+            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}${puertosInfoConfirm}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.\n\n💡 Podrás cancelar el envío en cualquier momento desde la pestaña de Historial.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -1044,6 +1186,7 @@ const WhatsApp = () => {
             const desdeIdInt = desdeId && !isNaN(parseInt(desdeId, 10)) ? parseInt(desdeId, 10) : null;
             const hastaIdInt = hastaId && !isNaN(parseInt(hastaId, 10)) ? parseInt(hastaId, 10) : null;
             const limiteInt = limiteMensajes && !isNaN(parseInt(limiteMensajes, 10)) ? parseInt(limiteMensajes, 10) : null;
+            const puertosParam = puertosSeleccionados.length > 0 ? puertosSeleccionados : null;
 
             await whatsappService.enviarGlobal(
                 mensajeGlobal,
@@ -1056,9 +1199,10 @@ const WhatsApp = () => {
                 batchPauseMax,
                 desdeIdInt,
                 hastaIdInt,
-                limiteInt
+                limiteInt,
+                puertosParam
             );
-            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}). Se procesará en segundo plano con protección anti-bloqueo.`);
+            showSuccess(`Difusión masiva iniciada con éxito para ${count} clientes (${estadoLabel}${puertosTexto}). Se procesará en segundo plano con protección anti-bloqueo.`);
             setMensajeGlobal('');
             setActiveTab('Historial');
             setVistaHistorial('difusiones');
@@ -2356,7 +2500,7 @@ const WhatsApp = () => {
                                     </label>
                                     <select
                                         value={nodoSeleccionado}
-                                        onChange={(e) => setNodoSeleccionado(e.target.value)}
+                                        onChange={(e) => handleNodoChange(e.target.value)}
                                         style={{ 
                                             height: '40px', 
                                             background: '#0e1726', 
@@ -2456,7 +2600,177 @@ const WhatsApp = () => {
                                     />
                                 </div>
 
-                                {/* 5. Selector de Ritmo Anti-Baneo */}
+                                {/* 5. Selector de Puertos (Multi-selección) */}
+                                {(() => {
+                                    const puertosDisponibles = getPuertosParaNodo(nodoSeleccionado);
+                                    const todosSeleccionados = puertosDisponibles.length > 0 && puertosDisponibles.every(p => puertosSeleccionados.includes(p));
+                                    const ningunoSeleccionado = puertosSeleccionados.length === 0;
+
+                                    return (
+                                        <div style={{ 
+                                            background: 'rgba(15, 23, 42, 0.75)', 
+                                            padding: '16px 18px', 
+                                            borderRadius: '8px', 
+                                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                                            gridColumn: '1 / -1',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                                                <div>
+                                                    <label className="label" style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>🔌</span> Filtrar por Puertos ({nodoSeleccionado === 'todos' ? 'Todos los Nodos' : `Zona: ${nodoSeleccionado}`})
+                                                    </label>
+                                                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                                        Selecciona uno o más puertos para segmentar la difusión masiva. Si ninguno está marcado, se enviará a todos los puertos.
+                                                    </p>
+                                                </div>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (todosSeleccionados) {
+                                                                setPuertosSeleccionados([]);
+                                                            } else {
+                                                                setPuertosSeleccionados([...puertosDisponibles]);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: todosSeleccionados ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                                                            color: '#38bdf8',
+                                                            borderRadius: '6px',
+                                                            padding: '4px 10px',
+                                                            fontSize: '0.78rem',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px'
+                                                        }}
+                                                    >
+                                                        {todosSeleccionados ? 'Deseleccionar Todos' : '✓ Seleccionar Todos'}
+                                                    </button>
+
+                                                    {!ningunoSeleccionado && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPuertosSeleccionados([])}
+                                                            style={{
+                                                                background: 'rgba(239, 68, 68, 0.15)',
+                                                                border: '1px solid rgba(239, 68, 68, 0.35)',
+                                                                color: '#fca5a5',
+                                                                borderRadius: '6px',
+                                                                padding: '4px 10px',
+                                                                fontSize: '0.78rem',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            title="Desmarcar todos los puertos para enviar a todos"
+                                                        >
+                                                            ✕ Limpiar Filtro ({puertosSeleccionados.length})
+                                                        </button>
+                                                    )}
+
+                                                    <span style={{
+                                                        fontSize: '0.76rem',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '6px',
+                                                        background: ningunoSeleccionado ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                        color: ningunoSeleccionado ? '#93c5fd' : '#6ee7b7',
+                                                        border: `1px solid ${ningunoSeleccionado ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        {ningunoSeleccionado 
+                                                            ? '🌐 Todos los puertos incluidos' 
+                                                            : `🎯 ${puertosSeleccionados.length} puerto(s) seleccionado(s)`}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Grid de Puertos */}
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                                                gap: '8px',
+                                                marginTop: '10px',
+                                                maxHeight: '220px',
+                                                overflowY: 'auto',
+                                                padding: '4px',
+                                                background: 'rgba(0, 0, 0, 0.2)',
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)'
+                                            }}>
+                                                {puertosDisponibles.map((puerto) => {
+                                                    const isChecked = puertosSeleccionados.includes(puerto);
+                                                    const conteo = getConteoClientesPorPuerto(puerto);
+
+                                                    return (
+                                                        <div
+                                                            key={puerto}
+                                                            onClick={() => {
+                                                                setPuertosSeleccionados(prev => 
+                                                                    prev.includes(puerto) 
+                                                                        ? prev.filter(p => p !== puerto) 
+                                                                        : [...prev, puerto]
+                                                                );
+                                                            }}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                padding: '6px 10px',
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.15s ease',
+                                                                background: isChecked ? 'rgba(14, 165, 233, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                                                                border: isChecked ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                                                                color: isChecked ? '#fff' : '#cbd5e1',
+                                                                userSelect: 'none'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => {}} // Manejado por el click del div contenedor
+                                                                    style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
+                                                                />
+                                                                <span style={{ 
+                                                                    fontSize: '0.84rem', 
+                                                                    fontWeight: isChecked ? '700' : '500',
+                                                                    whiteSpace: 'nowrap',
+                                                                    textOverflow: 'ellipsis',
+                                                                    overflow: 'hidden'
+                                                                }}>
+                                                                    {puerto}
+                                                                </span>
+                                                            </div>
+                                                            <span style={{
+                                                                fontSize: '0.72rem',
+                                                                padding: '1px 6px',
+                                                                borderRadius: '10px',
+                                                                background: isChecked ? 'rgba(56, 189, 248, 0.4)' : (conteo > 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)'),
+                                                                color: isChecked ? '#fff' : (conteo > 0 ? '#93c5fd' : '#64748b'),
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                {conteo}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {puertosDisponibles.length === 0 && (
+                                                <div style={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', padding: '12px' }}>
+                                                    No se encontraron puertos registrados para este nodo.
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* 6. Selector de Ritmo Anti-Baneo */}
                                 <div style={{ 
                                     background: 'rgba(15, 23, 42, 0.65)', 
                                     padding: '14px 16px', 
@@ -2517,6 +2831,11 @@ const WhatsApp = () => {
                                             {primer && ultimo && (
                                                 <span style={{ color: '#c084fc', background: 'rgba(168, 85, 247, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
                                                     🆔 Rango: Cliente #{primer.id} ({primer.nombre}) ➡️ #{ultimo.id} ({ultimo.nombre})
+                                                </span>
+                                            )}
+                                            {puertosSeleccionados.length > 0 && (
+                                                <span style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(56, 189, 248, 0.35)', fontWeight: '600' }}>
+                                                    🔌 Puertos: {puertosSeleccionados.join(', ')} ({puertosSeleccionados.length})
                                                 </span>
                                             )}
                                             {limiteMensajes && parseInt(limiteMensajes, 10) < totalSinLimite && (

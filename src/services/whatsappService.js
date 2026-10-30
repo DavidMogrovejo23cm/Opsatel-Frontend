@@ -93,8 +93,8 @@ export const whatsappService = {
   cerrarSesionBridge: () =>
     api.post('/whatsapp/logout'),
 
-  // Difusión global masiva con control de ritmo, lotes, rango de IDs y límite de mensajes
-  enviarGlobal: (mensaje, nodo = null, estado = 'ACTIVO', delay_min = 30.0, delay_max = 120.0, batch_size = 10, batch_pause_min = 300.0, batch_pause_max = 600.0, desde_id = null, hasta_id = null, limite_mensajes = null) =>
+  // Difusión global masiva con control de ritmo, lotes, rango de IDs, límite de mensajes y puertos
+  enviarGlobal: (mensaje, nodo = null, estado = 'ACTIVO', delay_min = 30.0, delay_max = 120.0, batch_size = 10, batch_pause_min = 300.0, batch_pause_max = 600.0, desde_id = null, hasta_id = null, limite_mensajes = null, puertos = null) =>
     api.post('/whatsapp/enviar-global', { 
       mensaje: mensaje, 
       nodo: nodo, 
@@ -106,7 +106,8 @@ export const whatsappService = {
       batch_pause_max: batch_pause_max,
       desde_id: desde_id,
       hasta_id: hasta_id,
-      limite_mensajes: limite_mensajes
+      limite_mensajes: limite_mensajes,
+      puertos: puertos
     }),
 
   // Administradores de WhatsApp
