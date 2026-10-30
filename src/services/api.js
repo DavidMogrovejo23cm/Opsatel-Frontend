@@ -341,6 +341,7 @@ export const oltService = {
   getMacCandidates: (cliente_id, nodo = null, puerto = null, limit = 50) => api.get('/olt-tasks/mac-candidates', { params: { cliente_id, nodo, puerto, limit } }),
   // Potencia ONT en tiempo real
   getOntPotencia: (cliente_id) => api.get(`/olt-tasks/clientes/${cliente_id}/potencia`),
+  getOntPotenciaStreamEndpoint: (cliente_id) => `/olt-tasks/clientes/${cliente_id}/potencia-stream`,
   resetOnt: (cliente_id, payload = {}) => api.post(`/olt-tasks/clientes/${cliente_id}/reset-ont`, payload),
   // OLT Config CRUD
   listConfigs: () => api.get('/olt-tasks/config/'),

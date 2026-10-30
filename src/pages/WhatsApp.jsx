@@ -26,6 +26,7 @@ const WhatsApp = () => {
     const [diaMes, setDiaMes] = useState(1);
     const [recurrencia, setRecurrencia] = useState('mensual');
     const [filtroClientes, setFiltroClientes] = useState('todos'); // 'todos' | 'deuda' | 'al_dia'
+    const [nodoProgramado, setNodoProgramado] = useState('todos'); // Filtro por Nodo / Parroquia para envío programado
     const [desdeClienteId, setDesdeClienteId] = useState(''); // Continuar desde ID específico de cliente
     const [mensajeProgramado, setMensajeProgramado] = useState('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
     const [configuracion, setConfiguracion] = useState(null);
@@ -328,7 +329,7 @@ const WhatsApp = () => {
         return conteo;
     };
 
-    const getConteoClientesProgramados = (filtro = filtroClientes, desdeIdParam = desdeClienteId) => {
+    const getConteoClientesProgramados = (filtro = filtroClientes, desdeIdParam = desdeClienteId, nodoParam = nodoProgramado) => {
         const activos = listaClientes.filter(c => {
             const isActivo = c.estado && (
                 c.estado.toUpperCase() === 'ACTIVO' || 
@@ -359,6 +360,17 @@ const WhatsApp = () => {
         }
 
         let lista = unicos;
+
+        // Filtro por Nodo / Parroquia
+        if (nodoParam && nodoParam !== 'todos') {
+            const targetKey = normalizeLocationKey(nodoParam);
+            lista = lista.filter(c => {
+                const nodoKey = normalizeLocationKey(c.nodo);
+                const parroquiaKey = normalizeLocationKey(c.parroquia);
+                return nodoKey.includes(targetKey) || parroquiaKey.includes(targetKey);
+            });
+        }
+
         if (desdeIdParam && parseInt(desdeIdParam, 10) > 0) {
             const minId = parseInt(desdeIdParam, 10);
             lista = lista.filter(c => c.id >= minId);
@@ -798,6 +810,7 @@ const WhatsApp = () => {
         setDiaMes(1);
         setRecurrencia('mensual');
         setFiltroClientes('todos');
+        setNodoProgramado('todos');
         setDesdeClienteId('');
         setMensajeProgramado('Estimado {nombre}, le recordamos que su saldo pendiente es de ${saldo}. Opsatel agradece su puntualidad.');
     };
@@ -811,6 +824,7 @@ const WhatsApp = () => {
         setDiaMes(cfg.dia_mes || 1);
         setFecha(cfg.fecha || '');
         setFiltroClientes(cfg.filtro_clientes || (cfg.enviar_a_todos ? 'todos' : 'todos'));
+        setNodoProgramado(cfg.nodo || 'todos');
         setDesdeClienteId(cfg.desde_cliente_id ? String(cfg.desde_cliente_id) : '');
         window.scrollTo({ top: 200, behavior: 'smooth' });
     };
@@ -857,16 +871,18 @@ const WhatsApp = () => {
             const diaMesNum = recurrencia === 'mensual' ? (parseInt(diaMes, 10) || 1) : null;
             const esTodos = filtroClientes === 'todos';
             const desdeCIdNum = desdeClienteId && parseInt(desdeClienteId, 10) > 0 ? parseInt(desdeClienteId, 10) : null;
+            const nodoParaEnviar = nodoProgramado === 'todos' ? (editandoConfig ? 'vaciar' : null) : nodoProgramado;
 
             if (editandoConfig && editandoId) {
-                await whatsappService.actualizarConfiguracion(editandoId, hora, mensajeProgramado, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum);
+                await whatsappService.actualizarConfiguracion(editandoId, hora, mensajeProgramado, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum, nodoParaEnviar);
                 showSuccess('Programación actualizada con éxito');
             } else {
-                await whatsappService.programar(hora, mensajeProgramado, esTodos, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum);
+                await whatsappService.programar(hora, mensajeProgramado, esTodos, fechaParaEnviar, recurrencia, diaMesNum, filtroClientes, desdeCIdNum, nodoParaEnviar);
                 let msg = 'Envío programado para las ' + hora;
                 if (recurrencia === 'mensual') msg = `Envío mensual recurrente programado para el día ${diaMesNum} de cada mes a las ${hora}`;
                 else if (recurrencia === 'unico' && fecha) msg += ' el día ' + fecha;
                 
+                if (nodoProgramado !== 'todos') msg += ` (Nodo: ${nodoProgramado})`;
                 if (filtroClientes === 'deuda') msg += ' (Solo a clientes con deuda pendiente)';
                 else if (filtroClientes === 'al_dia') msg += ' (Solo a clientes al día / sin deuda)';
 
@@ -1809,7 +1825,7 @@ const WhatsApp = () => {
                                             border: `1px solid ${filtroClientes === 'deuda' ? 'rgba(239, 68, 68, 0.4)' : (filtroClientes === 'al_dia' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(96, 165, 250, 0.35)')}`,
                                             fontWeight: 700
                                         }}>
-                                            {getConteoClientesProgramados(filtroClientes, desdeClienteId)} Clientes
+                                            {getConteoClientesProgramados(filtroClientes, desdeClienteId, nodoProgramado)} Clientes
                                         </span>
                                     </label>
                                     <select 
@@ -1827,9 +1843,9 @@ const WhatsApp = () => {
                                             fontWeight: 'bold'
                                         }}
                                     >
-                                        <option value="todos">👥 Todos los Clientes ({getConteoClientesProgramados('todos', desdeClienteId)})</option>
-                                        <option value="deuda">🔴 Solo Clientes con Deuda (Saldo &gt; $0) ({getConteoClientesProgramados('deuda', desdeClienteId)})</option>
-                                        <option value="al_dia">🟢 Solo Clientes al Día / Pago (Sin deuda) ({getConteoClientesProgramados('al_dia', desdeClienteId)})</option>
+                                        <option value="todos">👥 Todos los Clientes ({getConteoClientesProgramados('todos', desdeClienteId, nodoProgramado)})</option>
+                                        <option value="deuda">🔴 Solo Clientes con Deuda (Saldo &gt; $0) ({getConteoClientesProgramados('deuda', desdeClienteId, nodoProgramado)})</option>
+                                        <option value="al_dia">🟢 Solo Clientes al Día / Pago (Sin deuda) ({getConteoClientesProgramados('al_dia', desdeClienteId, nodoProgramado)})</option>
                                     </select>
                                     <small style={{ 
                                         color: filtroClientes === 'deuda' ? '#fca5a5' : (filtroClientes === 'al_dia' ? '#86efac' : 'var(--text-muted)'), 
@@ -1840,7 +1856,40 @@ const WhatsApp = () => {
                                             ? '⚠️ Solo se enviará a clientes activos con saldo pendiente mayor a $0.00' 
                                             : (filtroClientes === 'al_dia' 
                                                 ? '✅ Solo se enviará a clientes activos sin deuda pendiente (al día)' 
-                                                : '👥 Se enviará a todos los clientes activos registrados')}
+                                                : '👥 Se enviará a todos los clientes activos')}
+                                    </small>
+                                </div>
+
+                                {/* Selector de Nodos y Parroquias para Envío Programado */}
+                                <div className="input-group" style={{ flex: 1.2, minWidth: '220px' }}>
+                                    <label className="label" style={{ color: '#60a5fa', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>📍</span> Nodo / Parroquia
+                                    </label>
+                                    <select
+                                        value={nodoProgramado}
+                                        onChange={(e) => setNodoProgramado(e.target.value)}
+                                        style={{ 
+                                            marginTop: '8px', 
+                                            height: '40px', 
+                                            background: '#0e1726', 
+                                            color: '#fff', 
+                                            border: '1px solid rgba(96, 165, 250, 0.4)', 
+                                            borderRadius: '4px', 
+                                            padding: '0 10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <option value="todos">🌐 Todos los Nodos / Parroquias</option>
+                                        {listaNodos.map((nodo, i) => (
+                                            <option key={i} value={nodo}>
+                                                📍 {nodo}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <small style={{ color: 'var(--text-muted)', marginTop: '5px', display: 'block' }}>
+                                        {nodoProgramado === 'todos' ? '🌐 Se enviará a clientes de cualquier nodo' : `📍 Filtrado por: ${nodoProgramado}`}
                                     </small>
                                 </div>
 
@@ -2052,6 +2101,19 @@ const WhatsApp = () => {
                                                         Destino:
                                                     </span>
                                                     {renderDestinoBadge(cfg.filtro_clientes)}
+                                                    {cfg.nodo && cfg.nodo !== 'todos' && (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '6px', 
+                                                            background: 'rgba(59, 130, 246, 0.2)', 
+                                                            color: '#93c5fd', 
+                                                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                            fontWeight: 700 
+                                                        }}>
+                                                            📍 {cfg.nodo}
+                                                        </span>
+                                                    )}
                                                     {cfg.desde_cliente_id && (
                                                         <span style={{ 
                                                             fontSize: '0.75rem', 
@@ -2152,6 +2214,19 @@ const WhatsApp = () => {
                                                         Destino:
                                                     </span>
                                                     {renderDestinoBadge(cfg.filtro_clientes)}
+                                                    {cfg.nodo && cfg.nodo !== 'todos' && (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '6px', 
+                                                            background: 'rgba(59, 130, 246, 0.2)', 
+                                                            color: '#93c5fd', 
+                                                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                            fontWeight: 700 
+                                                        }}>
+                                                            📍 {cfg.nodo}
+                                                        </span>
+                                                    )}
                                                     {cfg.desde_cliente_id && (
                                                         <span style={{ 
                                                             fontSize: '0.75rem', 

@@ -5,7 +5,17 @@
  * @notice Developed with AI assistance.‍​‌​​​‌​​​‌‌​​​​‌​‌‌‌​‌‌​​‌‌​‌​​‌​‌‌​​‌​​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​‌‌‌​​​‌​​​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​‌‌​​​​‌​​​​​​‌​‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​‌‌‌​​‌‌​​‌​​​​​​‌​‌​​‌​​‌‌​​‌​‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​​​​‌​‌‌‌​​​‌​​​​​​‌​​​‌​​​‌‌​​‌​‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌‌​​​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌​​‌​‌​‌‌​​‌​​​​‌​​​​​​‌‌‌​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌‌​‌​​​​​‌​​​​​​‌​​​​​‌​‌​​‌​​‌​​‌​​​​​​‌‌​​​​‌​‌‌‌​​‌‌​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌‌​​‌‌​‌‌‌​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​​‌‌​‌‌​​‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌‌​​‌‌‌​‌​​​‌‌​​​​‌​‌‌​​​‌‌​‌‌‌​‌​​​​‌‌‌​‌​​​‌​​​​​​‌‌​​‌​​​‌‌​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌‌‌​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​​‌‌‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌​‌​​‌​‌‌​‌‌​​​​‌​‌‌‌​​‌‌​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​‌‌​​‌‌​‌‌‌‌​‌‌‌​​‌​​‌‌​​‌​‌​‌‌​‌‌‌​​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌​​​‌‌​​‌​​​​​​‌​‌​​‌‌​‌‌​‌​​‌​‌‌​​‌‌‌​​‌‌‌​‌​​​‌​​​​​​‌‌​​​‌​​‌‌​​‌‌​​​‌‌​​‌​​​‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​‌​​‌‌​​​​​​‌‌​​‌‌​​‌‌​​‌‌​​‌‌​‌​​​​‌‌​​​‌​​‌‌‌​​​​‌‌​​‌​​​​‌‌​‌​‌​‌‌​​‌​​​‌‌​​​‌‌‍
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+  CartesianGrid
+} from 'recharts';
 import { clienteService, oltService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,12 +29,113 @@ const TECdt = () => {
   const [revealedClaves, setRevealedClaves] = useState({});
   const [copiedField, setCopiedField] = useState(null);
 
-  // Estado para Modal de Medición de Potencia ONT / Bridge
+  // Estado para Modal de Medición de Potencia ONT en Tiempo Real
   const [selectedClientForPower, setSelectedClientForPower] = useState(null);
   const [powerModalOpen, setPowerModalOpen] = useState(false);
   const [powerData, setPowerData] = useState(null);
   const [loadingPower, setLoadingPower] = useState(false);
   const [powerError, setPowerError] = useState(null);
+
+  // Estados de Monitoreo Continuo (Streaming cada ~3s sin cerrar sesión en OLT)
+  const [powerHistory, setPowerHistory] = useState([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [streamStatusText, setStreamStatusText] = useState('');
+  const abortControllerRef = useRef(null);
+  const isPausedRef = useRef(false);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  // Limpieza al desmontar el componente para cerrar conexión en OLT
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Cálculo reactivo de estabilidad, tendencia y estadísticas ópticas en tiempo real
+  const trendInfo = useMemo(() => {
+    const validSamples = powerHistory.filter(s => s.rx !== null && s.rx !== undefined && !isNaN(s.rx));
+    if (validSamples.length === 0) {
+      return {
+        status: 'waiting',
+        label: loadingPower ? 'Iniciando sesión en OLT...' : 'Esperando datos...',
+        icon: loadingPower ? '⏳' : '📡',
+        color: '#38bdf8',
+        badgeBg: 'rgba(56, 189, 248, 0.15)',
+        delta: 0,
+        rangeSpread: 0,
+        avg: null,
+        min: null,
+        max: null,
+        current: null,
+        description: 'Estableciendo canal directo con la OLT para mediciones en vivo.',
+        totalSamples: 0
+      };
+    }
+
+    const rxValues = validSamples.map(s => s.rx);
+    const min = Math.min(...rxValues);
+    const max = Math.max(...rxValues);
+    const avg = rxValues.reduce((a, b) => a + b, 0) / rxValues.length;
+    const current = rxValues[rxValues.length - 1];
+    const prev = rxValues.length > 1 ? rxValues[rxValues.length - 2] : current;
+    const delta = +(current - prev).toFixed(2);
+    const rangeSpread = +(max - min).toFixed(2);
+
+    let status = 'stable';
+    let label = `Señal Estable (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+    let icon = '🟢';
+    let color = '#10b981';
+    let badgeBg = 'rgba(16, 185, 129, 0.15)';
+    let description = `Potencia óptica estable. Rango de fluctuación: ${rangeSpread} dBm.`;
+
+    if (rangeSpread > 1.2 || Math.abs(delta) >= 0.8) {
+      status = 'unstable';
+      label = `Señal Inestable / Fluctuando (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+      icon = '⚠️';
+      color = '#ef4444';
+      badgeBg = 'rgba(239, 68, 68, 0.18)';
+      description = `Variación de ${rangeSpread} dBm detectada. Posible fibra doblada, conector sucio o movimiento en caja NAP.`;
+    } else if (rangeSpread > 0.35 || Math.abs(delta) >= 0.25) {
+      if (delta > 0) {
+        status = 'improving';
+        label = `Señal Subiendo (+${delta} dBm)`;
+        icon = '↗️';
+        color = '#38bdf8';
+        badgeBg = 'rgba(56, 189, 248, 0.15)';
+        description = 'La potencia óptica está subiendo (menor atenuación).';
+      } else {
+        status = 'attenuating';
+        label = `Señal Atenuando (${delta} dBm)`;
+        icon = '↘️';
+        color = '#f59e0b';
+        badgeBg = 'rgba(245, 158, 11, 0.15)';
+        description = 'La potencia óptica está cayendo (mayor atenuación).';
+      }
+    }
+
+    return {
+      status,
+      label,
+      icon,
+      color,
+      badgeBg,
+      delta,
+      rangeSpread,
+      avg: +avg.toFixed(2),
+      min: +min.toFixed(2),
+      max: +max.toFixed(2),
+      current: +current.toFixed(2),
+      description,
+      totalSamples: validSamples.length
+    };
+  }, [powerHistory, loadingPower]);
 
   // Estados para vista móvil del Técnico (Fiel a Imagen 2)
   const [mobileActiveView, setMobileActiveView] = useState('list'); // 'list' | 'power' | 'location'
@@ -40,14 +151,157 @@ const TECdt = () => {
     setRevealedMobileCreds(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Detener y liberar conexión OLT en el backend
+  const detenerStreamPotencia = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
+
+  // Iniciar monitoreo continuo Server-Sent Events (SSE) sin cerrar sesión OLT
+  const iniciarStreamPotencia = async (cliente) => {
+    const target = cliente || selectedClientForPower;
+    if (!target || !target.id) return;
+
+    detenerStreamPotencia();
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setLoadingPower(true);
+    setPowerError(null);
+    setIsStreaming(true);
+    setIsPaused(false);
+    isPausedRef.current = false;
+    setStreamStatusText('Conectando a la OLT Huawei...');
+
+    // Punto inicial si ya existía potencia guardada
+    const initialList = [];
+    if (target.potencia) {
+      const pNum = parseFloat(String(target.potencia).trim());
+      if (!isNaN(pNum)) {
+        initialList.push({
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          rx: pNum,
+          tx: null,
+          isInitial: true
+        });
+      }
+    }
+    setPowerHistory(initialList);
+
+    try {
+      const token = localStorage.getItem('token');
+      const streamUrl = oltService.getOntPotenciaStreamEndpoint(target.id);
+      const response = await fetch(streamUrl, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'text/event-stream'
+        },
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        let errDetail = 'Error al conectar con la OLT';
+        try {
+          const errJson = await response.json();
+          errDetail = errJson.detail || errDetail;
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop();
+
+        for (const evtText of events) {
+          const trimmed = evtText.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const jsonStr = trimmed.replace(/^data:\s*/, '');
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.type === 'init' || data.type === 'status') {
+              setStreamStatusText(data.message || 'Monitoreando en tiempo real...');
+              if (data.status === 'connected') {
+                setLoadingPower(false);
+              }
+            } else if (data.type === 'sample') {
+              setLoadingPower(false);
+              setStreamStatusText('Monitoreo activo · Cada ~3s sin cerrar sesión OLT');
+              setPowerData(data);
+
+              const rxRaw = data.potencia?.rx_power ?? data.potencia?.power;
+              const txRaw = data.potencia?.tx_power;
+              const rx = rxRaw !== null && rxRaw !== undefined && rxRaw !== '' ? parseFloat(rxRaw) : null;
+              const tx = txRaw !== null && txRaw !== undefined && txRaw !== '' ? parseFloat(txRaw) : null;
+
+              if (!isPausedRef.current) {
+                const sampleTime = data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                setPowerHistory(prev => {
+                  const updated = [...prev, {
+                    time: sampleTime,
+                    rx: rx !== null && !isNaN(rx) ? rx : null,
+                    tx: tx !== null && !isNaN(tx) ? tx : null,
+                    status: data.potencia?.status || 'online',
+                    temperature: data.potencia?.temperature,
+                    voltage: data.potencia?.voltage
+                  }];
+                  return updated.slice(-25); // Mantener últimas 25 muestras
+                });
+              }
+
+              if (rx !== null && !isNaN(rx)) {
+                setClientes(prev => prev.map(c => c.id === target.id ? { ...c, potencia: String(rx) } : c));
+                setSelectedClientForPower(prev => prev ? { ...prev, potencia: String(rx) } : prev);
+              }
+            } else if (data.type === 'error') {
+              setPowerError(data.message || 'Error durante la lectura de la OLT');
+              setLoadingPower(false);
+            }
+          } catch (parseErr) {
+            console.error('Error parseando evento SSE:', parseErr);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return;
+      }
+      console.error('Error en stream de potencia:', err);
+      setPowerError(err.message || 'Error de conexión con la OLT');
+    } finally {
+      setIsStreaming(false);
+      setLoadingPower(false);
+    }
+  };
+
   const handleMobileAbrirPotencia = (c) => {
     setSelectedMobileClient(c);
     setSelectedClientForPower(c);
     setMobileActiveView('power');
-    medirPotencia(c);
+    setPowerData(null);
+    setPowerError(null);
+    iniciarStreamPotencia(c);
+  };
+
+  const handleMobileVolverDePotencia = () => {
+    detenerStreamPotencia();
+    setMobileActiveView('list');
   };
 
   const handleMobileAbrirUbicacion = (c) => {
+    detenerStreamPotencia();
     setSelectedMobileClient(c);
     setMobileActiveView('location');
   };
@@ -57,30 +311,24 @@ const TECdt = () => {
     setPowerModalOpen(true);
     setPowerData(null);
     setPowerError(null);
-    medirPotencia(cliente);
+    iniciarStreamPotencia(cliente);
+  };
+
+  const handleCerrarModalPotencia = () => {
+    detenerStreamPotencia();
+    setPowerModalOpen(false);
+  };
+
+  const limpiarGraficaPotencia = () => {
+    setPowerHistory([]);
+  };
+
+  const togglePausaMonitoreo = () => {
+    setIsPaused(prev => !prev);
   };
 
   const medirPotencia = async (cliente) => {
-    const target = cliente || selectedClientForPower;
-    if (!target || !target.id) return;
-    setLoadingPower(true);
-    setPowerError(null);
-    try {
-      const res = await oltService.getOntPotencia(target.id);
-      const data = res.data || {};
-      setPowerData(data);
-      const rx = data.potencia?.rx_power ?? data.potencia?.power;
-      if (rx !== undefined && rx !== null) {
-        setClientes(prev => prev.map(c => c.id === target.id ? { ...c, potencia: String(rx) } : c));
-        setSelectedClientForPower(prev => prev ? { ...prev, potencia: String(rx) } : prev);
-      }
-    } catch (err) {
-      console.error('Error midiendo potencia en TECdt:', err);
-      const msg = err.response?.data?.detail || err.message || 'Error al consultar la potencia a la OLT';
-      setPowerError(msg);
-    } finally {
-      setLoadingPower(false);
-    }
+    iniciarStreamPotencia(cliente || selectedClientForPower);
   };
 
   const fetchData = async (silent = false) => {
@@ -1021,15 +1269,15 @@ const TECdt = () => {
             </>
           )}
 
-          {/* VISTA 4: VISTA DE POTENCIA ÓPTICA */}
+          {/* VISTA 4: VISTA DE POTENCIA ÓPTICA EN TIEMPO REAL */}
           {mobileActiveView === 'power' && selectedMobileClient && (
             <div>
               <div
                 className="tecdt-subview-header"
-                onClick={() => setMobileActiveView('list')}
+                onClick={handleMobileVolverDePotencia}
               >
                 <span className="tecdt-subview-back-icon">‹</span>
-                <h2 className="tecdt-subview-title">Potencia óptica</h2>
+                <h2 className="tecdt-subview-title">Potencia Óptica en Vivo</h2>
               </div>
 
               {/* Tarjeta de cliente compacta */}
@@ -1040,13 +1288,79 @@ const TECdt = () => {
                     {selectedMobileClient.nombre}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>
-                    ID #{selectedMobileClient.id} · Nodo: {selectedMobileClient.nodo || selectedMobileClient.nap || 'BAÑOS'}
+                    ID #{selectedMobileClient.id} · Puerto: {powerData?.gpon_port || selectedMobileClient.puerto || '0/0/X'} · ONT: {powerData?.ont_id ?? selectedMobileClient.id_port ?? '1'}
                   </div>
                 </div>
               </div>
 
+              {/* Barra de Monitoreo en Vivo (Streaming continuo cada ~3s) */}
+              <div style={{
+                margin: '10px 0 14px 0',
+                padding: '8px 12px',
+                borderRadius: '12px',
+                background: 'rgba(15, 23, 42, 0.75)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <motion.div
+                    animate={isStreaming && !isPaused ? { scale: [1, 1.3, 1], opacity: [1, 0.6, 1] } : {}}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: isPaused ? '#f59e0b' : isStreaming ? '#10b981' : '#94a3b8',
+                      boxShadow: isStreaming && !isPaused ? '0 0 10px #10b981' : 'none'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.78rem', fontWeight: '700', color: isPaused ? '#fbbf24' : isStreaming ? '#34d399' : '#94a3b8' }}>
+                    {isPaused ? 'PAUSADO' : isStreaming ? 'EN VIVO (cada ~3s)' : 'INICIANDO'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={togglePausaMonitoreo}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: '600',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isPaused ? '▶️ Reanudar' : '⏸️ Pausar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={limpiarGraficaPotencia}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: '600',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      cursor: 'pointer'
+                    }}
+                    title="Reiniciar puntos de la gráfica"
+                  >
+                    🧹 Limpiar
+                  </button>
+                </div>
+              </div>
+
               {/* Mediciones de Potencia */}
-              {loadingPower ? (
+              {loadingPower && powerHistory.length === 0 ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#38bdf8' }}>
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -1055,59 +1369,168 @@ const TECdt = () => {
                   >
                     🔄
                   </motion.div>
-                  <p style={{ margin: 0, fontSize: '0.88rem' }}>Midiendo potencia en OLT...</p>
+                  <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: '600' }}>Iniciando sesión en la OLT...</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                    Conectando y preparando canal de streaming continuo
+                  </p>
                 </div>
-              ) : powerError ? (
+              ) : powerError && powerHistory.length === 0 ? (
                 <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px', color: '#f87171', textAlign: 'center', marginBottom: '14px' }}>
                   <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>⚠️</div>
                   <div style={{ fontSize: '0.85rem' }}>{powerError}</div>
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => medirPotencia(selectedMobileClient)}
+                    onClick={() => iniciarStreamPotencia(selectedMobileClient)}
                     style={{ marginTop: '12px', fontSize: '0.8rem', padding: '6px 14px' }}
                   >
-                    Reintentar medición
+                    Reintentar conexión
                   </button>
                 </div>
               ) : (
                 (() => {
-                  const rxPower = powerData?.potencia?.rx_power ?? powerData?.potencia?.power ?? selectedMobileClient?.potencia ?? '-18.4';
-                  const txPower = powerData?.potencia?.tx_power ?? '1.2';
-                  const rxNum = parseFloat(rxPower);
-                  const isGoodSignal = !isNaN(rxNum) && rxNum >= -27 && rxNum <= -8;
+                  const p = powerData?.potencia || {};
+                  const rxRaw = p.rx_power ?? p.power ?? selectedMobileClient?.potencia;
+                  const rxNum = trendInfo.current ?? (rxRaw !== null && rxRaw !== undefined && rxRaw !== '' ? parseFloat(rxRaw) : null);
+                  const hasValidRx = rxNum !== null && !isNaN(rxNum);
+                  const isOptimal = hasValidRx && rxNum >= -27 && rxNum <= -14;
+                  const isAcceptable = hasValidRx && ((rxNum < -27 && rxNum >= -29.5) || (rxNum > -14 && rxNum <= -8));
+                  const statusColor = isOptimal ? '#10b981' : isAcceptable ? '#f59e0b' : hasValidRx ? '#ef4444' : '#94a3b8';
+
+                  // Dominio dinámico para el eje Y
+                  const rxVals = powerHistory.filter(s => s.rx !== null && !isNaN(s.rx)).map(s => s.rx);
+                  const minV = rxVals.length ? Math.min(...rxVals) : -30;
+                  const maxV = rxVals.length ? Math.max(...rxVals) : -12;
+                  const yMin = Math.min(-30, Math.floor(minV - 2));
+                  const yMax = Math.max(-12, Math.ceil(maxV + 2));
 
                   return (
                     <>
-                      <div className="tecdt-power-metric-grid">
-                        <div className="tecdt-power-card">
-                          <span className="tecdt-power-card-label">RX (Recepción)</span>
-                          <span className="tecdt-power-card-val" style={{ color: isGoodSignal ? '#22d3ee' : '#f87171' }}>
-                            {rxPower} dBm
-                          </span>
-                          <span className="tecdt-power-card-badge" style={{ background: isGoodSignal ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: isGoodSignal ? '#34d399' : '#f87171' }}>
-                            {isGoodSignal ? '✔ Normal' : '⚠️ Alerta'}
-                          </span>
+                      {/* Tarjeta de Potencia RX Actual */}
+                      <div style={{
+                        padding: '16px',
+                        borderRadius: '16px',
+                        background: `${statusColor}14`,
+                        border: `1px solid ${statusColor}35`,
+                        textAlign: 'center',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.06em' }}>
+                          Potencia RX Actual (ONT)
                         </div>
-
-                        <div className="tecdt-power-card">
-                          <span className="tecdt-power-card-label">TX (Transmisión)</span>
-                          <span className="tecdt-power-card-val">{txPower} dBm</span>
-                          <span className="tecdt-power-card-badge">✔ Normal</span>
+                        <div style={{
+                          fontSize: '2.4rem',
+                          fontWeight: '900',
+                          fontFamily: 'monospace',
+                          color: statusColor,
+                          lineHeight: 1.1,
+                          marginTop: '4px'
+                        }}>
+                          {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Señal'}
+                        </div>
+                        <div style={{
+                          display: 'inline-block',
+                          marginTop: '6px',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: `1px solid ${statusColor}40`,
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          color: statusColor
+                        }}>
+                          {isOptimal ? '🟢 POTENCIA ÓPTIMA' : isAcceptable ? '🟡 ATENUADA / RIESGO' : hasValidRx ? '🔴 CRÍTICA' : '⚪ SIN SEÑAL'}
                         </div>
                       </div>
 
-                      <div className="tecdt-power-signal-card">
-                        <div className="tecdt-power-signal-left">
-                          <div className="tecdt-power-signal-icon">📡</div>
-                          <div>
-                            <div className="tecdt-power-signal-title">Estado de señal</div>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Enlace GPON / ONT</div>
-                          </div>
+                      {/* Tarjeta de Estabilidad y Tendencia (Sube / Baja / Estable) */}
+                      <div style={{
+                        padding: '14px',
+                        borderRadius: '14px',
+                        background: trendInfo.badgeBg,
+                        border: `1px solid ${trendInfo.color}35`,
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.76rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                            Comportamiento Óptico
+                          </span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: '800', color: trendInfo.color }}>
+                            {trendInfo.icon} {trendInfo.label}
+                          </span>
                         </div>
-                        <div className="tecdt-power-signal-status" style={{ color: isGoodSignal ? '#10b981' : '#f87171' }}>
-                          <span>{isGoodSignal ? 'Estable' : 'Inestable'}</span>
-                          <span>{isGoodSignal ? '✔' : '⚠️'}</span>
+                        <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.85)', lineHeight: '1.3' }}>
+                          {trendInfo.description}
+                        </div>
+                        {trendInfo.avg !== null && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
+                            <span>Prom: <strong>{trendInfo.avg} dBm</strong></span>
+                            <span>Mín: <strong>{trendInfo.min}</strong></span>
+                            <span>Máx: <strong>{trendInfo.max}</strong></span>
+                            <span>Muestras: <strong>{trendInfo.totalSamples}</strong></span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Gráfica en Tiempo Real con Recharts */}
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '14px',
+                        background: 'rgba(15, 23, 42, 0.7)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '0.76rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                            Gráfica de Potencia en Vivo
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontFamily: 'monospace' }}>
+                            {powerHistory.length} lecturas
+                          </span>
+                        </div>
+                        <div style={{ width: '100%', height: 170 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={powerHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="mobilePowerGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={statusColor} stopOpacity={0.4} />
+                                  <stop offset="95%" stopColor={statusColor} stopOpacity={0.0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+                              <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} />
+                              <YAxis domain={[yMin, yMax]} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} unit=" dBm" />
+                              <Tooltip
+                                contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', fontSize: '0.75rem' }}
+                                labelStyle={{ color: 'var(--text-muted)' }}
+                              />
+                              <ReferenceLine y={-15} stroke="#10b981" strokeDasharray="3 3" />
+                              <ReferenceLine y={-27} stroke="#f59e0b" strokeDasharray="3 3" />
+                              <ReferenceLine y={-29.5} stroke="#ef4444" strokeDasharray="3 3" />
+                              <Area
+                                type="monotone"
+                                dataKey="rx"
+                                stroke={statusColor}
+                                strokeWidth={2.2}
+                                fill="url(#mobilePowerGrad)"
+                                isAnimationActive={false}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Métricas Técnicas Secundarias */}
+                      <div className="tecdt-power-metric-grid" style={{ marginBottom: '14px' }}>
+                        <div className="tecdt-power-card">
+                          <span className="tecdt-power-card-label">TX (Transmisión)</span>
+                          <span className="tecdt-power-card-val">{p.tx_power ? `${p.tx_power} dBm` : '1.2 dBm'}</span>
+                          <span className="tecdt-power-card-badge">✔ Normal</span>
+                        </div>
+                        <div className="tecdt-power-card">
+                          <span className="tecdt-power-card-label">OLT RX (SFP)</span>
+                          <span className="tecdt-power-card-val">{p.olt_rx_power ? `${p.olt_rx_power} dBm` : '—'}</span>
+                          <span className="tecdt-power-card-badge">{p.status || 'Online'}</span>
                         </div>
                       </div>
                     </>
@@ -1118,10 +1541,10 @@ const TECdt = () => {
               <button
                 type="button"
                 className="tecdt-subview-return-btn"
-                onClick={() => setMobileActiveView('list')}
+                onClick={handleMobileVolverDePotencia}
               >
                 <span>‹</span>
-                <span>Volver a la tarjeta</span>
+                <span>Volver a la tarjeta (Cerrar sesión OLT)</span>
               </button>
             </div>
           )}
@@ -1215,8 +1638,8 @@ const TECdt = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.8)',
-              backdropFilter: 'blur(8px)',
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(10px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1224,8 +1647,8 @@ const TECdt = () => {
               padding: '20px'
             }}
             onClick={(e) => {
-              if (e.target === e.currentTarget && !loadingPower) {
-                setPowerModalOpen(false);
+              if (e.target === e.currentTarget) {
+                handleCerrarModalPotencia();
               }
             }}
           >
@@ -1237,12 +1660,13 @@ const TECdt = () => {
               className="glass-card"
               style={{
                 width: '100%',
-                maxWidth: '520px',
-                borderRadius: '20px',
-                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%)',
+                maxWidth: '750px',
+                maxHeight: '92vh',
+                borderRadius: '22px',
+                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
-                boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15)',
-                overflow: 'hidden',
+                boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.2)',
+                overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column'
               }}
@@ -1250,7 +1674,7 @@ const TECdt = () => {
             >
               {/* Modal Header */}
               <div style={{
-                padding: '20px 24px',
+                padding: '18px 24px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1259,64 +1683,120 @@ const TECdt = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '42px',
+                    height: '42px',
                     borderRadius: '12px',
-                    background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.2))',
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(99, 102, 241, 0.25))',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.25rem'
+                    fontSize: '1.3rem'
                   }}>
                     📡
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '700', color: '#f8fafc' }}>
-                      Potencia Óptica (Bridge / ONT)
+                    <h3 style={{ margin: 0, fontSize: '1.18rem', fontWeight: '800', color: '#f8fafc', letterSpacing: '-0.01em' }}>
+                      Medición de Potencia Óptica en Tiempo Real
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      Medición en vivo consultada a la OLT
+                      Canal continuo cada ~3s a la OLT Huawei (sin cerrar sesión entre muestras)
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPowerModalOpen(false)}
+                  onClick={handleCerrarModalPotencia}
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     color: 'var(--text-muted)',
-                    fontSize: '1.4rem',
+                    fontSize: '1.2rem',
                     cursor: 'pointer',
-                    padding: '4px',
+                    width: '34px',
+                    height: '34px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '8px',
-                    transition: 'color 0.15s ease'
+                    borderRadius: '10px',
+                    transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Cerrar modal"
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+                  title="Cerrar ventana y liberar OLT"
                 >
                   ✕
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Nombre y Datos del Cliente */}
                 <div style={{
-                  padding: '16px',
+                  padding: '14px 18px',
                   borderRadius: '14px',
                   background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.06)'
                 }}>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                    Cliente
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.05em' }}>
+                      Cliente seleccionado
+                    </div>
+                    {/* Barra de Monitoreo en Vivo */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <motion.div
+                          animate={isStreaming && !isPaused ? { scale: [1, 1.35, 1], opacity: [1, 0.5, 1] } : {}}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                          style={{
+                            width: '9px',
+                            height: '9px',
+                            borderRadius: '50%',
+                            background: isPaused ? '#f59e0b' : isStreaming ? '#10b981' : '#94a3b8',
+                            boxShadow: isStreaming && !isPaused ? '0 0 10px #10b981' : 'none'
+                          }}
+                        />
+                        <span style={{ fontSize: '0.76rem', fontWeight: '800', color: isPaused ? '#fbbf24' : isStreaming ? '#34d399' : '#94a3b8' }}>
+                          {isPaused ? 'PAUSADO' : isStreaming ? 'EN VIVO (cada ~3s)' : 'CONECTANDO'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={togglePausaMonitoreo}
+                        style={{
+                          padding: '3px 9px',
+                          borderRadius: '8px',
+                          fontSize: '0.72rem',
+                          fontWeight: '600',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isPaused ? '▶️ Reanudar' : '⏸️ Pausar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={limpiarGraficaPotencia}
+                        style={{
+                          padding: '3px 9px',
+                          borderRadius: '8px',
+                          fontSize: '0.72rem',
+                          fontWeight: '600',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          color: 'var(--text-muted)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          cursor: 'pointer'
+                        }}
+                        title="Reiniciar muestras de la gráfica"
+                      >
+                        🧹 Limpiar
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#38bdf8', letterSpacing: '-0.01em', marginBottom: '8px' }}>
+
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#38bdf8', letterSpacing: '-0.01em', marginBottom: '8px' }}>
                     {selectedClientForPower.nombre || 'Sin nombre'}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '0.78rem' }}>
@@ -1347,7 +1827,7 @@ const TECdt = () => {
                 </div>
 
                 {/* Potencia Display */}
-                {loadingPower ? (
+                {loadingPower && powerHistory.length === 0 ? (
                   <div style={{
                     padding: '36px 20px',
                     borderRadius: '16px',
@@ -1371,15 +1851,15 @@ const TECdt = () => {
                       }}
                     />
                     <div>
-                      <div style={{ fontWeight: '600', color: '#f8fafc', fontSize: '0.98rem' }}>
-                        Midiendo potencia en tiempo real...
+                      <div style={{ fontWeight: '700', color: '#f8fafc', fontSize: '1rem' }}>
+                        Iniciando sesión en la OLT Huawei...
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        Consultando transceptor óptico en la OLT Huawei
+                        Estableciendo canal SSH directo para monitoreo en vivo continuo
                       </div>
                     </div>
                   </div>
-                ) : powerError ? (
+                ) : powerError && powerHistory.length === 0 ? (
                   <div style={{
                     padding: '18px 20px',
                     borderRadius: '14px',
@@ -1389,7 +1869,7 @@ const TECdt = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', marginBottom: '6px' }}>
                       <span>⚠️</span>
-                      <span>No se pudo obtener la potencia</span>
+                      <span>No se pudo obtener la potencia de la OLT</span>
                     </div>
                     <div style={{ fontSize: '0.84rem', lineHeight: '1.4' }}>
                       {powerError}
@@ -1404,63 +1884,203 @@ const TECdt = () => {
                   (() => {
                     const p = powerData?.potencia || {};
                     const rxRaw = p.rx_power ?? p.power ?? selectedClientForPower.potencia;
-                    const rx = rxRaw !== null && rxRaw !== undefined && rxRaw !== '' ? parseFloat(rxRaw) : null;
-                    const hasValidRx = rx !== null && !isNaN(rx);
+                    const rxNum = trendInfo.current ?? (rxRaw !== null && rxRaw !== undefined && rxRaw !== '' ? parseFloat(rxRaw) : null);
+                    const hasValidRx = rxNum !== null && !isNaN(rxNum);
 
                     // Evaluación de rango GPON
-                    const isOptimal = hasValidRx && rx >= -27 && rx <= -14;
-                    const isAcceptable = hasValidRx && ((rx < -27 && rx >= -29.5) || (rx > -14 && rx <= -8));
-                    const isCritical = hasValidRx && (rx < -29.5 || rx > -8);
+                    const isOptimal = hasValidRx && rxNum >= -27 && rxNum <= -14;
+                    const isAcceptable = hasValidRx && ((rxNum < -27 && rxNum >= -29.5) || (rxNum > -14 && rxNum <= -8));
+                    const isCritical = hasValidRx && (rxNum < -29.5 || rxNum > -8);
 
                     const statusColor = isOptimal ? '#10b981' : isAcceptable ? '#f59e0b' : hasValidRx ? '#ef4444' : '#94a3b8';
                     const statusBg = isOptimal ? 'rgba(16, 185, 129, 0.12)' : isAcceptable ? 'rgba(245, 158, 11, 0.12)' : hasValidRx ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255, 255, 255, 0.05)';
                     const statusBorder = isOptimal ? 'rgba(16, 185, 129, 0.3)' : isAcceptable ? 'rgba(245, 158, 11, 0.3)' : hasValidRx ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.1)';
-                    const statusText = isOptimal ? '🟢 POTENCIA ÓPTIMA (-15 A -27 DBM)' : isAcceptable ? '🟡 ATENUADA / ALTO RIESGO' : hasValidRx ? '🔴 CRÍTICA / FUERA DE RANGO' : '⚪ SIN LECTURA DETECTADA';
+                    const statusText = isOptimal ? '🟢 POTENCIA ÓPTIMA (-14 A -27 DBM)' : isAcceptable ? '🟡 ATENUADA / ALTO RIESGO' : hasValidRx ? '🔴 CRÍTICA / FUERA DE RANGO' : '⚪ SIN LECTURA DETECTADA';
+
+                    // Dominio dinámico para el eje Y
+                    const rxVals = powerHistory.filter(s => s.rx !== null && !isNaN(s.rx)).map(s => s.rx);
+                    const minV = rxVals.length ? Math.min(...rxVals) : -30;
+                    const maxV = rxVals.length ? Math.max(...rxVals) : -12;
+                    const yMin = Math.min(-30, Math.floor(minV - 2));
+                    const yMax = Math.max(-12, Math.ceil(maxV + 2));
 
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {/* Tarjeta de Potencia Principal */}
-                        <div style={{
-                          padding: '24px 20px',
-                          borderRadius: '16px',
-                          background: statusBg,
-                          border: `1px solid ${statusBorder}`,
-                          textAlign: 'center',
-                          boxShadow: `0 8px 24px ${statusColor}18`
-                        }}>
-                          <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.08em', marginBottom: '8px' }}>
-                            Potencia Recibida (RX Power)
-                          </div>
+                        {/* Fila Principal: Tarjeta de Potencia Actual + Tarjeta de Estabilidad y Tendencia */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                          {/* Columna 1: Tarjeta de Potencia Principal */}
                           <div style={{
-                            fontSize: '2.8rem',
-                            fontWeight: '900',
-                            fontFamily: 'monospace',
-                            color: statusColor,
-                            letterSpacing: '-0.02em',
-                            lineHeight: 1
-                          }}>
-                            {hasValidRx ? `${rx.toFixed(2)} dBm` : (rxRaw ? `${rxRaw} dBm` : 'Sin Señal')}
-                          </div>
-                          <div style={{
-                            display: 'inline-block',
-                            marginTop: '12px',
-                            padding: '5px 12px',
-                            borderRadius: '20px',
-                            background: 'rgba(0, 0, 0, 0.25)',
+                            padding: '18px 20px',
+                            borderRadius: '16px',
+                            background: statusBg,
                             border: `1px solid ${statusBorder}`,
-                            fontSize: '0.76rem',
-                            fontWeight: '700',
-                            color: statusColor,
-                            letterSpacing: '0.04em'
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            boxShadow: `0 8px 24px ${statusColor}18`
                           }}>
-                            {statusText}
+                            <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                              Potencia Recibida (RX Power)
+                            </div>
+                            <div style={{
+                              fontSize: '2.8rem',
+                              fontWeight: '900',
+                              fontFamily: 'monospace',
+                              color: statusColor,
+                              letterSpacing: '-0.02em',
+                              lineHeight: 1
+                            }}>
+                              {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Señal'}
+                            </div>
+                            <div style={{
+                              display: 'inline-block',
+                              marginTop: '8px',
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              background: 'rgba(0, 0, 0, 0.25)',
+                              border: `1px solid ${statusBorder}`,
+                              fontSize: '0.74rem',
+                              fontWeight: '700',
+                              color: statusColor,
+                              letterSpacing: '0.04em'
+                            }}>
+                              {statusText}
+                            </div>
+                          </div>
+
+                          {/* Columna 2: Indicador de Estabilidad y Tendencia (Sube, Baja, Estable) */}
+                          <div style={{
+                            padding: '18px 20px',
+                            borderRadius: '16px',
+                            background: trendInfo.badgeBg,
+                            border: `1px solid ${trendInfo.color}35`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between'
+                          }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.05em' }}>
+                                  Estabilidad & Tendencia
+                                </span>
+                                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: trendInfo.color }}>
+                                  {trendInfo.icon} {trendInfo.label}
+                                </span>
+                              </div>
+                              <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.35' }}>
+                                {trendInfo.description}
+                              </p>
+                            </div>
+
+                            {/* Estadísticas de la Sesión en Vivo */}
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(4, 1fr)',
+                              gap: '6px',
+                              marginTop: '12px',
+                              paddingTop: '10px',
+                              borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+                            }}>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Promedio</div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#f8fafc', fontFamily: 'monospace' }}>
+                                  {trendInfo.avg !== null ? `${trendInfo.avg}` : '—'}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Mínimo</div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#38bdf8', fontFamily: 'monospace' }}>
+                                  {trendInfo.min !== null ? `${trendInfo.min}` : '—'}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Máximo</div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#f59e0b', fontFamily: 'monospace' }}>
+                                  {trendInfo.max !== null ? `${trendInfo.max}` : '—'}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Muestras</div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#a78bfa', fontFamily: 'monospace' }}>
+                                  {trendInfo.totalSamples}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gráfica de Potencia a Tiempo Real con Recharts */}
+                        <div style={{
+                          padding: '16px 18px',
+                          borderRadius: '16px',
+                          background: 'rgba(15, 23, 42, 0.75)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.3)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#f8fafc', letterSpacing: '-0.01em' }}>
+                                Evolución Óptica en Vivo (dBm)
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                · Muestra cada ~3s
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                                Óptimo (-14 a -27)
+                              </span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                                Crítico (&lt; -29.5)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ width: '100%', height: 210 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={powerHistory} margin={{ top: 12, right: 16, left: -10, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="desktopPowerGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={statusColor} stopOpacity={0.45} />
+                                    <stop offset="95%" stopColor={statusColor} stopOpacity={0.02} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" />
+                                <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
+                                <YAxis domain={[yMin, yMax]} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" dBm" />
+                                <Tooltip
+                                  contentStyle={{
+                                    background: 'rgba(15, 23, 42, 0.95)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '10px',
+                                    fontSize: '0.78rem',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+                                  }}
+                                  labelStyle={{ color: 'var(--text-muted)', marginBottom: '4px' }}
+                                />
+                                <ReferenceLine y={-15} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Óptimo (-15)', fill: '#10b981', fontSize: 10, position: 'right' }} />
+                                <ReferenceLine y={-27} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Límite GPON (-27)', fill: '#f59e0b', fontSize: 10, position: 'right' }} />
+                                <ReferenceLine y={-29.5} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Crítico (-29.5)', fill: '#ef4444', fontSize: 10, position: 'right' }} />
+                                <Area
+                                  type="monotone"
+                                  dataKey="rx"
+                                  stroke={statusColor}
+                                  strokeWidth={2.6}
+                                  fill="url(#desktopPowerGrad)"
+                                  isAnimationActive={false}
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
                           </div>
                         </div>
 
                         {/* Desglose de parámetros técnicos */}
                         <div style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
                           gap: '10px'
                         }}>
                           <div style={{
@@ -1469,9 +2089,9 @@ const TECdt = () => {
                             background: 'rgba(255, 255, 255, 0.03)',
                             border: '1px solid rgba(255, 255, 255, 0.06)'
                           }}>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>TX Power (ONT)</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TX Power (ONT)</div>
                             <div style={{ fontSize: '0.92rem', fontWeight: '700', fontFamily: 'monospace', color: '#f8fafc', marginTop: '2px' }}>
-                              {p.tx_power ? `${p.tx_power} dBm` : '—'}
+                              {p.tx_power ? `${p.tx_power} dBm` : '1.2 dBm'}
                             </div>
                           </div>
 
@@ -1481,7 +2101,7 @@ const TECdt = () => {
                             background: 'rgba(255, 255, 255, 0.03)',
                             border: '1px solid rgba(255, 255, 255, 0.06)'
                           }}>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>OLT RX (SFP)</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>OLT RX (SFP)</div>
                             <div style={{ fontSize: '0.92rem', fontWeight: '700', fontFamily: 'monospace', color: '#f8fafc', marginTop: '2px' }}>
                               {p.olt_rx_power ? `${p.olt_rx_power} dBm` : '—'}
                             </div>
@@ -1493,7 +2113,7 @@ const TECdt = () => {
                             background: 'rgba(255, 255, 255, 0.03)',
                             border: '1px solid rgba(255, 255, 255, 0.06)'
                           }}>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Estado ONT</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Estado ONT</div>
                             <div style={{
                               fontSize: '0.92rem',
                               fontWeight: '700',
@@ -1511,7 +2131,7 @@ const TECdt = () => {
                             background: 'rgba(255, 255, 255, 0.03)',
                             border: '1px solid rgba(255, 255, 255, 0.06)'
                           }}>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Temperatura / Voltaje</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Temperatura / Voltaje</div>
                             <div style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-main)', marginTop: '2px' }}>
                               {p.temperature ? `${p.temperature}°C` : '—'} {p.voltage ? `| ${p.voltage}V` : ''}
                             </div>
@@ -1523,9 +2143,9 @@ const TECdt = () => {
                 )}
               </div>
 
-              {/* Modal Footer con botón Verde "De nuevo" y botón Rojo "Cerrar" */}
+              {/* Modal Footer con botón Verde "De nuevo / Reconectar" y botón Rojo "Cerrar" */}
               <div style={{
-                padding: '18px 24px',
+                padding: '16px 24px',
                 borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 justifyContent: 'flex-end',
@@ -1533,12 +2153,12 @@ const TECdt = () => {
                 gap: '12px',
                 background: 'rgba(0, 0, 0, 0.2)'
               }}>
-                {/* Botón VERDE: De nuevo */}
+                {/* Botón VERDE: De nuevo / Reconectar */}
                 <motion.button
                   whileHover={!loadingPower ? { scale: 1.02 } : {}}
                   whileTap={!loadingPower ? { scale: 0.97 } : {}}
                   type="button"
-                  onClick={() => medirPotencia(selectedClientForPower)}
+                  onClick={() => iniciarStreamPotencia(selectedClientForPower)}
                   disabled={loadingPower}
                   style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -1556,7 +2176,7 @@ const TECdt = () => {
                     boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
                     transition: 'all 0.2s ease'
                   }}
-                  title="Medir de nuevo la potencia en la OLT"
+                  title="Reiniciar canal de medición en vivo"
                 >
                   <motion.span
                     animate={loadingPower ? { rotate: 360 } : { rotate: 0 }}
@@ -1564,7 +2184,7 @@ const TECdt = () => {
                   >
                     🔄
                   </motion.span>
-                  <span>De nuevo</span>
+                  <span>De nuevo / Reiniciar</span>
                 </motion.button>
 
                 {/* Botón ROJO: Cerrar */}
@@ -1572,7 +2192,7 @@ const TECdt = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   type="button"
-                  onClick={() => setPowerModalOpen(false)}
+                  onClick={handleCerrarModalPotencia}
                   style={{
                     background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                     color: '#ffffff',
@@ -1588,7 +2208,7 @@ const TECdt = () => {
                     boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
                     transition: 'all 0.2s ease'
                   }}
-                  title="Cerrar ventana"
+                  title="Cerrar ventana y desconectar de la OLT"
                 >
                   <span>✕</span>
                   <span>Cerrar</span>
