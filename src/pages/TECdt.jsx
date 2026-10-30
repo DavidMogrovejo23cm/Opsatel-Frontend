@@ -1161,7 +1161,7 @@ const TECdt = () => {
                                 <span>📶</span>
                                 <div>
                                   <span className="tecdt-mobile-cred-label">Red</span>
-                                  <span className="tecdt-mobile-cred-val">{redVal}</span>
+                                  <span className="tecdt-mobile-cred-val">{redWifiMobile}</span>
                                 </div>
                               </div>
                               <div className="tecdt-mobile-cred-actions">
@@ -1176,7 +1176,7 @@ const TECdt = () => {
                                 <button
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
-                                  onClick={() => handleCopy(c.red, 'Red')}
+                                  onClick={() => handleCopy(redWifiMobile, 'Red')}
                                   title="Copiar Red"
                                 >
                                   📋
