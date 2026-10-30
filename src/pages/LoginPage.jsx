@@ -2,8 +2,7 @@
  * @file LoginPage.jsx
  * @author David Mogrovejo dmogrovejo87@gmail.com
  * @copyright (c) 2026 David Mogrovejo. All Rights Reserved.
- * @notice Developed with AI assistance.‍​‌​​​‌​​​‌‌​​​​‌​‌‌‌​‌‌​​‌‌​‌​​‌​‌‌​​‌​​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​‌‌‌​​​‌​​​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​‌‌​​​​‌​​​​​​‌​‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​‌‌‌​​‌‌​​‌​​​​​​‌​‌​​‌​​‌‌​​‌​‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​​​​‌​‌‌‌​​​‌​​​​​​‌​​​‌​​​‌‌​​‌​‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌‌​​​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌​​‌​‌​‌‌​​‌​​​​‌​​​​​​‌‌‌​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌‌​‌​​​​​‌​​​​​​‌​​​​​‌​‌​​‌​​‌​​‌​​​​​​‌‌​​​​‌​‌‌‌​​‌‌​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌‌​​‌‌​‌‌‌​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​​‌‌​‌‌​​‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌‌​​‌‌‌​‌​​​‌‌​​​​‌​‌‌​​​‌‌​‌‌‌​‌​​​​‌‌‌​‌​​​‌​​​​​​‌‌​​‌​​​‌‌​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌‌‌​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​​‌‌‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌​‌​​‌​‌‌​‌‌​​​​‌​‌‌‌​​‌‌​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​‌‌​​‌‌​‌‌‌‌​‌‌‌​​‌​​‌‌​​‌​‌​‌‌​‌‌‌​​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌​​​‌‌​​‌​​​​​​‌​‌​​‌‌​‌‌​‌​​‌​‌‌​​‌‌‌​​‌‌‌​‌​​​‌​​​​​​‌‌​​​‌​​‌‌​​‌‌​​​‌‌​​‌​​​‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​‌​​‌‌​​​​​​‌‌​​‌‌​​‌‌​​‌‌​​‌‌​‌​​​​‌‌​​​‌​​‌‌‌​​​​‌‌​​‌​​​​‌‌​‌​‌​‌‌​​‌​​​‌‌​​​‌‌‍
- * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
+ * @notice Developed with AI assistance.
  */
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +12,7 @@ import { motion } from 'framer-motion';
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +44,7 @@ const LoginPage = () => {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         className="login-card-container"
       >
-        {/* 3D Mascot Peeking around the top-left edge */}
+        {/* 3D Mascot Peeking around the top-left edge (Desktop Only) */}
         <div className="login-mascot-wrapper">
           <img
             src="/mascot-peeking-hq.png"
@@ -53,8 +53,34 @@ const LoginPage = () => {
           />
         </div>
 
+        {/* Mobile Header (Fiel a la referencia: Logo + ¡Bienvenido! + Mascota asomándose arriba a la derecha) */}
+        <div className="login-mobile-header">
+          <div className="login-mobile-header-left">
+            <div className="login-mobile-logo-row">
+              <img
+                src="/opsatel-sphere-logo.png"
+                alt="OPSATEL"
+                className="login-mobile-sphere-logo"
+              />
+              <span className="login-mobile-brand-name">OPSATEL</span>
+            </div>
+            <h2 className="login-mobile-welcome-title">¡Bienvenido!</h2>
+            <p className="login-mobile-welcome-subtitle">
+              Inicia sesión para continuar en tu cuenta.
+            </p>
+          </div>
+
+          <div className="login-mobile-mascot-wrapper">
+            <img
+              src="/mascot-mobile-peeking.png"
+              alt="Mascota OPSATEL"
+              className="login-mobile-mascot-img"
+            />
+          </div>
+        </div>
+
         <div className="login-card">
-          {/* Left Panel: Deep Purple Gradient & Welcome Text */}
+          {/* Left Panel: Deep Purple Gradient & Welcome Text (Desktop Only) */}
           <div className="login-left">
             {/* Soft decorative diagonal stripes */}
             <div className="login-diagonal-stripe stripe-1" />
@@ -117,7 +143,7 @@ const LoginPage = () => {
                   </svg>
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -125,6 +151,25 @@ const LoginPage = () => {
                   className="login-clean-input"
                   autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  className="login-password-toggle-btn"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  )}
+                </button>
               </div>
 
               {error && (
@@ -147,6 +192,16 @@ const LoginPage = () => {
             <div className="login-footer-copy">
               © 2026 OPSATEL SERVICIO PERSONALIZADO
             </div>
+          </div>
+        </div>
+
+        {/* Mobile Footer Decorativo (Fiel a la referencia: SIEMPRE CONTIGO con línea de resplandor) */}
+        <div className="login-mobile-footer-brand">
+          <div className="login-mobile-neon-curve" />
+          <div className="login-mobile-tagline">
+            <span className="login-tagline-line" />
+            <span className="login-tagline-text">SIEMPRE CONTIGO</span>
+            <span className="login-tagline-line" />
           </div>
         </div>
       </motion.div>

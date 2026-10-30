@@ -1635,17 +1635,21 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   VISTA MÓVIL DEL LOGIN (Centrada, limpia, sin mascota/imagen)
+   VISTA MÓVIL DEL LOGIN (Fiel a la referencia con mascota peeking)
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .login-wrapper {
-    padding: 24px 16px !important;
+    padding: 24px 16px 36px 16px !important;
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     min-height: 100vh !important;
     min-height: 100dvh !important;
     overflow-x: hidden !important;
+    background-color: #060919 !important;
+    background-image: 
+      radial-gradient(circle at 50% 18%, rgba(30, 45, 120, 0.4) 0%, rgba(10, 15, 40, 0.2) 50%, #060919 85%) !important;
   }
 
   .login-bg-glow {
@@ -1659,55 +1663,124 @@ html, body {
     max-width: 380px !important;
     width: 100% !important;
     margin: 0 auto !important;
+    position: relative !important;
   }
 
-  /* Ocultar mascota en móvil */
+  /* Ocultar elementos de escritorio en móvil */
   .login-mascot-wrapper {
     display: none !important;
   }
 
-  /* Ocultar panel decorativo izquierdo en móvil */
   .login-left {
     display: none !important;
   }
 
+  .login-brand-header {
+    display: none !important;
+  }
+
+  /* Cabecera Móvil fiel a la referencia */
+  .login-mobile-header {
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    position: relative !important;
+    margin-bottom: -15px !important;
+    z-index: 5 !important;
+    padding: 0 4px !important;
+  }
+
+  .login-mobile-header-left {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    z-index: 6 !important;
+    max-width: 58% !important;
+    padding-bottom: 24px !important;
+  }
+
+  .login-mobile-logo-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .login-mobile-sphere-logo {
+    width: 44px !important;
+    height: 44px !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)) !important;
+  }
+
+  .login-mobile-brand-name {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 2.5px !important;
+    color: #ffffff !important;
+  }
+
+  .login-mobile-welcome-title {
+    font-size: 1.45rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    letter-spacing: -0.3px !important;
+    line-height: 1.2 !important;
+  }
+
+  .login-mobile-welcome-subtitle {
+    font-size: 0.8rem !important;
+    color: #94a3b8 !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  .login-mobile-mascot-wrapper {
+    position: absolute !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 168px !important;
+    z-index: 8 !important;
+    pointer-events: none !important;
+  }
+
+  .login-mobile-mascot-img {
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.7)) !important;
+  }
+
+  /* Tarjeta Móvil con borde sutil cyan/azul translúcido */
   .login-card {
     flex-direction: column !important;
     min-height: auto !important;
     width: 100% !important;
-    border-radius: 26px !important;
-    background: #0c1532 !important;
-    border: 1px solid rgba(80, 95, 220, 0.35) !important;
+    border-radius: 24px !important;
+    background: rgba(10, 16, 38, 0.82) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
     box-shadow: 
       0 20px 50px rgba(0, 0, 0, 0.8),
-      0 0 35px rgba(70, 75, 230, 0.25) !important;
-    overflow: hidden !important;
+      0 0 35px rgba(59, 130, 246, 0.16) !important;
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 2 !important;
     margin: 0 auto !important;
   }
 
   .login-right {
-    padding: 38px 24px 28px 24px !important;
+    padding: 30px 22px 22px 22px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    background: transparent !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-  }
-
-  .login-brand-header {
-    margin-bottom: 24px !important;
-  }
-
-  .login-sphere-logo-container {
-    width: 82px !important;
-    height: 82px !important;
-    margin-bottom: 12px !important;
-  }
-
-  .login-brand-title {
-    font-size: 1.45rem !important;
-    letter-spacing: 2.5px !important;
   }
 
   .login-form {
@@ -1717,13 +1790,14 @@ html, body {
 
   .login-input-group {
     margin-bottom: 22px !important;
+    position: relative !important;
   }
 
   .login-clean-input,
   .login-clean-input[type="text"],
   .login-clean-input[type="password"] {
     font-size: 1rem !important;
-    padding: 12px 10px 12px 34px !important;
+    padding: 12px 38px 12px 34px !important;
   }
 
   .login-btn-container {
@@ -1743,6 +1817,44 @@ html, body {
   .login-footer-copy {
     margin-top: 24px !important;
     font-size: 0.68rem !important;
+  }
+
+  /* Pie decorativo móvil "SIEMPRE CONTIGO" */
+  .login-mobile-footer-brand {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 26px !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  .login-mobile-neon-curve {
+    width: 85% !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.7) 50%, transparent 100%) !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.9) !important;
+  }
+
+  .login-mobile-tagline {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .login-tagline-line {
+    width: 28px !important;
+    height: 1px !important;
+    background: rgba(99, 102, 241, 0.4) !important;
+  }
+
+  .login-tagline-text {
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 3px !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
   }
 }
 
