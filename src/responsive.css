@@ -731,12 +731,16 @@ html, body {
   background: #0f1222;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 16px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   transition: transform 0.15s ease, border-color 0.15s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .pagos-mobile-card:active {
@@ -797,35 +801,41 @@ html, body {
   background: currentColor;
 }
 
-/* Grilla de información de planes */
+/* Grilla de información de planes (adaptable en 2x2 para no salirse de la tarjeta) */
 .pagos-mobile-info-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: 8px;
-  align-items: baseline;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pagos-mobile-info-col {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pagos-mobile-info-label {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .pagos-mobile-info-val {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 /* Caja de Pendiente / Deuda */
@@ -2067,4 +2077,37 @@ div.general-desktop-only {
   display: flex;
   justify-content: flex-end;
   background: rgba(15, 23, 42, 0.98);
+}
+
+/* Contención estricta de tarjetas móviles para prevenir cualquier desborde horizontal */
+@media (max-width: 768px) {
+  .pagos-mobile-container,
+  .pagos-mobile-view,
+  .general-mobile-view,
+  .general-mobile-list,
+  .hr-mobile-view,
+  .cc-mobile-view {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .pagos-mobile-card,
+  .general-mobile-card,
+  .hr-mobile-card,
+  .cc-card-mobile {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .pagos-mobile-card-header,
+  .pagos-mobile-card-footer,
+  .pagos-mobile-debt-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
 }

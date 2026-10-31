@@ -72,20 +72,22 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Estados de grupos colapsables (por defecto todos abiertos para rápido acceso)
+  // Estados de grupos colapsables: solo uno abierto a la vez (acordeón estricto)
   const [openSections, setOpenSections] = useState(() => {
     try {
-      const saved = localStorage.getItem('opsatel_sidebar_sections_v2');
-      if (saved) return JSON.parse(saved);
+      const saved = localStorage.getItem('opsatel_sidebar_section_active');
+      if (saved) return { [saved]: true };
     } catch (e) { }
-    return { principal: true, clientes: true, tecnica: true, finanzas: true, sistema: false };
+    return { clientes: true };
   });
 
   const toggleSection = (sectionId) => {
     setOpenSections(prev => {
-      const updated = { ...prev, [sectionId]: !prev[sectionId] };
+      const isCurrentlyOpen = !!prev[sectionId];
+      // Si ya está abierto, se cierra. Si está cerrado, se abre SOLO este y se cierran todos los demás.
+      const updated = isCurrentlyOpen ? {} : { [sectionId]: true };
       try {
-        localStorage.setItem('opsatel_sidebar_sections_v2', JSON.stringify(updated));
+        localStorage.setItem('opsatel_sidebar_section_active', isCurrentlyOpen ? '' : sectionId);
       } catch (e) { }
       return updated;
     });
@@ -162,15 +164,16 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
     }).filter(section => section.items.length > 0);
   }, [user, isMobile]);
 
-  // Asegura que el grupo que contiene la ruta activa esté abierto
+  // Asegura que el grupo que contiene la ruta activa esté abierto y los demás cerrados
   useEffect(() => {
     const currentPath = location.pathname;
-    visibleSections.forEach(sec => {
-      const hasActive = sec.items.some(item => item.path === currentPath);
-      if (hasActive && !openSections[sec.id]) {
-        setOpenSections(prev => ({ ...prev, [sec.id]: true }));
-      }
-    });
+    const activeSec = visibleSections.find(sec => sec.items.some(item => item.path === currentPath));
+    if (activeSec && !openSections[activeSec.id]) {
+      setOpenSections({ [activeSec.id]: true });
+      try {
+        localStorage.setItem('opsatel_sidebar_section_active', activeSec.id);
+      } catch (e) { }
+    }
   }, [location.pathname, visibleSections]);
 
   return (
@@ -253,7 +256,7 @@ const Sidebar = ({ isOpen, setIsOpen, onRefresh, onOpenSearch }) => {
         {/* Lista de Secciones y Módulos con scroll */}
         <nav className="sidebar-nav-scroll">
           {visibleSections.map(section => {
-            const isSectionOpen = openSections[section.id] !== false;
+            const isSectionOpen = !!openSections[section.id];
             const hasActiveRoute = section.items.some(it => it.path === location.pathname);
 
             return (
