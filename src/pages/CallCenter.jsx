@@ -187,25 +187,36 @@ const CallCenter = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  /* Filtros de tabla: Solo barra de búsqueda general */
+  /* Filtros de tabla (Adaptativo: escritorio completo / móvil solo búsqueda general) */
   const filteredTickets = useMemo(() => {
     if (!Array.isArray(tickets)) return [];
     const term = searchTerm.toLowerCase().trim();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
     return tickets
       .filter(t => {
-        if (!term) return true;
-        return (
+        const matchSearch =
+          !term ||
           (t.cliente_nombre || '').toLowerCase().includes(term) ||
           (t.telefono || '').toLowerCase().includes(term) ||
           (t.a_cargo || '').toLowerCase().includes(term) ||
           (t.problema || '').toLowerCase().includes(term) ||
           String(t.id || '').includes(term) ||
           (t.ip || '').toLowerCase().includes(term) ||
-          (t.estado || '').toLowerCase().includes(term)
-        );
+          (t.estado || '').toLowerCase().includes(term);
+
+        if (!matchSearch) return false;
+
+        // En móvil solo aplica la barra de búsqueda general
+        if (isMobile) return true;
+
+        // En escritorio se aplican los filtros seleccionados de estado y fecha
+        const matchDate = dateFilter ? (t.fecha_ingreso || '').startsWith(dateFilter) : true;
+        const matchStatus = statusFilter === 'TODOS' ? true : (t.estado || '').toUpperCase() === statusFilter;
+        return matchDate && matchStatus;
       })
       .sort((a, b) => new Date(b.fecha_ingreso || 0) - new Date(a.fecha_ingreso || 0));
-  }, [tickets, searchTerm]);
+  }, [tickets, searchTerm, dateFilter, statusFilter]);
 
   /* Lookup de clientes para asociar ID e información */
   const clientLookup = useMemo(() => {
@@ -510,22 +521,313 @@ const CallCenter = () => {
         </div>
       </div>
 
-      {/* ── BARRA DE BÚSQUEDA GENERAL ── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '20px',
-        width: '100%'
+      {/* ── SECCIÓN EXCLUSIVA DE ESCRITORIO (KPIs, Tabs y Filtros avanzados intactos) ── */}
+      <div className="cc-desktop-view">
+        {/* KPI METRIC CARDS */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+          gap: '14px',
+          marginBottom: '20px'
+        }}>
+          {STAT_CARDS.map(card => {
+            const isActive = statusFilter === card.value;
+            const count = counts[card.value] ?? 0;
+            return (
+              <div
+                key={card.value}
+                onClick={() => {
+                  setStatusFilter(card.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  background: isActive
+                    ? `linear-gradient(145deg, ${card.color}20 0%, rgba(255,255,255,0.03) 100%)`
+                    : 'rgba(255,255,255,0.02)',
+                  borderRadius: '18px',
+                  border: `1.5px solid ${isActive ? card.color : 'rgba(255,255,255,0.07)'}`,
+                  boxShadow: isActive ? `0 8px 24px ${card.color}24` : '0 4px 14px rgba(0,0,0,0.2)',
+                  padding: '16px 18px',
+                  cursor: 'pointer',
+                  transition: 'all 0.22s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  userSelect: 'none'
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) e.currentTarget.style.borderColor = `${card.color}66`;
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '50%',
+                  background: card.bg || `${card.color}22`,
+                  border: `1.5px solid ${card.color}55`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.25rem',
+                  flexShrink: 0
+                }}>
+                  {card.icon}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    color: isActive ? card.color : 'var(--text-muted)',
+                    textTransform: 'capitalize',
+                    letterSpacing: '0.02em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {card.label}
+                  </div>
+                  <div style={{
+                    fontSize: '1.65rem',
+                    fontWeight: '900',
+                    color: '#fff',
+                    lineHeight: '1.15',
+                    marginTop: '2px'
+                  }}>
+                    {count}
+                  </div>
+                  <div style={{
+                    fontSize: '0.68rem',
+                    color: 'rgba(255,255,255,0.4)',
+                    marginTop: '2px',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {card.sublabel}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* BARRA DE PESTAÑAS Y BUSCADOR (ESCRITORIO) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '16px',
+          flexWrap: 'wrap'
+        }}>
+          {/* Pills / Tabs por Estado */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[{ value: 'TODOS', label: 'Todos', color: '#8b5cf6', icon: '📞' }, ...ESTADOS].map(e => {
+              const isActive = statusFilter === e.value;
+              const cnt = counts[e.value] ?? 0;
+              return (
+                <button
+                  key={e.value}
+                  onClick={() => {
+                    setStatusFilter(e.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: '25px',
+                    border: `1.5px solid ${isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.08)'}`,
+                    background: isActive ? `${e.color || '#8b5cf6'}26` : 'rgba(255,255,255,0.03)',
+                    color: isActive ? (e.color || '#8b5cf6') : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: isActive ? '800' : '500',
+                    fontSize: '0.78rem',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>{e.icon}</span>
+                  <span>{e.label}</span>
+                  <span style={{
+                    background: isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.1)',
+                    color: isActive ? '#fff' : 'var(--text-muted)',
+                    borderRadius: '12px',
+                    padding: '1px 8px',
+                    fontSize: '0.68rem',
+                    fontWeight: '800'
+                  }}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Buscador y Botón de Filtros */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                className="input"
+                placeholder="🔍 Buscar cliente, tel, IP..."
+                style={{
+                  width: '230px',
+                  marginBottom: 0,
+                  padding: '8px 28px 8px 14px',
+                  fontSize: '0.78rem',
+                  borderRadius: '20px',
+                  background: 'rgba(255,255,255,0.04)',
+                  borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.1)'
+                }}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    padding: 0
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowFilters(prev => !prev)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '20px',
+                border: `1.5px solid ${showFilters || dateFilter ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`,
+                background: showFilters || dateFilter ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
+                color: showFilters || dateFilter ? '#c4b5fd' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '0.78rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <span>🎛️</span>
+              <span>Filtros</span>
+              {dateFilter && (
+                <span style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#8b5cf6',
+                  display: 'inline-block'
+                }} />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* PANEL DESPLEGABLE DE FILTROS */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px',
+                padding: '12px 18px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  📅 Filtrar por Fecha Ingreso:
+                </span>
+                <input
+                  type="date"
+                  className="input"
+                  style={{ width: '160px', marginBottom: 0, padding: '6px 10px', fontSize: '0.78rem' }}
+                  value={dateFilter}
+                  onChange={e => setDateFilter(e.target.value)}
+                />
+              </div>
+              {dateFilter && (
+                <button
+                  onClick={() => setDateFilter('')}
+                  style={{
+                    background: 'rgba(239,68,68,0.12)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    color: '#f87171',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Limpiar Fecha
+                </button>
+              )}
+              {(searchTerm || dateFilter || statusFilter !== 'TODOS') && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setDateFilter('');
+                    setStatusFilter('TODOS');
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.7)',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    marginLeft: 'auto'
+                  }}
+                >
+                  Restablecer Filtros
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── BARRA DE BÚSQUEDA GENERAL (SOLO EN MÓVIL) ── */}
+      <div className="cc-mobile-view" style={{
+        padding: '0 4px 14px 4px',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ position: 'relative', width: '100%', maxWidth: '520px' }}>
+        <div style={{ position: 'relative', width: '100%' }}>
           <input
             className="input"
             placeholder="🔍 Buscar cliente, teléfono, IP, problema..."
             style={{
               width: '100%',
               marginBottom: 0,
-              padding: '11px 40px 11px 18px',
+              padding: '11px 40px 11px 16px',
               fontSize: '0.88rem',
               borderRadius: '14px',
               background: 'rgba(255,255,255,0.04)',
