@@ -7,7 +7,8 @@
  */
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { clienteService, configuracionService } from '../services/api';
+import { clienteService, configuracionService, oltService } from '../services/api';
+import OntPotenciaModal from '../components/OntPotenciaModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
@@ -29,6 +30,28 @@ const General = () => {
 
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Estado para Modal de Medición de Potencia Óptica ONT en Tiempo Real
+  const [selectedClientForPower, setSelectedClientForPower] = useState(null);
+  const [showPotenciaModal, setShowPotenciaModal] = useState(false);
+
+  const handleAbrirPotencia = (cliente) => {
+    if (!cliente) return;
+    setSelectedClientForPower(cliente);
+    setShowPotenciaModal(true);
+  };
+
+  const handleCerrarPotencia = () => {
+    setShowPotenciaModal(false);
+    setSelectedClientForPower(null);
+  };
+
+  const handleUpdateClientePotencia = (clienteId, newPotencia) => {
+    if (!clienteId || newPotencia === undefined || newPotencia === null) return;
+    const pStr = String(newPotencia);
+    setClientes(prev => prev.map(c => c.id === clienteId ? { ...c, potencia: pStr } : c));
+    setSelectedMobileClient(prev => (prev && prev.id === clienteId) ? { ...prev, potencia: pStr } : prev);
+  };
 
   // Filtros con persistencia automática
   const [searchTerm, setSearchTerm] = useState(() => (urlSearch !== null && urlSearch !== undefined) ? urlSearch : (savedFilters?.searchTerm || ''));
@@ -1259,6 +1282,7 @@ const General = () => {
             onChange={(e) => setSelectedAction(e.target.value)}
           >
             <option value="VER">⚙️ Acciones...</option>
+            <option value="POTENCIA">⚡ Ver Potencia (Tiempo Real)</option>
             <option value="MIGRAR">🔄 Migrar (OLT, MikroTik, LibreQoS → Activación)</option>
             <option value="ELIMINAR">🗑️ Eliminar (Solo Sistema)</option>
             <option value="BORRAR">💥 Borrar (Todo: OLT, MikroTik, XUI, LibreQoS)</option>
@@ -1508,6 +1532,26 @@ const General = () => {
                     </th>
                   );
                 })}
+                {selectedAction === 'POTENCIA' && (
+                  <th key="acciones-potencia" style={{
+                    padding: '12px',
+                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    width: 140,
+                    minWidth: 140,
+                    maxWidth: 140,
+                    position: 'sticky',
+                    right: 0,
+                    background: 'var(--sticky-col-bg, #131526)',
+                    zIndex: 22,
+                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                  }}>
+                    Acción (Potencia)
+                  </th>
+                )}
                 {selectedAction === 'MIGRAR' && (
                   <th key="acciones-migrar" style={{
                     padding: '12px',
@@ -2378,6 +2422,41 @@ const General = () => {
                                   );
                                 }
 
+                                if (col === 'potencia') {
+                                  const potVal = c.potencia;
+                                  const hasPot = potVal !== undefined && potVal !== null && String(potVal).trim() !== '';
+                                  return (
+                                    <div
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAbrirPotencia(c);
+                                      }}
+                                      title="Click para ver potencia óptica en tiempo real"
+                                    >
+                                      <span style={{
+                                        color: hasPot ? '#c084fc' : 'var(--text-muted)',
+                                        fontWeight: hasPot ? '700' : 'normal',
+                                        fontFamily: hasPot ? 'monospace' : 'inherit'
+                                      }}>
+                                        {hasPot ? `${potVal} dBm` : '-'}
+                                      </span>
+                                      <span style={{
+                                        fontSize: '0.7rem',
+                                        background: 'rgba(56, 189, 248, 0.15)',
+                                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                                        color: '#38bdf8',
+                                        borderRadius: '4px',
+                                        padding: '1px 5px',
+                                        fontWeight: '700',
+                                        lineHeight: 1
+                                      }}>
+                                        ⚡
+                                      </span>
+                                    </div>
+                                  );
+                                }
+
                                 const cellVal = c[col] !== undefined ? c[col] : (col === 'bridge' ? c.breach : undefined);
                                 return (cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '') ? String(cellVal) : '-';
                               })()}
@@ -2386,7 +2465,57 @@ const General = () => {
                         </td>
                       );
                     })}
-                    {selectedAction === 'MIGRAR' && (
+                    {selectedAction === 'POTENCIA' && (
+                      <td key="acciones-potencia" style={{
+                        padding: '6px 12px',
+                        whiteSpace: 'nowrap',
+                        width: 140,
+                        minWidth: 140,
+                        maxWidth: 140,
+                        textAlign: 'center',
+                        position: 'sticky',
+                        right: 0,
+                        background: '#131526',
+                        zIndex: 12,
+                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirPotencia(c)}
+                          style={{
+                            padding: '5px 12px',
+                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
+                            border: '1px solid rgba(56, 189, 248, 0.45)',
+                            color: '#38bdf8',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 2px 8px rgba(56, 189, 248, 0.15)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(99, 102, 241, 0.4))';
+                            e.currentTarget.style.borderColor = '#38bdf8';
+                            e.currentTarget.style.boxShadow = '0 2px 12px rgba(56, 189, 248, 0.4)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))';
+                            e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.45)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(56, 189, 248, 0.15)';
+                          }}
+                          title={`Ver potencia óptica en tiempo real de ${c.nombre}`}
+                        >
+                          ⚡ Ver Potencia
+                        </button>
+                      </td>
+                    )}
+                {selectedAction === 'MIGRAR' && (
                       <td key="acciones-migrar" style={{
                         padding: '6px 12px',
                         whiteSpace: 'nowrap',
@@ -2558,6 +2687,33 @@ const General = () => {
                   <div className="general-mobile-card-name">
                     {cliente.nombre || 'Sin Nombre'}
                   </div>
+                  <button
+                    type="button"
+                    className="general-mobile-card-btn-potencia"
+                    title="Ver potencia óptica en tiempo real"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbrirPotencia(cliente);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#38bdf8',
+                      borderRadius: '8px',
+                      padding: '5px 9px',
+                      fontSize: '0.74rem',
+                      fontWeight: '700',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
+                    }}
+                  >
+                    <span>⚡</span>
+                    <span>Potencia</span>
+                  </button>
                   <div className="general-mobile-card-arrow">
                     ›
                   </div>
@@ -3687,12 +3843,34 @@ const General = () => {
                   </span>
                 </div>
 
-                {/* 11. Potencia */}
+                {/* 11. Potencia (Live OLT) */}
                 <div className="general-mobile-detail-row">
                   <span className="general-mobile-detail-label">Potencia</span>
-                  <span className="general-mobile-detail-value" style={{ color: '#c084fc' }}>
-                    {selectedMobileClient.potencia || '—'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="general-mobile-detail-value" style={{ color: '#c084fc', fontWeight: '700' }}>
+                      {selectedMobileClient.potencia ? `${selectedMobileClient.potencia} dBm` : '—'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirPotencia(selectedMobileClient)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.25))',
+                        border: '1px solid rgba(56, 189, 248, 0.45)',
+                        color: '#38bdf8',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Medir potencia óptica en tiempo real"
+                    >
+                      ⚡ Medir en Vivo
+                    </button>
+                  </div>
                 </div>
 
                 {/* 12. NAP */}
@@ -3717,17 +3895,39 @@ const General = () => {
               </div>
 
               {/* Footer del Modal */}
-              <div className="general-mobile-modal-footer">
+              <div className="general-mobile-modal-footer" style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  onClick={() => setSelectedMobileClient(null)}
+                  onClick={() => handleAbrirPotencia(selectedMobileClient)}
                   style={{
-                    padding: '8px 24px',
+                    flex: 1,
+                    padding: '9px 16px',
                     fontSize: '0.85rem',
                     fontWeight: '700',
                     borderRadius: '10px',
-                    width: '100%'
+                    background: 'linear-gradient(135deg, #0284c7 0%, #6366f1 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
+                  }}
+                >
+                  <span>⚡</span>
+                  <span>Ver Potencia en Vivo</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setSelectedMobileClient(null)}
+                  style={{
+                    padding: '9px 18px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    borderRadius: '10px'
                   }}
                 >
                   Cerrar
@@ -3737,6 +3937,14 @@ const General = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Medición de Potencia Óptica ONT en Tiempo Real */}
+      <OntPotenciaModal
+        isOpen={showPotenciaModal}
+        cliente={selectedClientForPower}
+        onClose={handleCerrarPotencia}
+        onUpdatePotencia={handleUpdateClientePotencia}
+      />
     </motion.div>
   );
 };

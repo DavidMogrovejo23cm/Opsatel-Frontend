@@ -1982,6 +1982,17 @@ div.general-desktop-only {
     line-height: 1.35;
   }
 
+  .general-mobile-card-btn-potencia {
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .general-mobile-card-btn-potencia:active {
+    transform: scale(0.94);
+    background: rgba(56, 189, 248, 0.35) !important;
+    border-color: #38bdf8 !important;
+  }
+
   .general-mobile-card-arrow {
     color: #64748b;
     font-size: 1.4rem;
