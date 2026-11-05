@@ -64,7 +64,7 @@ const Traccar = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       ref={containerRef}
       className={`traccar-page-container ${isFullscreen ? 'fullscreen-mode' : ''}`}
       initial={{ opacity: 0, y: 10 }}
@@ -78,7 +78,7 @@ const Traccar = () => {
             <span className="traccar-icon">🛰️</span>
           </div>
           <div>
-            <h2 className="traccar-title">Monitoreo GPS (Traccar)</h2>
+            <h2 className="traccar-title">Monitoreo GPS</h2>
             <p className="traccar-subtitle">Seguimiento y telemetría en tiempo real</p>
           </div>
           <div className="traccar-live-badge">
@@ -88,9 +88,9 @@ const Traccar = () => {
         </div>
 
         <div className="traccar-actions">
-          <button 
-            type="button" 
-            className="traccar-btn refresh" 
+          <button
+            type="button"
+            className="traccar-btn refresh"
             onClick={handleRefresh}
             title="Recargar vista de rastreo"
           >
@@ -98,9 +98,9 @@ const Traccar = () => {
             <span className="btn-label">Recargar</span>
           </button>
 
-          <button 
-            type="button" 
-            className="traccar-btn fullscreen" 
+          <button
+            type="button"
+            className="traccar-btn fullscreen"
             onClick={toggleFullscreen}
             title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           >
@@ -108,9 +108,9 @@ const Traccar = () => {
             <span className="btn-label">{isFullscreen ? 'Salir Fullscreen' : 'Pantalla Completa'}</span>
           </button>
 
-          <button 
-            type="button" 
-            className="traccar-btn external" 
+          <button
+            type="button"
+            className="traccar-btn external"
             onClick={handleOpenExternal}
             title="Abrir en una nueva pestaña"
           >
