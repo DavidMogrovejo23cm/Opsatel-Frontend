@@ -108,15 +108,7 @@ const Traccar = () => {
             <span className="btn-label">{isFullscreen ? 'Salir Fullscreen' : 'Pantalla Completa'}</span>
           </button>
 
-          <button
-            type="button"
-            className="traccar-btn external"
-            onClick={handleOpenExternal}
-            title="Abrir en una nueva pestaña"
-          >
-            <span className="btn-icon">↗</span>
-            <span className="btn-label">Abrir Externo</span>
-          </button>
+
         </div>
       </div>
 
