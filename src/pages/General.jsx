@@ -3939,12 +3939,16 @@ const General = () => {
       </AnimatePresence>
 
       {/* Modal de Medición de Potencia Óptica ONT en Tiempo Real */}
-      <OntPotenciaModal
-        isOpen={showPotenciaModal}
-        cliente={selectedClientForPower}
-        onClose={handleCerrarPotencia}
-        onUpdatePotencia={handleUpdateClientePotencia}
-      />
+      <AnimatePresence>
+        {showPotenciaModal && (
+          <OntPotenciaModal
+            isOpen={showPotenciaModal}
+            cliente={selectedClientForPower}
+            onClose={handleCerrarPotencia}
+            onUpdatePotencia={handleUpdateClientePotencia}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

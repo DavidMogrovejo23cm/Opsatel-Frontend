@@ -2122,3 +2122,20 @@ div.general-desktop-only {
     box-sizing: border-box !important;
   }
 }
+
+
+/* Modal de Potencia Óptica ONT en Tiempo Real */
+.ont-potencia-modal-card {
+  width: 100%;
+  max-width: 750px;
+  max-height: 92vh;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .ont-potencia-modal-card {
+    max-width: 98% !important;
+    max-height: 94vh !important;
+    border-radius: 18px !important;
+  }
+}

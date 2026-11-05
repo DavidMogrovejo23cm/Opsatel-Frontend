@@ -4,6 +4,7 @@
  * Compatible tanto con vista de escritorio como con vista móvil.
  */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ResponsiveContainer,
@@ -276,9 +277,10 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
 
   if (!isOpen || !cliente) return null;
 
-  return (
+  const modalNode = (
     <AnimatePresence>
       <motion.div
+        key="ont-potencia-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -291,10 +293,11 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
           bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 99999,
+          zIndex: 999999,
           padding: '12px'
         }}
         onClick={(e) => {
@@ -304,20 +307,23 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
         }}
       >
         <motion.div
+          key="ont-potencia-card"
           initial={{ scale: 0.92, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0, y: 20 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="glass-card"
+          className="ont-potencia-modal-card"
           style={{
             width: '100%',
             maxWidth: '750px',
             maxHeight: '94vh',
             borderRadius: '22px',
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+            backgroundColor: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.2)',
             overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
             display: 'flex',
             flexDirection: 'column'
           }}
@@ -691,8 +697,8 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
                         </div>
                       </div>
 
-                      <div style={{ width: '100%', height: 195 }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div style={{ width: '100%', height: 195, minWidth: 0 }}>
+                        <ResponsiveContainer width="100%" height={195}>
                           <AreaChart data={powerHistory} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                             <defs>
                               <linearGradient id="modalPowerGrad" x1="0" y1="0" x2="0" y2="1">
@@ -868,6 +874,10 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
       </motion.div>
     </AnimatePresence>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalNode, document.body)
+    : modalNode;
 };
 
 export default OntPotenciaModal;
