@@ -2769,7 +2769,7 @@ const Balance = () => {
     if (data.id) await balanceService.actualizarGastoFijo(data.id, data);
     else await balanceService.crearGastoFijo(data);
     fetchGastosFijos();
-    if (vista === 'mensual') fetchMensual();
+    fetchMensual();
   };
   const handleDeleteGastoFijo = async id => {
     const confirmado = await showConfirm('¿Eliminar gasto fijo?', '¿Eliminar este gasto fijo?', 'Sí, eliminar', 'Cancelar');
@@ -2856,8 +2856,22 @@ const Balance = () => {
       value,
       color: getCatColor(name, customCategorias)
     })).filter(x => x.value > 0);
-    const egByMetodo = egData.lista.reduce((acc, eg) => {
-      acc[eg.metodo_pago] = (acc[eg.metodo_pago] || 0) + parseFloat(eg.monto);
+
+    // Combinar egresos puntuales con los gastos fijos activos mensuales recurrentes
+    const allEgresos = [
+      ...(egData.lista || []),
+      ...(egData.gastos_fijos || []).map(gf => ({
+        ...gf,
+        id: `gf-${gf.id}`,
+        subcategoria: 'Fijo Mensual',
+        fecha: `${mes}-01`,
+        esFijo: true
+      }))
+    ];
+
+    const egByMetodo = allEgresos.reduce((acc, eg) => {
+      const metodo = eg.metodo_pago || 'Efectivo';
+      acc[metodo] = (acc[metodo] || 0) + parseFloat(eg.monto || 0);
       return acc;
     }, {});
     const pieMetodo = Object.entries(egByMetodo).map(([name, value]) => ({ name, value, color: name === 'Pichincha' ? P.pichincha : name === 'JEP' ? P.jep : name === 'Efectivo' ? P.efectivo : '#94a3b8' }));
@@ -3282,7 +3296,7 @@ const Balance = () => {
             <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔎</span>
           </div>
         </div>
-        {egData.lista.length === 0 ? (
+        {allEgresos.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 20, border: '1px dashed rgba(255,255,255,0.1)' }}>
             <div style={{ fontSize: '2rem', marginBottom: 10 }}>📭</div>
             Sin egresos registrados para este período.
@@ -3298,7 +3312,7 @@ const Balance = () => {
                 </tr>
               </thead>
               <tbody>
-                {egData.lista
+                {allEgresos
                   .filter(e => {
                     const search = filtroEgreso.toLowerCase();
                     return e.descripcion.toLowerCase().includes(search) ||
@@ -3312,9 +3326,18 @@ const Balance = () => {
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
                       transition: 'background 0.2s'
                     }} className="hover-row">
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>
+                        {eg.esFijo && <span title="Egreso Fijo Mensual" style={{ marginRight: 6 }}>🔒</span>}
+                        {eg.descripcion}
+                      </td>
                       <td style={{ padding: '12px 16px' }}>
-                        {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                        {eg.esFijo ? (
+                          <Badge text="🔒 Fijo Mensual" color="#f43f5e" />
+                        ) : eg.subcategoria ? (
+                          <Badge text={eg.subcategoria} color={P.proyecto} />
+                        ) : (
+                          <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px' }}><Badge text={getCatLabel(eg.categoria, customCategorias)} color={getCatColor(eg.categoria, customCategorias)} /></td>
                       <td style={{ padding: '12px 16px' }}>
