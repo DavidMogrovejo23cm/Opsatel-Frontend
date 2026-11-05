@@ -24,7 +24,7 @@ const BREADCRUMB_MAP = {
   'extras-pagos': { title: 'Pagos Extras', module: 'Finanzas', icon: '💸' },
   'extras-general': { title: 'Extras General', module: 'Finanzas', icon: '🌍' },
   'administrar': { title: 'Administrar Clientes', module: 'Sistema', icon: '⚙️' },
-  'traccar': { title: 'Monitoreo GPS (Traccar)', module: 'Sistema', icon: '🛰️' },
+  'traccar': { title: 'Monitoreo GPS ', module: 'Sistema', icon: '🛰️' },
   'config': { title: 'Configuración', module: 'Sistema', icon: '🛠️' },
   'asistencia': { title: 'Control Asistencia', module: 'Personal', icon: '⏰' },
   'upload-db': { title: 'Copia Base de Datos', module: 'Sistema', icon: '📂' },
@@ -85,25 +85,25 @@ const Layout = () => {
   return (
     <div className="layout-root">
       {/* Overlay oscuro para móvil cuando el sidebar está abierto */}
-      <div 
-        className={`blur-overlay ${isSidebarOpen ? 'active' : ''}`} 
+      <div
+        className={`blur-overlay ${isSidebarOpen ? 'active' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* Menú lateral moderno */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        setIsOpen={setIsSidebarOpen} 
+      <Sidebar
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
         onRefresh={handleRefresh}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
-      
+
       {/* Contenedor principal con Header Superior */}
       <div className="app-main-layout">
         {/* Botón flotante para abrir el menú en móviles sin consumir espacio vertical */}
         {!isSidebarOpen && (
-          <button 
-            className="mobile-floating-menu-btn" 
+          <button
+            className="mobile-floating-menu-btn"
             onClick={() => setIsSidebarOpen(true)}
             aria-label="Abrir Menú"
             type="button"
@@ -116,8 +116,8 @@ const Layout = () => {
         <header className="app-top-header">
           {/* Lado Izquierdo: Botón Hamburguesa móvil + Breadcrumbs */}
           <div className="top-header-left">
-            <button 
-              className="top-header-hamburger" 
+            <button
+              className="top-header-hamburger"
               onClick={() => setIsSidebarOpen(true)}
               aria-label="Abrir Menú"
               type="button"
@@ -136,8 +136,8 @@ const Layout = () => {
 
           {/* Centro: Buscador Global (Ctrl + K) */}
           <div className="top-header-center">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="top-header-search-bar"
               onClick={() => setIsSearchOpen(true)}
             >
@@ -191,9 +191,9 @@ const Layout = () => {
             </div>
 
             {/* Botón Refrescar Vista */}
-            <button 
-              type="button" 
-              className="top-header-icon-btn" 
+            <button
+              type="button"
+              className="top-header-icon-btn"
               onClick={handleRefresh}
               title="Refrescar contenido"
             >
@@ -209,9 +209,9 @@ const Layout = () => {
       </div>
 
       {/* MODAL DE BÚSQUEDA GLOBAL */}
-      <GlobalSearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
       />
 
       <style>{`
