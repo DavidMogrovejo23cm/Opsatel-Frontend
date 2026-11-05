@@ -403,13 +403,14 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
       return {
         ...initial,
         fecha: fechaVal,
-        mes: initial.mes || fechaVal.slice(0, 7)
+        mes: initial.mes || fechaVal.slice(0, 7),
+        estado: (initial.estado || 'Realizado').toLowerCase() === 'pendiente' ? 'Pendiente' : 'Realizado'
       };
     }
     return {
       descripcion: '', categoria: 'operacional', subcategoria: '',
       monto: '', fecha: todayStr, mes: todayStr.slice(0, 7),
-      metodo_pago: 'Efectivo', notas: ''
+      metodo_pago: 'Efectivo', estado: 'Realizado', notas: ''
     };
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -435,7 +436,7 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
     e.preventDefault();
     if (!form.descripcion || !form.monto) return showWarning('Completa descripción y monto.');
     const mes = form.fecha ? form.fecha.slice(0, 7) : DEFAULT_MES;
-    await onSave({ ...form, monto: parseFloat(form.monto), fecha: form.fecha, mes });
+    await onSave({ ...form, monto: parseFloat(form.monto), fecha: form.fecha, mes, estado: form.estado || 'Realizado' });
     onClose();
   };
 
@@ -555,6 +556,63 @@ function EgresoForm({ initial, customCategorias = [], onOpenCategoriasModal, onS
           )}
         </div>
       </div>
+      {/* Estado del Egreso: Realizado vs Pendiente */}
+      <div>
+        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>
+          ⚡ Estado del Gasto
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => set('estado', 'Realizado')}
+            style={{
+              padding: '11px 14px',
+              borderRadius: 12,
+              border: form.estado === 'Realizado' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+              background: form.estado === 'Realizado' ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.03)',
+              color: form.estado === 'Realizado' ? '#34d399' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              fontFamily: 'Outfit, sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: form.estado === 'Realizado' ? '0 4px 14px rgba(16,185,129,0.25)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>🟢</span> Realizado
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 500 }}>(Suma a Balance)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => set('estado', 'Pendiente')}
+            style={{
+              padding: '11px 14px',
+              borderRadius: 12,
+              border: form.estado === 'Pendiente' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
+              background: form.estado === 'Pendiente' ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.03)',
+              color: form.estado === 'Pendiente' ? '#fbbf24' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              fontFamily: 'Outfit, sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: form.estado === 'Pendiente' ? '0 4px 14px rgba(245,158,11,0.25)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>🟡</span> Pendiente
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 500 }}>(No Suma a Balance)</span>
+          </button>
+        </div>
+      </div>
+
       <div>
         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 6, fontWeight: 600 }}>Notas (opcional)</label>
         <textarea style={{ ...IS, resize: 'vertical', minHeight: 56 }} value={form.notas} onChange={e => set('notas', e.target.value)} />
@@ -2515,7 +2573,13 @@ const Balance = () => {
   const fetchPlataforma = useCallback(async () => { setLoading(true); try { const r = await balanceService.reportePlataforma(mes); setReportPlataforma(r.data); } catch (e) { } setLoading(false); }, [mes]);
   const fetchMovsInternos = useCallback(async () => { setLoading(true); try { const r = await balanceService.listarMovimientosInternos(mes); setReportMovsInternos(r.data); } catch (e) { } setLoading(false); }, [mes]);
   const fetchAnual = useCallback(async () => { setLoading(true); try { const r = await balanceService.reporteAnual(anio); setReportAnual(r.data); } catch (e) { } setLoading(false); }, [anio]);
-  const fetchEgresos = useCallback(async () => { try { const r = await balanceService.listarEgresos(); setEgresos(r.data); } catch (e) { } }, []);
+  const fetchEgresos = useCallback(async (targetMes) => {
+    try {
+      const m = targetMes !== undefined ? targetMes : (filterEgresosByMes ? mes : null);
+      const r = await balanceService.listarEgresos(m);
+      setEgresos(r.data);
+    } catch (e) { }
+  }, [mes, filterEgresosByMes]);
   const fetchProyectos = useCallback(async () => { try { const r = await balanceService.listarProyectos(); setProyectos(r.data); } catch (e) { } }, []);
   const fetchGastosFijos = useCallback(async () => { try { const r = await balanceService.listarGastosFijos(); setGastosFijos(r.data); } catch (e) { } }, []);
   const fetchResumenColchon = useCallback(async () => { try { const r = await balanceService.resumenColchon(); setResumenColchonData(r.data); } catch (e) { } }, []);
@@ -2618,7 +2682,7 @@ const Balance = () => {
     }
   }, [vista, mes, fetchMovsInternos, fetchPlataforma, fetchResumenColchon]);
   useEffect(() => { if (vista === 'anual') fetchAnual(); }, [vista, fetchAnual]);
-  useEffect(() => { if (vista === 'egresos') { fetchEgresos(); fetchGastosFijos(); } }, [vista, fetchEgresos, fetchGastosFijos]);
+  useEffect(() => { if (vista === 'egresos') { fetchEgresos(mes); fetchGastosFijos(); } }, [vista, mes, fetchEgresos, fetchGastosFijos]);
   useEffect(() => { if (vista === 'proyectos') fetchProyectos(); }, [vista, fetchProyectos]);
   useEffect(() => { if (vista === 'colchon') fetchResumenColchon(); }, [vista, fetchResumenColchon]);
   useEffect(() => { fetchGastosFijos(); fetchResumenColchon(); }, [fetchGastosFijos, fetchResumenColchon]);
@@ -2682,17 +2746,51 @@ const Balance = () => {
 
   const handleSaveEgreso = async data => {
     const finalFecha = data.fecha || new Date().toISOString().split('T')[0];
-    const finalMes = finalFecha.slice(0, 7);
+    const finalMes = data.mes || finalFecha.slice(0, 7);
     const payload = {
       ...data,
       fecha: finalFecha,
-      mes: finalMes
+      mes: finalMes,
+      estado: data.estado || 'Realizado'
     };
     if (data.id) await balanceService.actualizarEgreso(data.id, payload);
     else await balanceService.crearEgreso(payload);
-    fetchEgresos();
+    fetchEgresos(mes);
     if (vista === 'mensual') fetchMensual();
     showSuccess('Egreso guardado');
+  };
+
+  const handleToggleEstadoEgreso = async egreso => {
+    try {
+      const actualEstado = (egreso.estado || 'Realizado').toLowerCase();
+      const nuevoEstado = actualEstado === 'realizado' ? 'Pendiente' : 'Realizado';
+      await balanceService.actualizarEgreso(egreso.id, {
+        estado: nuevoEstado
+      });
+      showSuccess(`Gasto marcado como ${nuevoEstado === 'Realizado' ? 'Realizado (sumado al balance)' : 'Pendiente (no suma al balance)'}`);
+      fetchEgresos(mes);
+      if (vista === 'mensual') fetchMensual();
+    } catch (err) {
+      showError('Error al cambiar estado del gasto');
+    }
+  };
+
+  const handleToggleGastoFijoEstado = async gf => {
+    if (!gf.egreso_id) {
+      showWarning('No se encontró el registro mensual de este gasto fijo.');
+      return;
+    }
+    const nuevoEstado = (gf.estado || 'Pendiente').toLowerCase() === 'realizado' ? 'Pendiente' : 'Realizado';
+    try {
+      await balanceService.actualizarEgreso(gf.egreso_id, {
+        estado: nuevoEstado
+      });
+      showSuccess(`Gasto fijo marcado como ${nuevoEstado === 'Realizado' ? 'Realizado (sumado al balance)' : 'Pendiente (no suma al balance)'}`);
+      fetchMensual();
+      fetchEgresos(mes);
+    } catch (err) {
+      showError('Error al actualizar estado del gasto fijo.');
+    }
   };
 
   const handleDeleteEgreso = async id => {
@@ -2857,19 +2955,12 @@ const Balance = () => {
       color: getCatColor(name, customCategorias)
     })).filter(x => x.value > 0);
 
-    // Combinar egresos puntuales con los gastos fijos activos mensuales recurrentes
-    const allEgresos = [
-      ...(egData.lista || []),
-      ...(egData.gastos_fijos || []).map(gf => ({
-        ...gf,
-        id: `gf-${gf.id}`,
-        subcategoria: 'Fijo Mensual',
-        fecha: `${mes}-01`,
-        esFijo: true
-      }))
-    ];
+    // Los egresos de la lista ya incluyen los gastos fijos sincronizados de este mes.
+    // Para el cálculo de balance, filtramos ÚNICAMENTE los egresos que estén en estado "Realizado".
+    const egresosRealizados = (egData.lista || []).filter(e => (e.estado || 'Realizado').toLowerCase() === 'realizado');
+    const egresosPendientes = (egData.lista || []).filter(e => (e.estado || 'Realizado').toLowerCase() === 'pendiente');
 
-    const egByMetodo = allEgresos.reduce((acc, eg) => {
+    const egByMetodo = egresosRealizados.reduce((acc, eg) => {
       const metodo = eg.metodo_pago || 'Efectivo';
       acc[metodo] = (acc[metodo] || 0) + parseFloat(eg.monto || 0);
       return acc;
@@ -3557,26 +3648,67 @@ const Balance = () => {
         {/* ── SECCIÓN GASTOS FIJOS en vista mensual ── */}
         {report?.egresos?.gastos_fijos?.length > 0 && (
           <>
-            <SectionTitle icon="🔒" text="Egresos Fijos del Mes (Aplicados Automáticamente)" />
+            <SectionTitle icon="🔒" text="Egresos Fijos del Mes" />
             <div style={{ background: 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.15)', borderRadius: 16, padding: 18, marginBottom: 32 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  En cada nuevo mes inician en <span style={{ color: '#fbbf24', fontWeight: 700 }}>🟡 PENDIENTE</span> (no restan del balance). Al pagarse, haz clic para marcar <span style={{ color: '#34d399', fontWeight: 700 }}>🟢 REALIZADO</span>.
+                </div>
                 <button onClick={() => setVista('gastos-fijos')} style={{ padding: '7px 16px', borderRadius: 10, background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.3)', color: P.egreso, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'Outfit, sans-serif' }}>
-                  ⚙️ Gestionar Egresos Fijos
+                  ⚙️ Configurar Egresos Fijos
                 </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {report.egresos.gastos_fijos.map(gf => (
-                  <div key={gf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
-                    <div>
-                      <div style={{ fontSize: '0.87rem', fontWeight: 700 }}>{gf.descripcion}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{getCatLabel(gf.categoria, customCategorias)} · {gf.metodo_pago}</div>
+                {report.egresos.gastos_fijos.map(gf => {
+                  const esRealizado = (gf.estado || 'Pendiente').toLowerCase() === 'realizado';
+                  return (
+                    <div key={gf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.87rem', fontWeight: 700, color: 'white' }}>{gf.descripcion}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{getCatLabel(gf.categoria, customCategorias)} · {gf.metodo_pago}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGastoFijoEstado(gf)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 14,
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            border: esRealizado ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(245,158,11,0.5)',
+                            background: esRealizado ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
+                            color: esRealizado ? '#34d399' : '#fbbf24',
+                            transition: 'all 0.15s'
+                          }}
+                          title={`Clic para cambiar estado a ${esRealizado ? 'Pendiente' : 'Realizado'}`}
+                        >
+                          {esRealizado ? '🟢 REALIZADO' : '🟡 PENDIENTE'}
+                        </button>
+                        <div style={{ fontSize: '1rem', fontWeight: 900, color: esRealizado ? P.egreso : '#fbbf24', textAlign: 'right', minWidth: 80 }}>
+                          {fmt(gf.monto)}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: P.egreso }}>{fmt(gf.monto)}</div>
+                  );
+                })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(244,63,94,0.1)', borderRadius: 10, borderTop: '1px solid rgba(244,63,94,0.2)', marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>RESUMEN GASTOS FIJOS</span>
+                    <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 700 }}>
+                      Realizados: {fmt(report.egresos.total_gastos_fijos_realizados || 0)}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 700 }}>
+                      Pendientes: {fmt(report.egresos.total_gastos_fijos_pendientes || 0)}
+                    </span>
                   </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(244,63,94,0.1)', borderRadius: 10, borderTop: '1px solid rgba(244,63,94,0.2)', marginTop: 4 }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>TOTAL GASTOS FIJOS</span>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: P.egreso }}>{fmt(report.egresos.total_gastos_fijos)}</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: P.egreso }}>
+                    Total Fijo: {fmt(report.egresos.total_gastos_fijos)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -4038,6 +4170,14 @@ const Balance = () => {
       return acc;
     }, {});
 
+    const totalEgresosRealizados = displayEgresos
+      .filter(e => (e.estado || 'Realizado').toLowerCase() === 'realizado')
+      .reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+    const totalEgresosPendientes = displayEgresos
+      .filter(e => (e.estado || 'Realizado').toLowerCase() === 'pendiente')
+      .reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+    const totalEgresosGeneral = totalEgresosRealizados + totalEgresosPendientes;
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <MonthNavBar value={mes} onChange={val => setMes(val)} />
@@ -4077,6 +4217,31 @@ const Balance = () => {
           </div>
         </div>
 
+        {/* Tarjetas KPI de Estado de Egresos */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 8 }}>
+          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 16, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#34d399', letterSpacing: 0.5, textTransform: 'uppercase' }}>🟢 Realizados (Suman al Balance)</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: 2 }}>{fmt(totalEgresosRealizados)}</div>
+            </div>
+            <span style={{ fontSize: '1.6rem' }}>✅</span>
+          </div>
+          <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#fbbf24', letterSpacing: 0.5, textTransform: 'uppercase' }}>🟡 Pendientes (No Afectan Balance)</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fde68a', marginTop: 2 }}>{fmt(totalEgresosPendientes)}</div>
+            </div>
+            <span style={{ fontSize: '1.6rem' }}>⏳</span>
+          </div>
+          <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 16, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#818cf8', letterSpacing: 0.5, textTransform: 'uppercase' }}>📊 Total Compromisos Registrados</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: 2 }}>{fmt(totalEgresosGeneral)}</div>
+            </div>
+            <span style={{ fontSize: '1.6rem' }}>📑</span>
+          </div>
+        </div>
+
         <div className="grid-responsive" style={{ marginBottom: 12 }}>
           {(() => {
             const seen = new Set();
@@ -4108,15 +4273,22 @@ const Balance = () => {
             });
 
             return allCategoryKeys.map(cat => {
-              const total = displayEgresos
-                .filter(e => String(e.categoria || '').toLowerCase().trim() === String(cat).toLowerCase().trim())
-                .reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+              const catEgresos = displayEgresos.filter(e => String(e.categoria || '').toLowerCase().trim() === String(cat).toLowerCase().trim());
+              const totReal = catEgresos.filter(e => (e.estado || 'Realizado').toLowerCase() === 'realizado').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+              const totPend = catEgresos.filter(e => (e.estado || 'Realizado').toLowerCase() === 'pendiente').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
               const label = getCatLabel(cat, customCategorias);
               const color = getCatColor(cat, customCategorias);
               return (
                 <div key={cat} style={{ background: `${color}12`, border: `1px solid ${color}35`, borderRadius: 16, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: color, letterSpacing: 0.5 }}>{label.toUpperCase()}</span>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{fmt(total)}</span>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: color, letterSpacing: 0.5 }}>{label.toUpperCase()}</span>
+                    {totPend > 0 && (
+                      <div style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>
+                        ⏳ Pendiente: {fmt(totPend)}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{fmt(totReal)}</span>
                 </div>
               );
             });
@@ -4127,82 +4299,123 @@ const Balance = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                {['Concepto', 'Subcategoría', 'Fecha', 'Mes', 'Método', 'Monto', 'Acciones'].map(h => (
+                {['Estado', 'Concepto', 'Subcategoría', 'Fecha', 'Mes', 'Método', 'Monto', 'Acciones'].map(h => (
                   <th key={h} style={{ padding: '16px', textAlign: h === 'Monto' ? 'right' : 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {egresos.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>📭 No hay egresos registrados todavía.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>📭 No hay egresos registrados todavía.</td></tr>
               ) : Object.entries(groupedEgresos).map(([cat, list]) => (
                 <React.Fragment key={cat}>
                   <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <td colSpan={7} style={{ padding: '10px 16px', color: getCatColor(cat, customCategorias), fontWeight: 800, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}>
+                    <td colSpan={8} style={{ padding: '10px 16px', color: getCatColor(cat, customCategorias), fontWeight: 800, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}>
                       ▶ {getCatLabel(cat, customCategorias)}
                     </td>
                   </tr>
-                  {list.map(eg => (
-                    <tr key={eg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }} className="hover-row">
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>{eg.descripcion}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}
-                      </td>
-
-                      {/* COLUMNA FECHA CON EDICION DIRECTA EN DOBLE CLICK */}
-                      {editingFechaId === eg.id ? (
-                        <td style={{ padding: '8px 16px' }}>
-                          <input
-                            type="date"
-                            autoFocus
-                            defaultValue={eg.fecha ? String(eg.fecha).split('T')[0] : ''}
-                            onBlur={(e) => handleQuickUpdateEgresoFecha(eg.id, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleQuickUpdateEgresoFecha(eg.id, e.target.value);
-                              if (e.key === 'Escape') setEditingFechaId(null);
-                            }}
-                            onChange={(e) => {
-                              if (e.target.value) handleQuickUpdateEgresoFecha(eg.id, e.target.value);
-                            }}
+                  {list.map(eg => {
+                    const esRealizado = (eg.estado || 'Realizado').toLowerCase() === 'realizado';
+                    return (
+                      <tr key={eg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s', opacity: esRealizado ? 1 : 0.85 }} className="hover-row">
+                        {/* ESTADO INTERACTIVO: CLICK PARA TOGGLE ENTRE REALIZADO Y PENDIENTE */}
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleEstadoEgreso(eg)}
+                            title={`Clic para cambiar a ${esRealizado ? 'Pendiente' : 'Realizado'}`}
                             style={{
-                              background: 'rgba(99, 102, 241, 0.25)',
-                              border: '1px solid #6366f1',
-                              color: 'white',
-                              borderRadius: '8px',
-                              padding: '4px 8px',
-                              fontSize: '0.85rem',
-                              outline: 'none',
-                              fontFamily: 'Outfit, sans-serif'
+                              padding: '5px 12px',
+                              borderRadius: 20,
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              border: esRealizado ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(245,158,11,0.5)',
+                              background: esRealizado ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
+                              color: esRealizado ? '#34d399' : '#fbbf24',
+                              boxShadow: esRealizado ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(245,158,11,0.15)',
+                              transition: 'all 0.15s'
                             }}
-                          />
+                          >
+                            {esRealizado ? '🟢 REALIZADO' : '🟡 PENDIENTE'}
+                          </button>
                         </td>
-                      ) : (
-                        <td
-                          onDoubleClick={() => setEditingFechaId(eg.id)}
-                          title="Haz doble clic para modificar la fecha directamente"
-                          style={{
-                            padding: '12px 16px',
-                            color: '#818cf8',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                          }}
-                        >
-                          📅 {eg.fecha || '—'} <small style={{ fontSize: '0.65rem', opacity: 0.6 }}>(doble clic)</small>
-                        </td>
-                      )}
 
-                      <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.3)' }}>{eg.mes}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.7rem' }}>{eg.metodo_pago.toUpperCase()}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', color: P.egreso, fontWeight: 800, fontSize: '1rem' }}>{fmt(eg.monto)}</td>
-                      <td style={{ padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
-                        <button onClick={() => setModalEgreso(eg)} style={{ background: 'rgba(99,102,241,0.1)', border: 'none', borderRadius: 8, color: P.balance, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>✏️</button>
-                        <button onClick={() => handleDeleteEgreso(eg.id)} style={{ background: 'rgba(244,63,94,0.1)', border: 'none', borderRadius: 8, color: P.egreso, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>🗑️</button>
-                      </td>
-                    </tr>
-                  ))}
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>
+                          {eg.descripcion}
+                          {eg.gasto_fijo_id && (
+                            <span style={{ marginLeft: 8, fontSize: '0.68rem', padding: '2px 7px', borderRadius: 8, background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', verticalAlign: 'middle', fontWeight: 700 }}>
+                              🔒 FIJO
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {eg.subcategoria ? <Badge text={eg.subcategoria} color={P.proyecto} /> : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}
+                        </td>
+
+                        {/* COLUMNA FECHA CON EDICION DIRECTA EN DOBLE CLICK */}
+                        {editingFechaId === eg.id ? (
+                          <td style={{ padding: '8px 16px' }}>
+                            <input
+                              type="date"
+                              autoFocus
+                              defaultValue={eg.fecha ? String(eg.fecha).split('T')[0] : ''}
+                              onBlur={(e) => handleQuickUpdateEgresoFecha(eg.id, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleQuickUpdateEgresoFecha(eg.id, e.target.value);
+                                if (e.key === 'Escape') setEditingFechaId(null);
+                              }}
+                              onChange={(e) => {
+                                if (e.target.value) handleQuickUpdateEgresoFecha(eg.id, e.target.value);
+                              }}
+                              style={{
+                                background: 'rgba(99, 102, 241, 0.25)',
+                                border: '1px solid #6366f1',
+                                color: 'white',
+                                borderRadius: '8px',
+                                padding: '4px 8px',
+                                fontSize: '0.85rem',
+                                outline: 'none',
+                                fontFamily: 'Outfit, sans-serif'
+                              }}
+                            />
+                          </td>
+                        ) : (
+                          <td
+                            onDoubleClick={() => setEditingFechaId(eg.id)}
+                            title="Haz doble clic para modificar la fecha directamente"
+                            style={{
+                              padding: '12px 16px',
+                              color: '#818cf8',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            📅 {eg.fecha || '—'} <small style={{ fontSize: '0.65rem', opacity: 0.6 }}>(doble clic)</small>
+                          </td>
+                        )}
+
+                        <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.3)' }}>{eg.mes}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.7rem' }}>{eg.metodo_pago.toUpperCase()}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', color: esRealizado ? P.egreso : '#fbbf24', fontWeight: 800, fontSize: '1rem' }}>
+                          {fmt(eg.monto)}
+                          {!esRealizado && (
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontWeight: 600 }}>no suma</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
+                          <button onClick={() => setModalEgreso(eg)} style={{ background: 'rgba(99,102,241,0.1)', border: 'none', borderRadius: 8, color: P.balance, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>✏️</button>
+                          <button onClick={() => handleDeleteEgreso(eg.id)} style={{ background: 'rgba(244,63,94,0.1)', border: 'none', borderRadius: 8, color: P.egreso, padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}>🗑️</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </React.Fragment>
               ))}
             </tbody>
