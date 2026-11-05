@@ -21,6 +21,7 @@ const SYSTEM_PAGES = [
   { title: 'Call Center', path: '/call-center', category: 'Soporte', icon: '📞', roles: ['administrador', 'secretario', 'tecnico'] },
   { title: 'WhatsApp Notificaciones', path: '/whatsapp', category: 'Clientes', icon: '📱', roles: ['administrador', 'secretario'] },
   { title: 'Administrar Clientes', path: '/administrar', category: 'Sistema', icon: '⚙️', roles: ['administrador', 'tecnico'] },
+  { title: 'Monitoreo GPS (Traccar)', path: '/traccar', category: 'Sistema', icon: '🛰️', roles: ['administrador', 'secretario', 'tecnico'] },
   { title: 'Configuración General', path: '/config', category: 'Sistema', icon: '🛠️', roles: ['administrador'] },
   { title: 'Control de Asistencia', path: '/asistencia', category: 'Personal', icon: '⏰', roles: ['administrador', 'secretario', 'tecnico', 'instalador'] },
   { title: 'Copia de Base de Datos', path: '/upload-db', category: 'Sistema', icon: '📂', roles: ['administrador'] },

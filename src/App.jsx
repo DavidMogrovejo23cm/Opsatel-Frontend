@@ -31,6 +31,7 @@ import Asistencia from './pages/Asistencia';
 import WhatsApp from './pages/WhatsApp';
 import Eliminados from './pages/Eliminados';
 import TECdt from './pages/TECdt';
+import Traccar from './pages/Traccar';
 
 function HomeRedirect() {
   const { user } = useAuth();
@@ -98,6 +99,12 @@ function App() {
             <Route path="administrar" element={
               <ProtectedRoute roles={['administrador', 'secretario', 'tecnico']}>
                 <Administrar />
+              </ProtectedRoute>
+            } />
+
+            <Route path="traccar" element={
+              <ProtectedRoute roles={['administrador', 'secretario', 'tecnico']}>
+                <Traccar />
               </ProtectedRoute>
             } />
             

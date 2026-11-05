@@ -24,6 +24,7 @@ const BREADCRUMB_MAP = {
   'extras-pagos': { title: 'Pagos Extras', module: 'Finanzas', icon: '💸' },
   'extras-general': { title: 'Extras General', module: 'Finanzas', icon: '🌍' },
   'administrar': { title: 'Administrar Clientes', module: 'Sistema', icon: '⚙️' },
+  'traccar': { title: 'Monitoreo GPS (Traccar)', module: 'Sistema', icon: '🛰️' },
   'config': { title: 'Configuración', module: 'Sistema', icon: '🛠️' },
   'asistencia': { title: 'Control Asistencia', module: 'Personal', icon: '⏰' },
   'upload-db': { title: 'Copia Base de Datos', module: 'Sistema', icon: '📂' },
@@ -440,6 +441,12 @@ const Layout = () => {
           flex: 1;
           padding: 24px 32px;
           box-sizing: border-box;
+        }
+
+        .main-content-container[data-page="traccar"] {
+          padding: 16px 24px;
+          display: flex;
+          flex-direction: column;
         }
 
         /* Tablet y Móvil */

@@ -57,6 +57,7 @@ const MENU_SECTIONS = [
     icon: '⚙️',
     items: [
       { path: '/administrar', label: 'Administrar Clientes', icon: '⚙️', roles: ['administrador', 'secretario', 'tecnico'] },
+      { path: '/traccar', label: 'Monitoreo GPS (Traccar)', icon: '🛰️', roles: ['administrador', 'secretario', 'tecnico'] },
       { path: '/config', label: 'Configuraciones', icon: '🛠️', roles: ['administrador'] },
       { path: '/asistencia', label: 'Control Asistencia', icon: '⏰', roles: ['administrador', 'secretario', 'tecnico', 'instalador'] },
       { path: '/upload-db', label: 'Copia Base de Datos', icon: '📂', roles: ['administrador'] },
