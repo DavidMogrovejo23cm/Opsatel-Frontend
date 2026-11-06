@@ -742,6 +742,12 @@ function ProyectoComentariosModal({ proyecto, onClose, onSave }) {
             <span style={{ fontSize: '0.68rem', color: 'rgba(245, 158, 11, 0.85)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Invertido</span>
             <span style={{ fontSize: '0.95rem', fontWeight: 800, color: P.proyecto }}>{fmt(proyecto.monto_invertido)}</span>
           </div>
+          <div>
+            <span style={{ fontSize: '0.68rem', color: ((parseFloat(proyecto.ganancia) || 0) - (parseFloat(proyecto.monto_invertido) || 0)) >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Total</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: ((parseFloat(proyecto.ganancia) || 0) - (parseFloat(proyecto.monto_invertido) || 0)) >= 0 ? P.ingreso : P.egreso }}>
+              {fmt((parseFloat(proyecto.ganancia) || 0) - (parseFloat(proyecto.monto_invertido) || 0))}
+            </span>
+          </div>
         </div>
 
         {/* Cuerpo: Comentarios o Edición */}
@@ -3479,195 +3485,220 @@ const Balance = () => {
           </div>
         )}
 
-        {/* Proyectos activos */}
-        {proyData.lista.length > 0 && (
-          <>
-            <SectionTitle icon="🏗️" text="Proyectos Activos" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {proyData.lista.map(p => {
-                const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
-                const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
-                return (
-                  <div key={p.id} style={{
-                    background: 'rgba(245,158,11,0.05)',
-                    border: '1px solid rgba(245,158,11,0.18)',
-                    borderRadius: 16,
-                    padding: '18px 20px',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                      <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>🏗️</span>
-                        <span>{p.nombre}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => setProyectoComentariosModal(p)}
-                          title={p.descripcion ? "Ver comentarios y descripción del proyecto" : "Agregar comentarios / descripción al proyecto"}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.14)',
-                            borderRadius: 10,
-                            padding: '4px 10px',
-                            color: '#e2e8f0',
-                            cursor: 'pointer',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            fontFamily: 'Outfit, sans-serif',
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-                            e.currentTarget.style.color = '#fbbf24';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
-                            e.currentTarget.style.color = '#e2e8f0';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-                          }}
-                        >
-                          <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁️</span>
-                          <span>Comentarios</span>
-                          {p.descripcion && p.descripcion.trim() && (
-                            <span
-                              style={{
-                                width: 7,
-                                height: 7,
-                                borderRadius: '50%',
-                                background: '#10b981',
-                                boxShadow: '0 0 8px #10b981'
-                              }}
-                              title="Tiene comentarios registrados"
-                            />
-                          )}
-                        </button>
-                        <Badge text={p.estado} color={ec} />
-                      </div>
-                    </div>
+        {/* Proyectos activos (solo pendientes / en curso, no completados) */}
+        {(() => {
+          const proyActivosLista = (proyData?.lista || []).filter(p => (p.estado || '').trim().toLowerCase() !== 'completado');
+          if (proyActivosLista.length === 0) return null;
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
-                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Proyectado
+          return (
+            <>
+              <SectionTitle icon="🏗️" text="Proyectos Activos" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {proyActivosLista.map(p => {
+                  const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
+                  const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
+                  const totalProyNeto = (parseFloat(p.ganancia) || 0) - (parseFloat(p.monto_invertido) || 0);
+                  return (
+                    <div key={p.id} style={{
+                      background: 'rgba(245,158,11,0.05)',
+                      border: '1px solid rgba(245,158,11,0.18)',
+                      borderRadius: 16,
+                      padding: '18px 20px',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>🏗️</span>
+                          <span>{p.nombre}</span>
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
-                          {fmt(p.monto_total)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => setProyectoComentariosModal(p)}
+                            title={p.descripcion ? "Ver comentarios y descripción del proyecto" : "Agregar comentarios / descripción al proyecto"}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid rgba(255, 255, 255, 0.14)',
+                              borderRadius: 10,
+                              padding: '4px 10px',
+                              color: '#e2e8f0',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              fontFamily: 'Outfit, sans-serif',
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                              e.currentTarget.style.color = '#fbbf24';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+                              e.currentTarget.style.color = '#e2e8f0';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+                            }}
+                          >
+                            <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁️</span>
+                            <span>Comentarios</span>
+                            {p.descripcion && p.descripcion.trim() && (
+                              <span
+                                style={{
+                                  width: 7,
+                                  height: 7,
+                                  borderRadius: '50%',
+                                  background: '#10b981',
+                                  boxShadow: '0 0 8px #10b981'
+                                }}
+                                title="Tiene comentarios registrados"
+                              />
+                            )}
+                          </button>
+                          <Badge text={p.estado} color={ec} />
                         </div>
                       </div>
 
-                      <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'rgba(16,185,129,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Ganancia
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Proyectado
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+                            {fmt(p.monto_total)}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.ingreso }}>
-                          {fmt(p.ganancia || 0)}
+
+                        <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(16,185,129,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Ganancia
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.ingreso }}>
+                            {fmt(p.ganancia || 0)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Invertido
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.proyecto }}>
+                            {fmt(p.monto_invertido)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(99,102,241,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Total
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: totalProyNeto >= 0 ? P.ingreso : P.egreso }}>
+                            {fmt(totalProyNeto)}
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Invertido
-                        </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: P.proyecto }}>
-                          {fmt(p.monto_invertido)}
-                        </div>
+                      <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
                       </div>
-                    </div>
-
-                    <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 5 }}>
-                      <span>Avance de inversión: <strong style={{ color: P.proyecto }}>{pct.toFixed(1)}%</strong></span>
-                      {p.banco_ganancia && (
-                        <span>Banco Ganancia: <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{p.banco_ganancia}</strong></span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Totales consolidados de todos los proyectos */}
-              {(() => {
-                const totalProyTotal = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.monto_total) || 0), 0);
-                const totalProyGanancia = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.ganancia) || 0), 0);
-                const totalProyInvertido = proyData.lista.reduce((sum, p) => sum + (parseFloat(p.monto_invertido) || 0), 0);
-                const totalProyPct = totalProyTotal > 0 ? Math.min(100, (totalProyInvertido / totalProyTotal) * 100) : 0;
-
-                return (
-                  <div style={{
-                    background: 'linear-gradient(145deg, rgba(245,158,11,0.08), rgba(99,102,241,0.05))',
-                    border: '1px solid rgba(245,158,11,0.3)',
-                    borderRadius: 16,
-                    padding: '18px 20px',
-                    marginTop: 4
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: '1.1rem' }}>Σ</span>
-                        <span>Total Consolidado de Proyectos ({proyData.lista.length})</span>
-                      </div>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '3px 10px',
-                        borderRadius: 20,
-                        background: 'rgba(245,158,11,0.18)',
-                        color: P.proyecto,
-                        border: '1px solid rgba(245,158,11,0.35)'
-                      }}>
-                        Avance Global: {totalProyPct.toFixed(1)}%
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
-                      <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Total Proyectado
-                        </div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f8fafc' }}>
-                          {fmt(totalProyTotal)}
-                        </div>
-                      </div>
-
-                      <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'rgba(16,185,129,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Total Ganancia
-                        </div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.ingreso }}>
-                          {fmt(totalProyGanancia)}
-                        </div>
-                      </div>
-
-                      <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ color: 'rgba(245,158,11,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                          Total Invertido
-                        </div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.proyecto }}>
-                          {fmt(totalProyInvertido)}
-                        </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 5 }}>
+                        <span>Avance de inversión: <strong style={{ color: P.proyecto }}>{pct.toFixed(1)}%</strong></span>
+                        {p.banco_ganancia && (
+                          <span>Banco Ganancia: <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{p.banco_ganancia}</strong></span>
+                        )}
                       </div>
                     </div>
+                  );
+                })}
 
-                    <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ width: `${totalProyPct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
+                {/* Totales consolidados de todos los proyectos activos */}
+                {(() => {
+                  const totalProyTotal = proyActivosLista.reduce((sum, p) => sum + (parseFloat(p.monto_total) || 0), 0);
+                  const totalProyGanancia = proyActivosLista.reduce((sum, p) => sum + (parseFloat(p.ganancia) || 0), 0);
+                  const totalProyInvertido = proyActivosLista.reduce((sum, p) => sum + (parseFloat(p.monto_invertido) || 0), 0);
+                  const totalProyPct = totalProyTotal > 0 ? Math.min(100, (totalProyInvertido / totalProyTotal) * 100) : 0;
+                  const totalConsolidadoNeto = totalProyGanancia - totalProyInvertido;
+
+                  return (
+                    <div style={{
+                      background: 'linear-gradient(145deg, rgba(245,158,11,0.08), rgba(99,102,241,0.05))',
+                      border: '1px solid rgba(245,158,11,0.3)',
+                      borderRadius: 16,
+                      padding: '18px 20px',
+                      marginTop: 4
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: '1.1rem' }}>Σ</span>
+                          <span>Total Consolidado de Proyectos ({proyActivosLista.length})</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          background: 'rgba(245,158,11,0.18)',
+                          color: P.proyecto,
+                          border: '1px solid rgba(245,158,11,0.35)'
+                        }}>
+                          Avance Global: {totalProyPct.toFixed(1)}%
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                        <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Total Proyectado
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f8fafc' }}>
+                            {fmt(totalProyTotal)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(16,185,129,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Total Ganancia
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.ingreso }}>
+                            {fmt(totalProyGanancia)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(245,158,11,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Total Invertido
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.proyecto }}>
+                            {fmt(totalProyInvertido)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ color: 'rgba(99,102,241,0.9)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                            Total Neto
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: totalConsolidadoNeto >= 0 ? P.ingreso : P.egreso }}>
+                            {fmt(totalConsolidadoNeto)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ width: `${totalProyPct}%`, height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </>
-        )}
+                  );
+                })()}
+              </div>
+            </>
+          );
+        })()}
 
 
 
@@ -4472,82 +4503,101 @@ const Balance = () => {
         </button>
       </div>
       <div className="grid-responsive">
-        {proyectos.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: 16, gridColumn: '1/-1' }}>No hay proyectos registrados.</div>
-        ) : proyectos.map(p => {
-          const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
-          const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
-          return (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 18, padding: 22 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                <div style={{ fontWeight: 800, fontSize: '1rem', flex: 1 }}>{p.nombre}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => setProyectoComentariosModal(p)}
-                    title="Ver comentarios / descripción del proyecto"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.14)',
-                      borderRadius: 8,
-                      padding: '3px 8px',
-                      color: '#e2e8f0',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}
-                  >
-                    <span>👁️</span> Comentarios
-                  </button>
-                  <Badge text={p.estado} color={ec} />
+        {(() => {
+          const sortedProyectos = [...proyectos].sort((a, b) => {
+            const isAComp = (a.estado || '').trim().toLowerCase() === 'completado';
+            const isBComp = (b.estado || '').trim().toLowerCase() === 'completado';
+            if (isAComp && !isBComp) return 1;
+            if (!isAComp && isBComp) return -1;
+            return 0;
+          });
+
+          if (sortedProyectos.length === 0) {
+            return (
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: 16, gridColumn: '1/-1' }}>No hay proyectos registrados.</div>
+            );
+          }
+
+          return sortedProyectos.map(p => {
+            const pct = p.monto_total > 0 ? Math.min(100, (p.monto_invertido / p.monto_total) * 100) : 0;
+            const ec = p.estado === 'Completado' ? P.ingreso : p.estado === 'Pausado' ? P.egreso : P.proyecto;
+            const totalProyNeto = (parseFloat(p.ganancia) || 0) - (parseFloat(p.monto_invertido) || 0);
+            return (
+              <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 18, padding: 22 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', flex: 1 }}>{p.nombre}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setProyectoComentariosModal(p)}
+                      title="Ver comentarios / descripción del proyecto"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.14)',
+                        borderRadius: 8,
+                        padding: '3px 8px',
+                        color: '#e2e8f0',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span>👁️</span> Comentarios
+                    </button>
+                    <Badge text={p.estado} color={ec} />
+                  </div>
                 </div>
-              </div>
-              <div style={{
-                fontSize: '0.82rem',
-                color: 'var(--text-muted)',
-                marginBottom: 12,
-                minHeight: 24,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                lineHeight: 1.5
-              }}>
-                {p.descripcion || 'Sin descripción'}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Presupuesto:</span>
-                <span style={{ fontWeight: 700 }}>{fmt(p.monto_total)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Ganancia:</span>
-                <span style={{ color: P.ingreso, fontWeight: 700 }}>{fmt(p.ganancia || 0)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 10 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Invertido:</span>
-                <span style={{ color: P.proyecto, fontWeight: 700 }}>{fmt(p.monto_invertido)}</span>
-              </div>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden', marginBottom: 4 }}>
-                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }}
-                  style={{ height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-                <span>Inicio: {p.fecha_inicio || '—'}</span>
-                <span>{pct.toFixed(1)}%</span>
-                <span>Fin: {p.fecha_fin || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setProyDetalle(p)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: 'linear-gradient(135deg,rgba(245,158,11,0.25),rgba(217,119,6,0.2))', border: '1px solid rgba(245,158,11,0.4)', color: P.proyecto, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Outfit, sans-serif', transition: 'all 0.2s' }}>
-                  📋 Ver Detalle
-                </button>
-                <button onClick={() => setModalProy(p)} style={{ padding: '9px 12px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: P.balance, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>✏️</button>
-                <button onClick={() => handleDeleteProy(p.id)} style={{ padding: '9px 12px', borderRadius: 10, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', color: P.egreso, cursor: 'pointer', fontSize: '0.9rem' }}>🗑️</button>
-              </div>
-            </motion.div>
-          );
-        })}
+                <div style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: 12,
+                  minHeight: 24,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  lineHeight: 1.5
+                }}>
+                  {p.descripcion || 'Sin descripción'}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Presupuesto:</span>
+                  <span style={{ fontWeight: 700 }}>{fmt(p.monto_total)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Ganancia:</span>
+                  <span style={{ color: P.ingreso, fontWeight: 700 }}>{fmt(p.ganancia || 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Invertido:</span>
+                  <span style={{ color: P.proyecto, fontWeight: 700 }}>{fmt(p.monto_invertido)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 10 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total:</span>
+                  <span style={{ color: totalProyNeto >= 0 ? P.ingreso : P.egreso, fontWeight: 700 }}>{fmt(totalProyNeto)}</span>
+                </div>
+                <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden', marginBottom: 4 }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }}
+                    style={{ height: '100%', background: `linear-gradient(90deg,${P.proyecto},#d97706)`, borderRadius: 99 }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  <span>Inicio: {p.fecha_inicio || '—'}</span>
+                  <span>{pct.toFixed(1)}%</span>
+                  <span>Fin: {p.fecha_fin || '—'}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setProyDetalle(p)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: 'linear-gradient(135deg,rgba(245,158,11,0.25),rgba(217,119,6,0.2))', border: '1px solid rgba(245,158,11,0.4)', color: P.proyecto, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'Outfit, sans-serif', transition: 'all 0.2s' }}>
+                    📋 Ver Detalle
+                  </button>
+                  <button onClick={() => setModalProy(p)} style={{ padding: '9px 12px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: P.balance, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>✏️</button>
+                  <button onClick={() => handleDeleteProy(p.id)} style={{ padding: '9px 12px', borderRadius: 10, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', color: P.egreso, cursor: 'pointer', fontSize: '0.9rem' }}>🗑️</button>
+                </div>
+              </motion.div>
+            );
+          });
+        })()}
       </div>
     </div>
   );
