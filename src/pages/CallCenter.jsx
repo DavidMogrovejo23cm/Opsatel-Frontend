@@ -2,15 +2,14 @@
  * @file CallCenter.jsx
  * @author David Mogrovejo dmogrovejo87@gmail.com
  * @copyright (c) 2026 David Mogrovejo. All Rights Reserved.
- * @notice Developed with AI assistance.‍​‌​​​‌​​​‌‌​​​​‌​‌‌‌​‌‌​​‌‌​‌​​‌​‌‌​​‌​​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​‌‌‌​​​‌​​​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​‌‌​​​​‌​​​​​​‌​‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​‌‌‌​​‌‌​​‌​​​​​​‌​‌​​‌​​‌‌​​‌​‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​​​​‌​‌‌‌​​​‌​​​​​​‌​​​‌​​​‌‌​​‌​‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌‌​​​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌​​‌​‌​‌‌​​‌​​​​‌​​​​​​‌‌‌​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌‌​‌​​​​​‌​​​​​​‌​​​​​‌​‌​​‌​​‌​​‌​​​​​​‌‌​​​​‌​‌‌‌​​‌‌​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌‌​​‌‌​‌‌‌​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​​‌‌​‌‌​​‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌‌​​‌‌‌​‌​​​‌‌​​​​‌​‌‌​​​‌‌​‌‌‌​‌​​​​‌‌‌​‌​​​‌​​​​​​‌‌​​‌​​​‌‌​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌‌‌​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​​‌‌‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌​‌​​‌​‌‌​‌‌​​​​‌​‌‌‌​​‌‌​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​‌‌​​‌‌​‌‌‌‌​‌‌‌​​‌​​‌‌​​‌​‌​‌‌​‌‌‌​​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌​​​‌‌​​‌​​​​​​‌​‌​​‌‌​‌‌​‌​​‌​‌‌​​‌‌‌​​‌‌‌​‌​​​‌​​​​​​‌‌​​​‌​​‌‌​​‌‌​​​‌‌​​‌​​​‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​‌​​‌‌​​​​​​‌‌​​‌‌​​‌‌​​‌‌​​‌‌​‌​​​​‌‌​​​‌​​‌‌‌​​​​‌‌​​‌​​​​‌‌​‌​‌​‌‌​​‌​​​‌‌​​​‌‌‍
- * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
+ * @notice Developed with AI assistance.
  */
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { callCenterService, clienteService, hojaRutaService, configuracionService } from '../services/api';
+import { whatsappService } from '../services/whatsappService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
-import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
-
+import { showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 /* ────────────────────────────────────────────
    ESTADO CONFIG
@@ -24,12 +23,12 @@ const ESTADOS = [
 ];
 
 const STAT_CARDS = [
-  { value: 'TODOS',                            label: 'Total',           sublabel: 'registros',   icon: '📞', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+  { value: 'TODOS',                            label: 'Total Clientes',  sublabel: 'orden A-Z',   icon: '👥', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
   { value: 'PENDIENTE',                        label: 'Pendientes',      sublabel: 'por atender', icon: '⏳', color: '#94a3b8', bg: 'rgba(100,116,139,0.15)' },
   { value: 'SOLUCIONADO',                      label: 'Solucionados',    sublabel: 'cerrados',    icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
   { value: 'ESPERA DE RESPUESTA DE CLIENTE',   label: 'En espera',       sublabel: 'en proceso',  icon: '⏰', color: '#eab308', bg: 'rgba(234,179,8,0.15)' },
-  { value: 'NO SOLUCIONADO',                   label: 'No solucionados', sublabel: 'sin resolver',icon: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: '❌' },
-  { value: 'VISITA TECNICA',                   label: 'Visita técnica',  sublabel: 'programadas', icon: '🔧', color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: '🔧' },
+  { value: 'NO SOLUCIONADO',                   label: 'No solucionados', sublabel: 'sin resolver',icon: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  { value: 'VISITA TECNICA',                   label: 'Visita técnica',  sublabel: 'programadas', icon: '🔧', color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
 ];
 
 const getEstado = (val) =>
@@ -73,10 +72,40 @@ const getPhoneInfo = (rawPhone) => {
   return { callPhone: firstPart, waPhone: wa };
 };
 
+const formatChatDate = (dateVal) => {
+  if (!dateVal) return '';
+  try {
+    const d = new Date(typeof dateVal === 'string' ? dateVal.replace(' ', 'T') : dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch {
+    return String(dateVal);
+  }
+};
+
 /* ────────────────────────────────────────────
    BADGE ESTADO
 ────────────────────────────────────────────── */
 const EstadoBadge = ({ estado }) => {
+  if (!estado) {
+    return (
+      <span style={{
+        background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        padding: '4px 10px', borderRadius: '20px',
+        fontSize: '0.62rem', fontWeight: '700',
+        display: 'inline-flex', alignItems: 'center', gap: '4px',
+        whiteSpace: 'nowrap',
+      }}>
+        ⚪ Sin Ticket
+      </span>
+    );
+  }
   const cfg = getEstado(estado);
   return (
     <span style={{
@@ -93,7 +122,7 @@ const EstadoBadge = ({ estado }) => {
 };
 
 /* ────────────────────────────────────────────
-   MAIN
+   MAIN CALL CENTER COMPONENT
 ────────────────────────────────────────────── */
 const CallCenter = () => {
   const [tickets, setTickets]       = useState([]);
@@ -103,19 +132,31 @@ const CallCenter = () => {
   const [showModal, setShowModal]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('TODOS');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showFilters, setShowFilters] = useState(false);
-  const [editingId, setEditingId]   = useState(null);
-  const [clientSearch, setClientSearch] = useState('');
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const [obsModalTicket, setObsModalTicket] = useState(null);
-  const [copiedObs, setCopiedObs] = useState(false);
-  const clientRef = useRef(null);
 
-  // Estados para modal "Enviar a Hoja de Ruta"
+  // Cliente y Ticket seleccionado en Modal
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedTicketId, setSelectedTicketId] = useState(null); // id o 'NEW'
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    id: null,
+    estado: 'PENDIENTE',
+    a_cargo: '',
+    problema: '',
+    observacion_revision: '',
+    registrado_por: ''
+  });
+
+  // Chat de WhatsApp en Modal
+  const [chatMensajes, setChatMensajes] = useState([]);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [nuevoMensajeChat, setNuevoMensajeChat] = useState('');
+  const [enviandoMensajeChat, setEnviandoMensajeChat] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // Modal para Enviar a Hoja de Ruta
   const [showHojaRutaModal, setShowHojaRutaModal] = useState(false);
   const [submittingHojaRuta, setSubmittingHojaRuta] = useState(false);
   const [hojaRutaForm, setHojaRutaForm] = useState({
@@ -135,21 +176,9 @@ const CallCenter = () => {
 
   const user = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
 
-  const handleCopyObs = (text) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedObs(true);
-    setTimeout(() => setCopiedObs(false), 2000);
-  };
-
-  const initialForm = {
-    cliente_nombre: '', ip: '', direccion: '',
-    telefono: '', estado: 'PENDIENTE',
-    a_cargo: '', problema: '', observacion_revision: '',
-  };
-  const [formData, setFormData] = useState(initialForm);
-
-  /* Fetch data */
+  /* ────────────────────────────────────────────
+     FETCH DATA
+  ────────────────────────────────────────────── */
   const fetchData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -176,89 +205,176 @@ const CallCenter = () => {
     return () => clearInterval(interval);
   }, []);
 
-  /* Cerrar dropdown al click externo */
-  useEffect(() => {
-    const handler = (e) => {
-      if (clientRef.current && !clientRef.current.contains(e.target)) {
-        setShowClientDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  /* ────────────────────────────────────────────
+     ASOCIAR TICKETS A CLIENTES (Y PRESERVAR EXISTENTES)
+  ────────────────────────────────────────────── */
+  const clientTicketsMap = useMemo(() => {
+    const map = new Map();
+    const nameToId = new Map();
+    const phoneToId = new Map();
+    const ipToId = new Map();
 
-  /* Filtros de tabla (Adaptativo: escritorio completo / móvil solo búsqueda general) */
-  const filteredTickets = useMemo(() => {
-    if (!Array.isArray(tickets)) return [];
-    const term = searchTerm.toLowerCase().trim();
-    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-
-    return tickets
-      .filter(t => {
-        const matchSearch =
-          !term ||
-          (t.cliente_nombre || '').toLowerCase().includes(term) ||
-          (t.telefono || '').toLowerCase().includes(term) ||
-          (t.a_cargo || '').toLowerCase().includes(term) ||
-          (t.problema || '').toLowerCase().includes(term) ||
-          String(t.id || '').includes(term) ||
-          (t.ip || '').toLowerCase().includes(term) ||
-          (t.estado || '').toLowerCase().includes(term);
-
-        if (!matchSearch) return false;
-
-        // En móvil solo aplica la barra de búsqueda general
-        if (isMobile) return true;
-
-        // En escritorio se aplican los filtros seleccionados de estado y fecha
-        const matchDate = dateFilter ? (t.fecha_ingreso || '').startsWith(dateFilter) : true;
-        const matchStatus = statusFilter === 'TODOS' ? true : (t.estado || '').toUpperCase() === statusFilter;
-        return matchDate && matchStatus;
-      })
-      .sort((a, b) => new Date(b.fecha_ingreso || 0) - new Date(a.fecha_ingreso || 0));
-  }, [tickets, searchTerm, dateFilter, statusFilter]);
-
-  /* Lookup de clientes para asociar ID e información */
-  const clientLookup = useMemo(() => {
-    const byName = new Map();
-    const byIp = new Map();
-    const byTel = new Map();
     (clientes || []).forEach(c => {
-      if (c.nombre) byName.set(c.nombre.trim().toLowerCase(), c);
-      if (c.ip) byIp.set(c.ip.trim(), c);
+      map.set(c.id, []);
+      if (c.nombre) nameToId.set(c.nombre.trim().toLowerCase(), c.id);
+      if (c.ip && c.ip.trim()) ipToId.set(c.ip.trim(), c.id);
       if (c.celular) {
         const clean = c.celular.replace(/\D/g, '');
-        if (clean) byTel.set(clean, c);
+        if (clean && clean.length >= 7) phoneToId.set(clean, c.id);
       }
     });
-    return { byName, byIp, byTel };
-  }, [clientes]);
 
-  const getClientMeta = (ticket) => {
-    if (!ticket) return null;
-    const nameKey = (ticket.cliente_nombre || '').trim().toLowerCase();
-    if (nameKey && clientLookup.byName.has(nameKey)) return clientLookup.byName.get(nameKey);
-    const ipKey = (ticket.ip || '').trim();
-    if (ipKey && clientLookup.byIp.has(ipKey)) return clientLookup.byIp.get(ipKey);
-    const telKey = (ticket.telefono || '').replace(/\D/g, '');
-    if (telKey && clientLookup.byTel.has(telKey)) return clientLookup.byTel.get(telKey);
-    return null;
-  };
+    const unmatchedTickets = [];
 
-  /* Paginación */
+    (tickets || []).forEach(ticket => {
+      let matchedId = null;
+      const tName = (ticket.cliente_nombre || '').trim().toLowerCase();
+      const tIp = (ticket.ip || '').trim();
+      const tTel = (ticket.telefono || '').replace(/\D/g, '');
+
+      if (ticket.cliente_id && map.has(ticket.cliente_id)) {
+        matchedId = ticket.cliente_id;
+      } else if (tName && nameToId.has(tName)) {
+        matchedId = nameToId.get(tName);
+      } else if (tIp && ipToId.has(tIp)) {
+        matchedId = ipToId.get(tIp);
+      } else if (tTel && tTel.length >= 7) {
+        for (const [phone, cId] of phoneToId.entries()) {
+          if (phone === tTel || phone.includes(tTel) || tTel.includes(phone)) {
+            matchedId = cId;
+            break;
+          }
+        }
+      }
+
+      if (matchedId && map.has(matchedId)) {
+        map.get(matchedId).push(ticket);
+      } else {
+        unmatchedTickets.push(ticket);
+      }
+    });
+
+    // Ordenar tickets de cada cliente: más reciente primero
+    for (const list of map.values()) {
+      list.sort((a, b) => new Date(b.fecha_ingreso || 0) - new Date(a.fecha_ingreso || 0));
+    }
+
+    return { map, unmatchedTickets };
+  }, [clientes, tickets]);
+
+  /* ────────────────────────────────────────────
+     LISTA DE TODOS LOS CLIENTES ORDENADOS DE LA A A LA Z
+  ────────────────────────────────────────────── */
+  const allClientsList = useMemo(() => {
+    // Clientes base ordenados de A a Z
+    const sorted = [...(clientes || [])].sort((a, b) =>
+      (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+    );
+
+    // Integrar cualquier ticket existente cuyo cliente no esté en la base de datos
+    if (clientTicketsMap.unmatchedTickets.length > 0) {
+      const grouped = {};
+      clientTicketsMap.unmatchedTickets.forEach(t => {
+        const key = (t.cliente_nombre || `Ticket #${t.id}`).trim();
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(t);
+      });
+
+      Object.entries(grouped).forEach(([name, tList]) => {
+        tList.sort((a, b) => new Date(b.fecha_ingreso || 0) - new Date(a.fecha_ingreso || 0));
+        const first = tList[0];
+        const virtualClient = {
+          id: `T-${first.id}`,
+          nombre: name,
+          celular: first.telefono || '',
+          ip: first.ip || '',
+          direccion: first.direccion || '',
+          isVirtual: true,
+        };
+        clientTicketsMap.map.set(virtualClient.id, tList);
+        sorted.push(virtualClient);
+      });
+
+      sorted.sort((a, b) =>
+        (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+      );
+    }
+
+    return sorted;
+  }, [clientes, clientTicketsMap]);
+
+  /* ────────────────────────────────────────────
+     FILTRADO DE CLIENTES POR BÚSQUEDA Y ESTADO
+  ────────────────────────────────────────────── */
+  const filteredClients = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+
+    return allClientsList.filter(client => {
+      const clientTickets = clientTicketsMap.map.get(client.id) || [];
+      const latestTicket = clientTickets[0] || null;
+      const latestEstado = (latestTicket?.estado || '').toUpperCase();
+
+      // Filtro por Estado
+      if (statusFilter !== 'TODOS') {
+        if (!latestTicket || latestEstado !== statusFilter) {
+          return false;
+        }
+      }
+
+      // Filtro por Búsqueda General
+      if (!term) return true;
+
+      const matchName = (client.nombre || '').toLowerCase().includes(term);
+      const matchCel = (client.celular || client.telefono || '').toLowerCase().includes(term);
+      const matchIp = (client.ip || '').toLowerCase().includes(term);
+      const matchDir = (client.direccion || client.parroquia || '').toLowerCase().includes(term);
+      const matchCed = (client.cedula || '').toLowerCase().includes(term);
+      const matchId = String(client.id || '').toLowerCase().includes(term);
+
+      // Coincidencia en tickets del cliente
+      const matchTicket = clientTickets.some(t =>
+        String(t.id || '').includes(term) ||
+        (t.problema || '').toLowerCase().includes(term) ||
+        (t.observacion_revision || '').toLowerCase().includes(term) ||
+        (t.a_cargo || '').toLowerCase().includes(term) ||
+        (t.estado || '').toLowerCase().includes(term)
+      );
+
+      return matchName || matchCel || matchIp || matchDir || matchCed || matchId || matchTicket;
+    });
+  }, [allClientsList, clientTicketsMap, searchTerm, statusFilter]);
+
+  /* ────────────────────────────────────────────
+     CONTADORES PARA KPIS Y TABS
+  ────────────────────────────────────────────── */
+  const counts = useMemo(() => {
+    const obj = { TODOS: allClientsList.length };
+    ESTADOS.forEach(e => {
+      obj[e.value] = allClientsList.filter(c => {
+        const tList = clientTicketsMap.map.get(c.id) || [];
+        const latest = tList[0];
+        return latest && (latest.estado || '').toUpperCase() === e.value;
+      }).length;
+    });
+    return obj;
+  }, [allClientsList, clientTicketsMap]);
+
+  /* ────────────────────────────────────────────
+     PAGINACIÓN
+  ────────────────────────────────────────────── */
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, dateFilter, statusFilter, itemsPerPage]);
+  }, [searchTerm, statusFilter, itemsPerPage]);
 
-  const totalItems = filteredTickets.length;
+  const totalItems = filteredClients.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
   const startIndex = (safeCurrentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
-  const paginatedTickets = useMemo(() => {
-    return filteredTickets.slice(startIndex, endIndex);
-  }, [filteredTickets, startIndex, endIndex]);
+  const paginatedClients = useMemo(() => {
+    return filteredClients.slice(startIndex, endIndex);
+  }, [filteredClients, startIndex, endIndex]);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -270,11 +386,8 @@ const CallCenter = () => {
       let start = Math.max(2, safeCurrentPage - 1);
       let end = Math.min(totalPages - 1, safeCurrentPage + 1);
 
-      if (safeCurrentPage <= 3) {
-        end = 4;
-      } else if (safeCurrentPage >= totalPages - 2) {
-        start = totalPages - 3;
-      }
+      if (safeCurrentPage <= 3) end = 4;
+      else if (safeCurrentPage >= totalPages - 2) start = totalPages - 3;
 
       if (start > 2) pages.push('...');
       for (let i = start; i <= end; i++) pages.push(i);
@@ -284,76 +397,223 @@ const CallCenter = () => {
     return pages;
   };
 
-  /* Clientes filtrados en dropdown */
-  const filteredClientes = useMemo(() => {
-    const term = clientSearch.toLowerCase();
-    return clientes.filter(c =>
-      (c.nombre || '').toLowerCase().includes(term) ||
-      String(c.id).includes(term) ||
-      (c.celular || '').includes(term) ||
-      (c.cedula || '').includes(term)
-    ).slice(0, 50);
-  }, [clientes, clientSearch]);
-
-  /* Open modal */
-  const handleOpenModal = (ticket = null) => {
-    if (ticket) {
-      setEditingId(ticket.id);
-      setFormData({
-        cliente_nombre: ticket.cliente_nombre || '',
-        ip: ticket.ip || '',
-        direccion: ticket.direccion || '',
-        telefono: ticket.telefono || '',
-        estado: ticket.estado || 'PENDIENTE',
-        a_cargo: ticket.a_cargo || '',
-        problema: ticket.problema || '',
-        observacion_revision: ticket.observacion_revision || '',
-      });
-      setClientSearch(ticket.cliente_nombre || '');
-    } else {
-      setEditingId(null);
-      setFormData({ ...initialForm });
-      setClientSearch('');
+  /* ────────────────────────────────────────────
+     CARGAR CHAT DE WHATSAPP DEL CLIENTE
+  ────────────────────────────────────────────── */
+  const cargarChatCliente = async (phoneVal) => {
+    const { waPhone, callPhone } = getPhoneInfo(phoneVal);
+    const targetPhone = waPhone || callPhone;
+    if (!targetPhone) {
+      setChatMensajes([]);
+      return;
     }
-    setShowClientDropdown(false);
+    setLoadingChat(true);
+    try {
+      const res = await whatsappService.obtenerChat(targetPhone);
+      setChatMensajes(res.data?.mensajes || []);
+      setTimeout(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } catch (err) {
+      console.warn("No se pudo cargar chat de WhatsApp:", err);
+      setChatMensajes([]);
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  /* ────────────────────────────────────────────
+     ABRIR MODAL DE GESTIONAR CLIENTE
+  ────────────────────────────────────────────── */
+  const handleOpenModal = (client) => {
+    setSelectedClient(client);
+    setShowStatusDropdown(false);
+    setNuevoMensajeChat('');
+
+    const clientTickets = clientTicketsMap.map.get(client.id) || [];
+    if (clientTickets.length > 0) {
+      const latest = clientTickets[0];
+      setSelectedTicketId(latest.id);
+      setTicketForm({
+        id: latest.id,
+        estado: latest.estado || 'PENDIENTE',
+        a_cargo: latest.a_cargo || latest.registrado_por || user.username || '',
+        problema: latest.problema || '',
+        observacion_revision: latest.observacion_revision || '',
+        registrado_por: latest.registrado_por || user.username || ''
+      });
+    } else {
+      setSelectedTicketId('NEW');
+      setTicketForm({
+        id: null,
+        estado: 'PENDIENTE',
+        a_cargo: user.username || '',
+        problema: '',
+        observacion_revision: '',
+        registrado_por: user.username || ''
+      });
+    }
+
     setShowModal(true);
+    cargarChatCliente(client.celular || client.telefono);
   };
 
-  /* Select client from dropdown */
-  const handleSelectClient = (c) => {
-    setFormData(prev => ({
-      ...prev,
-      cliente_nombre: c.nombre,
-      ip: c.ip || prev.ip,
-      direccion: c.direccion || prev.direccion,
-      telefono: c.celular || prev.telefono,
-    }));
-    setClientSearch(c.nombre);
-    setShowClientDropdown(false);
+  /* Seleccionar Ticket específico dentro del Modal */
+  const handleSelectTicket = (t) => {
+    setShowStatusDropdown(false);
+    if (t === 'NEW') {
+      setSelectedTicketId('NEW');
+      setTicketForm({
+        id: null,
+        estado: 'PENDIENTE',
+        a_cargo: user.username || '',
+        problema: '',
+        observacion_revision: '',
+        registrado_por: user.username || ''
+      });
+    } else {
+      setSelectedTicketId(t.id);
+      setTicketForm({
+        id: t.id,
+        estado: t.estado || 'PENDIENTE',
+        a_cargo: t.a_cargo || t.registrado_por || user.username || '',
+        problema: t.problema || '',
+        observacion_revision: t.observacion_revision || '',
+        registrado_por: t.registrado_por || user.username || ''
+      });
+    }
   };
 
-  /* Abrir modal para Enviar a Hoja de Ruta */
+  /* ────────────────────────────────────────────
+     GUARDAR O ACTUALIZAR TICKET
+  ────────────────────────────────────────────── */
+  const handleSaveTicket = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedClient) return;
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        cliente_nombre: selectedClient.nombre,
+        ip: selectedClient.ip || '',
+        direccion: selectedClient.direccion || '',
+        telefono: selectedClient.celular || selectedClient.telefono || '',
+        estado: ticketForm.estado || 'PENDIENTE',
+        a_cargo: ticketForm.a_cargo || user.username || '',
+        problema: ticketForm.problema || '',
+        observacion_revision: ticketForm.observacion_revision || '',
+      };
+
+      let savedTicket = null;
+      if (selectedTicketId && selectedTicketId !== 'NEW') {
+        const res = await callCenterService.actualizar(selectedTicketId, payload);
+        savedTicket = res.data;
+        showSuccess(`Ticket #${selectedTicketId} actualizado correctamente`);
+      } else {
+        const res = await callCenterService.crear(payload);
+        savedTicket = res.data;
+        setSelectedTicketId(savedTicket.id);
+        showSuccess(`Ticket #${savedTicket.id} registrado correctamente`);
+      }
+
+      await fetchData(true);
+
+      // Si el ticket se cambió a VISITA TECNICA, abrir Hoja de Ruta
+      if (ticketForm.estado === 'VISITA TECNICA') {
+        handleOpenHojaRutaModal(savedTicket || { ...payload, id: selectedTicketId });
+      }
+    } catch (err) {
+      console.error("Error al guardar ticket:", err);
+      showError(err.response?.data?.detail || "Error al procesar el ticket");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ────────────────────────────────────────────
+     ENVIAR MENSAJE DESDE EL CHAT DE WHATSAPP
+  ────────────────────────────────────────────── */
+  const handleEnviarMensajeChat = async (e) => {
+    if (e) e.preventDefault();
+    const text = nuevoMensajeChat.trim();
+    if (!text || !selectedClient) return;
+
+    const { waPhone, callPhone } = getPhoneInfo(selectedClient.celular || selectedClient.telefono);
+    const targetPhone = waPhone || callPhone;
+    if (!targetPhone) {
+      showWarning("El cliente no tiene un número telefónico válido");
+      return;
+    }
+
+    setEnviandoMensajeChat(true);
+    try {
+      await whatsappService.enviarMensajeChat(targetPhone, text);
+      setNuevoMensajeChat('');
+
+      // Agregar inmediatamente al listado local
+      const nowStr = new Date().toISOString();
+      setChatMensajes(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          rol: 'operador',
+          mensaje: text,
+          fecha_hora: nowStr
+        }
+      ]);
+
+      setTimeout(() => {
+        if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }, 80);
+
+      // Sincronizar con el backend
+      setTimeout(() => cargarChatCliente(targetPhone), 1500);
+    } catch (err) {
+      console.error("Error al enviar mensaje por WhatsApp:", err);
+      showError("Error al enviar mensaje por WhatsApp");
+    } finally {
+      setEnviandoMensajeChat(false);
+    }
+  };
+
+  /* ────────────────────────────────────────────
+     ELIMINAR TICKET
+  ────────────────────────────────────────────── */
+  const handleDelete = async (id) => {
+    if (user.rol?.toLowerCase() !== 'administrador') {
+      showWarning("Solo el administrador puede eliminar registros.");
+      return;
+    }
+    const confirmado = await showConfirm("¿Eliminar ticket?", "¿Eliminar este ticket de Call Center?", "Sí, eliminar", "Cancelar");
+    if (!confirmado) return;
+    try {
+      await callCenterService.eliminar(id);
+      showSuccess("Ticket eliminado correctamente");
+      await fetchData(true);
+      if (selectedClient) {
+        handleOpenModal(selectedClient);
+      }
+    } catch {
+      showError("Error al eliminar ticket");
+    }
+  };
+
+  /* ────────────────────────────────────────────
+     MODAL HOJA DE RUTA
+  ────────────────────────────────────────────── */
   const handleOpenHojaRutaModal = (ticket) => {
     if (!ticket) return;
 
     const tNombre = (ticket.cliente_nombre || '').trim().toLowerCase();
-    const tIp = (ticket.ip || '').trim();
-    const tTel = (ticket.telefono || '').replace(/\D/g, '');
-
-    const matchedClient = clientes.find(c => {
-      if (tNombre && c.nombre && c.nombre.trim().toLowerCase() === tNombre) return true;
-      if (tIp && c.ip && c.ip.trim() === tIp) return true;
-      if (tTel && c.celular) {
-        const cTel = c.celular.replace(/\D/g, '');
-        if (cTel && (cTel.includes(tTel) || tTel.includes(cTel))) return true;
-      }
-      return false;
-    });
+    const matchedClient = (clientes || []).find(c =>
+      c.nombre && c.nombre.trim().toLowerCase() === tNombre
+    ) || selectedClient;
 
     const now = new Date();
     const currentHora = now.toTimeString().slice(0, 5);
 
-    // Las observaciones para Hoja de Ruta deben ser prioritariamente la Observación Revisión
     const obsRevision = (ticket.observacion_revision || '').trim();
     const problemaTxt = (ticket.problema || '').trim();
     let obsFinal = obsRevision;
@@ -361,7 +621,7 @@ const CallCenter = () => {
       obsFinal = `Problema reportado: ${problemaTxt}`;
     }
 
-    const matchedTecnico = tecnicos.find(t => 
+    const matchedTecnico = tecnicos.find(t =>
       ticket.a_cargo && t.username && t.username.toLowerCase() === ticket.a_cargo.trim().toLowerCase()
     );
     const tecDefault = matchedTecnico ? matchedTecnico.username : (ticket.a_cargo || (tecnicos[0]?.username || ''));
@@ -384,7 +644,6 @@ const CallCenter = () => {
     setShowHojaRutaModal(true);
   };
 
-  /* Submit Hoja de Ruta */
   const handleSubmitHojaRuta = async (e) => {
     e.preventDefault();
     if (!hojaRutaForm.hora) {
@@ -430,59 +689,14 @@ const CallCenter = () => {
     }
   };
 
-  /* Submit */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      let savedTicket = null;
-      if (editingId) {
-        const res = await callCenterService.actualizar(editingId, formData);
-        savedTicket = res.data;
-      } else {
-        const res = await callCenterService.crear(formData);
-        savedTicket = res.data;
-      }
-      setShowModal(false);
-      await fetchData(true);
+  /* Datos del cliente seleccionado */
+  const modalClientTickets = selectedClient ? (clientTicketsMap.map.get(selectedClient.id) || []) : [];
+  const activeTicket = modalClientTickets.find(t => t.id === selectedTicketId) || null;
+  const modalWaInfo = selectedClient ? getPhoneInfo(selectedClient.celular || selectedClient.telefono) : { waPhone: '', callPhone: '' };
 
-      // Si el ticket se marcó como VISITA TECNICA, abrir automáticamente el modal para enviar a Hoja de Ruta
-      if (formData.estado === 'VISITA TECNICA') {
-        handleOpenHojaRutaModal(savedTicket || { ...formData, id: editingId });
-      } else {
-        showSuccess(editingId ? "Ticket actualizado correctamente" : "Ticket registrado correctamente");
-      }
-    } catch (err) {
-      showError(err.response?.data?.detail || "Error al procesar el registro");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /* Delete */
-  const handleDelete = async (id) => {
-    if (user.rol?.toLowerCase() !== 'administrador') {
-      showWarning("Solo el administrador puede eliminar registros.");
-      return;
-    }
-    const confirmado = await showConfirm("¿Eliminar ticket?", "¿Eliminar este ticket de Call Center?", "Sí, eliminar", "Cancelar");
-    if (!confirmado) return;
-    try {
-      await callCenterService.eliminar(id);
-      showSuccess("Ticket eliminado correctamente");
-      fetchData(true);
-    } catch { showError("Error al eliminar"); }
-  };
-
-  /* Counters para filtros */
-  const counts = useMemo(() => {
-    const base = tickets;
-    const obj = { TODOS: base.length };
-    ESTADOS.forEach(e => { obj[e.value] = base.filter(t => (t.estado || '').toUpperCase() === e.value).length; });
-    return obj;
-  }, [tickets]);
-
-  /* ── RENDER ── */
+  /* ────────────────────────────────────────────
+     RENDER
+  ────────────────────────────────────────────── */
   return (
     <div style={{ width: '100%', padding: '0' }}>
 
@@ -501,29 +715,13 @@ const CallCenter = () => {
             📞 Call Center
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Registro, monitoreo y seguimiento de reclamos y soporte técnico telefónico.
+            Directorio general de clientes ordenados de la A a la Z, gestión de tickets y chat de WhatsApp en vivo.
           </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => handleOpenModal()}
-            className="btn btn-primary"
-            style={{
-              background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-              padding: '10px 22px', fontWeight: '800', fontSize: '0.85rem',
-              borderRadius: '12px', border: 'none', color: '#fff',
-              boxShadow: '0 4px 16px rgba(139,92,246,0.3)',
-              display: 'flex', alignItems: 'center', gap: '8px'
-            }}
-          >
-            <span>+</span> Nuevo Ticket
-          </button>
         </div>
       </div>
 
-      {/* ── SECCIÓN EXCLUSIVA DE ESCRITORIO (KPIs, Tabs y Filtros avanzados intactos) ── */}
+      {/* ── KPI METRIC CARDS ── */}
       <div className="cc-desktop-view">
-        {/* KPI METRIC CARDS */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
@@ -565,46 +763,32 @@ const CallCenter = () => {
                 }}
               >
                 <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '50%',
+                  width: '46px', height: '46px', borderRadius: '50%',
                   background: card.bg || `${card.color}22`,
                   border: `1.5px solid ${card.color}55`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.25rem',
-                  flexShrink: 0
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.25rem', flexShrink: 0
                 }}>
                   {card.icon}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
-                    fontSize: '0.72rem',
-                    fontWeight: '700',
+                    fontSize: '0.72rem', fontWeight: '700',
                     color: isActive ? card.color : 'var(--text-muted)',
-                    textTransform: 'capitalize',
-                    letterSpacing: '0.02em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    textTransform: 'capitalize', letterSpacing: '0.02em',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                   }}>
                     {card.label}
                   </div>
                   <div style={{
-                    fontSize: '1.65rem',
-                    fontWeight: '900',
-                    color: '#fff',
-                    lineHeight: '1.15',
-                    marginTop: '2px'
+                    fontSize: '1.65rem', fontWeight: '900', color: '#fff',
+                    lineHeight: '1.15', marginTop: '2px'
                   }}>
                     {count}
                   </div>
                   <div style={{
-                    fontSize: '0.68rem',
-                    color: 'rgba(255,255,255,0.4)',
-                    marginTop: '2px',
-                    whiteSpace: 'nowrap'
+                    fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)',
+                    marginTop: '2px', whiteSpace: 'nowrap'
                   }}>
                     {card.sublabel}
                   </div>
@@ -614,18 +798,14 @@ const CallCenter = () => {
           })}
         </div>
 
-        {/* BARRA DE PESTAÑAS Y BUSCADOR (ESCRITORIO) */}
+        {/* BARRA DE PESTAÑAS Y BUSCADOR */}
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '16px',
-          flexWrap: 'wrap'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          gap: '12px', marginBottom: '16px', flexWrap: 'wrap'
         }}>
-          {/* Pills / Tabs por Estado */}
+          {/* Tabs por Estado */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {[{ value: 'TODOS', label: 'Todos', color: '#8b5cf6', icon: '📞' }, ...ESTADOS].map(e => {
+            {[{ value: 'TODOS', label: 'Todos', color: '#8b5cf6', icon: '👥' }, ...ESTADOS].map(e => {
               const isActive = statusFilter === e.value;
               const cnt = counts[e.value] ?? 0;
               return (
@@ -636,18 +816,13 @@ const CallCenter = () => {
                     setCurrentPage(1);
                   }}
                   style={{
-                    padding: '7px 16px',
-                    borderRadius: '25px',
+                    padding: '7px 16px', borderRadius: '25px',
                     border: `1.5px solid ${isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.08)'}`,
                     background: isActive ? `${e.color || '#8b5cf6'}26` : 'rgba(255,255,255,0.03)',
                     color: isActive ? (e.color || '#8b5cf6') : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontWeight: isActive ? '800' : '500',
-                    fontSize: '0.78rem',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
+                    cursor: 'pointer', fontWeight: isActive ? '800' : '500',
+                    fontSize: '0.78rem', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: '8px'
                   }}
                 >
                   <span>{e.icon}</span>
@@ -655,10 +830,8 @@ const CallCenter = () => {
                   <span style={{
                     background: isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.1)',
                     color: isActive ? '#fff' : 'var(--text-muted)',
-                    borderRadius: '12px',
-                    padding: '1px 8px',
-                    fontSize: '0.68rem',
-                    fontWeight: '800'
+                    borderRadius: '12px', padding: '1px 8px',
+                    fontSize: '0.68rem', fontWeight: '800'
                   }}>
                     {cnt}
                   </span>
@@ -667,19 +840,16 @@ const CallCenter = () => {
             })}
           </div>
 
-          {/* Buscador y Botón de Filtros */}
+          {/* Buscador */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
               <input
                 className="input"
-                placeholder="🔍 Buscar cliente, tel, IP..."
+                placeholder="🔍 Buscar cliente (A-Z), tel, IP, problema..."
                 style={{
-                  width: '230px',
-                  marginBottom: 0,
-                  padding: '8px 28px 8px 14px',
-                  fontSize: '0.78rem',
-                  borderRadius: '20px',
-                  background: 'rgba(255,255,255,0.04)',
+                  width: '300px', marginBottom: 0,
+                  padding: '9px 32px 9px 16px', fontSize: '0.8rem',
+                  borderRadius: '20px', background: 'rgba(255,255,255,0.04)',
                   borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.1)'
                 }}
                 value={searchTerm}
@@ -689,16 +859,10 @@ const CallCenter = () => {
                 <button
                   onClick={() => setSearchTerm('')}
                   style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'rgba(255,255,255,0.5)',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    padding: 0
+                    position: 'absolute', right: '12px', top: '50%',
+                    transform: 'translateY(-50%)', background: 'none',
+                    border: 'none', color: 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer', fontSize: '0.8rem', padding: 0
                   }}
                 >
                   ✕
@@ -706,160 +870,51 @@ const CallCenter = () => {
               )}
             </div>
 
-            <button
-              onClick={() => setShowFilters(prev => !prev)}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '20px',
-                border: `1.5px solid ${showFilters || dateFilter ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`,
-                background: showFilters || dateFilter ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
-                color: showFilters || dateFilter ? '#c4b5fd' : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontWeight: '700',
-                fontSize: '0.78rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <span>🎛️</span>
-              <span>Filtros</span>
-              {dateFilter && (
-                <span style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  background: '#8b5cf6',
-                  display: 'inline-block'
-                }} />
-              )}
-            </button>
+            {(searchTerm || statusFilter !== 'TODOS') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('TODOS');
+                }}
+                style={{
+                  padding: '7px 14px', borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer', fontWeight: '600', fontSize: '0.74rem'
+                }}
+              >
+                Restablecer
+              </button>
+            )}
           </div>
         </div>
-
-        {/* PANEL DESPLEGABLE DE FILTROS */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: '16px',
-                padding: '12px 18px',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                flexWrap: 'wrap'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  📅 Filtrar por Fecha Ingreso:
-                </span>
-                <input
-                  type="date"
-                  className="input"
-                  style={{ width: '160px', marginBottom: 0, padding: '6px 10px', fontSize: '0.78rem' }}
-                  value={dateFilter}
-                  onChange={e => setDateFilter(e.target.value)}
-                />
-              </div>
-              {dateFilter && (
-                <button
-                  onClick={() => setDateFilter('')}
-                  style={{
-                    background: 'rgba(239,68,68,0.12)',
-                    border: '1px solid rgba(239,68,68,0.25)',
-                    color: '#f87171',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '0.72rem',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✕ Limpiar Fecha
-                </button>
-              )}
-              {(searchTerm || dateFilter || statusFilter !== 'TODOS') && (
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setDateFilter('');
-                    setStatusFilter('TODOS');
-                  }}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.7)',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '0.72rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginLeft: 'auto'
-                  }}
-                >
-                  Restablecer Filtros
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* ── BARRA DE BÚSQUEDA GENERAL (SOLO EN MÓVIL) ── */}
-      <div className="cc-mobile-view" style={{
-        padding: '0 4px 14px 4px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
+      {/* ── BÚSQUEDA GENERAL EN MÓVIL ── */}
+      <div className="cc-mobile-view" style={{ padding: '0 4px 14px 4px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ position: 'relative', width: '100%' }}>
           <input
             className="input"
-            placeholder="🔍 Buscar cliente, teléfono, IP, problema..."
+            placeholder="🔍 Buscar cliente (A-Z), teléfono, IP..."
             style={{
-              width: '100%',
-              marginBottom: 0,
-              padding: '11px 40px 11px 16px',
-              fontSize: '0.88rem',
-              borderRadius: '14px',
-              background: 'rgba(255,255,255,0.04)',
+              width: '100%', marginBottom: 0,
+              padding: '11px 40px 11px 16px', fontSize: '0.88rem',
+              borderRadius: '14px', background: 'rgba(255,255,255,0.04)',
               border: `1.5px solid ${searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.12)'}`,
-              color: '#fff',
-              boxSizing: 'border-box'
+              color: '#fff', boxSizing: 'border-box'
             }}
             value={searchTerm}
-            onChange={e => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={e => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setCurrentPage(1);
-              }}
+              onClick={() => setSearchTerm('')}
               style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: 'rgba(255,255,255,0.5)',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                padding: 0
+                position: 'absolute', right: '12px', top: '50%',
+                transform: 'translateY(-50%)', background: 'none',
+                border: 'none', color: 'rgba(255,255,255,0.5)',
+                cursor: 'pointer', fontSize: '0.9rem', padding: 0
               }}
-              title="Limpiar búsqueda"
             >
               ✕
             </button>
@@ -867,10 +922,10 @@ const CallCenter = () => {
         </div>
       </div>
 
-      {/* ── TABLA DE TICKETS ── */}
+      {/* ── TABLA PRINCIPAL DE CLIENTES (ORDENADOS A - Z) ── */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-          Cargando registros...
+          Cargando clientes de la A a la Z...
         </div>
       ) : (
         <div style={{
@@ -879,251 +934,176 @@ const CallCenter = () => {
           border: '1px solid rgba(255,255,255,0.06)',
           overflow: 'hidden'
         }}>
-          {/* ── VISTA ESCRITORIO (TABLA EXPANDIDA) ── */}
+          {/* ── VISTA ESCRITORIO: TABLA (NOMBRE, CONTACTO, ESTADO, A CARGO, ACCIONES) ── */}
           <div className="cc-desktop-view" style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ minWidth: '1000px', width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ minWidth: '950px', width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{
                   background: 'rgba(255,255,255,0.04)',
                   borderBottom: '1px solid rgba(255,255,255,0.07)'
                 }}>
-                  {['Fecha Ingreso', 'Cliente', 'Contacto', 'Problema', 'Observación Revisión', 'Estado', 'A Cargo', 'Acciones'].map(h => (
+                  {['Nombre (A-Z)', 'Contacto', 'Estado', 'A Cargo', 'Acciones'].map(h => (
                     <th key={h} style={{
-                      padding: '14px 16px', textAlign: 'left',
-                      fontSize: '0.65rem', textTransform: 'uppercase',
+                      padding: '14px 18px', textAlign: 'left',
+                      fontSize: '0.67rem', textTransform: 'uppercase',
                       letterSpacing: '0.08em', color: 'var(--text-muted)',
-                      fontWeight: '700', whiteSpace: 'nowrap'
+                      fontWeight: '800', whiteSpace: 'nowrap'
                     }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {paginatedTickets.length === 0 ? (
+                {paginatedClients.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No hay registros con los filtros actuales.
+                    <td colSpan="5" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No se encontraron clientes con los filtros actuales.
                     </td>
                   </tr>
-                ) : paginatedTickets.map((t, idx) => {
-                  const clientMeta = getClientMeta(t);
+                ) : paginatedClients.map((client, idx) => {
+                  const clientTickets = clientTicketsMap.map.get(client.id) || [];
+                  const latestTicket = clientTickets[0] || null;
+                  const { callPhone, waPhone } = getPhoneInfo(client.celular || client.telefono);
+
                   return (
-                    <tr key={t.id} style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
-                      transition: 'background 0.15s',
-                      verticalAlign: 'top',
-                    }}
+                    <tr
+                      key={client.id}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                        transition: 'background 0.15s',
+                        verticalAlign: 'middle',
+                      }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.06)'}
                       onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
                     >
-                      {/* FECHA INGRESO */}
-                      <td style={{ padding: '14px 16px', minWidth: '135px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                          <span style={{ fontSize: '0.95rem', color: '#8b5cf6', marginTop: '1px' }}>📅</span>
-                          <div>
-                            <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#f1f5f9' }}>
-                              {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
-                            </div>
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '1px' }}>
-                              {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                            </div>
-                            <div style={{ fontSize: '0.62rem', color: '#64748b', marginTop: '2px' }}>
-                              Por: {t.registrado_por || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* CLIENTE CON AVATAR */}
-                      <td style={{ padding: '14px 12px', minWidth: '200px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {/* 1. NOMBRE (CON AVATAR) */}
+                      <td style={{ padding: '14px 18px', minWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '50%',
-                            background: getAvatarColor(t.cliente_nombre),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: '800',
-                            fontSize: '0.76rem',
-                            color: '#ffffff',
-                            flexShrink: 0,
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
+                            width: '42px', height: '42px', borderRadius: '50%',
+                            background: getAvatarColor(client.nombre),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: '900', fontSize: '0.82rem', color: '#ffffff',
+                            flexShrink: 0, textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                            boxShadow: '0 3px 10px rgba(0,0,0,0.3)'
                           }}>
-                            {getInitials(t.cliente_nombre)}
+                            {getInitials(client.nombre)}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: '800', fontSize: '0.82rem', color: '#f8fafc', lineHeight: '1.3' }}>
-                              {t.cliente_nombre || '-'}
-                              {clientMeta?.id && (
-                                <span style={{ color: '#818cf8', fontWeight: '800', marginLeft: '5px', fontSize: '0.75rem' }}>
-                                  ({clientMeta.id})
+                            <div style={{
+                              fontWeight: '800', fontSize: '0.88rem', color: '#f8fafc',
+                              lineHeight: '1.3', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}>
+                              <span>{client.nombre || 'Sin Nombre'}</span>
+                              {!client.isVirtual && client.id && (
+                                <span style={{
+                                  fontSize: '0.68rem', color: '#818cf8', fontWeight: '800',
+                                  background: 'rgba(129, 140, 248, 0.12)', padding: '1px 6px',
+                                  borderRadius: '6px'
+                                }}>
+                                  #{client.id}
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              IP: {t.ip || 'N/A'}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                IP: <strong style={{ color: client.ip ? '#cbd5e1' : '#64748b' }}>{client.ip || 'N/A'}</strong>
+                              </span>
+                              {clientTickets.length > 0 && (
+                                <span style={{
+                                  fontSize: '0.62rem', background: 'rgba(236,72,153,0.14)',
+                                  color: '#f472b6', padding: '1px 6px', borderRadius: '10px',
+                                  fontWeight: '800'
+                                }}>
+                                  🎫 {clientTickets.length} ticket{clientTickets.length > 1 ? 's' : ''}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* CONTACTO */}
-                      <td style={{ padding: '14px 10px', minWidth: '160px' }}>
+                      {/* 2. CONTACTO (TELÉFONO, DIRECCIÓN) */}
+                      <td style={{ padding: '14px 16px', minWidth: '200px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: '#cbd5e1' }}>
-                            <span style={{ color: '#818cf8', fontSize: '0.82rem' }}>📞</span>
-                            <span>{t.telefono || '-'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: '700', color: '#cbd5e1' }}>
+                            <span style={{ color: '#22c55e', fontSize: '0.85rem' }}>📞</span>
+                            <span>{client.celular || client.telefono || 'Sin teléfono'}</span>
+                            {waPhone && (
+                              <a
+                                href={`https://wa.me/${waPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: '#25d366', textDecoration: 'none',
+                                  fontSize: '0.72rem', marginLeft: '4px'
+                                }}
+                                title="Abrir en WhatsApp"
+                              >
+                                💬
+                              </a>
+                            )}
                           </div>
-                          {t.direccion && (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.68rem', color: '#94a3b8', lineHeight: '1.3' }}>
-                              <span style={{ color: '#818cf8', fontSize: '0.82rem', flexShrink: 0 }}>📍</span>
-                              <span>{t.direccion}</span>
+                          {(client.direccion || client.parroquia) && (
+                            <div style={{
+                              display: 'flex', alignItems: 'flex-start', gap: '6px',
+                              fontSize: '0.7rem', color: '#94a3b8', lineHeight: '1.3'
+                            }}>
+                              <span style={{ color: '#818cf8', flexShrink: 0 }}>📍</span>
+                              <span>{client.direccion || client.parroquia}</span>
                             </div>
                           )}
                         </div>
                       </td>
 
-                      {/* PROBLEMA */}
-                      <td style={{ padding: '14px 10px', minWidth: '180px', maxWidth: '220px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                          <span style={{ color: '#818cf8', fontSize: '0.85rem', marginTop: '1px', flexShrink: 0 }}>💬</span>
-                          <div className="preserve-breaks" style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: '1.45' }}>
-                            {t.problema || '-'}
-                          </div>
-                        </div>
+                      {/* 3. ESTADO */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <EstadoBadge estado={latestTicket?.estado} />
                       </td>
 
-                      {/* OBSERVACIÓN REVISIÓN */}
-                      <td style={{ padding: '14px 10px', minWidth: '220px', maxWidth: '270px' }}>
-                        {(() => {
-                          const obs = (t.observacion_revision || '').trim();
-                          if (!obs) {
-                            return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
-                          }
-                          const isLong = obs.length > 90 || obs.split('\n').length > 3;
-                          return (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                              <span style={{ color: '#38bdf8', fontSize: '0.85rem', marginTop: '1px', flexShrink: 0 }}>📄</span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                  className="preserve-breaks"
-                                  style={{
-                                    fontSize: '0.73rem',
-                                    color: 'var(--text-main)',
-                                    lineHeight: '1.45',
-                                    ...(isLong ? {
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 3,
-                                      WebkitBoxOrient: 'vertical',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      wordBreak: 'break-word',
-                                      cursor: 'pointer',
-                                    } : {
-                                      wordBreak: 'break-word',
-                                    })
-                                  }}
-                                  onClick={isLong ? () => setObsModalTicket(t) : undefined}
-                                  title={isLong ? "Clic para ver la información completa" : undefined}
-                                >
-                                  {obs}
-                                </div>
-                                {isLong && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setObsModalTicket(t)}
-                                    style={{
-                                      background: 'rgba(139, 92, 246, 0.14)',
-                                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                                      color: '#a78bfa',
-                                      padding: '2px 8px',
-                                      borderRadius: '6px',
-                                      fontSize: '0.68rem',
-                                      fontWeight: '700',
-                                      cursor: 'pointer',
-                                      marginTop: '5px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      transition: 'all 0.2s',
-                                    }}
-                                  >
-                                    Ver más ▾
-                                  </button>
-                                )}
-                                {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
-                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span>🕒</span> {t.fecha_cambio_estado}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </td>
-
-                      {/* ESTADO */}
-                      <td style={{ padding: '14px 10px' }}>
-                        <EstadoBadge estado={t.estado} />
-                      </td>
-
-                      {/* A CARGO */}
-                      <td style={{ padding: '14px 10px', minWidth: '120px' }}>
+                      {/* 4. A CARGO */}
+                      <td style={{ padding: '14px 16px', minWidth: '140px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>👤</span>
-                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: t.a_cargo ? '#f1f5f9' : '#64748b' }}>
-                            {t.a_cargo || 'Sin asignar'}
+                          <span style={{
+                            fontSize: '0.78rem', fontWeight: '700',
+                            color: (latestTicket?.a_cargo || latestTicket?.registrado_por) ? '#f1f5f9' : '#64748b'
+                          }}>
+                            {latestTicket?.a_cargo || latestTicket?.registrado_por || 'Sin asignar'}
                           </span>
                         </div>
                       </td>
 
-                      {/* ACCIONES */}
-                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                      {/* 5. ACCIONES */}
+                      <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
                         <button
-                          onClick={() => handleOpenModal(t)}
+                          onClick={() => handleOpenModal(client)}
                           style={{
-                            padding: '6px 14px', borderRadius: '10px',
-                            background: 'rgba(139,92,246,0.15)',
-                            border: '1px solid rgba(139,92,246,0.3)',
-                            color: '#a78bfa', cursor: 'pointer', fontSize: '0.72rem',
-                            fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
-                            display: 'inline-flex', alignItems: 'center', gap: '5px'
+                            padding: '7px 16px', borderRadius: '10px',
+                            background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.2))',
+                            border: '1px solid rgba(139,92,246,0.4)',
+                            color: '#c4b5fd', cursor: 'pointer', fontSize: '0.74rem',
+                            fontWeight: '800', marginRight: '6px', transition: 'all 0.2s',
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            boxShadow: '0 2px 8px rgba(139,92,246,0.2)'
                           }}
                         >
                           <span>⚙️</span> Gestionar ▾
                         </button>
-                        {t.estado === 'VISITA TECNICA' && (
+                        {latestTicket?.estado === 'VISITA TECNICA' && (
                           <button
-                            onClick={() => handleOpenHojaRutaModal(t)}
+                            onClick={() => handleOpenHojaRutaModal(latestTicket)}
                             style={{
-                              padding: '6px 12px', borderRadius: '10px',
+                              padding: '7px 12px', borderRadius: '10px',
                               background: 'rgba(249,115,22,0.15)',
                               border: '1px solid rgba(249,115,22,0.35)',
                               color: '#fb923c', cursor: 'pointer', fontSize: '0.72rem',
                               fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
                               display: 'inline-flex', alignItems: 'center', gap: '4px'
                             }}
-                            title="Enviar o re-agendar en Hoja de Ruta"
+                            title="Enviar a Hoja de Ruta"
                           >
                             🗓️ Hoja de Ruta
-                          </button>
-                        )}
-                        {user.rol?.toLowerCase() === 'administrador' && (
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            style={{
-                              padding: '6px 10px', borderRadius: '10px',
-                              background: 'rgba(239,68,68,0.1)',
-                              border: '1px solid rgba(239,68,68,0.25)',
-                              color: '#f87171', cursor: 'pointer', fontSize: '0.82rem',
-                              fontWeight: '700', transition: 'all 0.2s'
-                            }}
-                            title="Eliminar ticket"
-                          >
-                            ✕
                           </button>
                         )}
                       </td>
@@ -1134,157 +1114,87 @@ const CallCenter = () => {
             </table>
           </div>
 
-          {/* ── VISTA MÓVIL (TARJETAS ADAPTADAS) ── */}
+          {/* ── VISTA MÓVIL: TARJETAS DE CLIENTES ── */}
           <div className="cc-mobile-view" style={{ padding: '12px' }}>
-            {paginatedTickets.length === 0 ? (
+            {paginatedClients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '2rem' }}>📋</span>
-                <p style={{ marginTop: '8px', fontSize: '0.85rem' }}>No hay registros con los filtros actuales</p>
+                <span style={{ fontSize: '2rem' }}>👥</span>
+                <p style={{ marginTop: '8px', fontSize: '0.85rem' }}>No hay clientes que coincidan con la búsqueda</p>
               </div>
-            ) : paginatedTickets.map((t) => {
-              const clientMeta = getClientMeta(t);
-              const { callPhone, waPhone } = getPhoneInfo(t.telefono);
-              const obs = (t.observacion_revision || '').trim();
+            ) : paginatedClients.map((client) => {
+              const clientTickets = clientTicketsMap.map.get(client.id) || [];
+              const latestTicket = clientTickets[0] || null;
+              const { callPhone, waPhone } = getPhoneInfo(client.celular || client.telefono);
 
               return (
-                <div key={`m-${t.id}`} className="cc-card-mobile">
-                  {/* Header de la tarjeta móvil */}
+                <div key={`m-${client.id}`} className="cc-card-mobile">
+                  {/* Header móvil */}
                   <div className="cc-card-mobile-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                      <div className="cc-card-mobile-avatar" style={{ background: getAvatarColor(t.cliente_nombre) }}>
-                        {getInitials(t.cliente_nombre)}
+                      <div className="cc-card-mobile-avatar" style={{ background: getAvatarColor(client.nombre) }}>
+                        {getInitials(client.nombre)}
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#f8fafc', wordBreak: 'break-word', lineHeight: '1.25' }}>
-                          {t.cliente_nombre || 'Sin Nombre'}
-                          {clientMeta?.id && (
+                          {client.nombre || 'Sin Nombre'}
+                          {!client.isVirtual && client.id && (
                             <span style={{ color: '#a78bfa', marginLeft: '6px', fontSize: '0.74rem', fontWeight: '800' }}>
-                              (ID: {clientMeta.id})
+                              #{client.id}
                             </span>
                           )}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          IP: <span style={{ color: '#cbd5e1' }}>{t.ip || 'N/A'}</span>
+                          IP: <span style={{ color: '#cbd5e1' }}>{client.ip || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
-                    <EstadoBadge estado={t.estado} />
+                    <EstadoBadge estado={latestTicket?.estado} />
                   </div>
 
-                  {/* Grid de metadata */}
+                  {/* Metadata móvil */}
                   <div className="cc-card-mobile-details">
                     <div>
-                      <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>📅 Ingreso</div>
+                      <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>📞 Contacto</div>
                       <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#f1f5f9', marginTop: '2px' }}>
-                        {t.fecha_ingreso ? formatToDMY(t.fecha_ingreso) : '-'}
-                      </div>
-                      <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginTop: '1px' }}>
-                        Por: {t.registrado_por || 'N/A'}
+                        {client.celular || client.telefono || 'Sin teléfono'}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>👤 A Cargo</div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: t.a_cargo ? '#818cf8' : '#94a3b8', marginTop: '2px' }}>
-                        {t.a_cargo || 'Sin asignar'}
+                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: (latestTicket?.a_cargo || latestTicket?.registrado_por) ? '#818cf8' : '#94a3b8', marginTop: '2px' }}>
+                        {latestTicket?.a_cargo || latestTicket?.registrado_por || 'Sin asignar'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Contacto & Ubicación con accesos rápidos */}
-                  {(t.telefono || t.direccion) && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
-                      {t.telefono && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ color: '#818cf8' }}>📞</span>
-                          <span style={{ fontWeight: '700', color: '#e2e8f0' }}>{t.telefono}</span>
-                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-                            {callPhone && (
-                              <a
-                                href={`tel:${callPhone}`}
-                                style={{
-                                  padding: '4px 10px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.16)',
-                                  border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8',
-                                  fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
-                                }}
-                              >
-                                📞 Llamar
-                              </a>
-                            )}
-                            {waPhone && (
-                              <a
-                                href={`https://wa.me/${waPhone}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  padding: '4px 10px', borderRadius: '8px', background: 'rgba(37, 211, 102, 0.16)',
-                                  border: '1px solid rgba(37, 211, 102, 0.3)', color: '#25d366',
-                                  fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
-                                }}
-                              >
-                                💬 WhatsApp
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {t.direccion && (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#94a3b8', fontSize: '0.72rem', lineHeight: '1.3' }}>
-                          <span style={{ color: '#818cf8', flexShrink: 0 }}>📍</span>
-                          <span>{t.direccion}</span>
-                        </div>
-                      )}
+                  {/* Dirección */}
+                  {(client.direccion || client.parroquia) && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#94a3b8', fontSize: '0.72rem', lineHeight: '1.3' }}>
+                      <span style={{ color: '#818cf8', flexShrink: 0 }}>📍</span>
+                      <span>{client.direccion || client.parroquia}</span>
                     </div>
                   )}
 
-                  {/* Problema Reportado */}
-                  {t.problema && (
-                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.64rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '3px' }}>
-                        💬 Problema Reportado:
-                      </div>
-                      <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: '#e2e8f0', lineHeight: '1.4' }}>
-                        {t.problema}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Observación Revisión */}
-                  {obs && (
-                    <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                      <div style={{ fontSize: '0.64rem', color: '#c4b5fd', fontWeight: '700', marginBottom: '3px' }}>
-                        📄 Observación Revisión:
-                      </div>
-                      <div className="preserve-breaks" style={{ fontSize: '0.75rem', color: '#f1f5f9', lineHeight: '1.4' }}>
-                        {obs}
-                      </div>
-                      {t.fecha_cambio_estado && t.estado !== 'PENDIENTE' && (
-                        <div style={{ fontSize: '0.64rem', color: '#a78bfa', marginTop: '4px' }}>
-                          🕒 {t.fecha_cambio_estado}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fila de Acciones táctiles */}
+                  {/* Acciones móvil */}
                   <div className="cc-card-mobile-actions">
                     <button
-                      onClick={() => handleOpenModal(t)}
+                      onClick={() => handleOpenModal(client)}
                       style={{
-                        flex: 1, padding: '9px 14px', borderRadius: '10px',
+                        flex: 1, padding: '10px 14px', borderRadius: '10px',
                         background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
                         border: 'none', color: '#fff', cursor: 'pointer',
-                        fontSize: '0.78rem', fontWeight: '800', display: 'flex',
+                        fontSize: '0.8rem', fontWeight: '800', display: 'flex',
                         alignItems: 'center', justifyContent: 'center', gap: '6px',
                         boxShadow: '0 2px 8px rgba(139,92,246,0.3)'
                       }}
                     >
                       <span>⚙️</span> Gestionar
                     </button>
-                    {t.estado === 'VISITA TECNICA' && (
+                    {latestTicket?.estado === 'VISITA TECNICA' && (
                       <button
-                        onClick={() => handleOpenHojaRutaModal(t)}
+                        onClick={() => handleOpenHojaRutaModal(latestTicket)}
                         style={{
-                          padding: '9px 12px', borderRadius: '10px',
+                          padding: '10px 12px', borderRadius: '10px',
                           background: 'rgba(249,115,22,0.18)',
                           border: '1px solid rgba(249,115,22,0.35)',
                           color: '#fb923c', cursor: 'pointer',
@@ -1295,20 +1205,20 @@ const CallCenter = () => {
                         🗓️ Hoja Ruta
                       </button>
                     )}
-                    {user.rol?.toLowerCase() === 'administrador' && (
-                      <button
-                        onClick={() => handleDelete(t.id)}
+                    {callPhone && (
+                      <a
+                        href={`tel:${callPhone}`}
                         style={{
-                          padding: '9px 12px', borderRadius: '10px',
-                          background: 'rgba(239,68,68,0.14)',
-                          border: '1px solid rgba(239,68,68,0.3)',
-                          color: '#f87171', cursor: 'pointer',
-                          fontSize: '0.78rem', fontWeight: '700'
+                          padding: '10px 12px', borderRadius: '10px',
+                          background: 'rgba(56, 189, 248, 0.16)',
+                          border: '1px solid rgba(56, 189, 248, 0.3)',
+                          color: '#38bdf8', textDecoration: 'none',
+                          fontSize: '0.76rem', fontWeight: '700', display: 'flex',
+                          alignItems: 'center'
                         }}
-                        title="Eliminar"
                       >
-                        ✕
-                      </button>
+                        📞
+                      </a>
                     )}
                   </div>
                 </div>
@@ -1318,18 +1228,13 @@ const CallCenter = () => {
 
           {/* ── BARRA INFERIOR DE PAGINACIÓN ── */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '14px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(255,255,255,0.01)',
-            flexWrap: 'wrap',
-            gap: '12px'
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(255,255,255,0.01)', flexWrap: 'wrap', gap: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Mostrando <strong style={{ color: '#fff' }}>{totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong style={{ color: '#fff' }}>{endIndex}</strong> de <strong style={{ color: '#fff' }}>{totalItems}</strong> registros
+                Mostrando <strong style={{ color: '#fff' }}>{totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong style={{ color: '#fff' }}>{endIndex}</strong> de <strong style={{ color: '#fff' }}>{totalItems}</strong> clientes
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                 <span>Por página:</span>
@@ -1340,14 +1245,9 @@ const CallCenter = () => {
                     setCurrentPage(1);
                   }}
                   style={{
-                    background: '#1a1040',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    padding: '3px 8px',
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    outline: 'none'
+                    background: '#1a1040', border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff', borderRadius: '8px', padding: '3px 8px',
+                    fontSize: '0.74rem', cursor: 'pointer', outline: 'none'
                   }}
                 >
                   <option value={5}>5</option>
@@ -1364,20 +1264,14 @@ const CallCenter = () => {
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
+                  width: '32px', height: '32px', borderRadius: '8px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   background: safeCurrentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
                   color: safeCurrentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
                   cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.85rem',
-                  transition: 'all 0.2s'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.85rem'
                 }}
-                title="Página anterior"
               >
                 ‹
               </button>
@@ -1390,18 +1284,13 @@ const CallCenter = () => {
                     key={p}
                     onClick={() => setCurrentPage(p)}
                     style={{
-                      minWidth: '32px',
-                      height: '32px',
-                      padding: '0 8px',
+                      minWidth: '32px', height: '32px', padding: '0 8px',
                       borderRadius: '8px',
                       border: safeCurrentPage === p ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
                       background: safeCurrentPage === p ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.04)',
                       color: safeCurrentPage === p ? '#fff' : 'rgba(255,255,255,0.7)',
                       fontWeight: safeCurrentPage === p ? '800' : '500',
-                      cursor: 'pointer',
-                      fontSize: '0.78rem',
-                      transition: 'all 0.2s',
-                      boxShadow: safeCurrentPage === p ? '0 2px 8px rgba(139,92,246,0.35)' : 'none'
+                      cursor: 'pointer', fontSize: '0.78rem'
                     }}
                   >
                     {p}
@@ -1413,20 +1302,14 @@ const CallCenter = () => {
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage >= totalPages || totalItems === 0}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
+                  width: '32px', height: '32px', borderRadius: '8px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   background: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
                   color: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
                   cursor: (safeCurrentPage >= totalPages || totalItems === 0) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.85rem',
-                  transition: 'all 0.2s'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.85rem'
                 }}
-                title="Página siguiente"
               >
                 ›
               </button>
@@ -1435,9 +1318,11 @@ const CallCenter = () => {
         </div>
       )}
 
-      {/* ── MODAL ── */}
+      {/* ────────────────────────────────────────────
+          MODAL DE GESTIONAR (CLIENTE, CARD TICKET Y WHATSAPP)
+      ────────────────────────────────────────────── */}
       <AnimatePresence>
-        {showModal && (
+        {showModal && selectedClient && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1445,565 +1330,621 @@ const CallCenter = () => {
             style={{
               position: 'fixed', inset: 0, zIndex: 1000,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '20px',
-              background: 'rgba(0,0,0,0.65)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              padding: '16px',
+              background: 'rgba(0,0,0,0.75)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
             }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
           >
             <motion.div
               className="cc-modal-dialog"
-              initial={{ scale: 0.88, opacity: 0, y: 30 }}
+              initial={{ scale: 0.92, opacity: 0, y: 25 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.88, opacity: 0, y: 30 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-              style={{
-                width: '100%', maxWidth: '860px',
-                maxHeight: '90vh',
-                background: 'linear-gradient(145deg, #1a1040 0%, #1e1550 60%, #13103a 100%)',
-                borderRadius: '24px',
-                border: '1px solid rgba(139,92,246,0.25)',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                overflowY: 'auto',
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div style={{
-                padding: '24px 28px 20px',
-                background: 'linear-gradient(90deg, rgba(236,72,153,0.1), rgba(139,92,246,0.1))',
-                borderBottom: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-              }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800' }}>
-                    {editingId ? '⚙️ Gestionar Ticket' : '📞 Registrar Nuevo Reclamo'}
-                  </h2>
-                  <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {editingId ? 'Actualiza el estado y observaciones del ticket.' : 'Completa los datos del reclamo o soporte.'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.7)', width: '36px', height: '36px', borderRadius: '10px',
-                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div style={{ padding: '24px 28px', flex: 1 }}>
-                <form onSubmit={handleSubmit}>
-                  {/* Sección: Datos del cliente */}
-                  <div style={{ marginBottom: '8px' }}>
-                    <span style={{
-                      fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-                      letterSpacing: '0.1em', color: '#ec4899'
-                    }}>
-                      Información del Cliente
-                    </span>
-                  </div>
-
-                  <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                    {/* Dropdown cliente */}
-                    <div ref={clientRef} style={{ position: 'relative' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Cliente Solicitante *
-                      </label>
-                      <input
-                        className="input"
-                        placeholder="Buscar por nombre, ID, o teléfono..."
-                        value={clientSearch}
-                        onChange={e => {
-                          setClientSearch(e.target.value);
-                          setFormData(prev => ({ ...prev, cliente_nombre: e.target.value }));
-                          setShowClientDropdown(true);
-                        }}
-                        onFocus={() => setShowClientDropdown(true)}
-                        style={{ width: '100%', marginBottom: 0, paddingRight: '36px' }}
-                        autoComplete="off"
-                        required
-                      />
-                      <span style={{ position: 'absolute', right: '12px', top: '38px', color: 'var(--text-muted)', fontSize: '0.85rem', pointerEvents: 'none' }}>
-                        ▾
-                      </span>
-                      <AnimatePresence>
-                        {showClientDropdown && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.15 }}
-                            style={{
-                              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-                              background: '#1a1040',
-                              border: '1px solid rgba(139,92,246,0.3)',
-                              borderRadius: '12px', marginTop: '4px',
-                              maxHeight: '220px', overflowY: 'auto',
-                              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                            }}
-                          >
-                            {filteredClientes.length === 0 ? (
-                              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                Sin coincidencias
-                              </div>
-                            ) : filteredClientes.map(c => (
-                              <div
-                                key={c.id}
-                                onClick={() => handleSelectClient(c)}
-                                style={{
-                                  padding: '10px 14px', cursor: 'pointer',
-                                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                                  transition: 'background 0.15s',
-                                  display: 'flex', flexDirection: 'column', gap: '2px',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.15)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                              >
-                                <div style={{ fontWeight: '700', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span>#{c.id} — {c.nombre}</span>
-                                  {c.estado && (
-                                    <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
-                                      {c.estado}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                  {c.parroquia || 'Sin sector'} | 📱 {c.celular || 'S/N'} | IP: {c.ip || 'N/A'}
-                                </div>
-                              </div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        IP / Referencia de Conexión
-                      </label>
-                      <input
-                        className="input"
-                        value={formData.ip}
-                        onChange={e => setFormData({ ...formData, ip: e.target.value })}
-                        placeholder="Ej: 172.18.2.8"
-                        style={{ marginBottom: 0 }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Teléfono(s) de Contacto
-                      </label>
-                      <input
-                        className="input"
-                        value={formData.telefono}
-                        onChange={e => setFormData({ ...formData, telefono: e.target.value })}
-                        placeholder="0999... 0980..."
-                        style={{ marginBottom: 0 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Dirección / Sector
-                      </label>
-                      <input
-                        className="input"
-                        value={formData.direccion}
-                        onChange={e => setFormData({ ...formData, direccion: e.target.value })}
-                        placeholder="Ej: Av. Ordoñez Lasso..."
-                        style={{ marginBottom: 0 }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '8px' }}>
-                    <span style={{
-                      fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-                      letterSpacing: '0.1em', color: '#ec4899'
-                    }}>
-                      Detalle del Reclamo
-                    </span>
-                  </div>
-
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Problema del Cliente
-                    </label>
-                    <textarea
-                      className="input"
-                      rows="3"
-                      value={formData.problema}
-                      onChange={e => setFormData({ ...formData, problema: e.target.value })}
-                      placeholder="Describe el problema reportado por el cliente..."
-                      style={{ fontFamily: 'inherit', resize: 'vertical', marginBottom: 0 }}
-                    />
-                  </div>
-
-                  {/* Sección resolución */}
-                  <div style={{
-                    background: 'rgba(0,0,0,0.25)', borderRadius: '16px',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    padding: '18px', marginBottom: '20px'
-                  }}>
-                    <div style={{ marginBottom: '14px' }}>
-                      <span style={{
-                        fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-                        letterSpacing: '0.1em', color: '#8b5cf6'
-                      }}>
-                        🔍 Resolución y Seguimiento
-                      </span>
-                    </div>
-
-                    <div className="cc-modal-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Estado del Ticket
-                        </label>
-                        <select
-                          className="input"
-                          value={formData.estado}
-                          onChange={e => setFormData({ ...formData, estado: e.target.value })}
-                          style={{ background: '#1e1b4b', fontWeight: '700', marginBottom: 0 }}
-                        >
-                          {ESTADOS.map(e => (
-                            <option key={e.value} value={e.value}>{e.icon} {e.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Personal A Cargo
-                        </label>
-                        <input
-                          className="input"
-                          value={formData.a_cargo}
-                          onChange={e => setFormData({ ...formData, a_cargo: e.target.value })}
-                          placeholder="Ej: SOLANO, LLERENA..."
-                          style={{ marginBottom: 0 }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: '#fcd34d' }}>
-                        Observación Después de Revisión
-                      </label>
-                      <textarea
-                        className="input"
-                        rows="6"
-                        value={formData.observacion_revision}
-                        onChange={e => setFormData({ ...formData, observacion_revision: e.target.value })}
-                        placeholder="Detalle de la solución, pasos realizados, equipo revisado..."
-                        style={{ fontFamily: 'inherit', resize: 'vertical', marginBottom: 0, minHeight: '110px' }}
-                      />
-                      <div style={{ textAlign: 'right', fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
-                        {formData.observacion_revision.length} caracteres
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowModal(false)}
-                      className="btn"
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: 'rgba(255,255,255,0.7)'
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn"
-                      disabled={submitting}
-                      style={{
-                        background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-                        color: 'white', fontWeight: '700', minWidth: '150px',
-                        opacity: submitting ? 0.7 : 1,
-                      }}
-                    >
-                      {submitting ? '⌛ Guardando...' : (editingId ? '✅ Actualizar Ticket' : '📞 Crear Ticket')}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── MODAL DE DETALLE COMPLETO DE OBSERVACIÓN ── */}
-      <AnimatePresence>
-        {obsModalTicket && (
-          <motion.div
-            className="modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1050,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '20px',
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-            onClick={(e) => { if (e.target === e.currentTarget) setObsModalTicket(null); }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              exit={{ scale: 0.92, opacity: 0, y: 25 }}
               transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               style={{
-                width: '100%', maxWidth: '680px',
-                maxHeight: '90vh',
-                background: 'linear-gradient(145deg, #181236 0%, #1c1545 60%, #120e2e 100%)',
+                width: '100%', maxWidth: '1080px',
+                maxHeight: '92vh',
+                background: 'linear-gradient(145deg, #130f2c 0%, #1a1444 60%, #110e28 100%)',
                 borderRadius: '24px',
-                border: '1px solid rgba(139,92,246,0.3)',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15)',
+                border: '1.5px solid rgba(139,92,246,0.3)',
+                boxShadow: '0 25px 70px rgba(0,0,0,0.75), 0 0 35px rgba(139,92,246,0.15)',
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
               }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Header */}
+              {/* ── MODAL HEADER: NOMBRE DE CLIENTE Y SUBTÍTULO BONITO (IP, NÚMERO, DIRECCIÓN) ── */}
               <div style={{
-                padding: '20px 24px',
+                padding: '22px 28px 18px',
                 background: 'linear-gradient(90deg, rgba(236,72,153,0.12), rgba(139,92,246,0.15))',
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                gap: '14px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '12px',
-                    background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem'
-                  }}>
-                    📋
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  {/* Título: Nombre del cliente */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{
+                      width: '42px', height: '42px', borderRadius: '50%',
+                      background: getAvatarColor(selectedClient.nombre),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: '900', fontSize: '0.86rem', color: '#fff',
+                      boxShadow: '0 3px 10px rgba(0,0,0,0.4)', flexShrink: 0
+                    }}>
+                      {getInitials(selectedClient.nombre)}
+                    </div>
+                    <div>
+                      <h2 style={{
+                        margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#ffffff',
+                        lineHeight: '1.25', wordBreak: 'break-word', letterSpacing: '-0.01em'
+                      }}>
+                        {selectedClient.nombre}
+                      </h2>
+                    </div>
+                    {!selectedClient.isVirtual && selectedClient.id && (
+                      <span style={{
+                        fontSize: '0.72rem', color: '#c4b5fd', fontWeight: '800',
+                        background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)',
+                        padding: '2px 8px', borderRadius: '8px'
+                      }}>
+                        ID: #{selectedClient.id}
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#fff' }}>
-                      Detalle de Observación / Revisión
-                    </h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Ticket #{obsModalTicket.id} • {obsModalTicket.cliente_nombre || 'Cliente'}
-                    </p>
+
+                  {/* Subtítulo bonito: IP, Número y Dirección */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    marginTop: '10px', flexWrap: 'wrap'
+                  }}>
+                    <span style={{
+                      background: 'rgba(56, 189, 248, 0.12)',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      color: '#38bdf8', padding: '4px 12px', borderRadius: '20px',
+                      fontSize: '0.74rem', fontWeight: '700',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      🌐 IP: {selectedClient.ip || 'Sin IP'}
+                    </span>
+
+                    <span style={{
+                      background: 'rgba(37, 211, 102, 0.12)',
+                      border: '1px solid rgba(37, 211, 102, 0.3)',
+                      color: '#25d366', padding: '4px 12px', borderRadius: '20px',
+                      fontSize: '0.74rem', fontWeight: '700',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      📱 {selectedClient.celular || selectedClient.telefono || 'Sin número'}
+                    </span>
+
+                    <span style={{
+                      background: 'rgba(167, 139, 250, 0.12)',
+                      border: '1px solid rgba(167, 139, 250, 0.3)',
+                      color: '#c4b5fd', padding: '4px 12px', borderRadius: '20px',
+                      fontSize: '0.74rem', fontWeight: '700',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      📍 {selectedClient.direccion || selectedClient.parroquia || 'Sin dirección'}
+                    </span>
                   </div>
                 </div>
+
                 <button
-                  onClick={() => setObsModalTicket(null)}
+                  onClick={() => setShowModal(false)}
                   style={{
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.7)', width: '34px', height: '34px', borderRadius: '10px',
-                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s'
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.8)', width: '36px', height: '36px', borderRadius: '10px',
+                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.color = '#ef4444'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Body */}
-              <div style={{ padding: '22px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                {/* Metadatos del Ticket */}
-                <div style={{
-                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px',
-                  background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px',
-                  border: '1px solid rgba(255,255,255,0.06)'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Cliente Solicitante
+              {/* ── MODAL BODY: DOS COLUMNAS (CARD TICKET & CHAT DE WHATSAPP) ── */}
+              <div style={{
+                padding: '22px 26px',
+                overflowY: 'auto',
+                flex: 1,
+                display: 'grid',
+                gridTemplateColumns: 'minmax(340px, 1.15fr) minmax(320px, 0.95fr)',
+                gap: '22px'
+              }}>
+
+                {/* ═════════════════════════════════════════════
+                    COLUMNA 1: CARD TICKET DEL CLIENTE
+                ═════════════════════════════════════════════ */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                  {/* Selector / Pestañas de tickets existentes del cliente */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    flexWrap: 'wrap', gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', alignItems: 'center', paddingBottom: '2px' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>
+                        Tickets:
+                      </span>
+                      {modalClientTickets.map((t, idx) => {
+                        const isSelected = selectedTicketId === t.id;
+                        const tEst = getEstado(t.estado);
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => handleSelectTicket(t)}
+                            style={{
+                              padding: '5px 12px', borderRadius: '10px',
+                              border: `1.5px solid ${isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.08)'}`,
+                              background: isSelected ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255,255,255,0.03)',
+                              color: isSelected ? '#fff' : 'var(--text-muted)',
+                              cursor: 'pointer', fontSize: '0.72rem', fontWeight: '800',
+                              whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px'
+                            }}
+                          >
+                            <span>#{t.id}</span>
+                            <span>{tEst.icon}</span>
+                            {idx === 0 && (
+                              <span style={{ fontSize: '0.6rem', background: '#8b5cf6', color: '#fff', borderRadius: '4px', padding: '0 4px' }}>
+                                Actual
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTicket('NEW')}
+                        style={{
+                          padding: '5px 12px', borderRadius: '10px',
+                          border: `1.5px dashed ${selectedTicketId === 'NEW' ? '#ec4899' : 'rgba(236, 72, 153, 0.4)'}`,
+                          background: selectedTicketId === 'NEW' ? 'rgba(236, 72, 153, 0.2)' : 'transparent',
+                          color: '#ec4899', cursor: 'pointer', fontSize: '0.72rem',
+                          fontWeight: '800', whiteSpace: 'nowrap', display: 'inline-flex',
+                          alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        <span>+</span> Nuevo
+                      </button>
                     </div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', marginTop: '3px' }}>
-                      {obsModalTicket.cliente_nombre || '-'}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: '#a78bfa', marginTop: '2px' }}>
-                      {obsModalTicket.telefono ? `📞 ${obsModalTicket.telefono}` : ''}
-                      {obsModalTicket.ip ? ` • IP: ${obsModalTicket.ip}` : ''}
-                    </div>
-                    {obsModalTicket.direccion && (
-                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
-                        📍 {obsModalTicket.direccion}
+                  </div>
+
+                  {/* ── CARD TICKET ── */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.025)',
+                    border: '1.5px solid rgba(139, 92, 246, 0.28)',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}>
+
+                    {/* Header de la Card: Número de Ticket y Dropdown de Estado */}
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                      paddingBottom: '14px'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.3rem' }}>🎫</span>
+                          <span style={{ fontSize: '1.15rem', fontWeight: '900', color: '#ffffff' }}>
+                            {selectedTicketId === 'NEW' || !selectedTicketId ? 'Nuevo Ticket' : `Ticket #${selectedTicketId}`}
+                          </span>
+                        </div>
+                        {activeTicket?.fecha_ingreso && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                            📅 Creado el {formatToDMY(activeTicket.fecha_ingreso)} {new Date(activeTicket.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  <div>
-                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Estado del Ticket
-                    </div>
-                    <div style={{ marginTop: '5px' }}>
-                      <EstadoBadge estado={obsModalTicket.estado} />
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px' }}>
-                      A cargo: <strong style={{ color: '#e2e8f0' }}>{obsModalTicket.a_cargo || 'Sin asignar'}</strong>
-                    </div>
-                  </div>
+                      {/* Dropdown interactivo de Estado */}
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowStatusDropdown(prev => !prev)}
+                          style={{
+                            background: getEstado(ticketForm.estado).bg,
+                            color: getEstado(ticketForm.estado).color,
+                            border: `1.5px solid ${getEstado(ticketForm.estado).color}77`,
+                            padding: '8px 16px', borderRadius: '20px',
+                            fontSize: '0.8rem', fontWeight: '800',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            gap: '8px', boxShadow: `0 2px 10px ${getEstado(ticketForm.estado).color}25`,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <span>{getEstado(ticketForm.estado).icon}</span>
+                          <span>{getEstado(ticketForm.estado).label}</span>
+                          <span style={{ fontSize: '0.72rem' }}>▾</span>
+                        </button>
 
-                  <div>
-                    <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Registro & Tiempos
+                        <AnimatePresence>
+                          {showStatusDropdown && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -6 }}
+                              transition={{ duration: 0.15 }}
+                              style={{
+                                position: 'absolute', top: '100%', right: 0,
+                                marginTop: '6px', background: '#1c1344',
+                                border: '1px solid rgba(139, 92, 246, 0.4)',
+                                borderRadius: '14px', padding: '6px',
+                                zIndex: 120, boxShadow: '0 12px 35px rgba(0,0,0,0.7)',
+                                minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '4px'
+                              }}
+                            >
+                              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', padding: '4px 8px', textTransform: 'uppercase', fontWeight: '800' }}>
+                                Seleccionar Estado:
+                              </div>
+                              {ESTADOS.map(est => (
+                                <div
+                                  key={est.value}
+                                  onClick={() => {
+                                    setTicketForm(prev => ({ ...prev, estado: est.value }));
+                                    setShowStatusDropdown(false);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px', borderRadius: '8px',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                    gap: '10px', fontSize: '0.78rem', fontWeight: '700',
+                                    color: est.color,
+                                    background: ticketForm.estado === est.value ? `${est.color}24` : 'transparent',
+                                    transition: 'background 0.15s'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = `${est.color}24`}
+                                  onMouseLeave={e => {
+                                    if (ticketForm.estado !== est.value) e.currentTarget.style.background = 'transparent';
+                                  }}
+                                >
+                                  <span>{est.icon}</span>
+                                  <span>{est.label}</span>
+                                  {ticketForm.estado === est.value && (
+                                    <span style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>✓</span>
+                                  )}
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: '#ec4899', fontWeight: '700', marginTop: '3px' }}>
-                      📅 {obsModalTicket.fecha_ingreso ? formatToDMY(obsModalTicket.fecha_ingreso) : '-'}
-                      {obsModalTicket.fecha_ingreso && (
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>
-                          {new Date(obsModalTicket.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                    {/* Persona a cargo: sale automáticamente la cuenta que creó el ticket */}
+                    <div style={{
+                      background: 'rgba(139, 92, 246, 0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.2)',
+                      borderRadius: '12px', padding: '10px 14px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      flexWrap: 'wrap', gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.15rem' }}>👤</span>
+                        <div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>
+                            Persona A Cargo
+                          </div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#c4b5fd', marginTop: '2px' }}>
+                            {ticketForm.a_cargo || user.username || 'Sin asignar'}
+                          </div>
+                        </div>
+                      </div>
+                      {ticketForm.registrado_por && (
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>
+                          Creado por: <strong style={{ color: '#fff' }}>{ticketForm.registrado_por}</strong>
                         </span>
                       )}
                     </div>
-                    {obsModalTicket.registrado_por && (
-                      <div style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
-                        Por: {obsModalTicket.registrado_por}
-                      </div>
-                    )}
-                    {obsModalTicket.fecha_cambio_estado && obsModalTicket.estado !== 'PENDIENTE' && (
-                      <div style={{ fontSize: '0.68rem', color: '#38bdf8', marginTop: '4px' }}>
-                        🕐 Actualizado: {obsModalTicket.fecha_cambio_estado}
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Problema Reportado */}
-                {obsModalTicket.problema && (
-                  <div style={{
-                    background: 'rgba(245, 158, 11, 0.05)',
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    border: '1px solid rgba(245, 158, 11, 0.2)'
-                  }}>
-                    <div style={{ fontSize: '0.66rem', textTransform: 'uppercase', color: '#fbbf24', fontWeight: '800', letterSpacing: '0.08em', marginBottom: '5px' }}>
-                      ⚠️ Problema / Motivo del Soporte
+                    {/* Input: Problema del cliente */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.76rem', fontWeight: '800', color: '#f8fafc' }}>
+                        ⚠️ Problema del Cliente *
+                      </label>
+                      <textarea
+                        className="input"
+                        rows={3}
+                        value={ticketForm.problema}
+                        onChange={e => setTicketForm(prev => ({ ...prev, problema: e.target.value }))}
+                        placeholder="Describe el problema reportado por el cliente..."
+                        style={{
+                          width: '100%', marginBottom: 0,
+                          fontFamily: 'inherit', resize: 'vertical',
+                          background: 'rgba(0, 0, 0, 0.25)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontSize: '0.82rem', lineHeight: '1.45',
+                          minHeight: '80px'
+                        }}
+                      />
                     </div>
-                    <div className="preserve-breaks" style={{ fontSize: '0.8rem', color: '#e2e8f0', lineHeight: '1.5' }}>
-                      {obsModalTicket.problema}
-                    </div>
-                  </div>
-                )}
 
-                {/* Observación de Revisión (Completa) */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: '#a78bfa', fontWeight: '800', letterSpacing: '0.08em' }}>
-                      🔍 Observación y Solución de Revisión
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>
-                        {(obsModalTicket.observacion_revision || '').length} caracteres
-                      </span>
-                      {obsModalTicket.observacion_revision && (
+                    {/* Input: Solución del problema */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.76rem', fontWeight: '800', color: '#34d399' }}>
+                        ✅ Solución del Problema / Observación
+                      </label>
+                      <textarea
+                        className="input"
+                        rows={4}
+                        value={ticketForm.observacion_revision}
+                        onChange={e => setTicketForm(prev => ({ ...prev, observacion_revision: e.target.value }))}
+                        placeholder="Detalle de la solución, pasos técnicos o diagnóstico realizado..."
+                        style={{
+                          width: '100%', marginBottom: 0,
+                          fontFamily: 'inherit', resize: 'vertical',
+                          background: 'rgba(0, 0, 0, 0.25)',
+                          border: '1px solid rgba(52, 211, 153, 0.3)',
+                          fontSize: '0.82rem', lineHeight: '1.45',
+                          minHeight: '95px'
+                        }}
+                      />
+                    </div>
+
+                    {/* Botones de acción del Ticket */}
+                    <div style={{
+                      display: 'flex', gap: '10px', alignItems: 'center',
+                      justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '4px'
+                    }}>
+                      {ticketForm.estado === 'VISITA TECNICA' && (
                         <button
                           type="button"
-                          onClick={() => handleCopyObs(obsModalTicket.observacion_revision)}
+                          onClick={() => handleOpenHojaRutaModal(activeTicket || { ...ticketForm, cliente_nombre: selectedClient.nombre })}
                           style={{
-                            background: copiedObs ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)',
-                            border: `1px solid ${copiedObs ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.12)'}`,
-                            color: copiedObs ? '#34d399' : '#c4b5fd',
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.68rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'all 0.2s',
+                            padding: '8px 14px', borderRadius: '10px',
+                            background: 'rgba(249,115,22,0.18)',
+                            border: '1px solid rgba(249,115,22,0.4)',
+                            color: '#fb923c', cursor: 'pointer',
+                            fontSize: '0.76rem', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '6px'
                           }}
                         >
-                          {copiedObs ? '✓ ¡Copiado!' : '📋 Copiar'}
+                          🗓️ Hoja de Ruta
                         </button>
                       )}
-                    </div>
-                  </div>
 
-                  <div className="preserve-breaks" style={{
-                    background: 'rgba(10, 8, 25, 0.65)',
-                    padding: '18px',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(139, 92, 246, 0.25)',
-                    fontSize: '0.86rem',
-                    lineHeight: '1.65',
-                    color: '#f8fafc',
-                    maxHeight: '340px',
-                    overflowY: 'auto',
-                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}>
-                    {obsModalTicket.observacion_revision || 'Sin observaciones registradas.'}
+                      {user.rol?.toLowerCase() === 'administrador' && selectedTicketId && selectedTicketId !== 'NEW' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(selectedTicketId)}
+                          style={{
+                            padding: '8px 12px', borderRadius: '10px',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#f87171', cursor: 'pointer',
+                            fontSize: '0.76rem', fontWeight: '700'
+                          }}
+                          title="Eliminar este ticket"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleSaveTicket}
+                        disabled={submitting}
+                        className="btn"
+                        style={{
+                          background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
+                          color: '#fff', fontWeight: '800',
+                          fontSize: '0.82rem', padding: '9px 20px',
+                          borderRadius: '12px', border: 'none',
+                          cursor: submitting ? 'not-allowed' : 'pointer',
+                          boxShadow: '0 4px 14px rgba(139,92,246,0.3)',
+                          display: 'inline-flex', alignItems: 'center', gap: '6px'
+                        }}
+                      >
+                        {submitting ? '⌛ Guardando...' : (selectedTicketId === 'NEW' || !selectedTicketId ? '📞 Crear Ticket' : '💾 Guardar Ticket')}
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
-              </div>
+                {/* ═════════════════════════════════════════════
+                    COLUMNA 2: CONVERSACIÓN DE WHATSAPP DEL CLIENTE
+                ═════════════════════════════════════════════ */}
+                <div style={{
+                  background: 'rgba(10, 15, 26, 0.65)',
+                  border: '1.5px solid rgba(37, 211, 102, 0.25)',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  height: '100%',
+                  minHeight: '480px',
+                  maxHeight: '620px'
+                }}>
 
-              {/* Actions Footer */}
-              <div style={{
-                padding: '16px 24px',
-                background: 'rgba(0,0,0,0.25)',
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', justifyContent: 'flex-end', gap: '10px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const t = obsModalTicket;
-                    setObsModalTicket(null);
-                    handleOpenModal(t);
-                  }}
-                  className="btn"
-                  style={{
-                    background: 'rgba(139,92,246,0.15)',
-                    border: '1px solid rgba(139,92,246,0.3)',
-                    color: '#c4b5fd',
-                    fontSize: '0.8rem',
-                    fontWeight: '700'
-                  }}
-                >
-                  ⚙️ Gestionar Ticket
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setObsModalTicket(null)}
-                  className="btn"
-                  style={{
-                    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '0.8rem',
-                    minWidth: '100px'
-                  }}
-                >
-                  Cerrar
-                </button>
-              </div>
+                  {/* Header de WhatsApp */}
+                  <div style={{
+                    padding: '14px 18px',
+                    background: 'linear-gradient(90deg, rgba(37, 211, 102, 0.14), rgba(16, 185, 129, 0.08))',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.3rem' }}>💬</span>
+                      <div>
+                        <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#ffffff' }}>
+                          Conversación de WhatsApp
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#86efac' }}>
+                          📱 {modalWaInfo.waPhone ? `+${modalWaInfo.waPhone}` : (selectedClient.celular || 'Sin número')}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => cargarChatCliente(selectedClient.celular || selectedClient.telefono)}
+                      disabled={loadingChat}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#fff', padding: '5px 10px',
+                        borderRadius: '8px', fontSize: '0.72rem',
+                        fontWeight: '700', cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: '4px'
+                      }}
+                      title="Recargar conversación"
+                    >
+                      <span>{loadingChat ? '⌛' : '🔄'}</span>
+                      <span>{loadingChat ? 'Cargando...' : 'Actualizar'}</span>
+                    </button>
+                  </div>
 
+                  {/* Mensajes del Chat con fechas y burbujas */}
+                  <div style={{
+                    flex: 1, overflowY: 'auto',
+                    padding: '16px', display: 'flex',
+                    flexDirection: 'column', gap: '12px',
+                    background: 'rgba(0, 0, 0, 0.2)'
+                  }}>
+                    {loadingChat ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        ⌛ Cargando mensajes de WhatsApp...
+                      </div>
+                    ) : !modalWaInfo.waPhone && !modalWaInfo.callPhone ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}>📱</span>
+                        Este cliente no tiene un teléfono celular registrado para consultar WhatsApp.
+                      </div>
+                    ) : chatMensajes.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}>💬</span>
+                        No se encontraron mensajes de WhatsApp registrados con este cliente.
+                      </div>
+                    ) : (
+                      chatMensajes.map(m => {
+                        const esCliente = m.rol === 'cliente';
+                        const esOperador = m.rol === 'operador';
+                        const esAsistente = m.rol === 'asistente';
+                        const fechaHoraStr = formatChatDate(m.fecha_hora);
+
+                        return (
+                          <div
+                            key={m.id}
+                            style={{
+                              alignSelf: esCliente ? 'flex-start' : 'flex-end',
+                              maxWidth: '85%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: esCliente ? 'flex-start' : 'flex-end'
+                            }}
+                          >
+                            <div style={{
+                              padding: '10px 14px',
+                              borderRadius: esCliente ? '14px 14px 14px 2px' : '14px 14px 2px 14px',
+                              background: esCliente
+                                ? 'rgba(30, 41, 59, 0.95)'
+                                : esOperador
+                                ? 'linear-gradient(135deg, #065f46, #047857)'
+                                : 'linear-gradient(135deg, #1e3a8a, #1d4ed8)',
+                              border: esCliente
+                                ? '1px solid rgba(255, 255, 255, 0.12)'
+                                : esOperador
+                                ? '1px solid rgba(52, 211, 153, 0.4)'
+                                : '1px solid rgba(96, 165, 250, 0.4)',
+                              color: '#f8fafc',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                              wordBreak: 'break-word',
+                              fontSize: '0.82rem',
+                              lineHeight: 1.45
+                            }}>
+                              {/* Remitente */}
+                              <div style={{
+                                fontSize: '0.68rem', fontWeight: '800',
+                                marginBottom: '4px', display: 'flex',
+                                alignItems: 'center', gap: '4px',
+                                color: esCliente ? '#93c5fd' : esOperador ? '#a7f3d0' : '#bfdbfe'
+                              }}>
+                                {esCliente && <span>👤 Cliente</span>}
+                                {esOperador && <span>👨‍💼 Operador</span>}
+                                {esAsistente && <span>🤖 SAM Bot (IA)</span>}
+                              </div>
+
+                              {/* Mensaje */}
+                              <div style={{ whiteSpace: 'pre-wrap' }}>
+                                {m.mensaje}
+                              </div>
+
+                              {/* Fecha y Hora completa */}
+                              <div style={{
+                                fontSize: '0.64rem', opacity: 0.75,
+                                textAlign: 'right', marginTop: '6px',
+                                color: '#cbd5e1'
+                              }}>
+                                📅 {fechaHoraStr} {esOperador && '✓✓'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  {/* Barra rápida de envío de WhatsApp */}
+                  <form
+                    onSubmit={handleEnviarMensajeChat}
+                    style={{
+                      padding: '10px 14px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      display: 'flex', gap: '8px', alignItems: 'center'
+                    }}
+                  >
+                    <input
+                      className="input"
+                      value={nuevoMensajeChat}
+                      onChange={e => setNuevoMensajeChat(e.target.value)}
+                      placeholder="Escribir mensaje a cliente..."
+                      style={{
+                        marginBottom: 0, fontSize: '0.78rem',
+                        padding: '8px 12px', borderRadius: '10px',
+                        background: 'rgba(255, 255, 255, 0.05)', flex: 1
+                      }}
+                      disabled={enviandoMensajeChat || (!modalWaInfo.waPhone && !modalWaInfo.callPhone)}
+                    />
+                    <button
+                      type="submit"
+                      disabled={enviandoMensajeChat || !nuevoMensajeChat.trim() || (!modalWaInfo.waPhone && !modalWaInfo.callPhone)}
+                      style={{
+                        padding: '8px 14px', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        border: 'none', color: '#fff',
+                        fontWeight: '800', fontSize: '0.76rem',
+                        cursor: (enviandoMensajeChat || !nuevoMensajeChat.trim()) ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {enviandoMensajeChat ? '⌛' : '📤 Enviar'}
+                    </button>
+                  </form>
+
+                </div>
+
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* ── MODAL: ENVIAR A HOJA DE RUTA ── */}
+
+      {/* ────────────────────────────────────────────
+          MODAL: ENVIAR A HOJA DE RUTA
+      ────────────────────────────────────────────── */}
       <AnimatePresence>
         {showHojaRutaModal && (
           <motion.div
@@ -2013,10 +1954,8 @@ const CallCenter = () => {
             style={{
               position: 'fixed', inset: 0, zIndex: 1100,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '20px',
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              padding: '20px', background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
             }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowHojaRutaModal(false); }}
           >
@@ -2027,15 +1966,11 @@ const CallCenter = () => {
               exit={{ scale: 0.9, opacity: 0, y: 25 }}
               transition={{ type: 'spring', damping: 24, stiffness: 280 }}
               style={{
-                width: '100%', maxWidth: '680px',
-                maxHeight: '90vh',
+                width: '100%', maxWidth: '680px', maxHeight: '90vh',
                 background: 'linear-gradient(145deg, #181136 0%, #1e144a 60%, #130e2f 100%)',
-                borderRadius: '24px',
-                border: '1px solid rgba(249, 115, 22, 0.4)',
+                borderRadius: '24px', border: '1px solid rgba(249, 115, 22, 0.4)',
                 boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(249, 115, 22, 0.15)',
-                display: 'flex',
-                flexDirection: 'column',
-                overflowY: 'auto',
+                display: 'flex', flexDirection: 'column', overflowY: 'auto',
               }}
               onClick={e => e.stopPropagation()}
             >
@@ -2070,8 +2005,8 @@ const CallCenter = () => {
                   style={{
                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
                     color: 'rgba(255,255,255,0.7)', width: '34px', height: '34px', borderRadius: '10px',
-                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s'
+                    cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', transition: 'all 0.2s'
                   }}
                 >
                   ×
@@ -2083,15 +2018,10 @@ const CallCenter = () => {
                 
                 {/* Resumen del cliente */}
                 <div style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '14px',
-                  padding: '14px 18px',
-                  marginBottom: '18px',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '10px',
-                  fontSize: '0.78rem'
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '14px', padding: '14px 18px', marginBottom: '18px',
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '10px', fontSize: '0.78rem'
                 }}>
                   <div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Cliente:</span>
@@ -2134,9 +2064,7 @@ const CallCenter = () => {
                       style={{
                         marginBottom: 0, width: '100%',
                         border: '1px solid rgba(245, 158, 11, 0.4)',
-                        background: '#1e1842',
-                        color: '#fef3c7',
-                        fontWeight: '700'
+                        background: '#1e1842', color: '#fef3c7', fontWeight: '700'
                       }}
                       required
                     />
@@ -2154,11 +2082,8 @@ const CallCenter = () => {
                       value={hojaRutaForm.tecnico}
                       onChange={e => setHojaRutaForm({ ...hojaRutaForm, tecnico: e.target.value })}
                       style={{
-                        marginBottom: 0, width: '100%',
-                        background: '#1e1842',
-                        color: '#ffffff',
-                        fontWeight: '700',
-                        border: '1px solid rgba(56, 189, 248, 0.4)'
+                        marginBottom: 0, width: '100%', background: '#1e1842',
+                        color: '#ffffff', fontWeight: '700', border: '1px solid rgba(56, 189, 248, 0.4)'
                       }}
                       required
                     >
@@ -2189,16 +2114,11 @@ const CallCenter = () => {
                   </div>
                 </div>
 
-                {/* Observaciones (Observación Revisión) */}
+                {/* Observaciones */}
                 <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fcd34d' }}>
-                      📝 Observaciones para el Técnico (Observación Revisión) *
-                    </label>
-                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                      Pre-llenado de Call Center
-                    </span>
-                  </div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#fcd34d' }}>
+                    📝 Observaciones para el Técnico *
+                  </label>
                   <textarea
                     className="input"
                     rows="5"
@@ -2207,17 +2127,12 @@ const CallCenter = () => {
                     placeholder="Detalle técnico de la visita, instrucciones para el técnico..."
                     style={{
                       fontFamily: 'inherit', resize: 'vertical', marginBottom: 0,
-                      minHeight: '90px', width: '100%',
-                      background: 'rgba(0,0,0,0.3)',
-                      border: '1px solid rgba(252, 211, 77, 0.35)',
-                      color: '#f8fafc',
+                      minHeight: '90px', width: '100%', background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(252, 211, 77, 0.35)', color: '#f8fafc',
                       lineHeight: '1.5'
                     }}
                     required
                   />
-                  <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                    Esta observación se registrará en la Hoja de Ruta para que el técnico la visualice en campo.
-                  </div>
                 </div>
 
                 {/* Botones de acción */}
@@ -2227,11 +2142,8 @@ const CallCenter = () => {
                     onClick={() => setShowHojaRutaModal(false)}
                     className="btn"
                     style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      color: 'rgba(255,255,255,0.7)',
-                      fontSize: '0.8rem',
-                      fontWeight: '600'
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                      color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: '600'
                     }}
                   >
                     Cancelar
@@ -2242,16 +2154,10 @@ const CallCenter = () => {
                     className="btn"
                     style={{
                       background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                      border: 'none',
-                      color: '#fff',
-                      fontWeight: '800',
-                      fontSize: '0.82rem',
-                      padding: '10px 22px',
-                      borderRadius: '12px',
+                      border: 'none', color: '#fff', fontWeight: '800',
+                      fontSize: '0.82rem', padding: '10px 22px', borderRadius: '12px',
                       cursor: submittingHojaRuta ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
                       boxShadow: '0 4px 15px rgba(249, 115, 22, 0.35)'
                     }}
                   >
@@ -2263,6 +2169,7 @@ const CallCenter = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 };
