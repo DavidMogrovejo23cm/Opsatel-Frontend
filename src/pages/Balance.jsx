@@ -2956,9 +2956,10 @@ const Balance = () => {
     })).filter(x => x.value > 0);
 
     // Los egresos de la lista ya incluyen los gastos fijos sincronizados de este mes.
+    const allEgresos = egData.lista || [];
     // Para el cálculo de balance, filtramos ÚNICAMENTE los egresos que estén en estado "Realizado".
-    const egresosRealizados = (egData.lista || []).filter(e => (e.estado || 'Realizado').toLowerCase() === 'realizado');
-    const egresosPendientes = (egData.lista || []).filter(e => (e.estado || 'Realizado').toLowerCase() === 'pendiente');
+    const egresosRealizados = allEgresos.filter(e => (e.estado || 'Realizado').toLowerCase() === 'realizado');
+    const egresosPendientes = allEgresos.filter(e => (e.estado || 'Realizado').toLowerCase() === 'pendiente');
 
     const egByMetodo = egresosRealizados.reduce((acc, eg) => {
       const metodo = eg.metodo_pago || 'Efectivo';
@@ -3397,8 +3398,8 @@ const Balance = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                 <tr style={{ background: '#1a1a2e', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                  {['Descripción', 'En qué se gastó', 'Categoría', 'Método', 'Monto'].map(h => (
-                    <th key={h} style={{ padding: '14px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
+                  {['Descripción', 'En qué se gastó', 'Categoría', 'Método', 'Estado', 'Monto'].map(h => (
+                    <th key={h} style={{ padding: '14px 16px', textAlign: h === 'Monto' ? 'right' : 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -3411,37 +3412,67 @@ const Balance = () => {
                       e.categoria.toLowerCase().includes(search) ||
                       e.metodo_pago.toLowerCase().includes(search);
                   })
-                  .map((eg, idx) => (
-                    <tr key={eg.id} style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.03)',
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
-                      transition: 'background 0.2s'
-                    }} className="hover-row">
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>
-                        {eg.esFijo && <span title="Egreso Fijo Mensual" style={{ marginRight: 6 }}>🔒</span>}
-                        {eg.descripcion}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {eg.esFijo ? (
-                          <Badge text="🔒 Fijo Mensual" color="#f43f5e" />
-                        ) : eg.subcategoria ? (
-                          <Badge text={eg.subcategoria} color={P.proyecto} />
-                        ) : (
-                          <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}><Badge text={getCatLabel(eg.categoria, customCategorias)} color={getCatColor(eg.categoria, customCategorias)} /></td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px', color: P.egreso, fontWeight: 800, fontSize: '0.95rem' }}>{fmt(eg.monto)}</td>
-                    </tr>
-                  ))}
+                  .map((eg, idx) => {
+                    const esRealizado = (eg.estado || 'Realizado').toLowerCase() === 'realizado';
+                    return (
+                      <tr key={eg.id} style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                        opacity: esRealizado ? 1 : 0.85,
+                        transition: 'background 0.2s'
+                      }} className="hover-row">
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'white' }}>
+                          {(eg.esFijo || eg.gasto_fijo_id) && <span title="Egreso Fijo Mensual" style={{ marginRight: 6 }}>🔒</span>}
+                          {eg.descripcion}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {(eg.esFijo || eg.gasto_fijo_id) ? (
+                            <Badge text="🔒 Fijo Mensual" color="#f43f5e" />
+                          ) : eg.subcategoria ? (
+                            <Badge text={eg.subcategoria} color={P.proyecto} />
+                          ) : (
+                            <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}><Badge text={getCatLabel(eg.categoria, customCategorias)} color={getCatColor(eg.categoria, customCategorias)} /></td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ color: eg.metodo_pago === 'Efectivo' ? P.efectivo : P.pichincha, fontWeight: 700, fontSize: '0.75rem' }}>● {eg.metodo_pago.toUpperCase()}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleEstadoEgreso(eg)}
+                            title={`Clic para cambiar a ${esRealizado ? 'Pendiente' : 'Realizado'}`}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 14,
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              border: esRealizado ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(245,158,11,0.5)',
+                              background: esRealizado ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
+                              color: esRealizado ? '#34d399' : '#fbbf24',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {esRealizado ? '🟢 REALIZADO' : '🟡 PENDIENTE'}
+                          </button>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', color: esRealizado ? P.egreso : '#fbbf24', fontWeight: 800, fontSize: '0.95rem' }}>
+                          {fmt(eg.monto)}
+                          {!esRealizado && <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>no suma</div>}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
               <tfoot style={{ position: 'sticky', bottom: 0 }}>
                 <tr style={{ background: 'rgba(244,63,94,0.15)', backdropFilter: 'blur(10px)', fontWeight: 900 }}>
-                  <td colSpan={4} style={{ padding: '16px', color: 'white', letterSpacing: 1 }}>TOTAL GASTOS DEL MES</td>
-                  <td style={{ padding: '16px', color: P.egreso, fontSize: '1.2rem', textAlign: 'left' }}>{fmt(egData.total)}</td>
+                  <td colSpan={5} style={{ padding: '16px', color: 'white', letterSpacing: 1 }}>TOTAL GASTOS DEL MES (REALIZADOS)</td>
+                  <td style={{ padding: '16px', color: P.egreso, fontSize: '1.2rem', textAlign: 'right' }}>{fmt(egData.total)}</td>
                 </tr>
               </tfoot>
             </table>
