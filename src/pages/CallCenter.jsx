@@ -136,6 +136,19 @@ const CallCenter = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Detección de Sidebar en escritorio para centrar modales perfectamente
+  const [isDesktopSidebar, setIsDesktopSidebar] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth > 1024 : true
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktopSidebar(window.innerWidth > 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Cliente y Ticket seleccionado en Modal
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedTicketId, setSelectedTicketId] = useState(null); // id o 'NEW'
@@ -1337,12 +1350,20 @@ const CallCenter = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
-              position: 'fixed', inset: 0, zIndex: 1000,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '12px',
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              right: 0,
+              left: isDesktopSidebar ? '270px' : '0px',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: isDesktopSidebar ? '16px 24px' : '10px',
               background: 'rgba(0,0,0,0.8)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
+              boxSizing: 'border-box'
             }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
           >
@@ -1353,8 +1374,8 @@ const CallCenter = () => {
               exit={{ scale: 0.94, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 320 }}
               style={{
-                width: '96vw',
-                maxWidth: '1480px',
+                width: '100%',
+                maxWidth: isDesktopSidebar ? 'calc(100vw - 310px)' : '98vw',
                 height: '92vh',
                 maxHeight: '94vh',
                 background: 'linear-gradient(160deg, #130f28 0%, #171136 50%, #0e0a20 100%)',
@@ -1364,6 +1385,7 @@ const CallCenter = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
+                boxSizing: 'border-box'
               }}
               onClick={e => e.stopPropagation()}
             >
@@ -1475,12 +1497,12 @@ const CallCenter = () => {
 
               {/* ── MODAL BODY: DOS COLUMNAS DE ALTO IMPACTO (TICKETS Y WHATSAPP) ── */}
               <div style={{
-                padding: '20px 28px',
+                padding: '18px 24px',
                 flex: 1,
-                overflowY: 'hidden',
+                overflowY: isDesktopSidebar ? 'hidden' : 'auto',
                 display: 'grid',
-                gridTemplateColumns: 'minmax(500px, 1.25fr) minmax(400px, 1fr)',
-                gap: '22px'
+                gridTemplateColumns: isDesktopSidebar ? 'minmax(0, 1.22fr) minmax(0, 0.98fr)' : '1fr',
+                gap: '20px'
               }}>
 
                 {/* ═════════════════════════════════════════════
@@ -2065,10 +2087,16 @@ const CallCenter = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
-              position: 'fixed', inset: 0, zIndex: 1100,
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              right: 0,
+              left: isDesktopSidebar ? '270px' : '0px',
+              zIndex: 1100,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '20px', background: 'rgba(0,0,0,0.7)',
               backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              boxSizing: 'border-box'
             }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowHojaRutaModal(false); }}
           >
