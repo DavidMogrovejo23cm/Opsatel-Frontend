@@ -183,13 +183,13 @@ const General = () => {
     if (c.pendiente !== undefined && c.pendiente !== null && c.pendiente !== '') {
       return typeof c.pendiente === 'number' ? `$${c.pendiente.toFixed(2)}` : String(c.pendiente);
     }
-    const saldoVal = (c.saldo !== null && c.saldo !== undefined) 
-      ? parseFloat(c.saldo || 0) 
+    const saldoVal = (c.saldo !== null && c.saldo !== undefined)
+      ? parseFloat(c.saldo || 0)
       : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
     const plusVal = parseFloat(c.plus || 0);
     const adicVal = parseFloat(c.adicional || 0);
-    const total = (c.total_pago !== undefined && c.total_pago !== null) 
-      ? parseFloat(c.total_pago) 
+    const total = (c.total_pago !== undefined && c.total_pago !== null)
+      ? parseFloat(c.total_pago)
       : (saldoVal + plusVal + adicVal);
     return `$${total.toFixed(2)}`;
   };
@@ -1383,23 +1383,7 @@ const General = () => {
             )}
           </div>
           <div className="general-desktop-only" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <input
-              className="input"
-              placeholder="🌐 Filtrar por IP..."
-              style={{
-                width: 'auto',
-                minWidth: '160px',
-                marginBottom: 0,
-                fontSize: '0.82rem',
-                height: '38px',
-                padding: '4px 28px 4px 10px',
-                background: 'var(--input-select-bg, #1e1b4b)',
-                color: 'var(--text-main)',
-                borderColor: ipFilter ? 'var(--primary, #6366f1)' : undefined
-              }}
-              value={ipFilter}
-              onChange={(e) => setIpFilter(e.target.value)}
-            />
+
             {ipFilter && (
               <button
                 type="button"
@@ -1460,423 +1444,266 @@ const General = () => {
       {loading ? <p>Cargando datos...</p> : (
         <>
           <div className="table-container general-desktop-view" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
-          <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
-            <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-solid, #0a0e18)', zIndex: 20 }}>
-              <tr>
-                {allColumns.map(col => {
-                  const isId = col === 'id';
-                  const isNombre = col === 'nombre';
-                  const isIp = col === 'ip';
-                  const isSticky = isId || isNombre || isIp;
+            <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-solid, #0a0e18)', zIndex: 20 }}>
+                <tr>
+                  {allColumns.map(col => {
+                    const isId = col === 'id';
+                    const isNombre = col === 'nombre';
+                    const isIp = col === 'ip';
+                    const isSticky = isId || isNombre || isIp;
 
-                  // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
-                  let stickyStyle = {};
-                  if (isId) {
-                    stickyStyle = {
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 30,
-                      background: 'var(--table-header-solid, #0a0e18)'
-                    };
-                  } else if (isNombre) {
-                    stickyStyle = {
-                      position: 'sticky',
-                      left: colWidths['id'] || 60,
-                      zIndex: 30,
-                      background: 'var(--table-header-solid, #0a0e18)'
-                    };
-                  } else if (isIp) {
-                    stickyStyle = {
-                      position: 'sticky',
-                      left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
-                      zIndex: 30,
-                      background: 'var(--table-header-solid, #0a0e18)',
-                      borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                      boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
-                    };
-                  }
+                    // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
+                    let stickyStyle = {};
+                    if (isId) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 30,
+                        background: 'var(--table-header-solid, #0a0e18)'
+                      };
+                    } else if (isNombre) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: colWidths['id'] || 60,
+                        zIndex: 30,
+                        background: 'var(--table-header-solid, #0a0e18)'
+                      };
+                    } else if (isIp) {
+                      stickyStyle = {
+                        position: 'sticky',
+                        left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
+                        zIndex: 30,
+                        background: 'var(--table-header-solid, #0a0e18)',
+                        borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
+                      };
+                    }
 
-                  return (
-                    <th key={col} className={isSticky ? 'sticky-col' : ''} style={{
+                    return (
+                      <th key={col} className={isSticky ? 'sticky-col' : ''} style={{
+                        padding: '12px',
+                        borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                        textAlign: 'left',
+                        width: colWidths[col] || 150,
+                        minWidth: colWidths[col] || 150,
+                        maxWidth: colWidths[col] || 150,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        ...stickyStyle
+                      }}>
+                        {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : (col === 'bridge' || col === 'breach') ? 'BRIDGE' : col.replace('_', ' ')}
+
+                        {/* Control para redimensionar la columna */}
+                        <div
+                          onMouseDown={(e) => handleMouseDown(e, col)}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '6px',
+                            cursor: 'col-resize',
+                            background: 'rgba(255,255,255,0.05)',
+                            zIndex: 25
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = 'rgba(99, 102, 241, 0.4)'}
+                          onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                        />
+                      </th>
+                    );
+                  })}
+                  {selectedAction === 'POTENCIA' && (
+                    <th key="acciones-potencia" style={{
                       padding: '12px',
                       borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
                       borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                       textTransform: 'uppercase',
                       whiteSpace: 'nowrap',
-                      textAlign: 'left',
-                      width: colWidths[col] || 150,
-                      minWidth: colWidths[col] || 150,
-                      maxWidth: colWidths[col] || 150,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      ...stickyStyle
+                      textAlign: 'center',
+                      width: 140,
+                      minWidth: 140,
+                      maxWidth: 140,
+                      position: 'sticky',
+                      right: 0,
+                      background: 'var(--sticky-col-bg, #131526)',
+                      zIndex: 22,
+                      borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
                     }}>
-                      {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : (col === 'bridge' || col === 'breach') ? 'BRIDGE' : col.replace('_', ' ')}
-
-                      {/* Control para redimensionar la columna */}
-                      <div
-                        onMouseDown={(e) => handleMouseDown(e, col)}
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: '6px',
-                          cursor: 'col-resize',
-                          background: 'rgba(255,255,255,0.05)',
-                          zIndex: 25
-                        }}
-                        onMouseEnter={(e) => e.target.style.background = 'rgba(99, 102, 241, 0.4)'}
-                        onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
-                      />
+                      Acción (Potencia)
                     </th>
-                  );
-                })}
-                {selectedAction === 'POTENCIA' && (
-                  <th key="acciones-potencia" style={{
-                    padding: '12px',
-                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    width: 140,
-                    minWidth: 140,
-                    maxWidth: 140,
-                    position: 'sticky',
-                    right: 0,
-                    background: 'var(--sticky-col-bg, #131526)',
-                    zIndex: 22,
-                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
-                  }}>
-                    Acción (Potencia)
-                  </th>
-                )}
-                {selectedAction === 'MIGRAR' && (
-                  <th key="acciones-migrar" style={{
-                    padding: '12px',
-                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    width: 130,
-                    minWidth: 130,
-                    maxWidth: 130,
-                    position: 'sticky',
-                    right: 0,
-                    background: 'var(--sticky-col-bg, #131526)',
-                    zIndex: 22,
-                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
-                  }}>
-                    Acción (Migrar)
-                  </th>
-                )}
-                {selectedAction === 'ELIMINAR' && (
-                  <th key="acciones-eliminar" style={{
-                    padding: '12px',
-                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    width: 120,
-                    minWidth: 120,
-                    maxWidth: 120,
-                    position: 'sticky',
-                    right: 0,
-                    background: 'var(--sticky-col-bg, #131526)',
-                    zIndex: 22,
-                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
-                  }}>
-                    Acción (Eliminar)
-                  </th>
-                )}
-                {selectedAction === 'BORRAR' && (
-                  <th key="acciones-borrar" style={{
-                    padding: '12px',
-                    borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                    borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    width: 130,
-                    minWidth: 130,
-                    maxWidth: 130,
-                    position: 'sticky',
-                    right: 0,
-                    background: 'var(--sticky-col-bg, #131526)',
-                    zIndex: 22,
-                    borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
-                  }}>
-                    Acción (Borrar Todo)
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClientes.map(c => {
-                const isFiniquito = c.estado?.toUpperCase() === 'FINIQUITO';
-                return (
-                  <tr
-                    key={c.id}
-                    style={{
-                      borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                      opacity: isFiniquito ? 0.65 : 1,
-                      background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
-                      transition: 'opacity 0.2s ease'
-                    }}
-                  >
-                    {allColumns.map(col => {
-                      const isEditing = editingCell?.id === c.id && editingCell?.col === col;
-                      const isId = col === 'id';
-                      const isNombre = col === 'nombre';
-                      const isIp = col === 'ip';
-                      const isSticky = isId || isNombre || isIp;
+                  )}
+                  {selectedAction === 'MIGRAR' && (
+                    <th key="acciones-migrar" style={{
+                      padding: '12px',
+                      borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                      borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      width: 130,
+                      minWidth: 130,
+                      maxWidth: 130,
+                      position: 'sticky',
+                      right: 0,
+                      background: 'var(--sticky-col-bg, #131526)',
+                      zIndex: 22,
+                      borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                    }}>
+                      Acción (Migrar)
+                    </th>
+                  )}
+                  {selectedAction === 'ELIMINAR' && (
+                    <th key="acciones-eliminar" style={{
+                      padding: '12px',
+                      borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                      borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      width: 120,
+                      minWidth: 120,
+                      maxWidth: 120,
+                      position: 'sticky',
+                      right: 0,
+                      background: 'var(--sticky-col-bg, #131526)',
+                      zIndex: 22,
+                      borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                    }}>
+                      Acción (Eliminar)
+                    </th>
+                  )}
+                  {selectedAction === 'BORRAR' && (
+                    <th key="acciones-borrar" style={{
+                      padding: '12px',
+                      borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                      borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      width: 130,
+                      minWidth: 130,
+                      maxWidth: 130,
+                      position: 'sticky',
+                      right: 0,
+                      background: 'var(--sticky-col-bg, #131526)',
+                      zIndex: 22,
+                      borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))'
+                    }}>
+                      Acción (Borrar Todo)
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClientes.map(c => {
+                  const isFiniquito = c.estado?.toUpperCase() === 'FINIQUITO';
+                  return (
+                    <tr
+                      key={c.id}
+                      style={{
+                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        opacity: isFiniquito ? 0.65 : 1,
+                        background: isFiniquito ? 'rgba(15, 23, 42, 0.4)' : 'transparent',
+                        transition: 'opacity 0.2s ease'
+                      }}
+                    >
+                      {allColumns.map(col => {
+                        const isEditing = editingCell?.id === c.id && editingCell?.col === col;
+                        const isId = col === 'id';
+                        const isNombre = col === 'nombre';
+                        const isIp = col === 'ip';
+                        const isSticky = isId || isNombre || isIp;
 
-                      // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
-                      let stickyStyle = {};
-                      if (isId) {
-                        stickyStyle = {
-                          position: 'sticky',
-                          left: 0,
-                          zIndex: 10,
-                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
-                        };
-                      } else if (isNombre) {
-                        stickyStyle = {
-                          position: 'sticky',
-                          left: colWidths['id'] || 60,
-                          zIndex: 10,
-                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
-                        };
-                      } else if (isIp) {
-                        stickyStyle = {
-                          position: 'sticky',
-                          left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
-                          zIndex: 10,
-                          background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)'),
-                          borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                          boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
-                        };
-                      }
+                        // Posiciones sticky para ID, Nombre e IP con fondo 100% sólido y opaco
+                        let stickyStyle = {};
+                        if (isId) {
+                          stickyStyle = {
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 10,
+                            background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
+                          };
+                        } else if (isNombre) {
+                          stickyStyle = {
+                            position: 'sticky',
+                            left: colWidths['id'] || 60,
+                            zIndex: 10,
+                            background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')
+                          };
+                        } else if (isIp) {
+                          stickyStyle = {
+                            position: 'sticky',
+                            left: (colWidths['id'] || 60) + (colWidths['nombre'] || 220),
+                            zIndex: 10,
+                            background: isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)'),
+                            borderRight: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                            boxShadow: '4px 0 12px rgba(0, 0, 0, 0.5)'
+                          };
+                        }
 
-                      const isLockedCol = ['id', 'id_port', 'service_port', 'mac'].includes(col);
-                      const isCellEditable = !isFiniquito && canModifyTable && !isLockedCol && !(col === 'estado' && c[col]?.toLowerCase() === 'pendiente');
+                        const isLockedCol = ['id', 'id_port', 'service_port', 'mac'].includes(col);
+                        const isCellEditable = !isFiniquito && canModifyTable && !isLockedCol && !(col === 'estado' && c[col]?.toLowerCase() === 'pendiente');
 
-                      return (
-                        <td
-                          key={col}
-                          className={isSticky ? 'sticky-col' : ''}
-                          onClick={() => {
-                            if (!isCellEditable) return;
-                            if (col === 'fotos_cedula' || col === 'dispositivo' || col === 'iptv_cuenta') {
-                              return;
-                            }
-                            if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
-                              const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                              const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
-                              handleStartEdit(c.id, col, currentVal);
-                            }
-                          }}
-                          onDoubleClick={() => {
-                            if (!isCellEditable) return;
-                            if (col === 'fotos_cedula') {
-                              openPhotoModal(c);
-                              return;
-                            }
-                            if (col === 'dispositivo') {
-                              openDevicePhotoModal(c);
-                              return;
-                            }
-                            if (col === 'iptv_cuenta') {
-                              openIptvModal(c);
-                              return;
-                            }
-                            if (col !== 'estado') {
-                              const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                              const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : (col === 'bridge' ? (c.bridge ?? c.breach) : c[col])));
-                              handleStartEdit(c.id, col, currentVal);
-                            }
-                          }}
-                          title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
-                          style={{
-                            padding: '6px 12px',
-                            whiteSpace: 'nowrap',
-                            width: colWidths[col] || 150,
-                            minWidth: colWidths[col] || 150,
-                            maxWidth: colWidths[col] || 150,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            background: isSticky ? (isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')) : (isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent'),
-                            cursor: isCellEditable ? 'pointer' : 'default',
-                            borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                            borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                            ...stickyStyle
-                          }}
-                        >
-                          {isEditing ? (
-                            col === 'estado' ? (
-                              <select
-                                autoFocus
-                                className="input"
-                                style={{
-                                  width: '100%',
-                                  padding: '4px 8px',
-                                  height: '28px',
-                                  fontSize: '0.8rem',
-                                  background: '#1e1b4b',
-                                  border: '1px solid var(--primary)',
-                                  outline: 'none',
-                                  appearance: 'none'
-                                }}
-                                value={tempValue}
-                                onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
-                                onBlur={() => setEditingCell(null)}
-                              >
-                                {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO', 'Finiquito', 'FINIQUITO'].includes(tempValue) && (
-                                  <option value={tempValue}>{tempValue}</option>
-                                )}
-                                <option value="Activo">Activo</option>
-                                <option value="Inactivo">Inactivo</option>
-                                <option value="En Proceso">En Proceso</option>
-                                <option value="Juridico">Juridico</option>
-                                <option value="Finiquito">👻 Finiquito</option>
-                              </select>
-                            ) : col === 'facturas' ? (
-                              <select
-                                autoFocus
-                                className="input"
-                                style={{
-                                  width: '100%',
-                                  padding: '4px 8px',
-                                  height: '28px',
-                                  fontSize: '0.8rem',
-                                  background: '#1e1b4b',
-                                  border: '1px solid var(--primary)',
-                                  outline: 'none'
-                                }}
-                                value={tempValue || 'NONE'}
-                                onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
-                                onBlur={() => setEditingCell(null)}
-                              >
-                                <option value="NONE">NONE</option>
-                                <option value="SI">SI</option>
-                              </select>
-                            ) : (
-                              col === 'plan' ? (
+                        return (
+                          <td
+                            key={col}
+                            className={isSticky ? 'sticky-col' : ''}
+                            onClick={() => {
+                              if (!isCellEditable) return;
+                              if (col === 'fotos_cedula' || col === 'dispositivo' || col === 'iptv_cuenta') {
+                                return;
+                              }
+                              if (col === 'estado' || col === 'cedula_tipo' || col === 'facturas') {
+                                const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                                const currentVal = col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : c[col];
+                                handleStartEdit(c.id, col, currentVal);
+                              }
+                            }}
+                            onDoubleClick={() => {
+                              if (!isCellEditable) return;
+                              if (col === 'fotos_cedula') {
+                                openPhotoModal(c);
+                                return;
+                              }
+                              if (col === 'dispositivo') {
+                                openDevicePhotoModal(c);
+                                return;
+                              }
+                              if (col === 'iptv_cuenta') {
+                                openIptvModal(c);
+                                return;
+                              }
+                              if (col !== 'estado') {
+                                const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                                const currentVal = col === 'total' ? c.pago_mensual : (col === 'total_pago' ? c.total_pago : (col === 'facturas' ? (hasCod ? 'SI' : (c.facturas || 'NONE')) : (col === 'bridge' ? (c.bridge ?? c.breach) : c[col])));
+                                handleStartEdit(c.id, col, currentVal);
+                              }
+                            }}
+                            title={isCellEditable ? "Doble clic para editar" : (isLockedCol ? "Campo de sistema protegido" : undefined)}
+                            style={{
+                              padding: '6px 12px',
+                              whiteSpace: 'nowrap',
+                              width: colWidths[col] || 150,
+                              minWidth: colWidths[col] || 150,
+                              maxWidth: colWidths[col] || 150,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              background: isSticky ? (isEditing ? '#222d4a' : (isFiniquito ? '#0d111d' : 'var(--sticky-col-bg, #0e1320)')) : (isEditing ? 'rgba(99, 102, 241, 0.1)' : 'transparent'),
+                              cursor: isCellEditable ? 'pointer' : 'default',
+                              borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                              borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                              ...stickyStyle
+                            }}
+                          >
+                            {isEditing ? (
+                              col === 'estado' ? (
                                 <select
-                                  className="input"
-                                  style={{ width: '100%', padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
-                                  value={tempValue}
-                                  onChange={(e) => {
-                                    setTempValue(e.target.value);
-                                    handleSaveDropdown(c.id, col, e.target.value);
-                                  }}
-                                  onBlur={() => setEditingCell(null)}
-                                  autoFocus
-                                >
-                                  <option value="">- Seleccionar -</option>
-                                  {planesList.map(p => (
-                                    <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                                  ))}
-                                </select>
-                              ) : col === 'cedula_tipo' ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
-                                  <select
-                                    className="input"
-                                    style={{
-                                      width: '100%',
-                                      padding: '4px 6px',
-                                      height: '28px',
-                                      fontSize: '0.78rem',
-                                      background: '#1e1b4b',
-                                      border: '1px solid var(--primary)',
-                                      color: (tempValue === 'Si' || tempValue === 'SI') ? '#4ade80' : '#ffffff',
-                                      fontWeight: 'bold'
-                                    }}
-                                    value={(tempValue === 'Si' || tempValue === 'SI') ? 'Si' : 'No'}
-                                    onChange={async (e) => {
-                                      const val = e.target.value;
-                                      setTempValue(val);
-                                      try {
-                                        await clienteService.actualizar(c.id, { cedula_tipo: val });
-                                        showSuccess(`Cédula cambiada a: ${val}`);
-                                        fetchData();
-                                      } catch (err) {
-                                        showError('Error al guardar estado de cédula');
-                                      }
-                                    }}
-                                    autoFocus
-                                  >
-                                    <option value="No">No</option>
-                                    <option value="Si">Si</option>
-                                  </select>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
-                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
-                                      {fileFrontal ? '✅ Front.' : '📸 Front.'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-                                        if (e.target.files?.[0]) {
-                                          const f = await processModalImage(e.target.files[0], 'frontal.jpg');
-                                          if (f) setFileFrontal(f);
-                                        }
-                                      }} />
-                                    </label>
-                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
-                                      {filePosterior ? '✅ Post.' : '📸 Post.'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-                                        if (e.target.files?.[0]) {
-                                          const f = await processModalImage(e.target.files[0], 'posterior.jpg');
-                                          if (f) setFilePosterior(f);
-                                        }
-                                      }} />
-                                    </label>
-                                    <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFachada ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFachada ? '#000' : '#fff' }}>
-                                      {fileFachada ? '✅ Fachada' : '📸 Fachada'}
-                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-                                        if (e.target.files?.[0]) {
-                                          const f = await processModalImage(e.target.files[0], 'fachada.jpg');
-                                          if (f) setFileFachada(f);
-                                        }
-                                      }} />
-                                    </label>
-                                  </div>
-                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                                    {(fileFrontal || filePosterior || fileFachada) && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-primary"
-                                        disabled={uploadingCedula}
-                                        onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior, fileFachada)}
-                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                        title="Subir Fotos Seleccionadas"
-                                      >
-                                        {uploadingCedula ? '⏳' : 'Subir Fotos'}
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingCell(null);
-                                        setFileFrontal(null);
-                                        setFilePosterior(null);
-                                        setFileFachada(null);
-                                        setTempValue('');
-                                      }}
-                                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                      title="Cerrar"
-                                    >
-                                      ❌ Cerrar
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <input
                                   autoFocus
                                   className="input"
-                                  placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : col === 'ubicacion_cliente' ? 'Ej: -2.89, -79.00 o Google Maps' : col === 'bridge' ? 'Comando Bridge' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
                                   style={{
                                     width: '100%',
                                     padding: '4px 8px',
@@ -1884,845 +1711,1002 @@ const General = () => {
                                     fontSize: '0.8rem',
                                     background: '#1e1b4b',
                                     border: '1px solid var(--primary)',
-                                    fontFamily: col === 'ip' ? 'monospace' : 'inherit'
+                                    outline: 'none',
+                                    appearance: 'none'
                                   }}
                                   value={tempValue}
-                                  onChange={(e) => setTempValue(e.target.value)}
-                                  onBlur={() => handleSaveEdit(c.id, col)}
-                                  onKeyDown={(e) => handleKeyDown(e, c.id, col)}
-                                />
+                                  onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                                  onBlur={() => setEditingCell(null)}
+                                >
+                                  {!['Activo', 'ACTIVO', 'Inactivo', 'INACTIVO', 'Finiquito', 'FINIQUITO'].includes(tempValue) && (
+                                    <option value={tempValue}>{tempValue}</option>
+                                  )}
+                                  <option value="Activo">Activo</option>
+                                  <option value="Inactivo">Inactivo</option>
+                                  <option value="En Proceso">En Proceso</option>
+                                  <option value="Juridico">Juridico</option>
+                                  <option value="Finiquito">👻 Finiquito</option>
+                                </select>
+                              ) : col === 'facturas' ? (
+                                <select
+                                  autoFocus
+                                  className="input"
+                                  style={{
+                                    width: '100%',
+                                    padding: '4px 8px',
+                                    height: '28px',
+                                    fontSize: '0.8rem',
+                                    background: '#1e1b4b',
+                                    border: '1px solid var(--primary)',
+                                    outline: 'none'
+                                  }}
+                                  value={tempValue || 'NONE'}
+                                  onChange={(e) => handleSaveDropdown(c.id, col, e.target.value)}
+                                  onBlur={() => setEditingCell(null)}
+                                >
+                                  <option value="NONE">NONE</option>
+                                  <option value="SI">SI</option>
+                                </select>
+                              ) : (
+                                col === 'plan' ? (
+                                  <select
+                                    className="input"
+                                    style={{ width: '100%', padding: '4px 8px', height: '28px', fontSize: '0.8rem', background: '#1e1b4b', border: '1px solid var(--primary)' }}
+                                    value={tempValue}
+                                    onChange={(e) => {
+                                      setTempValue(e.target.value);
+                                      handleSaveDropdown(c.id, col, e.target.value);
+                                    }}
+                                    onBlur={() => setEditingCell(null)}
+                                    autoFocus
+                                  >
+                                    <option value="">- Seleccionar -</option>
+                                    {planesList.map(p => (
+                                      <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                                    ))}
+                                  </select>
+                                ) : col === 'cedula_tipo' ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
+                                    <select
+                                      className="input"
+                                      style={{
+                                        width: '100%',
+                                        padding: '4px 6px',
+                                        height: '28px',
+                                        fontSize: '0.78rem',
+                                        background: '#1e1b4b',
+                                        border: '1px solid var(--primary)',
+                                        color: (tempValue === 'Si' || tempValue === 'SI') ? '#4ade80' : '#ffffff',
+                                        fontWeight: 'bold'
+                                      }}
+                                      value={(tempValue === 'Si' || tempValue === 'SI') ? 'Si' : 'No'}
+                                      onChange={async (e) => {
+                                        const val = e.target.value;
+                                        setTempValue(val);
+                                        try {
+                                          await clienteService.actualizar(c.id, { cedula_tipo: val });
+                                          showSuccess(`Cédula cambiada a: ${val}`);
+                                          fetchData();
+                                        } catch (err) {
+                                          showError('Error al guardar estado de cédula');
+                                        }
+                                      }}
+                                      autoFocus
+                                    >
+                                      <option value="No">No</option>
+                                      <option value="Si">Si</option>
+                                    </select>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFrontal ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFrontal ? '#000' : '#fff' }}>
+                                        {fileFrontal ? '✅ Front.' : '📸 Front.'}
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                          if (e.target.files?.[0]) {
+                                            const f = await processModalImage(e.target.files[0], 'frontal.jpg');
+                                            if (f) setFileFrontal(f);
+                                          }
+                                        }} />
+                                      </label>
+                                      <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: filePosterior ? '#4ade80' : 'rgba(255,255,255,0.08)', color: filePosterior ? '#000' : '#fff' }}>
+                                        {filePosterior ? '✅ Post.' : '📸 Post.'}
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                          if (e.target.files?.[0]) {
+                                            const f = await processModalImage(e.target.files[0], 'posterior.jpg');
+                                            if (f) setFilePosterior(f);
+                                          }
+                                        }} />
+                                      </label>
+                                      <label className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '10px', flex: 1, textAlign: 'center', cursor: 'pointer', background: fileFachada ? '#4ade80' : 'rgba(255,255,255,0.08)', color: fileFachada ? '#000' : '#fff' }}>
+                                        {fileFachada ? '✅ Fachada' : '📸 Fachada'}
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                          if (e.target.files?.[0]) {
+                                            const f = await processModalImage(e.target.files[0], 'fachada.jpg');
+                                            if (f) setFileFachada(f);
+                                          }
+                                        }} />
+                                      </label>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                                      {(fileFrontal || filePosterior || fileFachada) && (
+                                        <button
+                                          type="button"
+                                          className="btn btn-primary"
+                                          disabled={uploadingCedula}
+                                          onClick={() => handleSaveCedulaTipo(c.id, tempValue || 'No', fileFrontal, filePosterior, fileFachada)}
+                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                          title="Subir Fotos Seleccionadas"
+                                        >
+                                          {uploadingCedula ? '⏳' : 'Subir Fotos'}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingCell(null);
+                                          setFileFrontal(null);
+                                          setFilePosterior(null);
+                                          setFileFachada(null);
+                                          setTempValue('');
+                                        }}
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                        title="Cerrar"
+                                      >
+                                        ❌ Cerrar
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <input
+                                    autoFocus
+                                    className="input"
+                                    placeholder={col === 'ip' ? 'Ej: 10.10.20.50' : col === 'ubicacion_cliente' ? 'Ej: -2.89, -79.00 o Google Maps' : col === 'bridge' ? 'Comando Bridge' : (col === 'total' || col === 'total_pago' ? '0.00' : '')}
+                                    style={{
+                                      width: '100%',
+                                      padding: '4px 8px',
+                                      height: '28px',
+                                      fontSize: '0.8rem',
+                                      background: '#1e1b4b',
+                                      border: '1px solid var(--primary)',
+                                      fontFamily: col === 'ip' ? 'monospace' : 'inherit'
+                                    }}
+                                    value={tempValue}
+                                    onChange={(e) => setTempValue(e.target.value)}
+                                    onBlur={() => handleSaveEdit(c.id, col)}
+                                    onKeyDown={(e) => handleKeyDown(e, c.id, col)}
+                                  />
+                                )
                               )
-                            )
-                          ) : (
-                            <span style={{
-                              color: col === 'estado' ? (
-                                c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
-                                  c[col]?.toUpperCase() === 'FINIQUITO' ? '#94a3b8' :
-                                    ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
-                                      c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
-                                        ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
-                                          c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
-                              ) : 'inherit',
-                              fontWeight: col === 'id' ? '600' : 'normal'
-                            }}>
-                              {(() => {
-                                if (col === 'id') {
-                                  if (isFiniquito) {
+                            ) : (
+                              <span style={{
+                                color: col === 'estado' ? (
+                                  c[col]?.toUpperCase() === 'ACTIVO' ? '#4ade80' :
+                                    c[col]?.toUpperCase() === 'FINIQUITO' ? '#94a3b8' :
+                                      ['MOROSO', 'SUSPENDIDO'].includes(c[col]?.toUpperCase()) ? '#ef4444' :
+                                        c[col]?.toUpperCase() === 'INACTIVO' ? '#f87171' :
+                                          ['EN PROCESO', 'PROCESO'].includes(c[col]?.toUpperCase()) ? '#fbbf24' :
+                                            c[col]?.toUpperCase() === 'JURIDICO' ? '#ec4899' : '#94a3b8'
+                                ) : 'inherit',
+                                fontWeight: col === 'id' ? '600' : 'normal'
+                              }}>
+                                {(() => {
+                                  if (col === 'id') {
+                                    if (isFiniquito) {
+                                      return (
+                                        <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Cliente en Finiquito (Registro Fantasma)">
+                                          👻 {c.id}
+                                        </span>
+                                      );
+                                    }
+                                    return c.id;
+                                  }
+                                  if (col === 'estado') {
+                                    if (isFiniquito) {
+                                      return (
+                                        <span style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '2px 8px',
+                                          borderRadius: '12px',
+                                          background: 'rgba(148, 163, 184, 0.15)',
+                                          color: '#cbd5e1',
+                                          fontSize: '0.75rem',
+                                          fontWeight: 'bold',
+                                          border: '1px dashed #94a3b8'
+                                        }}>
+                                          👻 Finiquito
+                                        </span>
+                                      );
+                                    }
+                                    return c.estado || '-';
+                                  }
+                                  if (col === 'total') {
+                                    const totalPagado = parseFloat(c.pago_mensual || 0);
+                                    return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
+                                  }
+                                  if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
+                                    const valPagado = c[col];
+                                    const hasValue = valPagado && parseFloat(valPagado) > 0;
+                                    return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
+                                  }
+                                  if (col === 'total_pago') {
+                                    const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
+                                    const plusVal = parseFloat(c.plus || 0);
+                                    const adicVal = parseFloat(c.adicional || 0);
+                                    const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
+                                    return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
+                                  }
+                                  if (col === 'cedula_tipo') {
+                                    const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '') || (c.foto_fachada && String(c.foto_fachada).trim() !== '');
+                                    const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
+                                    const displayVal = isSi ? 'Si' : 'No';
                                     return (
-                                      <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Cliente en Finiquito (Registro Fantasma)">
-                                        👻 {c.id}
+                                      <span style={{ color: isSi ? '#4ade80' : '#94a3b8', fontWeight: 'bold' }}>
+                                        {displayVal}
                                       </span>
                                     );
                                   }
-                                  return c.id;
-                                }
-                                if (col === 'estado') {
-                                  if (isFiniquito) {
+                                  if (col === 'plan') {
+                                    let precio = 0; let isSpecial = false; let isPromo = false;
+                                    if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
+                                    else if (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; isPromo = true; }
+                                    else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
+                                    else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
                                     return (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <span style={{ fontWeight: '600', color: c.plan ? 'var(--text-main, #ffffff)' : 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                          {c.plan || '-'}
+                                        </span>
+                                        {precio > 0 && (
+                                          <span style={{ color: c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#38bdf8')), fontSize: '0.72rem', fontWeight: '500' }}>
+                                            ${parseFloat(precio).toFixed(2)}
+                                            {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'fotos_cedula') {
+                                    const hasFront = !!(c.cedula_frontal && String(c.cedula_frontal).trim() !== '');
+                                    const hasPost = !!(c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
+                                    const hasFachada = !!(c.foto_fachada && String(c.foto_fachada).trim() !== '');
+
+                                    return (
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {hasFront && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Front.</a>}
+                                          {hasPost && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Post.</a>}
+                                          {hasFachada && <a href={c.foto_fachada} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#38bdf8', fontWeight: 'bold' }}>fot.fachada</a>}
+                                          {!hasFront && !hasPost && !hasFachada && <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                        </div>
+                                        {canModifyTable && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openPhotoModal(c);
+                                            }}
+                                            style={{
+                                              background: 'rgba(99, 102, 241, 0.2)',
+                                              border: '1px solid rgba(99, 102, 241, 0.4)',
+                                              color: '#c7d2fe',
+                                              padding: '2px 6px',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              fontSize: '0.68rem',
+                                              fontWeight: 600,
+                                              whiteSpace: 'nowrap'
+                                            }}
+                                            title="Subir o gestionar fotos de cédula y fachada"
+                                          >
+                                            📷 Subir
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'dispositivo') {
+                                    const dispInfo = getClientDevicePhotos(c);
+                                    const hasOnt = !!(dispInfo?.ont && String(dispInfo.ont).trim() !== '');
+                                    const hasRouter = !!(dispInfo?.router && String(dispInfo.router).trim() !== '');
+                                    const extraText = dispInfo?.texto;
+
+                                    return (
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {hasOnt && (
+                                            <a
+                                              href={dispInfo.ont}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              style={{
+                                                color: '#38bdf8',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.72rem',
+                                                background: 'rgba(56, 189, 248, 0.12)',
+                                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                                borderRadius: '4px',
+                                                padding: '2px 5px',
+                                                textDecoration: 'none',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px'
+                                              }}
+                                              title="Ver foto de Equipo Bridge / ONT"
+                                            >
+                                              🔌 Bridge/ONT
+                                            </a>
+                                          )}
+                                          {hasRouter && (
+                                            <a
+                                              href={dispInfo.router}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              style={{
+                                                color: '#c084fc',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.72rem',
+                                                background: 'rgba(168, 85, 247, 0.12)',
+                                                border: '1px solid rgba(168, 85, 247, 0.3)',
+                                                borderRadius: '4px',
+                                                padding: '2px 5px',
+                                                textDecoration: 'none',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px'
+                                              }}
+                                              title="Ver foto de Router"
+                                            >
+                                              📡 Router
+                                            </a>
+                                          )}
+                                          {extraText && (
+                                            <span style={{ fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }} title={extraText}>
+                                              {extraText}
+                                            </span>
+                                          )}
+                                          {!hasOnt && !hasRouter && !extraText && (
+                                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                          )}
+                                        </div>
+                                        {canModifyTable && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openDevicePhotoModal(c);
+                                            }}
+                                            style={{
+                                              background: 'rgba(56, 189, 248, 0.15)',
+                                              border: '1px solid rgba(56, 189, 248, 0.35)',
+                                              color: '#38bdf8',
+                                              padding: '2px 6px',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              fontSize: '0.68rem',
+                                              fontWeight: 600,
+                                              whiteSpace: 'nowrap'
+                                            }}
+                                            title="Subir o gestionar fotos de equipos (Bridge/ONT y Router)"
+                                          >
+                                            📷 Equipos
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'observaciones') {
+                                    const rawObs = (c.observaciones || '').trim();
+                                    if (!rawObs) {
+                                      return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                                    }
+                                    const textClean = rawObs.split('/').join('\n');
+                                    const isLong = textClean.length > 40 || textClean.includes('\n');
+                                    return (
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
+                                        <span style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>📝</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div
+                                            style={{
+                                              fontSize: '0.74rem',
+                                              color: '#c4b5fd',
+                                              lineHeight: '1.4',
+                                              ...(isLong ? {
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                wordBreak: 'break-word',
+                                                cursor: 'pointer'
+                                              } : {
+                                                whiteSpace: 'pre-line',
+                                                wordBreak: 'break-word'
+                                              })
+                                            }}
+                                            onClick={isLong ? () => setDetailModal({
+                                              title: 'Observaciones del Cliente',
+                                              text: textClean,
+                                              clientName: c.nombre,
+                                              id: c.id,
+                                              ip: c.ip,
+                                              type: 'obs'
+                                            }) : undefined}
+                                            title={isLong ? "Clic para ver la observación completa" : undefined}
+                                          >
+                                            {textClean}
+                                          </div>
+                                          {isLong && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDetailModal({
+                                                  title: 'Observaciones del Cliente',
+                                                  text: textClean,
+                                                  clientName: c.nombre,
+                                                  id: c.id,
+                                                  ip: c.ip,
+                                                  type: 'obs'
+                                                });
+                                              }}
+                                              style={{
+                                                background: 'rgba(139, 92, 246, 0.15)',
+                                                border: '1px solid rgba(139, 92, 246, 0.35)',
+                                                color: '#c4b5fd',
+                                                padding: '2px 7px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.67rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                marginTop: '4px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                transition: 'all 0.15s'
+                                              }}
+                                              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.28)'}
+                                              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'}
+                                            >
+                                              Ver más ▾
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'iptv_cuenta') {
+                                    const hasIptv = (c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user;
+                                    return (
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                        {hasIptv ? (
+                                          <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap', flex: 1, overflow: 'hidden' }}>
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>👤</strong> {c.iptv_user}</div>
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>🔑</strong> {c.iptv_pass}</div>
+                                            {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
+                                          </div>
+                                        ) : c.tv_tipo === 'CATV' ? (
+                                          <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>
+                                        ) : (
+                                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem' }}>-</span>
+                                        )}
+                                        {canModifyTable && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openIptvModal(c);
+                                            }}
+                                            style={{
+                                              background: hasIptv ? 'rgba(99, 102, 241, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                                              border: hasIptv ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(168, 85, 247, 0.4)',
+                                              color: hasIptv ? '#c7d2fe' : '#e9d5ff',
+                                              padding: '2px 6px',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              fontSize: '0.68rem',
+                                              fontWeight: 600,
+                                              whiteSpace: 'nowrap'
+                                            }}
+                                            title={hasIptv ? "Editar cuenta IPTV externa" : "Asignar cuenta IPTV externa"}
+                                          >
+                                            {hasIptv ? '✏️ Cuenta' : '➕ IPTV'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'ubicacion_cliente') {
+                                    // Mostrar ubicacion: primero del contrato, sino la dirección
+                                    const ubicacion = c.ubicacion || c.direccion || null;
+                                    if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                    return (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', maxWidth: '100%', overflow: 'hidden' }}>
+                                        <a
+                                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                          title={`Abrir en Google Maps: ${ubicacion} (Doble clic en la celda para editar)`}
+                                        >
+                                          📍 {ubicacion.length > 25 ? ubicacion.substring(0, 25) + '...' : ubicacion}
+                                        </a>
+                                      </div>
+                                    );
+                                  }
+                                  if (col === 'comentarios') {
+                                    const rawCom = (c.comentarios || '').trim();
+                                    if (!rawCom) {
+                                      return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
+                                    }
+                                    const textClean = rawCom.split('/').join('\n');
+                                    const isLong = textClean.length > 40 || textClean.includes('\n');
+                                    return (
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
+                                        <span style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>💬</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div
+                                            style={{
+                                              fontSize: '0.74rem',
+                                              color: '#93c5fd',
+                                              lineHeight: '1.4',
+                                              ...(isLong ? {
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                wordBreak: 'break-word',
+                                                cursor: 'pointer'
+                                              } : {
+                                                whiteSpace: 'pre-line',
+                                                wordBreak: 'break-word'
+                                              })
+                                            }}
+                                            onClick={isLong ? () => setDetailModal({
+                                              title: 'Comentarios del Cliente',
+                                              text: textClean,
+                                              clientName: c.nombre,
+                                              id: c.id,
+                                              ip: c.ip,
+                                              type: 'com'
+                                            }) : undefined}
+                                            title={isLong ? "Clic para ver el comentario completo" : undefined}
+                                          >
+                                            {textClean}
+                                          </div>
+                                          {isLong && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDetailModal({
+                                                  title: 'Comentarios del Cliente',
+                                                  text: textClean,
+                                                  clientName: c.nombre,
+                                                  id: c.id,
+                                                  ip: c.ip,
+                                                  type: 'com'
+                                                });
+                                              }}
+                                              style={{
+                                                background: 'rgba(56, 189, 248, 0.15)',
+                                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                                color: '#7dd3fc',
+                                                padding: '2px 7px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.67rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                marginTop: '4px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                transition: 'all 0.15s'
+                                              }}
+                                              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.28)'}
+                                              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)'}
+                                            >
+                                              Ver más ▾
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  if (col === 'facturas') {
+                                    const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
+                                    const isSi = hasCod || (c.facturas && String(c.facturas).trim().toUpperCase() === 'SI');
+                                    const displayVal = isSi ? 'SI' : ((c.facturas && String(c.facturas).trim() !== '') ? c.facturas : 'NONE');
+                                    return (
+                                      <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
+                                        {displayVal}
+                                      </span>
+                                    );
+                                  }
+
+                                  if (col === 'ip') {
+                                    return c.ip ? (
+                                      <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '600' }} title="IP del Cliente (Doble clic para editar)">
+                                        {c.ip}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>
+                                    );
+                                  }
+
+                                  if (col === 'tecnico') {
+                                    return c.tecnico ? (
+                                      <span style={{ fontWeight: '500', color: '#38bdf8' }} title="Técnico responsable del servicio">
+                                        👨‍🔧 {c.tecnico}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                    );
+                                  }
+
+                                  if (col === 'activador') {
+                                    return c.activador ? (
                                       <span style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: '4px',
                                         padding: '2px 8px',
-                                        borderRadius: '12px',
-                                        background: 'rgba(148, 163, 184, 0.15)',
-                                        color: '#cbd5e1',
+                                        borderRadius: '8px',
+                                        background: 'rgba(56, 189, 248, 0.1)',
+                                        color: '#38bdf8',
                                         fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        border: '1px dashed #94a3b8'
-                                      }}>
-                                        👻 Finiquito
+                                        fontWeight: '600'
+                                      }} title="Activador del servicio">
+                                        🤖 {c.activador}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                    );
+                                  }
+
+                                  if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
+                                    return formatToDMY(c[col]);
+                                  }
+
+                                  if (col === 'bridge' || col === 'breach') {
+                                    const bridgeVal = (c.bridge !== undefined && c.bridge !== null && c.bridge !== '') ? c.bridge : c.breach;
+                                    if (!bridgeVal || bridgeVal === 'NONE' || String(bridgeVal).trim() === '') {
+                                      return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                    }
+                                    return (
+                                      <span style={{ fontFamily: 'monospace', color: '#fb923c', fontSize: '0.75rem', fontWeight: '500' }} title={bridgeVal}>
+                                        {bridgeVal}
                                       </span>
                                     );
                                   }
-                                  return c.estado || '-';
-                                }
-                                if (col === 'total') {
-                                  const totalPagado = parseFloat(c.pago_mensual || 0);
-                                  return <span style={{ color: totalPagado > 0 ? '#4ade80' : 'var(--text-muted)', fontWeight: 'bold' }}>${totalPagado.toFixed(2)}</span>;
-                                }
-                                if (col === 'internet_payment' || col === 'plus' || col === 'adicional') {
-                                  const valPagado = c[col];
-                                  const hasValue = valPagado && parseFloat(valPagado) > 0;
-                                  return <span style={{ fontWeight: '500', color: hasValue ? (col === 'plus' ? '#4ade80' : col === 'adicional' ? '#60a5fa' : '#fbbf24') : 'inherit' }}>{hasValue ? `$${parseFloat(valPagado).toFixed(2)}` : '-'}</span>;
-                                }
-                                if (col === 'total_pago') {
-                                  const saldoVal = (c.saldo !== null && c.saldo !== undefined) ? parseFloat(c.saldo || 0) : (c.mantenimiento ? 10.00 : (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0 ? parseFloat(c.precio_plan_especial) : 0));
-                                  const plusVal = parseFloat(c.plus || 0);
-                                  const adicVal = parseFloat(c.adicional || 0);
-                                  const totalPendienteSum = (c.total_pago !== undefined && c.total_pago !== null) ? parseFloat(c.total_pago) : (saldoVal + plusVal + adicVal);
-                                  return <span style={{ color: totalPendienteSum <= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>${totalPendienteSum.toFixed(2)}</span>;
-                                }
-                                if (col === 'cedula_tipo') {
-                                  const hasPhoto = (c.cedula_frontal && String(c.cedula_frontal).trim() !== '') || (c.cedula_posterior && String(c.cedula_posterior).trim() !== '') || (c.foto_fachada && String(c.foto_fachada).trim() !== '');
-                                  const isSi = hasPhoto || (c.cedula_tipo === 'Si' || c.cedula_tipo === 'SI');
-                                  const displayVal = isSi ? 'Si' : 'No';
-                                  return (
-                                    <span style={{ color: isSi ? '#4ade80' : '#94a3b8', fontWeight: 'bold' }}>
-                                      {displayVal}
-                                    </span>
-                                  );
-                                }
-                                if (col === 'plan') {
-                                  let precio = 0; let isSpecial = false; let isPromo = false;
-                                  if (c.mantenimiento) { precio = 10.00; isSpecial = true; }
-                                  else if (c.precio_plan_especial && parseFloat(c.precio_plan_especial) > 0) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; isPromo = true; }
-                                  else if (c.tercera_edad && c.precio_plan_especial) { precio = parseFloat(c.precio_plan_especial); isSpecial = true; }
-                                  else { const plan = planesList.find(p => p.nombre.toLowerCase() === (c.plan || '').toLowerCase()); if (plan) precio = plan.precio; }
-                                  return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                      <span style={{ fontWeight: '600', color: c.plan ? 'var(--text-main, #ffffff)' : 'var(--text-muted)', fontSize: '0.78rem' }}>
-                                        {c.plan || '-'}
-                                      </span>
-                                      {precio > 0 && (
-                                        <span style={{ color: c.mantenimiento ? '#ec4899' : (isPromo ? '#fbbf24' : (isSpecial ? '#f59e0b' : '#38bdf8')), fontSize: '0.72rem', fontWeight: '500' }}>
-                                          ${parseFloat(precio).toFixed(2)}
-                                          {c.mantenimiento ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#f472b6' }}>🛠️ MANTENIMIENTO</small> : (isPromo ? <small style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24' }}>🏷️ PLAN MODIFICADO</small> : (isSpecial && <small style={{ display: 'block', fontSize: '0.65rem' }}>TERCERA EDAD</small>))}
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                if (col === 'fotos_cedula') {
-                                  const hasFront = !!(c.cedula_frontal && String(c.cedula_frontal).trim() !== '');
-                                  const hasPost = !!(c.cedula_posterior && String(c.cedula_posterior).trim() !== '');
-                                  const hasFachada = !!(c.foto_fachada && String(c.foto_fachada).trim() !== '');
 
-                                  return (
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                        {hasFront && <a href={c.cedula_frontal} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Front.</a>}
-                                        {hasPost && <a href={c.cedula_posterior} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#60a5fa', fontWeight: 'bold' }}>Post.</a>}
-                                        {hasFachada && <a href={c.foto_fachada} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: '#38bdf8', fontWeight: 'bold' }}>fot.fachada</a>}
-                                        {!hasFront && !hasPost && !hasFachada && <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                                      </div>
-                                      {canModifyTable && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openPhotoModal(c);
-                                          }}
-                                          style={{
-                                            background: 'rgba(99, 102, 241, 0.2)',
-                                            border: '1px solid rgba(99, 102, 241, 0.4)',
-                                            color: '#c7d2fe',
-                                            padding: '2px 6px',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.68rem',
-                                            fontWeight: 600,
-                                            whiteSpace: 'nowrap'
-                                          }}
-                                          title="Subir o gestionar fotos de cédula y fachada"
-                                        >
-                                          📷 Subir
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                if (col === 'dispositivo') {
-                                  const dispInfo = getClientDevicePhotos(c);
-                                  const hasOnt = !!(dispInfo?.ont && String(dispInfo.ont).trim() !== '');
-                                  const hasRouter = !!(dispInfo?.router && String(dispInfo.router).trim() !== '');
-                                  const extraText = dispInfo?.texto;
-
-                                  return (
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                        {hasOnt && (
-                                          <a
-                                            href={dispInfo.ont}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{
-                                              color: '#38bdf8',
-                                              fontWeight: 'bold',
-                                              fontSize: '0.72rem',
-                                              background: 'rgba(56, 189, 248, 0.12)',
-                                              border: '1px solid rgba(56, 189, 248, 0.3)',
-                                              borderRadius: '4px',
-                                              padding: '2px 5px',
-                                              textDecoration: 'none',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px'
-                                            }}
-                                            title="Ver foto de Equipo Bridge / ONT"
-                                          >
-                                            🔌 Bridge/ONT
-                                          </a>
-                                        )}
-                                        {hasRouter && (
-                                          <a
-                                            href={dispInfo.router}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{
-                                              color: '#c084fc',
-                                              fontWeight: 'bold',
-                                              fontSize: '0.72rem',
-                                              background: 'rgba(168, 85, 247, 0.12)',
-                                              border: '1px solid rgba(168, 85, 247, 0.3)',
-                                              borderRadius: '4px',
-                                              padding: '2px 5px',
-                                              textDecoration: 'none',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px'
-                                            }}
-                                            title="Ver foto de Router"
-                                          >
-                                            📡 Router
-                                          </a>
-                                        )}
-                                        {extraText && (
-                                          <span style={{ fontSize: '0.75rem', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }} title={extraText}>
-                                            {extraText}
-                                          </span>
-                                        )}
-                                        {!hasOnt && !hasRouter && !extraText && (
-                                          <span style={{ color: 'var(--text-muted)' }}>-</span>
-                                        )}
-                                      </div>
-                                      {canModifyTable && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openDevicePhotoModal(c);
-                                          }}
-                                          style={{
-                                            background: 'rgba(56, 189, 248, 0.15)',
-                                            border: '1px solid rgba(56, 189, 248, 0.35)',
-                                            color: '#38bdf8',
-                                            padding: '2px 6px',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.68rem',
-                                            fontWeight: 600,
-                                            whiteSpace: 'nowrap'
-                                          }}
-                                          title="Subir o gestionar fotos de equipos (Bridge/ONT y Router)"
-                                        >
-                                          📷 Equipos
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                if (col === 'observaciones') {
-                                  const rawObs = (c.observaciones || '').trim();
-                                  if (!rawObs) {
-                                    return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
-                                  }
-                                  const textClean = rawObs.split('/').join('\n');
-                                  const isLong = textClean.length > 40 || textClean.includes('\n');
-                                  return (
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
-                                      <span style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>📝</span>
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div
-                                          style={{
-                                            fontSize: '0.74rem',
-                                            color: '#c4b5fd',
-                                            lineHeight: '1.4',
-                                            ...(isLong ? {
-                                              display: '-webkit-box',
-                                              WebkitLineClamp: 2,
-                                              WebkitBoxOrient: 'vertical',
-                                              overflow: 'hidden',
-                                              textOverflow: 'ellipsis',
-                                              wordBreak: 'break-word',
-                                              cursor: 'pointer'
-                                            } : {
-                                              whiteSpace: 'pre-line',
-                                              wordBreak: 'break-word'
-                                            })
-                                          }}
-                                          onClick={isLong ? () => setDetailModal({
-                                            title: 'Observaciones del Cliente',
-                                            text: textClean,
-                                            clientName: c.nombre,
-                                            id: c.id,
-                                            ip: c.ip,
-                                            type: 'obs'
-                                          }) : undefined}
-                                          title={isLong ? "Clic para ver la observación completa" : undefined}
-                                        >
-                                          {textClean}
-                                        </div>
-                                        {isLong && (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setDetailModal({
-                                                title: 'Observaciones del Cliente',
-                                                text: textClean,
-                                                clientName: c.nombre,
-                                                id: c.id,
-                                                ip: c.ip,
-                                                type: 'obs'
-                                              });
-                                            }}
-                                            style={{
-                                              background: 'rgba(139, 92, 246, 0.15)',
-                                              border: '1px solid rgba(139, 92, 246, 0.35)',
-                                              color: '#c4b5fd',
-                                              padding: '2px 7px',
-                                              borderRadius: '6px',
-                                              fontSize: '0.67rem',
-                                              fontWeight: '700',
-                                              cursor: 'pointer',
-                                              marginTop: '4px',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px',
-                                              transition: 'all 0.15s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.28)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'}
-                                          >
-                                            Ver más ▾
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                if (col === 'iptv_cuenta') {
-                                  const hasIptv = (c.tv_tipo === 'IPTV' || c.iptv_user) && c.iptv_user;
-                                  return (
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                      {hasIptv ? (
-                                        <div style={{ padding: '3px 6px', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#a5b4fc', whiteSpace: 'nowrap', flex: 1, overflow: 'hidden' }}>
-                                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>👤</strong> {c.iptv_user}</div>
-                                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong>🔑</strong> {c.iptv_pass}</div>
-                                          {c.iptv_max_conn ? <div style={{ color: '#6ee7b7', fontSize: '0.65rem' }}>📺 {c.iptv_max_conn} pantallas</div> : null}
-                                        </div>
-                                      ) : c.tv_tipo === 'CATV' ? (
-                                        <span style={{ color: '#fcd34d', fontSize: '0.7rem' }}>🔌 CATV</span>
-                                      ) : (
-                                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem' }}>-</span>
-                                      )}
-                                      {canModifyTable && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openIptvModal(c);
-                                          }}
-                                          style={{
-                                            background: hasIptv ? 'rgba(99, 102, 241, 0.2)' : 'rgba(168, 85, 247, 0.2)',
-                                            border: hasIptv ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(168, 85, 247, 0.4)',
-                                            color: hasIptv ? '#c7d2fe' : '#e9d5ff',
-                                            padding: '2px 6px',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.68rem',
-                                            fontWeight: 600,
-                                            whiteSpace: 'nowrap'
-                                          }}
-                                          title={hasIptv ? "Editar cuenta IPTV externa" : "Asignar cuenta IPTV externa"}
-                                        >
-                                          {hasIptv ? '✏️ Cuenta' : '➕ IPTV'}
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                if (col === 'ubicacion_cliente') {
-                                  // Mostrar ubicacion: primero del contrato, sino la dirección
-                                  const ubicacion = c.ubicacion || c.direccion || null;
-                                  if (!ubicacion) return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-                                  return (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', maxWidth: '100%', overflow: 'hidden' }}>
-                                      <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        style={{ fontSize: '0.7rem', color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                        title={`Abrir en Google Maps: ${ubicacion} (Doble clic en la celda para editar)`}
-                                      >
-                                        📍 {ubicacion.length > 25 ? ubicacion.substring(0, 25) + '...' : ubicacion}
-                                      </a>
-                                    </div>
-                                  );
-                                }
-                                if (col === 'comentarios') {
-                                  const rawCom = (c.comentarios || '').trim();
-                                  if (!rawCom) {
-                                    return <span style={{ color: 'var(--text-muted)', fontSize: '0.73rem' }}>-</span>;
-                                  }
-                                  const textClean = rawCom.split('/').join('\n');
-                                  const isLong = textClean.length > 40 || textClean.includes('\n');
-                                  return (
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', width: '100%', minWidth: 0 }}>
-                                      <span style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '1px', flexShrink: 0 }}>💬</span>
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div
-                                          style={{
-                                            fontSize: '0.74rem',
-                                            color: '#93c5fd',
-                                            lineHeight: '1.4',
-                                            ...(isLong ? {
-                                              display: '-webkit-box',
-                                              WebkitLineClamp: 2,
-                                              WebkitBoxOrient: 'vertical',
-                                              overflow: 'hidden',
-                                              textOverflow: 'ellipsis',
-                                              wordBreak: 'break-word',
-                                              cursor: 'pointer'
-                                            } : {
-                                              whiteSpace: 'pre-line',
-                                              wordBreak: 'break-word'
-                                            })
-                                          }}
-                                          onClick={isLong ? () => setDetailModal({
-                                            title: 'Comentarios del Cliente',
-                                            text: textClean,
-                                            clientName: c.nombre,
-                                            id: c.id,
-                                            ip: c.ip,
-                                            type: 'com'
-                                          }) : undefined}
-                                          title={isLong ? "Clic para ver el comentario completo" : undefined}
-                                        >
-                                          {textClean}
-                                        </div>
-                                        {isLong && (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setDetailModal({
-                                                title: 'Comentarios del Cliente',
-                                                text: textClean,
-                                                clientName: c.nombre,
-                                                id: c.id,
-                                                ip: c.ip,
-                                                type: 'com'
-                                              });
-                                            }}
-                                            style={{
-                                              background: 'rgba(56, 189, 248, 0.15)',
-                                              border: '1px solid rgba(56, 189, 248, 0.35)',
-                                              color: '#7dd3fc',
-                                              padding: '2px 7px',
-                                              borderRadius: '6px',
-                                              fontSize: '0.67rem',
-                                              fontWeight: '700',
-                                              cursor: 'pointer',
-                                              marginTop: '4px',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px',
-                                              transition: 'all 0.15s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.28)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)'}
-                                          >
-                                            Ver más ▾
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-
-                                if (col === 'facturas') {
-                                  const hasCod = c.cod && String(c.cod).trim() !== '' && String(c.cod).trim().toUpperCase() !== 'NONE';
-                                  const isSi = hasCod || (c.facturas && String(c.facturas).trim().toUpperCase() === 'SI');
-                                  const displayVal = isSi ? 'SI' : ((c.facturas && String(c.facturas).trim() !== '') ? c.facturas : 'NONE');
-                                  return (
-                                    <span style={{ color: isSi ? '#4ade80' : 'inherit', fontWeight: isSi ? 'bold' : 'normal' }}>
-                                      {displayVal}
-                                    </span>
-                                  );
-                                }
-
-                                if (col === 'ip') {
-                                  return c.ip ? (
-                                    <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: '600' }} title="IP del Cliente (Doble clic para editar)">
-                                      {c.ip}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>
-                                  );
-                                }
-
-                                if (col === 'tecnico') {
-                                  return c.tecnico ? (
-                                    <span style={{ fontWeight: '500', color: '#38bdf8' }} title="Técnico responsable del servicio">
-                                      👨‍🔧 {c.tecnico}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>-</span>
-                                  );
-                                }
-
-                                if (col === 'activador') {
-                                  return c.activador ? (
-                                    <span style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      padding: '2px 8px',
-                                      borderRadius: '8px',
-                                      background: 'rgba(56, 189, 248, 0.1)',
-                                      color: '#38bdf8',
-                                      fontSize: '0.75rem',
-                                      fontWeight: '600'
-                                    }} title="Activador del servicio">
-                                      🤖 {c.activador}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>-</span>
-                                  );
-                                }
-
-                                if (['fecha_firma', 'instalation_date', 'payment_date'].includes(col)) {
-                                  return formatToDMY(c[col]);
-                                }
-
-                                if (col === 'bridge' || col === 'breach') {
-                                  const bridgeVal = (c.bridge !== undefined && c.bridge !== null && c.bridge !== '') ? c.bridge : c.breach;
-                                  if (!bridgeVal || bridgeVal === 'NONE' || String(bridgeVal).trim() === '') {
-                                    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-                                  }
-                                  return (
-                                    <span style={{ fontFamily: 'monospace', color: '#fb923c', fontSize: '0.75rem', fontWeight: '500' }} title={bridgeVal}>
-                                      {bridgeVal}
-                                    </span>
-                                  );
-                                }
-
-                                if (col === 'mac') {
-                                  if (!c.mac || String(c.mac).trim() === '') {
-                                    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-                                  }
-                                  return (
-                                    <span style={{
-                                      fontFamily: 'monospace',
-                                      fontSize: '0.78rem',
-                                      color: '#a5b4fc',
-                                      background: 'rgba(99, 102, 241, 0.08)',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      letterSpacing: '0.3px',
-                                      display: 'inline-block'
-                                    }} title={c.mac}>
-                                      {c.mac}
-                                    </span>
-                                  );
-                                }
-
-                                if (col === 'potencia') {
-                                  const potVal = c.potencia;
-                                  const hasPot = potVal !== undefined && potVal !== null && String(potVal).trim() !== '';
-                                  return (
-                                    <div
-                                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleAbrirPotencia(c);
-                                      }}
-                                      title="Click para ver potencia óptica en tiempo real"
-                                    >
+                                  if (col === 'mac') {
+                                    if (!c.mac || String(c.mac).trim() === '') {
+                                      return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+                                    }
+                                    return (
                                       <span style={{
-                                        color: hasPot ? '#c084fc' : 'var(--text-muted)',
-                                        fontWeight: hasPot ? '700' : 'normal',
-                                        fontFamily: hasPot ? 'monospace' : 'inherit'
-                                      }}>
-                                        {hasPot ? `${potVal} dBm` : '-'}
-                                      </span>
-                                      <span style={{
-                                        fontSize: '0.7rem',
-                                        background: 'rgba(56, 189, 248, 0.15)',
-                                        border: '1px solid rgba(56, 189, 248, 0.3)',
-                                        color: '#38bdf8',
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.78rem',
+                                        color: '#a5b4fc',
+                                        background: 'rgba(99, 102, 241, 0.08)',
+                                        padding: '2px 6px',
                                         borderRadius: '4px',
-                                        padding: '1px 5px',
-                                        fontWeight: '700',
-                                        lineHeight: 1
-                                      }}>
-                                        ⚡
+                                        letterSpacing: '0.3px',
+                                        display: 'inline-block'
+                                      }} title={c.mac}>
+                                        {c.mac}
                                       </span>
-                                    </div>
-                                  );
-                                }
+                                    );
+                                  }
 
-                                const cellVal = c[col] !== undefined ? c[col] : (col === 'bridge' ? c.breach : undefined);
-                                return (cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '') ? String(cellVal) : '-';
-                              })()}
-                            </span>
-                          )}
+                                  if (col === 'potencia') {
+                                    const potVal = c.potencia;
+                                    const hasPot = potVal !== undefined && potVal !== null && String(potVal).trim() !== '';
+                                    return (
+                                      <div
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAbrirPotencia(c);
+                                        }}
+                                        title="Click para ver potencia óptica en tiempo real"
+                                      >
+                                        <span style={{
+                                          color: hasPot ? '#c084fc' : 'var(--text-muted)',
+                                          fontWeight: hasPot ? '700' : 'normal',
+                                          fontFamily: hasPot ? 'monospace' : 'inherit'
+                                        }}>
+                                          {hasPot ? `${potVal} dBm` : '-'}
+                                        </span>
+                                        <span style={{
+                                          fontSize: '0.7rem',
+                                          background: 'rgba(56, 189, 248, 0.15)',
+                                          border: '1px solid rgba(56, 189, 248, 0.3)',
+                                          color: '#38bdf8',
+                                          borderRadius: '4px',
+                                          padding: '1px 5px',
+                                          fontWeight: '700',
+                                          lineHeight: 1
+                                        }}>
+                                          ⚡
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+
+                                  const cellVal = c[col] !== undefined ? c[col] : (col === 'bridge' ? c.breach : undefined);
+                                  return (cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '') ? String(cellVal) : '-';
+                                })()}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {selectedAction === 'POTENCIA' && (
+                        <td key="acciones-potencia" style={{
+                          padding: '6px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 140,
+                          minWidth: 140,
+                          maxWidth: 140,
+                          textAlign: 'center',
+                          position: 'sticky',
+                          right: 0,
+                          background: '#131526',
+                          zIndex: 12,
+                          borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                          borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                          borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAbrirPotencia(c)}
+                            style={{
+                              padding: '5px 12px',
+                              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
+                              border: '1px solid rgba(56, 189, 248, 0.45)',
+                              color: '#38bdf8',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 2px 8px rgba(56, 189, 248, 0.15)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(99, 102, 241, 0.4))';
+                              e.currentTarget.style.borderColor = '#38bdf8';
+                              e.currentTarget.style.boxShadow = '0 2px 12px rgba(56, 189, 248, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))';
+                              e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.45)';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(56, 189, 248, 0.15)';
+                            }}
+                            title={`Ver potencia óptica en tiempo real de ${c.nombre}`}
+                          >
+                            ⚡ Ver Potencia
+                          </button>
                         </td>
-                      );
-                    })}
-                    {selectedAction === 'POTENCIA' && (
-                      <td key="acciones-potencia" style={{
-                        padding: '6px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 140,
-                        minWidth: 140,
-                        maxWidth: 140,
-                        textAlign: 'center',
-                        position: 'sticky',
-                        right: 0,
-                        background: '#131526',
-                        zIndex: 12,
-                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                      }}>
-                        <button
-                          type="button"
-                          onClick={() => handleAbrirPotencia(c)}
-                          style={{
-                            padding: '5px 12px',
-                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
-                            border: '1px solid rgba(56, 189, 248, 0.45)',
-                            color: '#38bdf8',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            transition: 'all 0.2s ease',
-                            boxShadow: '0 2px 8px rgba(56, 189, 248, 0.15)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(99, 102, 241, 0.4))';
-                            e.currentTarget.style.borderColor = '#38bdf8';
-                            e.currentTarget.style.boxShadow = '0 2px 12px rgba(56, 189, 248, 0.4)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))';
-                            e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.45)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(56, 189, 248, 0.15)';
-                          }}
-                          title={`Ver potencia óptica en tiempo real de ${c.nombre}`}
-                        >
-                          ⚡ Ver Potencia
-                        </button>
-                      </td>
-                    )}
-                {selectedAction === 'MIGRAR' && (
-                      <td key="acciones-migrar" style={{
-                        padding: '6px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 130,
-                        minWidth: 130,
-                        maxWidth: 130,
-                        textAlign: 'center',
-                        position: 'sticky',
-                        right: 0,
-                        background: '#131526',
-                        zIndex: 12,
-                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                      }}>
-                        <button
-                          onClick={() => handleMigrarCliente(c)}
-                          style={{
-                            padding: '5px 12px',
-                            background: 'rgba(168, 85, 247, 0.25)',
-                            border: '1px solid #a855f7',
-                            color: '#d8b4fe',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#a855f7';
-                            e.currentTarget.style.color = '#ffffff';
-                            e.currentTarget.style.boxShadow = '0 2px 10px rgba(168, 85, 247, 0.5)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(168, 85, 247, 0.25)';
-                            e.currentTarget.style.color = '#d8b4fe';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                          title={`Migrar a ${c.nombre}: Desprovisionar de OLT, MikroTik y LibreQoS pasando a En Activación (Finanzas intactas)`}
-                        >
-                          🔄 Migrar
-                        </button>
-                      </td>
-                    )}
-                    {selectedAction === 'ELIMINAR' && (
-                      <td key="acciones-eliminar" style={{
-                        padding: '6px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 120,
-                        minWidth: 120,
-                        maxWidth: 120,
-                        textAlign: 'center',
-                        position: 'sticky',
-                        right: 0,
-                        background: '#131526',
-                        zIndex: 12,
-                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                      }}>
-                        <button
-                          onClick={() => handleDeleteCliente(c)}
-                          style={{
-                            padding: '5px 12px',
-                            background: 'rgba(239, 68, 68, 0.18)',
-                            border: '1px solid rgba(239, 68, 68, 0.45)',
-                            color: '#f87171',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#ef4444';
-                            e.currentTarget.style.color = '#ffffff';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
-                            e.currentTarget.style.color = '#f87171';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                          title={`Eliminar a ${c.nombre} únicamente del sistema`}
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </td>
-                    )}
-                    {selectedAction === 'BORRAR' && (
-                      <td key="acciones-borrar" style={{
-                        padding: '6px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 130,
-                        minWidth: 130,
-                        maxWidth: 130,
-                        textAlign: 'center',
-                        position: 'sticky',
-                        right: 0,
-                        background: '#131526',
-                        zIndex: 12,
-                        borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
-                        borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                        borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
-                      }}>
-                        <button
-                          onClick={() => handleDeleteCompleto(c)}
-                          style={{
-                            padding: '5px 12px',
-                            background: 'rgba(220, 38, 38, 0.25)',
-                            border: '1px solid #ef4444',
-                            color: '#fca5a5',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#dc2626';
-                            e.currentTarget.style.color = '#ffffff';
-                            e.currentTarget.style.boxShadow = '0 2px 10px rgba(220, 38, 38, 0.5)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
-                            e.currentTarget.style.color = '#fca5a5';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                          title={`Borrar a ${c.nombre} de OLT, MikroTik, LibreQoS, XUI y Sistema`}
-                        >
-                          💥 Borrar Todo
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                      {selectedAction === 'MIGRAR' && (
+                        <td key="acciones-migrar" style={{
+                          padding: '6px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 130,
+                          minWidth: 130,
+                          maxWidth: 130,
+                          textAlign: 'center',
+                          position: 'sticky',
+                          right: 0,
+                          background: '#131526',
+                          zIndex: 12,
+                          borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                          borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                          borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        }}>
+                          <button
+                            onClick={() => handleMigrarCliente(c)}
+                            style={{
+                              padding: '5px 12px',
+                              background: 'rgba(168, 85, 247, 0.25)',
+                              border: '1px solid #a855f7',
+                              color: '#d8b4fe',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#a855f7';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.boxShadow = '0 2px 10px rgba(168, 85, 247, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.25)';
+                              e.currentTarget.style.color = '#d8b4fe';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
+                            title={`Migrar a ${c.nombre}: Desprovisionar de OLT, MikroTik y LibreQoS pasando a En Activación (Finanzas intactas)`}
+                          >
+                            🔄 Migrar
+                          </button>
+                        </td>
+                      )}
+                      {selectedAction === 'ELIMINAR' && (
+                        <td key="acciones-eliminar" style={{
+                          padding: '6px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 120,
+                          minWidth: 120,
+                          maxWidth: 120,
+                          textAlign: 'center',
+                          position: 'sticky',
+                          right: 0,
+                          background: '#131526',
+                          zIndex: 12,
+                          borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                          borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                          borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        }}>
+                          <button
+                            onClick={() => handleDeleteCliente(c)}
+                            style={{
+                              padding: '5px 12px',
+                              background: 'rgba(239, 68, 68, 0.18)',
+                              border: '1px solid rgba(239, 68, 68, 0.45)',
+                              color: '#f87171',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#ef4444';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
+                              e.currentTarget.style.color = '#f87171';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
+                            title={`Eliminar a ${c.nombre} únicamente del sistema`}
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </td>
+                      )}
+                      {selectedAction === 'BORRAR' && (
+                        <td key="acciones-borrar" style={{
+                          padding: '6px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 130,
+                          minWidth: 130,
+                          maxWidth: 130,
+                          textAlign: 'center',
+                          position: 'sticky',
+                          right: 0,
+                          background: '#131526',
+                          zIndex: 12,
+                          borderLeft: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
+                          borderBottom: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                          borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
+                        }}>
+                          <button
+                            onClick={() => handleDeleteCompleto(c)}
+                            style={{
+                              padding: '5px 12px',
+                              background: 'rgba(220, 38, 38, 0.25)',
+                              border: '1px solid #ef4444',
+                              color: '#fca5a5',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#dc2626';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.boxShadow = '0 2px 10px rgba(220, 38, 38, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)';
+                              e.currentTarget.style.color = '#fca5a5';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
+                            title={`Borrar a ${c.nombre} de OLT, MikroTik, LibreQoS, XUI y Sistema`}
+                          >
+                            💥 Borrar Todo
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-        {/* VISTA MÓVIL: Tarjetas compactas mostrando únicamente ID y Nombre del Cliente */}
-        <div className="general-mobile-view">
-          {filteredClientes.length === 0 ? (
-            <div className="general-mobile-empty">
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>🔍</span>
-              <p style={{ margin: 0, fontWeight: 500 }}>No se encontraron clientes</p>
-            </div>
-          ) : (
-            <div className="general-mobile-list">
-              {filteredClientes.map(cliente => (
-                <div
-                  key={cliente.id}
-                  className="general-mobile-card"
-                  onClick={() => setSelectedMobileClient(cliente)}
-                >
-                  <div className="general-mobile-card-id">
-                    #{cliente.id}
-                  </div>
-                  <div className="general-mobile-card-name">
-                    {cliente.nombre || 'Sin Nombre'}
-                  </div>
-                  <button
-                    type="button"
-                    className="general-mobile-card-btn-potencia"
-                    title="Ver potencia óptica en tiempo real"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAbrirPotencia(cliente);
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#38bdf8',
-                      borderRadius: '8px',
-                      padding: '5px 9px',
-                      fontSize: '0.74rem',
-                      fontWeight: '700',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
-                    }}
+          {/* VISTA MÓVIL: Tarjetas compactas mostrando únicamente ID y Nombre del Cliente */}
+          <div className="general-mobile-view">
+            {filteredClientes.length === 0 ? (
+              <div className="general-mobile-empty">
+                <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>🔍</span>
+                <p style={{ margin: 0, fontWeight: 500 }}>No se encontraron clientes</p>
+              </div>
+            ) : (
+              <div className="general-mobile-list">
+                {filteredClientes.map(cliente => (
+                  <div
+                    key={cliente.id}
+                    className="general-mobile-card"
+                    onClick={() => setSelectedMobileClient(cliente)}
                   >
-                    <span>⚡</span>
-                    <span>Potencia</span>
-                  </button>
-                  <div className="general-mobile-card-arrow">
-                    ›
+                    <div className="general-mobile-card-id">
+                      #{cliente.id}
+                    </div>
+                    <div className="general-mobile-card-name">
+                      {cliente.nombre || 'Sin Nombre'}
+                    </div>
+                    <button
+                      type="button"
+                      className="general-mobile-card-btn-potencia"
+                      title="Ver potencia óptica en tiempo real"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAbrirPotencia(cliente);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(99, 102, 241, 0.22))',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: '#38bdf8',
+                        borderRadius: '8px',
+                        padding: '5px 9px',
+                        fontSize: '0.74rem',
+                        fontWeight: '700',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                    >
+                      <span>⚡</span>
+                      <span>Potencia</span>
+                    </button>
+                    <div className="general-mobile-card-arrow">
+                      ›
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
       <div className="general-desktop-only" style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span>
@@ -3800,20 +3784,19 @@ const General = () => {
                     background: (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
                       ? 'rgba(16, 185, 129, 0.15)'
                       : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
-                      ? 'rgba(239, 68, 68, 0.15)'
-                      : 'rgba(245, 158, 11, 0.15)',
+                        ? 'rgba(239, 68, 68, 0.15)'
+                        : 'rgba(245, 158, 11, 0.15)',
                     color: (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
                       ? '#34d399'
                       : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
-                      ? '#f87171'
-                      : '#fbbf24',
-                    border: `1px solid ${
-                      (selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
+                        ? '#f87171'
+                        : '#fbbf24',
+                    border: `1px solid ${(selectedMobileClient.estado?.toUpperCase() === 'ACTIVO')
                         ? 'rgba(16, 185, 129, 0.3)'
                         : (selectedMobileClient.estado?.toUpperCase() === 'INACTIVO')
-                        ? 'rgba(239, 68, 68, 0.3)'
-                        : 'rgba(245, 158, 11, 0.3)'
-                    }`
+                          ? 'rgba(239, 68, 68, 0.3)'
+                          : 'rgba(245, 158, 11, 0.3)'
+                      }`
                   }}>
                     {selectedMobileClient.estado || '—'}
                   </span>

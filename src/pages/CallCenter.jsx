@@ -725,7 +725,7 @@ const CallCenter = () => {
       {/* ── HEADER ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '22px', flexWrap: 'wrap', gap: '16px'
+        marginBottom: '20px', flexWrap: 'wrap', gap: '16px'
       }}>
         <div>
           <h1 style={{
@@ -736,9 +736,56 @@ const CallCenter = () => {
           }}>
             📞 Call Center
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Directorio general de clientes ordenados de la A a la Z, gestión de tickets y chat de WhatsApp en vivo.
-          </p>
+        </div>
+
+        {/* Buscador y Restablecer en la cabecera */}
+        <div className="cc-desktop-view" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              className="input"
+              placeholder="🔍 Buscar cliente (A-Z), tel, IP, problema..."
+              style={{
+                width: '320px', marginBottom: 0,
+                padding: '9px 34px 9px 16px', fontSize: '0.82rem',
+                borderRadius: '20px', background: 'rgba(255,255,255,0.04)',
+                borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.12)',
+                color: '#fff'
+              }}
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute', right: '12px', top: '50%',
+                  transform: 'translateY(-50%)', background: 'none',
+                  border: 'none', color: 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer', fontSize: '0.82rem', padding: 0
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {(searchTerm || statusFilter !== 'TODOS') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('TODOS');
+              }}
+              style={{
+                padding: '8px 16px', borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.8)',
+                cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem',
+                transition: 'all 0.2s'
+              }}
+            >
+              Restablecer
+            </button>
+          )}
         </div>
       </div>
 
@@ -818,97 +865,6 @@ const CallCenter = () => {
               </div>
             );
           })}
-        </div>
-
-        {/* BARRA DE PESTAÑAS Y BUSCADOR */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          gap: '12px', marginBottom: '16px', flexWrap: 'wrap'
-        }}>
-          {/* Tabs por Estado */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {[{ value: 'TODOS', label: 'Todos', color: '#8b5cf6', icon: '👥' }, ...ESTADOS].map(e => {
-              const isActive = statusFilter === e.value;
-              const cnt = counts[e.value] ?? 0;
-              return (
-                <button
-                  key={e.value}
-                  onClick={() => {
-                    setStatusFilter(e.value);
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    padding: '7px 16px', borderRadius: '25px',
-                    border: `1.5px solid ${isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.08)'}`,
-                    background: isActive ? `${e.color || '#8b5cf6'}26` : 'rgba(255,255,255,0.03)',
-                    color: isActive ? (e.color || '#8b5cf6') : 'var(--text-muted)',
-                    cursor: 'pointer', fontWeight: isActive ? '800' : '500',
-                    fontSize: '0.78rem', transition: 'all 0.2s',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
-                >
-                  <span>{e.icon}</span>
-                  <span>{e.label}</span>
-                  <span style={{
-                    background: isActive ? (e.color || '#8b5cf6') : 'rgba(255,255,255,0.1)',
-                    color: isActive ? '#fff' : 'var(--text-muted)',
-                    borderRadius: '12px', padding: '1px 8px',
-                    fontSize: '0.68rem', fontWeight: '800'
-                  }}>
-                    {cnt}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Buscador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                placeholder="🔍 Buscar cliente (A-Z), tel, IP, problema..."
-                style={{
-                  width: '300px', marginBottom: 0,
-                  padding: '9px 32px 9px 16px', fontSize: '0.8rem',
-                  borderRadius: '20px', background: 'rgba(255,255,255,0.04)',
-                  borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.1)'
-                }}
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  style={{
-                    position: 'absolute', right: '12px', top: '50%',
-                    transform: 'translateY(-50%)', background: 'none',
-                    border: 'none', color: 'rgba(255,255,255,0.5)',
-                    cursor: 'pointer', fontSize: '0.8rem', padding: 0
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {(searchTerm || statusFilter !== 'TODOS') && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('TODOS');
-                }}
-                style={{
-                  padding: '7px 14px', borderRadius: '20px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)',
-                  cursor: 'pointer', fontWeight: '600', fontSize: '0.74rem'
-                }}
-              >
-                Restablecer
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
