@@ -720,16 +720,56 @@ const CallCenter = () => {
      RENDER
   ────────────────────────────────────────────── */
   return (
-    <div style={{ width: '100%', padding: '0' }}>
+    <div className="cc-page-container" style={{ width: '100%', padding: '0' }}>
+      <style>{`
+        @media (min-width: 769px) {
+          .cc-page-container {
+            height: calc(100vh - 116px);
+            max-height: calc(100vh - 116px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+          }
+          .cc-card-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+          }
+          .cc-table-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: auto;
+          }
+        }
+        .cc-table-scroll::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .cc-table-scroll::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 4px;
+        }
+        .cc-table-scroll::-webkit-scrollbar-thumb {
+          background: rgba(139, 92, 246, 0.32);
+          border-radius: 4px;
+        }
+        .cc-table-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 92, 246, 0.65);
+        }
+      `}</style>
 
       {/* ── HEADER ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '20px', flexWrap: 'wrap', gap: '16px'
+        marginBottom: '10px', flexWrap: 'wrap', gap: '12px', flexShrink: 0
       }}>
         <div>
           <h1 style={{
-            fontSize: '2.1rem', fontWeight: '900', margin: 0,
+            fontSize: '1.65rem', fontWeight: '900', margin: 0,
             background: 'linear-gradient(90deg, #ec4899, #8b5cf6)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.02em'
@@ -745,8 +785,8 @@ const CallCenter = () => {
               className="input"
               placeholder="🔍 Buscar cliente (A-Z), tel, IP, problema..."
               style={{
-                width: '320px', marginBottom: 0,
-                padding: '9px 34px 9px 16px', fontSize: '0.82rem',
+                width: '310px', marginBottom: 0,
+                padding: '7px 34px 7px 14px', fontSize: '0.8rem',
                 borderRadius: '20px', background: 'rgba(255,255,255,0.04)',
                 borderColor: searchTerm ? '#8b5cf6' : 'rgba(255,255,255,0.12)',
                 color: '#fff'
@@ -761,7 +801,7 @@ const CallCenter = () => {
                   position: 'absolute', right: '12px', top: '50%',
                   transform: 'translateY(-50%)', background: 'none',
                   border: 'none', color: 'rgba(255,255,255,0.5)',
-                  cursor: 'pointer', fontSize: '0.82rem', padding: 0
+                  cursor: 'pointer', fontSize: '0.8rem', padding: 0
                 }}
               >
                 ✕
@@ -776,10 +816,10 @@ const CallCenter = () => {
                 setStatusFilter('TODOS');
               }}
               style={{
-                padding: '8px 16px', borderRadius: '20px',
+                padding: '6px 14px', borderRadius: '20px',
                 border: '1px solid rgba(255,255,255,0.12)',
                 background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.8)',
-                cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem',
+                cursor: 'pointer', fontWeight: '700', fontSize: '0.74rem',
                 transition: 'all 0.2s'
               }}
             >
@@ -790,12 +830,11 @@ const CallCenter = () => {
       </div>
 
       {/* ── KPI METRIC CARDS ── */}
-      <div className="cc-desktop-view">
+      <div className="cc-desktop-view" style={{ flexShrink: 0, marginBottom: '10px' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-          gap: '14px',
-          marginBottom: '20px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '10px'
         }}>
           {STAT_CARDS.map(card => {
             const isActive = statusFilter === card.value;
@@ -811,15 +850,15 @@ const CallCenter = () => {
                   background: isActive
                     ? `linear-gradient(145deg, ${card.color}20 0%, rgba(255,255,255,0.03) 100%)`
                     : 'rgba(255,255,255,0.02)',
-                  borderRadius: '18px',
+                  borderRadius: '12px',
                   border: `1.5px solid ${isActive ? card.color : 'rgba(255,255,255,0.07)'}`,
-                  boxShadow: isActive ? `0 8px 24px ${card.color}24` : '0 4px 14px rgba(0,0,0,0.2)',
-                  padding: '16px 18px',
+                  boxShadow: isActive ? `0 6px 18px ${card.color}20` : '0 2px 8px rgba(0,0,0,0.2)',
+                  padding: '8px 12px',
                   cursor: 'pointer',
-                  transition: 'all 0.22s ease',
+                  transition: 'all 0.2s ease',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '14px',
+                  gap: '10px',
                   userSelect: 'none'
                 }}
                 onMouseEnter={e => {
@@ -832,17 +871,17 @@ const CallCenter = () => {
                 }}
               >
                 <div style={{
-                  width: '46px', height: '46px', borderRadius: '50%',
+                  width: '32px', height: '32px', borderRadius: '50%',
                   background: card.bg || `${card.color}22`,
                   border: `1.5px solid ${card.color}55`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1.25rem', flexShrink: 0
+                  fontSize: '1rem', flexShrink: 0
                 }}>
                   {card.icon}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
-                    fontSize: '0.72rem', fontWeight: '700',
+                    fontSize: '0.67rem', fontWeight: '700',
                     color: isActive ? card.color : 'var(--text-muted)',
                     textTransform: 'capitalize', letterSpacing: '0.02em',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
@@ -850,14 +889,14 @@ const CallCenter = () => {
                     {card.label}
                   </div>
                   <div style={{
-                    fontSize: '1.65rem', fontWeight: '900', color: '#fff',
-                    lineHeight: '1.15', marginTop: '2px'
+                    fontSize: '1.25rem', fontWeight: '900', color: '#fff',
+                    lineHeight: '1.1', marginTop: '1px'
                   }}>
                     {count}
                   </div>
                   <div style={{
-                    fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)',
-                    marginTop: '2px', whiteSpace: 'nowrap'
+                    fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)',
+                    marginTop: '1px', whiteSpace: 'nowrap'
                   }}>
                     {card.sublabel}
                   </div>
@@ -902,38 +941,41 @@ const CallCenter = () => {
 
       {/* ── TABLA PRINCIPAL DE CLIENTES (ORDENADOS A - Z) ── */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flex: 1, padding: '40px', color: 'var(--text-muted)'
+        }}>
           Cargando clientes de la A a la Z...
         </div>
       ) : (
-        <div style={{
+        <div className="cc-card-container" style={{
           background: 'rgba(255,255,255,0.02)',
-          borderRadius: '20px',
+          borderRadius: '16px',
           border: '1px solid rgba(255,255,255,0.06)',
           overflow: 'hidden'
         }}>
           {/* ── VISTA ESCRITORIO: TABLA (NOMBRE, CONTACTO, ESTADO, A CARGO, ACCIONES) ── */}
-          <div className="cc-desktop-view" style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ minWidth: '950px', width: '100%', borderCollapse: 'collapse' }}>
+          <div className="cc-desktop-view cc-table-scroll" style={{ width: '100%' }}>
+            <table style={{ minWidth: '850px', width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  borderBottom: '1px solid rgba(255,255,255,0.07)'
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 10,
+                  background: '#0e1322',
+                  borderBottom: '1.5px solid rgba(255,255,255,0.08)'
                 }}>
-                  {['Nombre (A-Z)', 'Contacto', 'Estado', 'A Cargo', 'Acciones'].map(h => (
-                    <th key={h} style={{
-                      padding: '14px 18px', textAlign: 'left',
-                      fontSize: '0.67rem', textTransform: 'uppercase',
-                      letterSpacing: '0.08em', color: 'var(--text-muted)',
-                      fontWeight: '800', whiteSpace: 'nowrap'
-                    }}>{h}</th>
-                  ))}
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: '800', width: '30%' }}>Nombre (A-Z)</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: '800', width: '28%' }}>Contacto</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: '800', width: '14%' }}>Estado</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: '800', width: '14%' }}>A Cargo</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: '800', width: '14%' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedClients.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No se encontraron clientes con los filtros actuales.
                     </td>
                   </tr>
@@ -946,51 +988,53 @@ const CallCenter = () => {
                     <tr
                       key={client.id}
                       style={{
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                        borderBottom: '1px solid rgba(255,255,255,0.035)',
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)',
                         transition: 'background 0.15s',
                         verticalAlign: 'middle',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.06)'}
-                      onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.05)'}
+                      onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)'}
                     >
                       {/* 1. NOMBRE (CON AVATAR) */}
-                      <td style={{ padding: '14px 18px', minWidth: '240px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <td style={{ padding: '7px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
-                            width: '42px', height: '42px', borderRadius: '50%',
+                            width: '32px', height: '32px', borderRadius: '50%',
                             background: getAvatarColor(client.nombre),
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: '900', fontSize: '0.82rem', color: '#ffffff',
+                            fontWeight: '900', fontSize: '0.74rem', color: '#ffffff',
                             flexShrink: 0, textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                            boxShadow: '0 3px 10px rgba(0,0,0,0.3)'
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
                           }}>
                             {getInitials(client.nombre)}
                           </div>
-                          <div style={{ minWidth: 0 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{
-                              fontWeight: '800', fontSize: '0.88rem', color: '#f8fafc',
-                              lineHeight: '1.3', display: 'flex', alignItems: 'center', gap: '6px'
+                              fontWeight: '800', fontSize: '0.82rem', color: '#f8fafc',
+                              lineHeight: '1.2', display: 'flex', alignItems: 'center', gap: '6px'
                             }}>
-                              <span>{client.nombre || 'Sin Nombre'}</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {client.nombre || 'Sin Nombre'}
+                              </span>
                               {!client.isVirtual && client.id && (
                                 <span style={{
-                                  fontSize: '0.68rem', color: '#818cf8', fontWeight: '800',
-                                  background: 'rgba(129, 140, 248, 0.12)', padding: '1px 6px',
-                                  borderRadius: '6px'
+                                  fontSize: '0.62rem', color: '#818cf8', fontWeight: '800',
+                                  background: 'rgba(129, 140, 248, 0.12)', padding: '1px 5px',
+                                  borderRadius: '5px', flexShrink: 0
                                 }}>
                                   #{client.id}
                                 </span>
                               )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-                              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                                 IP: <strong style={{ color: client.ip ? '#cbd5e1' : '#64748b' }}>{client.ip || 'N/A'}</strong>
                               </span>
                               {clientTickets.length > 0 && (
                                 <span style={{
-                                  fontSize: '0.62rem', background: 'rgba(236,72,153,0.14)',
-                                  color: '#f472b6', padding: '1px 6px', borderRadius: '10px',
+                                  fontSize: '0.6rem', background: 'rgba(236,72,153,0.14)',
+                                  color: '#f472b6', padding: '1px 5px', borderRadius: '8px',
                                   fontWeight: '800'
                                 }}>
                                   🎫 {clientTickets.length} ticket{clientTickets.length > 1 ? 's' : ''}
@@ -1002,11 +1046,13 @@ const CallCenter = () => {
                       </td>
 
                       {/* 2. CONTACTO (TELÉFONO, DIRECCIÓN) */}
-                      <td style={{ padding: '14px 16px', minWidth: '200px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: '700', color: '#cbd5e1' }}>
-                            <span style={{ color: '#22c55e', fontSize: '0.85rem' }}>📞</span>
-                            <span>{client.celular || client.telefono || 'Sin teléfono'}</span>
+                      <td style={{ padding: '7px 12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: '700', color: '#cbd5e1' }}>
+                            <span style={{ color: '#22c55e', fontSize: '0.8rem' }}>📞</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {client.celular || client.telefono || 'Sin teléfono'}
+                            </span>
                             {waPhone && (
                               <a
                                 href={`https://wa.me/${waPhone}`}
@@ -1014,7 +1060,7 @@ const CallCenter = () => {
                                 rel="noopener noreferrer"
                                 style={{
                                   color: '#25d366', textDecoration: 'none',
-                                  fontSize: '0.72rem', marginLeft: '4px'
+                                  fontSize: '0.7rem', marginLeft: '2px'
                                 }}
                                 title="Abrir en WhatsApp"
                               >
@@ -1024,28 +1070,31 @@ const CallCenter = () => {
                           </div>
                           {(client.direccion || client.parroquia) && (
                             <div style={{
-                              display: 'flex', alignItems: 'flex-start', gap: '6px',
-                              fontSize: '0.7rem', color: '#94a3b8', lineHeight: '1.3'
+                              display: 'flex', alignItems: 'center', gap: '4px',
+                              fontSize: '0.67rem', color: '#94a3b8', lineHeight: '1.2'
                             }}>
                               <span style={{ color: '#818cf8', flexShrink: 0 }}>📍</span>
-                              <span>{client.direccion || client.parroquia}</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {client.direccion || client.parroquia}
+                              </span>
                             </div>
                           )}
                         </div>
                       </td>
 
                       {/* 3. ESTADO */}
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 12px' }}>
                         <EstadoBadge estado={latestTicket?.estado} />
                       </td>
 
                       {/* 4. A CARGO */}
-                      <td style={{ padding: '14px 16px', minWidth: '140px' }}>
+                      <td style={{ padding: '7px 12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>👤</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>👤</span>
                           <span style={{
-                            fontSize: '0.78rem', fontWeight: '700',
-                            color: (latestTicket?.a_cargo || latestTicket?.registrado_por) ? '#f1f5f9' : '#64748b'
+                            fontSize: '0.74rem', fontWeight: '700',
+                            color: (latestTicket?.a_cargo || latestTicket?.registrado_por) ? '#f1f5f9' : '#64748b',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                           }}>
                             {latestTicket?.a_cargo || latestTicket?.registrado_por || 'Sin asignar'}
                           </span>
@@ -1053,17 +1102,17 @@ const CallCenter = () => {
                       </td>
 
                       {/* 5. ACCIONES */}
-                      <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '7px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <button
                           onClick={() => handleOpenModal(client)}
                           style={{
-                            padding: '7px 16px', borderRadius: '10px',
+                            padding: '5px 12px', borderRadius: '8px',
                             background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.2))',
                             border: '1px solid rgba(139,92,246,0.4)',
-                            color: '#c4b5fd', cursor: 'pointer', fontSize: '0.74rem',
-                            fontWeight: '800', marginRight: '6px', transition: 'all 0.2s',
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            boxShadow: '0 2px 8px rgba(139,92,246,0.2)'
+                            color: '#c4b5fd', cursor: 'pointer', fontSize: '0.72rem',
+                            fontWeight: '800', marginRight: '4px', transition: 'all 0.2s',
+                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                            boxShadow: '0 2px 6px rgba(139,92,246,0.2)'
                           }}
                         >
                           <span>⚙️</span> Gestionar ▾
@@ -1072,11 +1121,11 @@ const CallCenter = () => {
                           <button
                             onClick={() => handleOpenHojaRutaModal(latestTicket)}
                             style={{
-                              padding: '7px 12px', borderRadius: '10px',
+                              padding: '5px 10px', borderRadius: '8px',
                               background: 'rgba(249,115,22,0.15)',
                               border: '1px solid rgba(249,115,22,0.35)',
-                              color: '#fb923c', cursor: 'pointer', fontSize: '0.72rem',
-                              fontWeight: '700', marginRight: '6px', transition: 'all 0.2s',
+                              color: '#fb923c', cursor: 'pointer', fontSize: '0.7rem',
+                              fontWeight: '700', transition: 'all 0.2s',
                               display: 'inline-flex', alignItems: 'center', gap: '4px'
                             }}
                             title="Enviar a Hoja de Ruta"
@@ -1093,7 +1142,7 @@ const CallCenter = () => {
           </div>
 
           {/* ── VISTA MÓVIL: TARJETAS DE CLIENTES ── */}
-          <div className="cc-mobile-view" style={{ padding: '12px' }}>
+          <div className="cc-mobile-view cc-table-scroll" style={{ padding: '10px' }}>
             {paginatedClients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
                 <span style={{ fontSize: '2rem' }}>👥</span>
@@ -1153,31 +1202,31 @@ const CallCenter = () => {
                     </div>
                   )}
 
-                  {/* Acciones móvil */}
+                  {/* Botones de acción móvil */}
                   <div className="cc-card-mobile-actions">
                     <button
                       onClick={() => handleOpenModal(client)}
+                      className="btn"
                       style={{
                         flex: 1, padding: '10px 14px', borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                        border: 'none', color: '#fff', cursor: 'pointer',
-                        fontSize: '0.8rem', fontWeight: '800', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        boxShadow: '0 2px 8px rgba(139,92,246,0.3)'
+                        background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.3))',
+                        border: '1px solid rgba(139,92,246,0.5)',
+                        color: '#fff', fontSize: '0.78rem', fontWeight: '800',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                       }}
                     >
-                      <span>⚙️</span> Gestionar
+                      <span>⚙️</span> Gestionar Cliente ▾
                     </button>
                     {latestTicket?.estado === 'VISITA TECNICA' && (
                       <button
                         onClick={() => handleOpenHojaRutaModal(latestTicket)}
+                        className="btn"
                         style={{
-                          padding: '10px 12px', borderRadius: '10px',
-                          background: 'rgba(249,115,22,0.18)',
-                          border: '1px solid rgba(249,115,22,0.35)',
-                          color: '#fb923c', cursor: 'pointer',
-                          fontSize: '0.76rem', fontWeight: '700', display: 'flex',
-                          alignItems: 'center', gap: '4px'
+                          padding: '10px 14px', borderRadius: '10px',
+                          background: 'rgba(249,115,22,0.2)',
+                          border: '1px solid rgba(249,115,22,0.4)',
+                          color: '#fb923c', fontSize: '0.76rem', fontWeight: '700',
+                          display: 'flex', alignItems: 'center', gap: '4px'
                         }}
                       >
                         🗓️ Hoja Ruta
@@ -1206,15 +1255,16 @@ const CallCenter = () => {
 
           {/* ── BARRA INFERIOR DE PAGINACIÓN ── */}
           <div style={{
+            flexShrink: 0,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(255,255,255,0.01)', flexWrap: 'wrap', gap: '12px'
+            padding: '7px 16px', borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(11, 15, 26, 0.98)', flexWrap: 'wrap', gap: '10px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                 Mostrando <strong style={{ color: '#fff' }}>{totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong style={{ color: '#fff' }}>{endIndex}</strong> de <strong style={{ color: '#fff' }}>{totalItems}</strong> clientes
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 <span>Por página:</span>
                 <select
                   value={itemsPerPage}
@@ -1224,8 +1274,8 @@ const CallCenter = () => {
                   }}
                   style={{
                     background: '#1a1040', border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#fff', borderRadius: '8px', padding: '3px 8px',
-                    fontSize: '0.74rem', cursor: 'pointer', outline: 'none'
+                    color: '#fff', borderRadius: '6px', padding: '2px 8px',
+                    fontSize: '0.72rem', cursor: 'pointer', outline: 'none'
                   }}
                 >
                   <option value={5}>5</option>
@@ -1237,18 +1287,18 @@ const CallCenter = () => {
             </div>
 
             {/* Controles de página */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
                 style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
+                  width: '28px', height: '28px', borderRadius: '6px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   background: safeCurrentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
                   color: safeCurrentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
                   cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.85rem'
+                  fontSize: '0.8rem'
                 }}
               >
                 ‹
@@ -1256,19 +1306,19 @@ const CallCenter = () => {
 
               {getPageNumbers().map((p, pIdx) => (
                 p === '...' ? (
-                  <span key={`dots-${pIdx}`} style={{ color: 'var(--text-muted)', padding: '0 4px', fontSize: '0.8rem' }}>…</span>
+                  <span key={`dots-${pIdx}`} style={{ color: 'var(--text-muted)', padding: '0 3px', fontSize: '0.75rem' }}>…</span>
                 ) : (
                   <button
                     key={p}
                     onClick={() => setCurrentPage(p)}
                     style={{
-                      minWidth: '32px', height: '32px', padding: '0 8px',
-                      borderRadius: '8px',
+                      minWidth: '28px', height: '28px', padding: '0 6px',
+                      borderRadius: '6px',
                       border: safeCurrentPage === p ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
                       background: safeCurrentPage === p ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.04)',
                       color: safeCurrentPage === p ? '#fff' : 'rgba(255,255,255,0.7)',
                       fontWeight: safeCurrentPage === p ? '800' : '500',
-                      cursor: 'pointer', fontSize: '0.78rem'
+                      cursor: 'pointer', fontSize: '0.74rem'
                     }}
                   >
                     {p}
@@ -1280,13 +1330,13 @@ const CallCenter = () => {
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage >= totalPages || totalItems === 0}
                 style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
+                  width: '28px', height: '28px', borderRadius: '6px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   background: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
                   color: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
                   cursor: (safeCurrentPage >= totalPages || totalItems === 0) ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.85rem'
+                  fontSize: '0.8rem'
                 }}
               >
                 ›
