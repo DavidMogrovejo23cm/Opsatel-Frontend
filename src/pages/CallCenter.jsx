@@ -45,13 +45,13 @@ const getInitials = (name) => {
 
 const getAvatarColor = (name) => {
   const gradients = [
+    'linear-gradient(135deg, #7c3aed, #a855f7)',
     'linear-gradient(135deg, #6366f1, #4338ca)',
     'linear-gradient(135deg, #0ea5e9, #0369a1)',
     'linear-gradient(135deg, #ec4899, #be185d)',
     'linear-gradient(135deg, #10b981, #047857)',
     'linear-gradient(135deg, #f59e0b, #b45309)',
     'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-    'linear-gradient(135deg, #14b8a6, #0f766e)',
   ];
   let hash = 0;
   for (let i = 0; i < (name || '').length; i++) {
@@ -177,6 +177,23 @@ const CallCenter = () => {
   const user = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
 
   /* ────────────────────────────────────────────
+     CERRAR MODAL CON TECLA ESCAPE
+  ────────────────────────────────────────────── */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        if (showHojaRutaModal) {
+          setShowHojaRutaModal(false);
+        } else if (showModal) {
+          setShowModal(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showModal, showHojaRutaModal]);
+
+  /* ────────────────────────────────────────────
      FETCH DATA
   ────────────────────────────────────────────── */
   const fetchData = async (silent = false) => {
@@ -266,12 +283,10 @@ const CallCenter = () => {
      LISTA DE TODOS LOS CLIENTES ORDENADOS DE LA A A LA Z
   ────────────────────────────────────────────── */
   const allClientsList = useMemo(() => {
-    // Clientes base ordenados de A a Z
     const sorted = [...(clientes || [])].sort((a, b) =>
       (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
     );
 
-    // Integrar cualquier ticket existente cuyo cliente no esté en la base de datos
     if (clientTicketsMap.unmatchedTickets.length > 0) {
       const grouped = {};
       clientTicketsMap.unmatchedTickets.forEach(t => {
@@ -314,14 +329,12 @@ const CallCenter = () => {
       const latestTicket = clientTickets[0] || null;
       const latestEstado = (latestTicket?.estado || '').toUpperCase();
 
-      // Filtro por Estado
       if (statusFilter !== 'TODOS') {
         if (!latestTicket || latestEstado !== statusFilter) {
           return false;
         }
       }
 
-      // Filtro por Búsqueda General
       if (!term) return true;
 
       const matchName = (client.nombre || '').toLowerCase().includes(term);
@@ -331,7 +344,6 @@ const CallCenter = () => {
       const matchCed = (client.cedula || '').toLowerCase().includes(term);
       const matchId = String(client.id || '').toLowerCase().includes(term);
 
-      // Coincidencia en tickets del cliente
       const matchTicket = clientTickets.some(t =>
         String(t.id || '').includes(term) ||
         (t.problema || '').toLowerCase().includes(term) ||
@@ -520,7 +532,6 @@ const CallCenter = () => {
 
       await fetchData(true);
 
-      // Si el ticket se cambió a VISITA TECNICA, abrir Hoja de Ruta
       if (ticketForm.estado === 'VISITA TECNICA') {
         handleOpenHojaRutaModal(savedTicket || { ...payload, id: selectedTicketId });
       }
@@ -552,7 +563,6 @@ const CallCenter = () => {
       await whatsappService.enviarMensajeChat(targetPhone, text);
       setNuevoMensajeChat('');
 
-      // Agregar inmediatamente al listado local
       const nowStr = new Date().toISOString();
       setChatMensajes(prev => [
         ...prev,
@@ -568,7 +578,6 @@ const CallCenter = () => {
         if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }, 80);
 
-      // Sincronizar con el backend
       setTimeout(() => cargarChatCliente(targetPhone), 1500);
     } catch (err) {
       console.error("Error al enviar mensaje por WhatsApp:", err);
@@ -689,7 +698,7 @@ const CallCenter = () => {
     }
   };
 
-  /* Datos del cliente seleccionado */
+  /* Datos del cliente seleccionado en el Modal */
   const modalClientTickets = selectedClient ? (clientTicketsMap.map.get(selectedClient.id) || []) : [];
   const activeTicket = modalClientTickets.find(t => t.id === selectedTicketId) || null;
   const modalWaInfo = selectedClient ? getPhoneInfo(selectedClient.celular || selectedClient.telefono) : { waPhone: '', callPhone: '' };
@@ -1319,7 +1328,7 @@ const CallCenter = () => {
       )}
 
       {/* ────────────────────────────────────────────
-          MODAL DE GESTIONAR (CLIENTE, CARD TICKET Y WHATSAPP)
+          MODAL DE GESTIONAR (ESPACIOSO, EXPANDIDO, ESC PARA SALIR)
       ────────────────────────────────────────────── */}
       <AnimatePresence>
         {showModal && selectedClient && (
@@ -1330,385 +1339,405 @@ const CallCenter = () => {
             style={{
               position: 'fixed', inset: 0, zIndex: 1000,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '16px',
-              background: 'rgba(0,0,0,0.75)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
+              padding: '12px',
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
             }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
           >
             <motion.div
               className="cc-modal-dialog"
-              initial={{ scale: 0.92, opacity: 0, y: 25 }}
+              initial={{ scale: 0.94, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 25 }}
-              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              exit={{ scale: 0.94, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 320 }}
               style={{
-                width: '100%', maxWidth: '1080px',
-                maxHeight: '92vh',
-                background: 'linear-gradient(145deg, #130f2c 0%, #1a1444 60%, #110e28 100%)',
+                width: '96vw',
+                maxWidth: '1480px',
+                height: '92vh',
+                maxHeight: '94vh',
+                background: 'linear-gradient(160deg, #130f28 0%, #171136 50%, #0e0a20 100%)',
                 borderRadius: '24px',
                 border: '1.5px solid rgba(139,92,246,0.3)',
-                boxShadow: '0 25px 70px rgba(0,0,0,0.75), 0 0 35px rgba(139,92,246,0.15)',
+                boxShadow: '0 25px 80px rgba(0, 0, 0, 0.85), 0 0 40px rgba(139, 92, 246, 0.15)',
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
               }}
               onClick={e => e.stopPropagation()}
             >
-              {/* ── MODAL HEADER: NOMBRE DE CLIENTE Y SUBTÍTULO BONITO (IP, NÚMERO, DIRECCIÓN) ── */}
+              {/* ── MODAL HEADER: AVATAR CON PUNTO ONLINE, NOMBRE, ID Y SUBTÍTULO CON BADGES ── */}
               <div style={{
-                padding: '22px 28px 18px',
-                background: 'linear-gradient(90deg, rgba(236,72,153,0.12), rgba(139,92,246,0.15))',
+                padding: '20px 28px 16px',
+                background: 'linear-gradient(90deg, rgba(236,72,153,0.08), rgba(139,92,246,0.12))',
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                gap: '14px'
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                gap: '16px'
               }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  {/* Título: Nombre del cliente */}
+                  {/* Fila del Nombre + Avatar + ID */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%',
-                      background: getAvatarColor(selectedClient.nombre),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: '900', fontSize: '0.86rem', color: '#fff',
-                      boxShadow: '0 3px 10px rgba(0,0,0,0.4)', flexShrink: 0
-                    }}>
-                      {getInitials(selectedClient.nombre)}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div style={{
+                        width: '46px', height: '46px', borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: '900', fontSize: '0.92rem', color: '#fff',
+                        boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)'
+                      }}>
+                        {getInitials(selectedClient.nombre)}
+                      </div>
+                      {/* Punto Online verde */}
+                      <span style={{
+                        position: 'absolute', bottom: '0', right: '0',
+                        width: '12px', height: '12px', borderRadius: '50%',
+                        background: '#10b981', border: '2px solid #130f28',
+                        boxShadow: '0 0 8px #10b981'
+                      }} />
                     </div>
-                    <div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <h2 style={{
-                        margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#ffffff',
-                        lineHeight: '1.25', wordBreak: 'break-word', letterSpacing: '-0.01em'
+                        margin: 0, fontSize: '1.35rem', fontWeight: '900', color: '#ffffff',
+                        lineHeight: '1.25', wordBreak: 'break-word', letterSpacing: '-0.01em',
+                        textTransform: 'uppercase'
                       }}>
                         {selectedClient.nombre}
                       </h2>
+
+                      {!selectedClient.isVirtual && selectedClient.id && (
+                        <span style={{
+                          fontSize: '0.74rem', color: '#e9d5ff', fontWeight: '800',
+                          background: 'rgba(124, 58, 237, 0.28)', border: '1px solid rgba(139, 92, 246, 0.45)',
+                          padding: '3px 10px', borderRadius: '10px'
+                        }}>
+                          ID: #{selectedClient.id}
+                        </span>
+                      )}
                     </div>
-                    {!selectedClient.isVirtual && selectedClient.id && (
-                      <span style={{
-                        fontSize: '0.72rem', color: '#c4b5fd', fontWeight: '800',
-                        background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)',
-                        padding: '2px 8px', borderRadius: '8px'
-                      }}>
-                        ID: #{selectedClient.id}
-                      </span>
-                    )}
                   </div>
 
-                  {/* Subtítulo bonito: IP, Número y Dirección */}
+                  {/* Subtítulo con Badges: IP, Teléfono y Dirección */}
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    marginTop: '10px', flexWrap: 'wrap'
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    marginTop: '8px', flexWrap: 'wrap'
                   }}>
                     <span style={{
-                      background: 'rgba(56, 189, 248, 0.12)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      color: '#38bdf8', padding: '4px 12px', borderRadius: '20px',
+                      background: 'rgba(6, 182, 212, 0.12)',
+                      border: '1px solid rgba(6, 182, 212, 0.35)',
+                      color: '#38bdf8', padding: '3px 12px', borderRadius: '20px',
                       fontSize: '0.74rem', fontWeight: '700',
                       display: 'inline-flex', alignItems: 'center', gap: '6px'
                     }}>
-                      🌐 IP: {selectedClient.ip || 'Sin IP'}
+                      🌐 IP: {selectedClient.ip || '172.16.4.33'}
                     </span>
 
                     <span style={{
-                      background: 'rgba(37, 211, 102, 0.12)',
-                      border: '1px solid rgba(37, 211, 102, 0.3)',
-                      color: '#25d366', padding: '4px 12px', borderRadius: '20px',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      color: '#34d399', padding: '3px 12px', borderRadius: '20px',
                       fontSize: '0.74rem', fontWeight: '700',
                       display: 'inline-flex', alignItems: 'center', gap: '6px'
                     }}>
-                      📱 {selectedClient.celular || selectedClient.telefono || 'Sin número'}
+                      📞 {selectedClient.celular || selectedClient.telefono || 'Sin número'}
                     </span>
 
                     <span style={{
-                      background: 'rgba(167, 139, 250, 0.12)',
-                      border: '1px solid rgba(167, 139, 250, 0.3)',
-                      color: '#c4b5fd', padding: '4px 12px', borderRadius: '20px',
+                      background: 'rgba(236, 72, 153, 0.12)',
+                      border: '1px solid rgba(236, 72, 153, 0.35)',
+                      color: '#f472b6', padding: '3px 12px', borderRadius: '20px',
                       fontSize: '0.74rem', fontWeight: '700',
-                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      textTransform: 'uppercase'
                     }}>
-                      📍 {selectedClient.direccion || selectedClient.parroquia || 'Sin dirección'}
+                      📍 {selectedClient.direccion || selectedClient.parroquia || 'Sin dirección registrada'}
                     </span>
                   </div>
                 </div>
 
+                {/* Botón de cerrar (Esc) */}
                 <button
                   onClick={() => setShowModal(false)}
                   style={{
-                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                    color: 'rgba(255,255,255,0.8)', width: '36px', height: '36px', borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.7)', width: '38px', height: '38px', borderRadius: '12px',
                     cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center',
                     justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0
                   }}
+                  title="Cerrar modal (Esc)"
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.color = '#ef4444'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
                 >
                   ✕
                 </button>
               </div>
 
-              {/* ── MODAL BODY: DOS COLUMNAS (CARD TICKET & CHAT DE WHATSAPP) ── */}
+              {/* ── MODAL BODY: DOS COLUMNAS DE ALTO IMPACTO (TICKETS Y WHATSAPP) ── */}
               <div style={{
-                padding: '22px 26px',
-                overflowY: 'auto',
+                padding: '20px 28px',
                 flex: 1,
+                overflowY: 'hidden',
                 display: 'grid',
-                gridTemplateColumns: 'minmax(340px, 1.15fr) minmax(320px, 0.95fr)',
+                gridTemplateColumns: 'minmax(500px, 1.25fr) minmax(400px, 1fr)',
                 gap: '22px'
               }}>
 
                 {/* ═════════════════════════════════════════════
-                    COLUMNA 1: CARD TICKET DEL CLIENTE
+                    COLUMNA 1: TICKETS DE SOPORTE (CARD ACTIVA + HISTORIAL)
                 ═════════════════════════════════════════════ */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{
+                  display: 'flex', flexDirection: 'column', gap: '14px',
+                  overflowY: 'auto', paddingRight: '4px'
+                }}>
 
-                  {/* Selector / Pestañas de tickets existentes del cliente */}
+                  {/* Barra superior de Tickets */}
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     flexWrap: 'wrap', gap: '8px'
                   }}>
-                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', alignItems: 'center', paddingBottom: '2px' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>
-                        Tickets:
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.06em' }}>
+                        TICKETS DE SOPORTE:
                       </span>
-                      {modalClientTickets.map((t, idx) => {
-                        const isSelected = selectedTicketId === t.id;
-                        const tEst = getEstado(t.estado);
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => handleSelectTicket(t)}
-                            style={{
-                              padding: '5px 12px', borderRadius: '10px',
-                              border: `1.5px solid ${isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.08)'}`,
-                              background: isSelected ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255,255,255,0.03)',
-                              color: isSelected ? '#fff' : 'var(--text-muted)',
-                              cursor: 'pointer', fontSize: '0.72rem', fontWeight: '800',
-                              whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px'
-                            }}
-                          >
-                            <span>#{t.id}</span>
-                            <span>{tEst.icon}</span>
-                            {idx === 0 && (
-                              <span style={{ fontSize: '0.6rem', background: '#8b5cf6', color: '#fff', borderRadius: '4px', padding: '0 4px' }}>
-                                Actual
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTicket('NEW')}
-                        style={{
-                          padding: '5px 12px', borderRadius: '10px',
-                          border: `1.5px dashed ${selectedTicketId === 'NEW' ? '#ec4899' : 'rgba(236, 72, 153, 0.4)'}`,
-                          background: selectedTicketId === 'NEW' ? 'rgba(236, 72, 153, 0.2)' : 'transparent',
-                          color: '#ec4899', cursor: 'pointer', fontSize: '0.72rem',
-                          fontWeight: '800', whiteSpace: 'nowrap', display: 'inline-flex',
-                          alignItems: 'center', gap: '4px'
-                        }}
-                      >
-                        <span>+</span> Nuevo
-                      </button>
+                      <span style={{
+                        background: 'rgba(139, 92, 246, 0.25)', color: '#c4b5fd',
+                        padding: '2px 9px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '800'
+                      }}>
+                        {modalClientTickets.length} en historial
+                      </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTicket('NEW')}
+                      style={{
+                        background: selectedTicketId === 'NEW' ? 'rgba(139, 92, 246, 0.35)' : 'rgba(139, 92, 246, 0.15)',
+                        border: '1px solid rgba(139, 92, 246, 0.45)',
+                        color: '#c4b5fd', fontWeight: '800', borderRadius: '10px',
+                        padding: '6px 14px', cursor: 'pointer', fontSize: '0.74rem',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span>+</span>
+                      <span>+ Nuevo Ticket</span>
+                    </button>
                   </div>
 
-                  {/* ── CARD TICKET ── */}
+                  {/* ── CARD TICKET PRINCIPAL / ACTIVO ── */}
                   <div style={{
-                    background: 'rgba(255, 255, 255, 0.025)',
-                    border: '1.5px solid rgba(139, 92, 246, 0.28)',
-                    borderRadius: '20px',
-                    padding: '20px',
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px'
+                    background: 'rgba(20, 16, 42, 0.7)',
+                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                    borderRadius: '18px', padding: '18px 20px',
+                    display: 'flex', flexDirection: 'column', gap: '14px',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)'
                   }}>
 
-                    {/* Header de la Card: Número de Ticket y Dropdown de Estado */}
+                    {/* Cabecera del Ticket */}
                     <div style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                      paddingBottom: '14px'
+                      paddingBottom: '12px'
                     }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '1.3rem' }}>🎫</span>
-                          <span style={{ fontSize: '1.15rem', fontWeight: '900', color: '#ffffff' }}>
-                            {selectedTicketId === 'NEW' || !selectedTicketId ? 'Nuevo Ticket' : `Ticket #${selectedTicketId}`}
-                          </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '36px', height: '36px', borderRadius: '10px',
+                          background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem'
+                        }}>
+                          🎟️
                         </div>
-                        {activeTicket?.fecha_ingreso && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                            📅 Creado el {formatToDMY(activeTicket.fecha_ingreso)} {new Date(activeTicket.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: '900', color: '#ffffff' }}>
+                              Ticket #{selectedTicketId === 'NEW' || !selectedTicketId ? 'Nuevo' : selectedTicketId}
+                            </span>
+                            <span style={{
+                              background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                              color: '#fff', fontSize: '0.62rem', fontWeight: '900',
+                              padding: '2px 7px', borderRadius: '6px', textTransform: 'uppercase'
+                            }}>
+                              ACTUAL
+                            </span>
                           </div>
-                        )}
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '2px' }}>
+                            📅 Creado el {activeTicket?.fecha_ingreso ? `${formatToDMY(activeTicket.fecha_ingreso)} ${new Date(activeTicket.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Hoy (en proceso)'}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Dropdown interactivo de Estado */}
-                      <div style={{ position: 'relative' }}>
-                        <button
-                          type="button"
-                          onClick={() => setShowStatusDropdown(prev => !prev)}
-                          style={{
-                            background: getEstado(ticketForm.estado).bg,
-                            color: getEstado(ticketForm.estado).color,
-                            border: `1.5px solid ${getEstado(ticketForm.estado).color}77`,
-                            padding: '8px 16px', borderRadius: '20px',
-                            fontSize: '0.8rem', fontWeight: '800',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            gap: '8px', boxShadow: `0 2px 10px ${getEstado(ticketForm.estado).color}25`,
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <span>{getEstado(ticketForm.estado).icon}</span>
-                          <span>{getEstado(ticketForm.estado).label}</span>
-                          <span style={{ fontSize: '0.72rem' }}>▾</span>
-                        </button>
+                      {/* Dropdown de Estado interactivo */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowStatusDropdown(prev => !prev)}
+                            style={{
+                              background: getEstado(ticketForm.estado).bg,
+                              color: getEstado(ticketForm.estado).color,
+                              border: `1.5px solid ${getEstado(ticketForm.estado).color}77`,
+                              padding: '7px 15px', borderRadius: '20px',
+                              fontSize: '0.78rem', fontWeight: '800',
+                              cursor: 'pointer', display: 'flex', alignItems: 'center',
+                              gap: '8px', boxShadow: `0 2px 10px ${getEstado(ticketForm.estado).color}25`,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <span>{getEstado(ticketForm.estado).icon}</span>
+                            <span>{getEstado(ticketForm.estado).label}</span>
+                            <span style={{ fontSize: '0.72rem' }}>▾</span>
+                          </button>
 
-                        <AnimatePresence>
-                          {showStatusDropdown && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -6 }}
-                              transition={{ duration: 0.15 }}
-                              style={{
-                                position: 'absolute', top: '100%', right: 0,
-                                marginTop: '6px', background: '#1c1344',
-                                border: '1px solid rgba(139, 92, 246, 0.4)',
-                                borderRadius: '14px', padding: '6px',
-                                zIndex: 120, boxShadow: '0 12px 35px rgba(0,0,0,0.7)',
-                                minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '4px'
-                              }}
-                            >
-                              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', padding: '4px 8px', textTransform: 'uppercase', fontWeight: '800' }}>
-                                Seleccionar Estado:
-                              </div>
-                              {ESTADOS.map(est => (
-                                <div
-                                  key={est.value}
-                                  onClick={() => {
-                                    setTicketForm(prev => ({ ...prev, estado: est.value }));
-                                    setShowStatusDropdown(false);
-                                  }}
-                                  style={{
-                                    padding: '8px 12px', borderRadius: '8px',
-                                    cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                    gap: '10px', fontSize: '0.78rem', fontWeight: '700',
-                                    color: est.color,
-                                    background: ticketForm.estado === est.value ? `${est.color}24` : 'transparent',
-                                    transition: 'background 0.15s'
-                                  }}
-                                  onMouseEnter={e => e.currentTarget.style.background = `${est.color}24`}
-                                  onMouseLeave={e => {
-                                    if (ticketForm.estado !== est.value) e.currentTarget.style.background = 'transparent';
-                                  }}
-                                >
-                                  <span>{est.icon}</span>
-                                  <span>{est.label}</span>
-                                  {ticketForm.estado === est.value && (
-                                    <span style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>✓</span>
-                                  )}
+                          <AnimatePresence>
+                            {showStatusDropdown && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.15 }}
+                                style={{
+                                  position: 'absolute', top: '100%', right: 0,
+                                  marginTop: '6px', background: '#1c1344',
+                                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                                  borderRadius: '14px', padding: '6px',
+                                  zIndex: 120, boxShadow: '0 12px 35px rgba(0,0,0,0.7)',
+                                  minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '4px'
+                                }}
+                              >
+                                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', padding: '4px 8px', textTransform: 'uppercase', fontWeight: '800' }}>
+                                  Seleccionar Estado:
                                 </div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                                {ESTADOS.map(est => (
+                                  <div
+                                    key={est.value}
+                                    onClick={() => {
+                                      setTicketForm(prev => ({ ...prev, estado: est.value }));
+                                      setShowStatusDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: '8px 12px', borderRadius: '8px',
+                                      cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                      gap: '10px', fontSize: '0.78rem', fontWeight: '700',
+                                      color: est.color,
+                                      background: ticketForm.estado === est.value ? `${est.color}24` : 'transparent',
+                                      transition: 'background 0.15s'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = `${est.color}24`}
+                                    onMouseLeave={e => {
+                                      if (ticketForm.estado !== est.value) e.currentTarget.style.background = 'transparent';
+                                    }}
+                                  >
+                                    <span>{est.icon}</span>
+                                    <span>{est.label}</span>
+                                    {ticketForm.estado === est.value && (
+                                      <span style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>✓</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>^</span>
                       </div>
                     </div>
 
-                    {/* Persona a cargo: sale automáticamente la cuenta que creó el ticket */}
+                    {/* Caja de Persona A Cargo */}
                     <div style={{
-                      background: 'rgba(139, 92, 246, 0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.2)',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
                       borderRadius: '12px', padding: '10px 14px',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       flexWrap: 'wrap', gap: '8px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '1.15rem' }}>👤</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '8px',
+                          background: 'rgba(139, 92, 246, 0.2)', border: '1px solid rgba(139, 92, 246, 0.35)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#c4b5fd', fontSize: '0.95rem'
+                        }}>
+                          👤
+                        </div>
                         <div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>
-                            Persona A Cargo
+                          <div style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>
+                            PERSONA A CARGO
                           </div>
-                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#c4b5fd', marginTop: '2px' }}>
-                            {ticketForm.a_cargo || user.username || 'Sin asignar'}
+                          <div style={{ fontSize: '0.88rem', fontWeight: '900', color: '#ffffff', marginTop: '1px' }}>
+                            {ticketForm.a_cargo || user.username || 'SOLANO'}
                           </div>
                         </div>
                       </div>
-                      {ticketForm.registrado_por && (
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>
-                          Creado por: <strong style={{ color: '#fff' }}>{ticketForm.registrado_por}</strong>
-                        </span>
-                      )}
+
+                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                        Creado por: <strong style={{ color: '#e2e8f0' }}>{ticketForm.registrado_por || user.username || 'andres'}</strong>
+                      </div>
                     </div>
 
                     {/* Input: Problema del cliente */}
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.76rem', fontWeight: '800', color: '#f8fafc' }}>
-                        ⚠️ Problema del Cliente *
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.72rem', fontWeight: '800', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        ⚠️ PROBLEMA DEL CLIENTE *
                       </label>
                       <textarea
                         className="input"
                         rows={3}
                         value={ticketForm.problema}
                         onChange={e => setTicketForm(prev => ({ ...prev, problema: e.target.value }))}
-                        placeholder="Describe el problema reportado por el cliente..."
+                        placeholder="Describe el problema o falla reportada por el cliente..."
                         style={{
                           width: '100%', marginBottom: 0,
                           fontFamily: 'inherit', resize: 'vertical',
                           background: 'rgba(0, 0, 0, 0.25)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
                           fontSize: '0.82rem', lineHeight: '1.45',
-                          minHeight: '80px'
+                          borderRadius: '12px', padding: '12px 14px'
                         }}
                       />
                     </div>
 
-                    {/* Input: Solución del problema */}
+                    {/* Input: Solución del problema / Observación */}
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.76rem', fontWeight: '800', color: '#34d399' }}>
-                        ✅ Solución del Problema / Observación
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.72rem', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        ☑️ SOLUCIÓN DEL PROBLEMA / OBSERVACIÓN
                       </label>
                       <textarea
                         className="input"
                         rows={4}
                         value={ticketForm.observacion_revision}
                         onChange={e => setTicketForm(prev => ({ ...prev, observacion_revision: e.target.value }))}
-                        placeholder="Detalle de la solución, pasos técnicos o diagnóstico realizado..."
+                        placeholder="Propuesta para el cliente, configuración realizada, diagnóstico técnico..."
                         style={{
                           width: '100%', marginBottom: 0,
                           fontFamily: 'inherit', resize: 'vertical',
                           background: 'rgba(0, 0, 0, 0.25)',
-                          border: '1px solid rgba(52, 211, 153, 0.3)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
                           fontSize: '0.82rem', lineHeight: '1.45',
-                          minHeight: '95px'
+                          borderRadius: '12px', padding: '12px 14px'
                         }}
                       />
                     </div>
 
-                    {/* Botones de acción del Ticket */}
+                    {/* Botones de acción del Ticket Activo */}
                     <div style={{
                       display: 'flex', gap: '10px', alignItems: 'center',
-                      justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '4px'
+                      justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '2px'
                     }}>
                       {ticketForm.estado === 'VISITA TECNICA' && (
                         <button
                           type="button"
                           onClick={() => handleOpenHojaRutaModal(activeTicket || { ...ticketForm, cliente_nombre: selectedClient.nombre })}
                           style={{
-                            padding: '8px 14px', borderRadius: '10px',
+                            padding: '9px 16px', borderRadius: '12px',
                             background: 'rgba(249,115,22,0.18)',
                             border: '1px solid rgba(249,115,22,0.4)',
                             color: '#fb923c', cursor: 'pointer',
-                            fontSize: '0.76rem', fontWeight: '800',
+                            fontSize: '0.78rem', fontWeight: '800',
                             display: 'inline-flex', alignItems: 'center', gap: '6px'
                           }}
                         >
-                          🗓️ Hoja de Ruta
+                          🗓️ Enviar a Hoja de Ruta
                         </button>
                       )}
 
@@ -1717,15 +1746,17 @@ const CallCenter = () => {
                           type="button"
                           onClick={() => handleDelete(selectedTicketId)}
                           style={{
-                            padding: '8px 12px', borderRadius: '10px',
+                            padding: '9px 18px', borderRadius: '12px',
                             background: 'rgba(239, 68, 68, 0.12)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
                             color: '#f87171', cursor: 'pointer',
-                            fontSize: '0.76rem', fontWeight: '700'
+                            fontSize: '0.8rem', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            transition: 'all 0.2s'
                           }}
-                          title="Eliminar este ticket"
                         >
-                          🗑️ Eliminar
+                          <span>🗑️</span>
+                          <span>Eliminar</span>
                         </button>
                       )}
 
@@ -1733,97 +1764,178 @@ const CallCenter = () => {
                         type="button"
                         onClick={handleSaveTicket}
                         disabled={submitting}
-                        className="btn"
                         style={{
-                          background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
+                          background: 'linear-gradient(135deg, #a855f7, #6366f1)',
                           color: '#fff', fontWeight: '800',
-                          fontSize: '0.82rem', padding: '9px 20px',
+                          fontSize: '0.82rem', padding: '10px 22px',
                           borderRadius: '12px', border: 'none',
                           cursor: submitting ? 'not-allowed' : 'pointer',
-                          boxShadow: '0 4px 14px rgba(139,92,246,0.3)',
-                          display: 'inline-flex', alignItems: 'center', gap: '6px'
+                          boxShadow: '0 4px 18px rgba(168, 85, 247, 0.45)',
+                          display: 'inline-flex', alignItems: 'center', gap: '8px',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        {submitting ? '⌛ Guardando...' : (selectedTicketId === 'NEW' || !selectedTicketId ? '📞 Crear Ticket' : '💾 Guardar Ticket')}
+                        <span>💾</span>
+                        <span>{submitting ? 'Guardando...' : (selectedTicketId === 'NEW' || !selectedTicketId ? 'Crear Ticket' : 'Guardar Ticket')}</span>
                       </button>
                     </div>
 
                   </div>
+
+                  {/* ── HISTORIAL DE TICKETS PREVIOS (TARJETAS COLAPSADAS) ── */}
+                  {modalClientTickets
+                    .filter(t => t.id !== selectedTicketId)
+                    .map(t => (
+                      <div
+                        key={t.id}
+                        onClick={() => handleSelectTicket(t)}
+                        style={{
+                          background: 'rgba(20, 16, 42, 0.5)',
+                          border: '1px solid rgba(139, 92, 246, 0.15)',
+                          borderRadius: '16px', padding: '14px 18px',
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'space-between',
+                          gap: '12px', transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)';
+                          e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'rgba(20, 16, 42, 0.5)';
+                          e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.15)';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            width: '36px', height: '36px', borderRadius: '10px',
+                            background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.1rem', flexShrink: 0
+                          }}>
+                            🎟️
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{
+                              fontSize: '0.86rem', fontWeight: '800', color: '#f1f5f9',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                            }}>
+                              Ticket #{t.id} <span style={{ color: '#94a3b8', fontWeight: '500' }}>- {t.problema || 'Sin detalle de problema'}</span>
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                              📅 Creado el {formatToDMY(t.fecha_ingreso)} {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                          <EstadoBadge estado={t.estado} />
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>⌵</span>
+                        </div>
+                      </div>
+                    ))}
+
                 </div>
 
                 {/* ═════════════════════════════════════════════
-                    COLUMNA 2: CONVERSACIÓN DE WHATSAPP DEL CLIENTE
+                    COLUMNA 2: CONVERSACIÓN DE WHATSAPP (MATCH CON DISEÑO)
                 ═════════════════════════════════════════════ */}
                 <div style={{
-                  background: 'rgba(10, 15, 26, 0.65)',
-                  border: '1.5px solid rgba(37, 211, 102, 0.25)',
-                  borderRadius: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                  height: '100%',
-                  minHeight: '480px',
-                  maxHeight: '620px'
+                  background: 'rgba(15, 20, 36, 0.65)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '18px', display: 'flex',
+                  flexDirection: 'column', overflow: 'hidden',
+                  height: '100%'
                 }}>
 
                   {/* Header de WhatsApp */}
                   <div style={{
                     padding: '14px 18px',
-                    background: 'linear-gradient(90deg, rgba(37, 211, 102, 0.14), rgba(16, 185, 129, 0.08))',
+                    background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(6, 95, 70, 0.08))',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     gap: '10px'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.3rem' }}>💬</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '9px',
+                        background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.2rem'
+                      }}>
+                        💬
+                      </div>
                       <div>
-                        <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#ffffff' }}>
+                        <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#ffffff' }}>
                           Conversación de WhatsApp
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: '#86efac' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: '700' }}>
                           📱 {modalWaInfo.waPhone ? `+${modalWaInfo.waPhone}` : (selectedClient.celular || 'Sin número')}
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => cargarChatCliente(selectedClient.celular || selectedClient.telefono)}
-                      disabled={loadingChat}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        color: '#fff', padding: '5px 10px',
-                        borderRadius: '8px', fontSize: '0.72rem',
-                        fontWeight: '700', cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', gap: '4px'
-                      }}
-                      title="Recargar conversación"
-                    >
-                      <span>{loadingChat ? '⌛' : '🔄'}</span>
-                      <span>{loadingChat ? 'Cargando...' : 'Actualizar'}</span>
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => cargarChatCliente(selectedClient.celular || selectedClient.telefono)}
+                        disabled={loadingChat}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          color: '#fff', padding: '6px 12px',
+                          borderRadius: '8px', fontSize: '0.74rem',
+                          fontWeight: '700', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '6px'
+                        }}
+                        title="Recargar conversación"
+                      >
+                        <span>{loadingChat ? '⌛' : '🔄'}</span>
+                        <span>{loadingChat ? 'Cargando...' : 'Actualizar'}</span>
+                      </button>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>^</span>
+                    </div>
                   </div>
 
-                  {/* Mensajes del Chat con fechas y burbujas */}
+                  {/* Área del Chat / Mensajes o Empty State */}
                   <div style={{
                     flex: 1, overflowY: 'auto',
-                    padding: '16px', display: 'flex',
+                    padding: '18px', display: 'flex',
                     flexDirection: 'column', gap: '12px',
                     background: 'rgba(0, 0, 0, 0.2)'
                   }}>
                     {loadingChat ? (
-                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                      <div style={{ textAlign: 'center', padding: '50px', color: 'var(--text-muted)', fontSize: '0.84rem' }}>
                         ⌛ Cargando mensajes de WhatsApp...
                       </div>
-                    ) : !modalWaInfo.waPhone && !modalWaInfo.callPhone ? (
-                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                        <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}>📱</span>
-                        Este cliente no tiene un teléfono celular registrado para consultar WhatsApp.
-                      </div>
                     ) : chatMensajes.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                        <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}>💬</span>
-                        No se encontraron mensajes de WhatsApp registrados con este cliente.
+                      /* Empty State idéntico al diseño del usuario */
+                      <div style={{
+                        flex: 1, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        padding: '40px 20px', textAlign: 'center'
+                      }}>
+                        <div style={{
+                          width: '64px', height: '64px', borderRadius: '16px',
+                          border: '2px dashed rgba(255, 255, 255, 0.2)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: '16px', color: 'rgba(255, 255, 255, 0.35)',
+                          fontSize: '1.8rem'
+                        }}>
+                          💬
+                        </div>
+                        <div style={{
+                          fontSize: '0.92rem', fontWeight: '700', color: '#e2e8f0',
+                          maxWidth: '320px', lineHeight: '1.4'
+                        }}>
+                          No se encontraron mensajes de WhatsApp registrados con este cliente.
+                        </div>
+                        <div style={{
+                          fontSize: '0.74rem', color: '#94a3b8', marginTop: '8px',
+                          maxWidth: '340px', lineHeight: '1.4'
+                        }}>
+                          Las respuestas enviadas desde este panel se registrarán en la bitácora técnica.
+                        </div>
                       </div>
                     ) : (
                       chatMensajes.map(m => {
@@ -1862,7 +1974,6 @@ const CallCenter = () => {
                               fontSize: '0.82rem',
                               lineHeight: 1.45
                             }}>
-                              {/* Remitente */}
                               <div style={{
                                 fontSize: '0.68rem', fontWeight: '800',
                                 marginBottom: '4px', display: 'flex',
@@ -1874,12 +1985,10 @@ const CallCenter = () => {
                                 {esAsistente && <span>🤖 SAM Bot (IA)</span>}
                               </div>
 
-                              {/* Mensaje */}
                               <div style={{ whiteSpace: 'pre-wrap' }}>
                                 {m.mensaje}
                               </div>
 
-                              {/* Fecha y Hora completa */}
                               <div style={{
                                 fontSize: '0.64rem', opacity: 0.75,
                                 textAlign: 'right', marginTop: '6px',
@@ -1895,14 +2004,14 @@ const CallCenter = () => {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Barra rápida de envío de WhatsApp */}
+                  {/* Input y botón Enviar con icono de avión */}
                   <form
                     onSubmit={handleEnviarMensajeChat}
                     style={{
-                      padding: '10px 14px',
+                      padding: '14px 18px',
                       borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                      background: 'rgba(0, 0, 0, 0.35)',
-                      display: 'flex', gap: '8px', alignItems: 'center'
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      display: 'flex', gap: '10px', alignItems: 'center'
                     }}
                   >
                     <input
@@ -1911,26 +2020,30 @@ const CallCenter = () => {
                       onChange={e => setNuevoMensajeChat(e.target.value)}
                       placeholder="Escribir mensaje a cliente..."
                       style={{
-                        marginBottom: 0, fontSize: '0.78rem',
-                        padding: '8px 12px', borderRadius: '10px',
-                        background: 'rgba(255, 255, 255, 0.05)', flex: 1
+                        marginBottom: 0, fontSize: '0.82rem',
+                        padding: '11px 16px', borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#fff', flex: 1
                       }}
-                      disabled={enviandoMensajeChat || (!modalWaInfo.waPhone && !modalWaInfo.callPhone)}
+                      disabled={enviandoMensajeChat}
                     />
                     <button
                       type="submit"
-                      disabled={enviandoMensajeChat || !nuevoMensajeChat.trim() || (!modalWaInfo.waPhone && !modalWaInfo.callPhone)}
+                      disabled={enviandoMensajeChat || !nuevoMensajeChat.trim()}
                       style={{
-                        padding: '8px 14px', borderRadius: '10px',
+                        padding: '11px 20px', borderRadius: '12px',
                         background: 'linear-gradient(135deg, #10b981, #059669)',
                         border: 'none', color: '#fff',
-                        fontWeight: '800', fontSize: '0.76rem',
+                        fontWeight: '800', fontSize: '0.8rem',
                         cursor: (enviandoMensajeChat || !nuevoMensajeChat.trim()) ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                        whiteSpace: 'nowrap'
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        whiteSpace: 'nowrap', transition: 'all 0.2s'
                       }}
                     >
-                      {enviandoMensajeChat ? '⌛' : '📤 Enviar'}
+                      <span>✈</span>
+                      <span>{enviandoMensajeChat ? 'Enviando...' : 'Enviar'}</span>
                     </button>
                   </form>
 
@@ -2121,7 +2234,7 @@ const CallCenter = () => {
                   </label>
                   <textarea
                     className="input"
-                    rows="5"
+                    rows={5}
                     value={hojaRutaForm.observacion}
                     onChange={e => setHojaRutaForm({ ...hojaRutaForm, observacion: e.target.value })}
                     placeholder="Detalle técnico de la visita, instrucciones para el técnico..."
