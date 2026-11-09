@@ -194,12 +194,39 @@ const General = () => {
     return `$${total.toFixed(2)}`;
   };
 
+  // Control de expansión de columnas
+  const [showTechColumns, setShowTechColumns] = useState(false);
+  const [showBillingColumns, setShowBillingColumns] = useState(false);
+
+  // Columnas base siempre visibles (hasta puerto)
+  const baseColumns = [
+    "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
+    "fecha_firma", "instalation_date", "estado", "observaciones", "iptv_cuenta", "puerto"
+  ];
+
+  // Columnas técnicas (se abren hacia la derecha de puerto)
+  const techColumns = [
+    "ont", "servicio", "bridge", "id_port", "service_port",
+    "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac"
+  ];
+
+  // Columnas de facturación y cobros
+  const billingColumns = [
+    "tiempo", "arrienda", "app", "payment_date", "bank", "cod", "facturas", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
+  ];
+
+  // Columnas activas calculadas dinámicamente
+  const visibleColumns = [
+    ...baseColumns,
+    ...(showTechColumns ? techColumns : []),
+    ...(showBillingColumns ? billingColumns : [])
+  ];
+
   // Definición de las columnas del sistema
   const allColumns = [
-    "id", "nombre", "ip", "celular", "cedula", "cedula_tipo", "fotos_cedula", "correo", "direccion", "nodo", "parroquia",
-    "fecha_firma", "instalation_date", "estado", "observaciones", "iptv_cuenta", "puerto", "ont", "servicio", "bridge", "id_port", "service_port",
-    "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac",
-    "tiempo", "arrienda", "app", "payment_date", "bank", "cod", "facturas", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
+    ...baseColumns,
+    ...techColumns,
+    ...billingColumns
   ];
 
   // Estado para los anchos ajustables de cada columna
@@ -216,6 +243,7 @@ const General = () => {
       else if (col === 'bridge') widths[col] = 160;
       else if (col === 'dispositivo') widths[col] = 190;
       else if (col === 'iptv_cuenta') widths[col] = 190;
+      else if (col === 'puerto') widths[col] = 210;
       else if (col === 'mac') widths[col] = 280;
       else widths[col] = 150;
     });
@@ -1231,8 +1259,52 @@ const General = () => {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%', maxWidth: 'none' }}>
-      <div className="page-header">
+    <div className="general-page-container" style={{ width: '100%', padding: '0', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (min-width: 769px) {
+          .general-page-container {
+            height: calc(100vh - 116px);
+            max-height: calc(100vh - 116px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+          }
+          .general-table-card {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 16px;
+          }
+          .general-table-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: auto;
+            width: 100%;
+          }
+        }
+        .general-table-scroll::-webkit-scrollbar {
+          width: 7px;
+          height: 7px;
+        }
+        .general-table-scroll::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 4px;
+        }
+        .general-table-scroll::-webkit-scrollbar-thumb {
+          background: rgba(139, 92, 246, 0.35);
+          border-radius: 4px;
+        }
+        .general-table-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 92, 246, 0.65);
+        }
+      `}</style>
+      <div className="page-header" style={{ marginBottom: '10px', flexShrink: 0 }}>
         <div className="page-header-info">
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <h1 style={{ margin: 0 }}>Vista General de Clientes</h1>
@@ -1438,16 +1510,70 @@ const General = () => {
               <span>Limpiar Filtros</span>
             </button>
           )}
+
+          {/* Botones de alternancia de columnas técnicas y facturación */}
+          <button
+            type="button"
+            onClick={() => setShowTechColumns(prev => !prev)}
+            className="btn general-desktop-only"
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              background: showTechColumns ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${showTechColumns ? '#8b5cf6' : 'rgba(255, 255, 255, 0.12)'}`,
+              color: showTechColumns ? '#c4b5fd' : 'rgba(255, 255, 255, 0.8)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              height: '38px',
+              fontWeight: '700',
+              transition: 'all 0.18s ease',
+              whiteSpace: 'nowrap'
+            }}
+            title={showTechColumns ? 'Contraer campos técnicos' : 'Expandir campos técnicos hacia la derecha'}
+          >
+            <span>⚙️</span>
+            <span>{showTechColumns ? '◀ Ocultar Técnicos' : 'Datos Técnicos (ONT, NAP...) ▸'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBillingColumns(prev => !prev)}
+            className="btn general-desktop-only"
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              background: showBillingColumns ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${showBillingColumns ? '#10b981' : 'rgba(255, 255, 255, 0.12)'}`,
+              color: showBillingColumns ? '#6ee7b7' : 'rgba(255, 255, 255, 0.8)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              height: '38px',
+              fontWeight: '700',
+              transition: 'all 0.18s ease',
+              whiteSpace: 'nowrap'
+            }}
+            title={showBillingColumns ? 'Ocultar campos de facturación y cobros' : 'Mostrar campos de facturación y cobros'}
+          >
+            <span>💳</span>
+            <span>{showBillingColumns ? '◀ Ocultar Facturación' : 'Facturación & Pagos ▸'}</span>
+          </button>
         </div>
       </div>
 
-      {loading ? <p>Cargando datos...</p> : (
-        <>
-          <div className="table-container general-desktop-view" style={{ maxHeight: '72vh', overflow: 'auto', width: '100%' }}>
+      {loading ? (
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos...</div>
+      ) : (
+        <div className="general-table-card">
+          <div className="table-container general-desktop-view general-table-scroll" style={{ width: '100%' }}>
             <table className="general-table-grid" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.8rem', border: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))' }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-solid, #0a0e18)', zIndex: 20 }}>
                 <tr>
-                  {allColumns.map(col => {
+                  {visibleColumns.map(col => {
                     const isId = col === 'id';
                     const isNombre = col === 'nombre';
                     const isIp = col === 'ip';
@@ -1482,7 +1608,7 @@ const General = () => {
 
                     return (
                       <th key={col} className={isSticky ? 'sticky-col' : ''} style={{
-                        padding: '12px',
+                        padding: col === 'puerto' ? '8px 10px' : '12px',
                         borderBottom: '2px solid var(--grid-border-highlight, rgba(255, 255, 255, 0.45))',
                         borderRight: '1px solid var(--grid-border, rgba(255, 255, 255, 0.22))',
                         textTransform: 'uppercase',
@@ -1493,9 +1619,44 @@ const General = () => {
                         maxWidth: colWidths[col] || 150,
                         position: 'relative',
                         overflow: 'hidden',
+                        background: techColumns.includes(col) ? 'rgba(139, 92, 246, 0.08)' : undefined,
                         ...stickyStyle
                       }}>
-                        {col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : (col === 'bridge' || col === 'breach') ? 'BRIDGE' : col.replace('_', ' ')}
+                        {col === 'puerto' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <span style={{ fontWeight: '800' }}>PUERTO</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowTechColumns(prev => !prev);
+                              }}
+                              style={{
+                                background: showTechColumns
+                                  ? 'rgba(239, 68, 68, 0.2)'
+                                  : 'linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(99, 102, 241, 0.35))',
+                                border: `1px solid ${showTechColumns ? 'rgba(239, 68, 68, 0.5)' : 'rgba(139, 92, 246, 0.6)'}`,
+                                color: showTechColumns ? '#fca5a5' : '#c4b5fd',
+                                borderRadius: '7px',
+                                padding: '3px 8px',
+                                fontSize: '0.66rem',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s ease',
+                                boxShadow: showTechColumns ? 'none' : '0 2px 8px rgba(139, 92, 246, 0.25)',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title={showTechColumns ? 'Contraer campos técnicos' : 'Abrir hacia la derecha (ONT, Servicio, Bridge, Potencia, etc.)'}
+                            >
+                              <span>{showTechColumns ? '◀ Ocultar' : '⚙️ Datos Técnicos ▸'}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          col === 'internet_payment' ? 'INTERNET PAY' : col === 'total_pago' ? 'PENDIENTE' : col === 'plus' ? 'IPTV' : col === 'observaciones' ? 'OBSERVACIONES' : col === 'comentarios' ? 'COMENTARIO' : col === 'iptv_cuenta' ? 'CUENTA IPTV' : col === 'ubicacion_cliente' ? 'UBICACIÓN' : col === 'facturas' ? 'FACTURA' : col === 'cod' ? 'COD' : (col === 'bridge' || col === 'breach') ? 'BRIDGE' : col.replace('_', ' ')
+                        )}
 
                         {/* Control para redimensionar la columna */}
                         <div
@@ -1611,7 +1772,7 @@ const General = () => {
                         transition: 'opacity 0.2s ease'
                       }}
                     >
-                      {allColumns.map(col => {
+                      {visibleColumns.map(col => {
                         const isEditing = editingCell?.id === c.id && editingCell?.col === col;
                         const isId = col === 'id';
                         const isNombre = col === 'nombre';
@@ -2706,9 +2867,9 @@ const General = () => {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
-      <div className="general-desktop-only" style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="general-desktop-only" style={{ marginTop: '6px', flexShrink: 0, padding: '2px 4px', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span>
           Total: {filteredClientes.length} clientes encontrados.
           {fechaInstalacionFilter && (
@@ -3932,7 +4093,7 @@ const General = () => {
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
