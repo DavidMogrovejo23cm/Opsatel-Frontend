@@ -1775,90 +1775,127 @@ const WhatsApp = () => {
                                                                 {/* Contenido del mensaje (Texto, Imagen/Comprobante o Multimedia) */}
                                                                 {(() => {
                                                                     const rawMsg = m.mensaje || '';
-                                                                    const urlMatch = rawMsg.match(/(?:https?:\/\/[^\s]+)?(\/uploadscr\/[a-zA-Z0-9_\-\.\/]+)/i);
-                                                                    const esComprobanteGuardado = rawMsg.includes('/uploadscr/') || rawMsg.startsWith('🧾 [Comprobante');
-                                                                    const esNonTextImg = rawMsg.startsWith('[NON_TEXT_MSG] image') || rawMsg === '[NON_TEXT_MSG] image' || rawMsg.includes('[Comprobante / Foto enviada]');
+                                                                    const urlMatch = rawMsg.match(/((?:https?:\/\/[^\s]+)?\/uploadscr\/[a-zA-Z0-9_\-\.\/]+)/i);
+                                                                    const esComprobanteGuardado = rawMsg.includes('/uploadscr/') || rawMsg.includes('[Comprobante');
+                                                                    const esNonTextImg = rawMsg.includes('[NON_TEXT_MSG] image') || rawMsg.includes('[Comprobante / Foto enviada]');
                                                                     
                                                                     if (urlMatch || esComprobanteGuardado) {
-                                                                        const imgUrl = urlMatch ? urlMatch[1] : (rawMsg.split(' ')[1] || '').trim();
+                                                                        const imgUrl = urlMatch ? urlMatch[1] : (rawMsg.split(' ').find(w => w.includes('/uploadscr/')) || '').trim();
                                                                         let textoLimpio = rawMsg
-                                                                            .replace(/🧾\s*\[Comprobante[^\]]*\]/gi, '')
+                                                                            .replace(/[🧾📄]\s*\[Comprobante[^\]]*\]/gi, '')
+                                                                            .replace(/\[Comprobante[^\]]*\]/gi, '')
                                                                             .replace(/(?:https?:\/\/[^\s]+)?\/uploadscr\/[a-zA-Z0-9_\-\.\/]+/gi, '')
                                                                             .replace(/^[\s\-–—:]+/, '')
                                                                             .trim();
 
                                                                         return (
-                                                                            <div>
+                                                                            <div style={{ minWidth: '220px', maxWidth: '100%' }}>
                                                                                 <div style={{
                                                                                     marginBottom: '8px',
-                                                                                    borderRadius: '8px',
+                                                                                    borderRadius: '10px',
                                                                                     overflow: 'hidden',
-                                                                                    border: '1px solid rgba(255,255,255,0.2)',
-                                                                                    background: 'rgba(0,0,0,0.3)',
-                                                                                    position: 'relative'
+                                                                                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                                                    background: 'rgba(15, 23, 42, 0.7)',
+                                                                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
                                                                                 }}>
+                                                                                    {/* Encabezado del Comprobante */}
                                                                                     <div style={{
-                                                                                        padding: '4px 8px',
-                                                                                        background: 'rgba(30, 58, 138, 0.75)',
-                                                                                        fontSize: '0.72rem',
+                                                                                        padding: '6px 10px',
+                                                                                        background: 'linear-gradient(90deg, #1e3a8a, #2563eb)',
+                                                                                        fontSize: '0.74rem',
                                                                                         fontWeight: 600,
+                                                                                        color: '#ffffff',
                                                                                         display: 'flex',
                                                                                         alignItems: 'center',
                                                                                         justifyContent: 'space-between',
                                                                                         gap: '6px'
                                                                                     }}>
-                                                                                        <span>🧾 Comprobante de pago</span>
-                                                                                        <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>uploadscr</span>
+                                                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                                            <span>🧾</span> <span>Comprobante de Pago</span>
+                                                                                        </span>
+                                                                                        <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                                            uploadscr
+                                                                                        </span>
                                                                                     </div>
-                                                                                    <img
-                                                                                        src={imgUrl}
-                                                                                        alt="Comprobante adjunto"
-                                                                                        style={{
-                                                                                            maxWidth: '100%',
-                                                                                            maxHeight: '260px',
-                                                                                            objectFit: 'cover',
-                                                                                            display: 'block',
-                                                                                            cursor: 'pointer',
-                                                                                            transition: 'transform 0.2s',
-                                                                                            borderRadius: '0 0 6px 6px'
-                                                                                        }}
-                                                                                        onClick={() => setModalImagenComprobante(imgUrl)}
-                                                                                        onError={(e) => {
-                                                                                            e.target.style.display = 'none';
-                                                                                            if (e.target.nextSibling) {
-                                                                                                e.target.nextSibling.style.display = 'block';
-                                                                                            }
-                                                                                        }}
-                                                                                    />
-                                                                                    <div style={{ display: 'none', padding: '12px', fontSize: '0.78rem', color: '#fca5a5', textAlign: 'center' }}>
-                                                                                        📷 Comprobante guardado en uploadscr ({imgUrl.split('/').pop()})
-                                                                                    </div>
+
+                                                                                    {/* Vista Previa de la Imagen con Click para Modal */}
+                                                                                    {imgUrl && (
+                                                                                        <div style={{ position: 'relative', cursor: 'pointer', background: '#020617', textAlign: 'center' }}>
+                                                                                            <img
+                                                                                                src={imgUrl}
+                                                                                                alt="Comprobante de pago"
+                                                                                                style={{
+                                                                                                    width: '100%',
+                                                                                                    maxHeight: '260px',
+                                                                                                    objectFit: 'contain',
+                                                                                                    display: 'block',
+                                                                                                    transition: 'opacity 0.2s'
+                                                                                                }}
+                                                                                                onClick={() => setModalImagenComprobante(imgUrl)}
+                                                                                                onError={(e) => {
+                                                                                                    e.target.style.display = 'none';
+                                                                                                    if (e.target.nextSibling) {
+                                                                                                        e.target.nextSibling.style.display = 'block';
+                                                                                                    }
+                                                                                                }}
+                                                                                            />
+                                                                                            <div style={{ display: 'none', padding: '16px 12px', fontSize: '0.8rem', color: '#93c5fd', textAlign: 'center' }}>
+                                                                                                <div style={{ fontSize: '1.6rem', marginBottom: '4px' }}>🖼️</div>
+                                                                                                <div style={{ fontWeight: 600 }}>Foto guardada en el servidor</div>
+                                                                                                <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
+                                                                                                    {imgUrl.split('/').pop()}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Barra de Acciones del Comprobante */}
                                                                                     <div style={{
-                                                                                        padding: '4px 8px',
-                                                                                        background: 'rgba(0,0,0,0.4)',
-                                                                                        fontSize: '0.7rem',
+                                                                                        padding: '6px 10px',
+                                                                                        background: 'rgba(0, 0, 0, 0.5)',
                                                                                         display: 'flex',
-                                                                                        justifyContent: 'flex-end',
-                                                                                        gap: '8px'
+                                                                                        justifyContent: 'space-between',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '8px',
+                                                                                        borderTop: '1px solid rgba(255, 255, 255, 0.08)'
                                                                                     }}>
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() => setModalImagenComprobante(imgUrl)}
                                                                                             style={{
-                                                                                                background: 'transparent',
-                                                                                                border: 'none',
-                                                                                                color: '#93c5fd',
-                                                                                                cursor: 'pointer',
+                                                                                                background: 'rgba(59, 130, 246, 0.25)',
+                                                                                                border: '1px solid rgba(59, 130, 246, 0.5)',
+                                                                                                color: '#bfdbfe',
+                                                                                                borderRadius: '4px',
+                                                                                                padding: '4px 8px',
                                                                                                 fontSize: '0.72rem',
-                                                                                                padding: 0
+                                                                                                cursor: 'pointer',
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
                                                                                             }}
                                                                                         >
-                                                                                            🔍 Ver imagen completa
+                                                                                            🔍 Ver en grande
                                                                                         </button>
+                                                                                        <a
+                                                                                            href={imgUrl}
+                                                                                            target="_blank"
+                                                                                            rel="noopener noreferrer"
+                                                                                            style={{
+                                                                                                color: '#93c5fd',
+                                                                                                fontSize: '0.72rem',
+                                                                                                textDecoration: 'none',
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px'
+                                                                                            }}
+                                                                                        >
+                                                                                            📥 Abrir archivo
+                                                                                        </a>
                                                                                     </div>
                                                                                 </div>
                                                                                 {textoLimpio && (
-                                                                                    <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>
+                                                                                    <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px', fontSize: '0.88rem' }}>
                                                                                         {textoLimpio}
                                                                                     </div>
                                                                                 )}
@@ -2192,81 +2229,6 @@ const WhatsApp = () => {
                                         })}
                                     </tbody>
                                 </table>
-                            </div>
-                        )}
-
-                        {/* Modal para ver imagen completa */}
-                        {modalImagenComprobante && (
-                            <div
-                                style={{
-                                    position: 'fixed',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    backgroundColor: 'rgba(0,0,0,0.85)',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    zIndex: 9999,
-                                    padding: '20px'
-                                }}
-                                onClick={() => setModalImagenComprobante(null)}
-                            >
-                                <div
-                                    style={{
-                                        position: 'relative',
-                                        maxWidth: '90vw',
-                                        maxHeight: '90vh',
-                                        background: '#1e293b',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <button
-                                        onClick={() => setModalImagenComprobante(null)}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '-12px',
-                                            right: '-12px',
-                                            background: '#ef4444',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '50%',
-                                            width: '32px',
-                                            height: '32px',
-                                            fontSize: '16px',
-                                            cursor: 'pointer',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        ✕
-                                    </button>
-                                    <img
-                                        src={modalImagenComprobante}
-                                        alt="Comprobante en detalle"
-                                        style={{
-                                            maxWidth: '85vw',
-                                            maxHeight: '82vh',
-                                            objectFit: 'contain',
-                                            display: 'block',
-                                            borderRadius: '4px'
-                                        }}
-                                    />
-                                    <div style={{ marginTop: '8px', textAlign: 'center' }}>
-                                        <a
-                                            href={modalImagenComprobante}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn btn-primary"
-                                            style={{ fontSize: '0.82rem', padding: '6px 12px' }}
-                                        >
-                                            📥 Abrir archivo original
-                                        </a>
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>
@@ -4089,6 +4051,142 @@ const WhatsApp = () => {
                     </div>
                 )}
             </div>
+            
+            {/* Modal Global para Ver Comprobante / Imagen en Pantalla Completa */}
+            {modalImagenComprobante && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.88)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 99999,
+                        padding: '16px',
+                        backdropFilter: 'blur(4px)'
+                    }}
+                    onClick={() => setModalImagenComprobante(null)}
+                >
+                    <div
+                        style={{
+                            position: 'relative',
+                            maxWidth: '92vw',
+                            maxHeight: '92vh',
+                            background: '#0f172a',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Cabecera del Modal */}
+                        <div style={{
+                            width: '100%',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '10px',
+                            paddingBottom: '8px',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>🧾</span>
+                                <span>Comprobante de Pago</span>
+                                <span style={{ fontSize: '0.75rem', opacity: 0.7, fontWeight: 'normal' }}>
+                                    ({modalImagenComprobante.split('/').pop()})
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModalImagenComprobante(null)}
+                                style={{
+                                    background: '#ef4444',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '30px',
+                                    height: '30px',
+                                    fontSize: '15px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 'bold'
+                                }}
+                                title="Cerrar (Esc)"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Imagen Original en Alta Resolución */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            overflow: 'auto',
+                            maxHeight: '75vh',
+                            background: '#020617',
+                            borderRadius: '8px',
+                            padding: '4px'
+                        }}>
+                            <img
+                                src={modalImagenComprobante}
+                                alt="Comprobante en alta resolución"
+                                style={{
+                                    maxWidth: '88vw',
+                                    maxHeight: '72vh',
+                                    objectFit: 'contain',
+                                    display: 'block',
+                                    borderRadius: '6px'
+                                }}
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    if (e.target.nextSibling) {
+                                        e.target.nextSibling.style.display = 'block';
+                                    }
+                                }}
+                            />
+                            <div style={{ display: 'none', padding: '30px 20px', textAlign: 'center', color: '#fca5a5' }}>
+                                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚠️</div>
+                                <div style={{ fontWeight: 600 }}>No se pudo cargar la imagen directamente</div>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>
+                                    Es posible que esté en una carpeta diferente o el backend esté reiniciándose.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Pie del Modal con Acciones */}
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', justifyContent: 'center', width: '100%' }}>
+                            <a
+                                href={modalImagenComprobante}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-primary"
+                                style={{ fontSize: '0.84rem', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                            >
+                                📥 Abrir archivo original en pestaña nueva
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setModalImagenComprobante(null)}
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.84rem', padding: '7px 14px' }}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Animación de spin para el spinner de carga */}
             <style>{`
