@@ -194,9 +194,8 @@ const General = () => {
     return `$${total.toFixed(2)}`;
   };
 
-  // Control de expansión de columnas
+  // Control de expansión de columnas (únicamente datos técnicos)
   const [showTechColumns, setShowTechColumns] = useState(false);
-  const [showBillingColumns, setShowBillingColumns] = useState(false);
 
   // Columnas base siempre visibles (hasta puerto)
   const baseColumns = [
@@ -210,16 +209,16 @@ const General = () => {
     "dispositivo", "potencia", "nap", "ubicacion_cliente", "tecnico", "activador", "red", "clave", "mac"
   ];
 
-  // Columnas de facturación y cobros
+  // Columnas de facturación y cobros (siempre visibles)
   const billingColumns = [
     "tiempo", "arrienda", "app", "payment_date", "bank", "cod", "facturas", "plan", "plus", "bank_plus", "adicional", "internet_payment", "total_pago", "total", "comentarios"
   ];
 
-  // Columnas activas calculadas dinámicamente
+  // Columnas activas calculadas dinámicamente: solo se ocultan los datos técnicos
   const visibleColumns = [
     ...baseColumns,
     ...(showTechColumns ? techColumns : []),
-    ...(showBillingColumns ? billingColumns : [])
+    ...billingColumns
   ];
 
   // Definición de las columnas del sistema
@@ -1536,31 +1535,6 @@ const General = () => {
           >
             <span>⚙️</span>
             <span>{showTechColumns ? '◀ Ocultar Técnicos' : 'Datos Técnicos (ONT, NAP...) ▸'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowBillingColumns(prev => !prev)}
-            className="btn general-desktop-only"
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.78rem',
-              background: showBillingColumns ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${showBillingColumns ? '#10b981' : 'rgba(255, 255, 255, 0.12)'}`,
-              color: showBillingColumns ? '#6ee7b7' : 'rgba(255, 255, 255, 0.8)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              height: '38px',
-              fontWeight: '700',
-              transition: 'all 0.18s ease',
-              whiteSpace: 'nowrap'
-            }}
-            title={showBillingColumns ? 'Ocultar campos de facturación y cobros' : 'Mostrar campos de facturación y cobros'}
-          >
-            <span>💳</span>
-            <span>{showBillingColumns ? '◀ Ocultar Facturación' : 'Facturación & Pagos ▸'}</span>
           </button>
         </div>
       </div>
