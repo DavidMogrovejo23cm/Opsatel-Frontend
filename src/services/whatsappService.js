@@ -152,6 +152,16 @@ export const whatsappService = {
   eliminarConversacion: (numero) =>
     api.delete(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`),
 
+  // Comprobantes de pago descargados en uploadscr
+  obtenerComprobantes: (params = {}) =>
+    api.get('/whatsapp/comprobantes', { params }),
+
+  actualizarComprobante: (id, data) =>
+    api.patch(`/whatsapp/comprobantes/${id}`, data),
+
+  eliminarComprobante: (id, eliminarArchivo = false) =>
+    api.delete(`/whatsapp/comprobantes/${id}`, { params: { eliminar_archivo: eliminarArchivo } }),
+
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = localStorage.getItem('user');

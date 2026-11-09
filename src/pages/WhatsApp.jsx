@@ -88,6 +88,56 @@ const WhatsApp = () => {
     const [mostrarBotonBajar, setMostrarBotonBajar] = useState(false);
     const [busquedaChat, setBusquedaChat] = useState('');
 
+    // Comprobantes descargados en uploadscr
+    const [comprobantes, setComprobantes] = useState([]);
+    const [cargandoComprobantes, setCargandoComprobantes] = useState(false);
+    const [filtroEstadoComprobante, setFiltroEstadoComprobante] = useState('TODOS');
+    const [busquedaComprobante, setBusquedaComprobante] = useState('');
+    const [modalImagenComprobante, setModalImagenComprobante] = useState(null);
+
+    const cargarComprobantes = async (silencioso = false) => {
+        try {
+            if (!silencioso) setCargandoComprobantes(true);
+            const res = await whatsappService.obtenerComprobantes({
+                estado: filtroEstadoComprobante,
+                q: busquedaComprobante
+            });
+            if (res && res.data && res.data.success) {
+                setComprobantes(res.data.comprobantes || []);
+            }
+        } catch (e) {
+            console.error('Error cargando comprobantes:', e);
+        } finally {
+            if (!silencioso) setCargandoComprobantes(false);
+        }
+    };
+
+    const cambiarEstadoComprobante = async (id, nuevoEstado) => {
+        try {
+            const res = await whatsappService.actualizarComprobante(id, { estado: nuevoEstado });
+            if (res && res.data && res.data.success) {
+                showSuccess(`Comprobante marcado como ${nuevoEstado}`);
+                cargarComprobantes(true);
+            }
+        } catch (e) {
+            showError('No se pudo actualizar el comprobante');
+        }
+    };
+
+    const handleEliminarComprobante = async (id) => {
+        const conf = await showConfirm('¿Estás seguro de eliminar este comprobante del registro?');
+        if (conf) {
+            try {
+                await whatsappService.eliminarComprobante(id, false);
+                showSuccess('Comprobante eliminado');
+                cargarComprobantes(true);
+            } catch (e) {
+                showError('Error al eliminar comprobante');
+            }
+        }
+    };
+
+
 
 
     useEffect(() => {
@@ -113,6 +163,13 @@ const WhatsApp = () => {
             return () => clearInterval(intv);
         }
     }, [difusiones]);
+
+    useEffect(() => {
+        if (activeTab === 'Comprobantes') {
+            cargarComprobantes();
+        }
+    }, [activeTab, filtroEstadoComprobante]);
+
 
     const normalizeLocationKey = (str) => {
         if (!str) return '';
@@ -1382,14 +1439,14 @@ const WhatsApp = () => {
             </div>
 
             <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                {['Chats en Vivo', 'Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
+                {['Chats en Vivo', 'Comprobantes', 'Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
                     <button
                         key={tab}
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setActiveTab(tab)}
                         style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
                     >
-                        {tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab}
+                        {tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab === 'Comprobantes' ? '🧾 Comprobantes' : tab}
                     </button>
                 ))}
             </div>
@@ -1804,6 +1861,274 @@ const WhatsApp = () => {
                         </div>
 
 
+                    </div>
+                )}
+                
+                {/* COMPROBANTES DE PAGO (DESCARGADOS AUTOMÁTICAMENTE EN uploadscr) */}
+                {activeTab === 'Comprobantes' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    🧾 Comprobantes de Pago Recibidos
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
+                                    Imágenes descargadas automáticamente en el servidor (carpeta <code>uploadscr</code>) y guardadas en la tabla <code>comprobantes</code>.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => cargarComprobantes()}
+                                    disabled={cargandoComprobantes}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                                >
+                                    🔄 {cargandoComprobantes ? 'Cargando...' : 'Actualizar'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Barra de Filtros y Búsqueda */}
+                        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ flex: '1 1 250px' }}>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="🔍 Buscar por cliente, teléfono, mensaje o archivo..."
+                                    value={busquedaComprobante}
+                                    onChange={(e) => setBusquedaComprobante(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') cargarComprobantes(); }}
+                                />
+                            </div>
+                            <div style={{ width: '180px' }}>
+                                <select
+                                    className="form-control"
+                                    value={filtroEstadoComprobante}
+                                    onChange={(e) => setFiltroEstadoComprobante(e.target.value)}
+                                >
+                                    <option value="TODOS">Todos los estados</option>
+                                    <option value="PENDIENTE">⏳ Pendientes</option>
+                                    <option value="REVISADO">👀 Revisados</option>
+                                    <option value="APROBADO">✅ Aprobados</option>
+                                    <option value="RECHAZADO">❌ Rechazados</option>
+                                </select>
+                            </div>
+                            <button className="btn btn-primary" onClick={() => cargarComprobantes()}>
+                                Filtrar
+                            </button>
+                        </div>
+
+                        {/* Listado de comprobantes */}
+                        {cargandoComprobantes && comprobantes.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                                ⏳ Cargando comprobantes...
+                            </div>
+                        ) : comprobantes.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🧾</div>
+                                <h4 style={{ margin: '0 0 6px 0' }}>No hay comprobantes registrados aún</h4>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>
+                                    Cuando alguien envíe una imagen por WhatsApp, se descargará automáticamente en <code>uploadscr</code> y aparecerá aquí.
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                                            <th style={{ padding: '10px' }}>Miniatura</th>
+                                            <th style={{ padding: '10px' }}>Cliente / Remitente</th>
+                                            <th style={{ padding: '10px' }}>Teléfono</th>
+                                            <th style={{ padding: '10px' }}>Mensaje</th>
+                                            <th style={{ padding: '10px' }}>Fecha y Hora</th>
+                                            <th style={{ padding: '10px' }}>Estado</th>
+                                            <th style={{ padding: '10px' }}>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {comprobantes.map(c => {
+                                            const imgUrl = c.url_archivo || `/uploadscr/${c.nombre_archivo}`;
+                                            return (
+                                                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <td style={{ padding: '10px', width: '80px' }}>
+                                                        <img
+                                                            src={imgUrl}
+                                                            alt="Comprobante"
+                                                            style={{
+                                                                width: '64px',
+                                                                height: '64px',
+                                                                objectFit: 'cover',
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer',
+                                                                border: '1px solid rgba(255,255,255,0.2)'
+                                                            }}
+                                                            onClick={() => setModalImagenComprobante(imgUrl)}
+                                                            onError={(e) => {
+                                                                e.target.style.opacity = '0.3';
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '10px' }}>
+                                                        <div style={{ fontWeight: 'bold' }}>
+                                                            {c.cliente ? c.cliente.nombre : (c.nombre_remitente || 'No vinculado')}
+                                                        </div>
+                                                        {c.cliente && (
+                                                            <div style={{ fontSize: '0.78rem', color: '#10b981' }}>
+                                                                ✓ Cliente ID #{c.cliente.id} {c.cliente.plan ? `(${c.cliente.plan})` : ''}
+                                                            </div>
+                                                        )}
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                            {c.nombre_archivo}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '10px', fontSize: '0.88rem' }}>
+                                                        {c.numero_telefono ? `+${c.numero_telefono}` : 'N/A'}
+                                                    </td>
+                                                    <td style={{ padding: '10px', fontSize: '0.85rem', maxWidth: '240px', color: 'var(--text-muted)' }}>
+                                                        {c.mensaje_texto ? `"${c.mensaje_texto}"` : <em>Sin texto</em>}
+                                                    </td>
+                                                    <td style={{ padding: '10px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                                        {c.fecha_hora ? new Date(c.fecha_hora).toLocaleString('es-EC', { hour12: false }) : 'N/A'}
+                                                    </td>
+                                                    <td style={{ padding: '10px' }}>
+                                                        <select
+                                                            className="form-control"
+                                                            value={c.estado || 'PENDIENTE'}
+                                                            onChange={(e) => cambiarEstadoComprobante(c.id, e.target.value)}
+                                                            style={{
+                                                                fontSize: '0.8rem',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                background: c.estado === 'APROBADO' ? 'rgba(16, 185, 129, 0.2)' :
+                                                                            c.estado === 'RECHAZADO' ? 'rgba(239, 68, 68, 0.2)' :
+                                                                            c.estado === 'REVISADO' ? 'rgba(59, 130, 246, 0.2)' :
+                                                                            'rgba(245, 158, 11, 0.2)',
+                                                                color: c.estado === 'APROBADO' ? '#34d399' :
+                                                                       c.estado === 'RECHAZADO' ? '#f87171' :
+                                                                       c.estado === 'REVISADO' ? '#60a5fa' :
+                                                                       '#fbbf24',
+                                                                fontWeight: 'bold',
+                                                                border: '1px solid currentColor'
+                                                            }}
+                                                        >
+                                                            <option value="PENDIENTE">⏳ PENDIENTE</option>
+                                                            <option value="REVISADO">👀 REVISADO</option>
+                                                            <option value="APROBADO">✅ APROBADO</option>
+                                                            <option value="RECHAZADO">❌ RECHAZADO</option>
+                                                        </select>
+                                                    </td>
+                                                    <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            <button
+                                                                className="btn btn-secondary"
+                                                                style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                                                                title="Ver imagen completa"
+                                                                onClick={() => setModalImagenComprobante(imgUrl)}
+                                                            >
+                                                                👁️ Ver
+                                                            </button>
+                                                            <a
+                                                                href={imgUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="btn btn-secondary"
+                                                                style={{ padding: '4px 8px', fontSize: '0.78rem', textDecoration: 'none' }}
+                                                                title="Abrir en pestaña nueva"
+                                                            >
+                                                                🔗
+                                                            </a>
+                                                            <button
+                                                                className="btn btn-danger"
+                                                                style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                                                                title="Eliminar registro"
+                                                                onClick={() => handleEliminarComprobante(c.id)}
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Modal para ver imagen completa */}
+                        {modalImagenComprobante && (
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    backgroundColor: 'rgba(0,0,0,0.85)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    zIndex: 9999,
+                                    padding: '20px'
+                                }}
+                                onClick={() => setModalImagenComprobante(null)}
+                            >
+                                <div
+                                    style={{
+                                        position: 'relative',
+                                        maxWidth: '90vw',
+                                        maxHeight: '90vh',
+                                        background: '#1e293b',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        onClick={() => setModalImagenComprobante(null)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-12px',
+                                            right: '-12px',
+                                            background: '#ef4444',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '32px',
+                                            height: '32px',
+                                            fontSize: '16px',
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                    <img
+                                        src={modalImagenComprobante}
+                                        alt="Comprobante en detalle"
+                                        style={{
+                                            maxWidth: '85vw',
+                                            maxHeight: '82vh',
+                                            objectFit: 'contain',
+                                            display: 'block',
+                                            borderRadius: '4px'
+                                        }}
+                                    />
+                                    <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                                        <a
+                                            href={modalImagenComprobante}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn btn-primary"
+                                            style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+                                        >
+                                            📥 Abrir archivo original
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
                 
