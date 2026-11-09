@@ -97,6 +97,86 @@ const WhatsApp = () => {
     const [modalImagenComprobante, setModalImagenComprobante] = useState(null);
     const [zoomModal, setZoomModal] = useState(false);
 
+    // Destinos de Reenvío para Comprobantes OCR
+    const [destinosOCR, setDestinosOCR] = useState([]);
+    const [cargandoDestinosOCR, setCargandoDestinosOCR] = useState(false);
+    const [mostrarDropdownOCR, setMostrarDropdownOCR] = useState(false);
+    const [nuevoNombreOCR, setNuevoNombreOCR] = useState('');
+    const [nuevoNumeroOCR, setNuevoNumeroOCR] = useState('');
+    const [guardandoDestinoOCR, setGuardandoDestinoOCR] = useState(false);
+    const dropdownOCRRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownOCRRef.current && !dropdownOCRRef.current.contains(event.target)) {
+                setMostrarDropdownOCR(false);
+            }
+        };
+        if (mostrarDropdownOCR) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [mostrarDropdownOCR]);
+
+    const cargarDestinosOCR = async () => {
+        try {
+            setCargandoDestinosOCR(true);
+            const res = await whatsappService.obtenerDestinosOCR();
+            setDestinosOCR(res.data || res || []);
+        } catch (error) {
+            console.error("Error cargando destinos OCR:", error);
+        } finally {
+            setCargandoDestinosOCR(false);
+        }
+    };
+
+    const guardarDestinoOCR = async (e) => {
+        if (e) e.preventDefault();
+        if (!nuevoNumeroOCR || !nuevoNumeroOCR.trim()) {
+            showError("Por favor ingresa el número de WhatsApp receptor");
+            return;
+        }
+        setGuardandoDestinoOCR(true);
+        try {
+            await whatsappService.crearDestinoOCR(
+                nuevoNumeroOCR.trim(),
+                nuevoNombreOCR.trim() || 'Receptor OCR',
+                true
+            );
+            showSuccess("Número añadido para reenvío de comprobantes OCR");
+            setNuevoNombreOCR("");
+            setNuevoNumeroOCR("");
+            cargarDestinosOCR();
+        } catch (error) {
+            showError("Error al guardar número: " + (error.response?.data?.detail || error.message));
+        } finally {
+            setGuardandoDestinoOCR(false);
+        }
+    };
+
+    const alternarEstadoDestinoOCR = async (destino) => {
+        try {
+            await whatsappService.toggleActivoDestinoOCR(destino.id);
+            showSuccess(`Número ${!destino.activo ? 'activado' : 'pausado'} para reenvío OCR`);
+            cargarDestinosOCR();
+        } catch (error) {
+            showError("Error al cambiar estado: " + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    const eliminarDestinoOCR = async (destinoId) => {
+        if (!window.confirm("¿Seguro que deseas eliminar este número de los destinatarios de OCR?")) return;
+        try {
+            await whatsappService.eliminarDestinoOCR(destinoId);
+            showSuccess("Número eliminado correctamente");
+            cargarDestinosOCR();
+        } catch (error) {
+            showError("Error al eliminar número: " + (error.response?.data?.detail || error.message));
+        }
+    };
+
     useEffect(() => {
         if (!modalImagenComprobante) {
             setZoomModal(false);
@@ -162,6 +242,7 @@ const WhatsApp = () => {
         cargarHistorial();
         cargarEstadoConexion();
         cargarAdministradores();
+        cargarDestinosOCR();
         cargarDatosNodosYClientes();
         cargarConversaciones();
         
@@ -1441,7 +1522,7 @@ const WhatsApp = () => {
             className="glass-card glass" 
             style={{ minHeight: '80vh' }}
         >
-            <div className="page-header">
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
                 <div className="page-header-info">
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                         <h1 style={{ background: 'linear-gradient(90deg, #06b6d4, #06d4af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
@@ -1452,6 +1533,187 @@ const WhatsApp = () => {
                     <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
                         Envía y gestiona notificaciones automáticas y masivas usando la pasarela de WhatsApp.
                     </p>
+                </div>
+
+                {/* BOTÓN Y DROPDOWN EN LA PARTE SUPERIOR DERECHA: REENVÍO OCR */}
+                <div style={{ position: 'relative' }} ref={dropdownOCRRef}>
+                    <button
+                        type="button"
+                        onClick={() => setMostrarDropdownOCR(!mostrarDropdownOCR)}
+                        className="btn btn-secondary"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: mostrarDropdownOCR ? 'rgba(6, 182, 212, 0.22)' : 'rgba(255, 255, 255, 0.06)',
+                            border: '1px solid ' + (mostrarDropdownOCR ? 'rgba(6, 182, 212, 0.55)' : 'rgba(255, 255, 255, 0.14)'),
+                            color: '#e2e8f0',
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            fontSize: '0.86rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                        }}
+                        title="Configurar números a donde se reenviarán los comprobantes con OCR"
+                    >
+                        <span>📲 Reenvío OCR</span>
+                        <span style={{
+                            background: destinosOCR.filter(d => d.activo).length > 0 ? '#10b981' : '#64748b',
+                            color: '#fff',
+                            fontSize: '0.72rem',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontWeight: 'bold'
+                        }}>
+                            {destinosOCR.filter(d => d.activo).length} activo(s)
+                        </span>
+                        <span style={{ fontSize: '0.72rem', transform: mostrarDropdownOCR ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                    </button>
+
+                    {mostrarDropdownOCR && (
+                        <div style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 'calc(100% + 8px)',
+                            width: '390px',
+                            maxWidth: '92vw',
+                            background: '#0f172a',
+                            border: '1px solid rgba(255, 255, 255, 0.18)',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            zIndex: 9999,
+                            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.8)',
+                            backdropFilter: 'blur(12px)'
+                        }}>
+                            {/* Cabecera del Dropdown */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '8px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: '0.94rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>📲</span> Destinos de Reenvío OCR
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '3px', lineHeight: '1.25' }}>
+                                        A estos números se les reenvía la foto con el ID, Nombre del cliente y todos los datos leídos con OCR.
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarDropdownOCR(false)}
+                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', padding: '0 4px', lineHeight: 1 }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Formulario para Añadir Número */}
+                            <form onSubmit={guardarDestinoOCR} style={{ marginBottom: '14px', background: 'rgba(255, 255, 255, 0.04)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
+                                    ➕ Añadir número de reenvío
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre (ej. Pagos, Caja)"
+                                        value={nuevoNombreOCR}
+                                        onChange={(e) => setNuevoNombreOCR(e.target.value)}
+                                        className="form-control"
+                                        style={{ fontSize: '0.8rem', padding: '6px 10px', flex: 1, background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Celular (ej. 0987149097)"
+                                        value={nuevoNumeroOCR}
+                                        onChange={(e) => setNuevoNumeroOCR(e.target.value)}
+                                        className="form-control"
+                                        style={{ fontSize: '0.8rem', padding: '6px 10px', flex: 1, background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={guardandoDestinoOCR}
+                                    className="btn btn-primary"
+                                    style={{ width: '100%', fontSize: '0.8rem', padding: '7px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
+                                >
+                                    {guardandoDestinoOCR ? '⏳ Guardando...' : '➕ Registrar Número para Reenvío'}
+                                </button>
+                            </form>
+
+                            {/* Lista de Números Configurados */}
+                            <div style={{ maxHeight: '230px', overflowY: 'auto' }}>
+                                <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginBottom: '6px', fontWeight: 600 }}>
+                                    📋 Números configurados ({destinosOCR.length}):
+                                </div>
+                                {cargandoDestinosOCR ? (
+                                    <div style={{ textAlign: 'center', padding: '10px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                        Cargando lista...
+                                    </div>
+                                ) : destinosOCR.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '14px', fontSize: '0.8rem', color: '#64748b' }}>
+                                        No hay números registrados aún. Agrega el primero arriba.
+                                    </div>
+                                ) : (
+                                    destinosOCR.map((d) => (
+                                        <div
+                                            key={d.id}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '8px 10px',
+                                                marginBottom: '6px',
+                                                background: d.activo ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                                                border: '1px solid ' + (d.activo ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.06)'),
+                                                borderRadius: '6px'
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.84rem', color: d.activo ? '#e2e8f0' : '#94a3b8' }}>
+                                                    {d.nombre}
+                                                </div>
+                                                <div style={{ fontSize: '0.76rem', color: '#38bdf8', fontFamily: 'monospace' }}>
+                                                    +{d.numero}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarEstadoDestinoOCR(d)}
+                                                    style={{
+                                                        background: d.activo ? '#10b981' : '#475569',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '12px',
+                                                        fontSize: '0.7rem',
+                                                        padding: '3px 8px',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                    title={d.activo ? 'Clic para pausar reenvío a este número' : 'Clic para activar reenvío'}
+                                                >
+                                                    {d.activo ? 'Activo' : 'Pausado'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => eliminarDestinoOCR(d.id)}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.9rem',
+                                                        padding: '2px 4px'
+                                                    }}
+                                                    title="Eliminar destinatario"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

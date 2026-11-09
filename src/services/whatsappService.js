@@ -128,6 +128,23 @@ export const whatsappService = {
   eliminarAdministrador: (admin_id) =>
     api.delete(`/whatsapp/administradores/${admin_id}`),
 
+  // Destinos de Reenvío para Comprobantes OCR
+  obtenerDestinosOCR: () =>
+    api.get('/whatsapp/destinos-ocr'),
+
+  crearDestinoOCR: (numero, nombre, activo = true) =>
+    api.post('/whatsapp/destinos-ocr', {
+      numero: numero,
+      nombre: nombre,
+      activo: activo
+    }),
+
+  toggleActivoDestinoOCR: (destino_id) =>
+    api.patch(`/whatsapp/destinos-ocr/${destino_id}/toggle-activo`),
+
+  eliminarDestinoOCR: (destino_id) =>
+    api.delete(`/whatsapp/destinos-ocr/${destino_id}`),
+
   // Conversaciones y Chat en vivo (Historial de 30 mensajes por cliente)
   obtenerConversaciones: () =>
     api.get('/whatsapp/conversaciones'),
