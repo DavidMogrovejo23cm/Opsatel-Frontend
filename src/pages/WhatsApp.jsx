@@ -6,6 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { whatsappService } from '../services/whatsappService';
 import { configuracionService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
@@ -94,6 +95,22 @@ const WhatsApp = () => {
     const [filtroEstadoComprobante, setFiltroEstadoComprobante] = useState('TODOS');
     const [busquedaComprobante, setBusquedaComprobante] = useState('');
     const [modalImagenComprobante, setModalImagenComprobante] = useState(null);
+    const [zoomModal, setZoomModal] = useState(false);
+
+    useEffect(() => {
+        if (!modalImagenComprobante) {
+            setZoomModal(false);
+            return;
+        }
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setModalImagenComprobante(null);
+                setZoomModal(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [modalImagenComprobante]);
 
     const cargarComprobantes = async (silencioso = false) => {
         try {
@@ -1820,7 +1837,14 @@ const WhatsApp = () => {
 
                                                                                     {/* Vista Previa de la Imagen con Click para Modal */}
                                                                                     {imgUrl && (
-                                                                                        <div style={{ position: 'relative', cursor: 'pointer', background: '#020617', textAlign: 'center' }}>
+                                                                                        <div 
+                                                                                            style={{ position: 'relative', cursor: 'pointer', background: '#020617', textAlign: 'center' }}
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                setModalImagenComprobante(imgUrl);
+                                                                                            }}
+                                                                                            title="Haz clic para ver el comprobante en grande"
+                                                                                        >
                                                                                             <img
                                                                                                 src={imgUrl}
                                                                                                 alt="Comprobante de pago"
@@ -1829,6 +1853,7 @@ const WhatsApp = () => {
                                                                                                     maxHeight: '260px',
                                                                                                     objectFit: 'contain',
                                                                                                     display: 'block',
+                                                                                                    cursor: 'zoom-in',
                                                                                                     transition: 'opacity 0.2s'
                                                                                                 }}
                                                                                                 onClick={() => setModalImagenComprobante(imgUrl)}
@@ -1839,6 +1864,23 @@ const WhatsApp = () => {
                                                                                                     }
                                                                                                 }}
                                                                                             />
+                                                                                            <div style={{
+                                                                                                position: 'absolute',
+                                                                                                bottom: '6px',
+                                                                                                right: '6px',
+                                                                                                background: 'rgba(0, 0, 0, 0.75)',
+                                                                                                color: '#fff',
+                                                                                                fontSize: '0.7rem',
+                                                                                                padding: '2px 8px',
+                                                                                                borderRadius: '12px',
+                                                                                                pointerEvents: 'none',
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px',
+                                                                                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                                                                                            }}>
+                                                                                                🔍 Clic para ampliar
+                                                                                            </div>
                                                                                             <div style={{ display: 'none', padding: '16px 12px', fontSize: '0.8rem', color: '#93c5fd', textAlign: 'center' }}>
                                                                                                 <div style={{ fontSize: '1.6rem', marginBottom: '4px' }}>🖼️</div>
                                                                                                 <div style={{ fontWeight: 600 }}>Foto guardada en el servidor</div>
@@ -4052,8 +4094,8 @@ const WhatsApp = () => {
                 )}
             </div>
             
-            {/* Modal Global para Ver Comprobante / Imagen en Pantalla Completa */}
-            {modalImagenComprobante && (
+            {/* Modal Global para Ver Comprobante / Imagen en Pantalla Completa (Portal a document.body) */}
+            {modalImagenComprobante && typeof document !== 'undefined' && createPortal(
                 <div
                     style={{
                         position: 'fixed',
@@ -4061,29 +4103,35 @@ const WhatsApp = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.88)',
+                        backgroundColor: 'rgba(2, 6, 23, 0.92)',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        zIndex: 99999,
+                        zIndex: 999999,
                         padding: '16px',
-                        backdropFilter: 'blur(4px)'
+                        backdropFilter: 'blur(8px)',
+                        animation: 'fadeIn 0.15s ease-out'
                     }}
-                    onClick={() => setModalImagenComprobante(null)}
+                    onClick={() => {
+                        setModalImagenComprobante(null);
+                        setZoomModal(false);
+                    }}
                 >
                     <div
                         style={{
                             position: 'relative',
-                            maxWidth: '92vw',
-                            maxHeight: '92vh',
+                            maxWidth: zoomModal ? '96vw' : '92vw',
+                            maxHeight: '94vh',
+                            width: zoomModal ? '95vw' : 'auto',
                             background: '#0f172a',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            border: '1px solid rgba(255, 255, 255, 0.18)',
                             padding: '16px',
-                            borderRadius: '12px',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+                            borderRadius: '14px',
+                            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9)',
                             display: 'flex',
                             flexDirection: 'column',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            transition: 'all 0.2s ease'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -4097,57 +4145,73 @@ const WhatsApp = () => {
                             paddingBottom: '8px',
                             borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
                         }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>🧾</span>
-                                <span>Comprobante de Pago</span>
-                                <span style={{ fontSize: '0.75rem', opacity: 0.7, fontWeight: 'normal' }}>
-                                    ({modalImagenComprobante.split('/').pop()})
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '1.2rem' }}>🧾</span>
+                                <span style={{ color: '#60a5fa' }}>Comprobante de Pago Original</span>
+                                <span style={{ fontSize: '0.75rem', opacity: 0.75, background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: '4px' }}>
+                                    {modalImagenComprobante.split('/').pop()}
                                 </span>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setModalImagenComprobante(null)}
+                                onClick={() => {
+                                    setModalImagenComprobante(null);
+                                    setZoomModal(false);
+                                }}
                                 style={{
                                     background: '#ef4444',
                                     color: '#fff',
                                     border: 'none',
                                     borderRadius: '50%',
-                                    width: '30px',
-                                    height: '30px',
-                                    fontSize: '15px',
+                                    width: '32px',
+                                    height: '32px',
+                                    fontSize: '16px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontWeight: 'bold'
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                    transition: 'transform 0.15s'
                                 }}
-                                title="Cerrar (Esc)"
+                                title="Cerrar ventana (Esc)"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {/* Imagen Original en Alta Resolución */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            overflow: 'auto',
-                            maxHeight: '75vh',
-                            background: '#020617',
-                            borderRadius: '8px',
-                            padding: '4px'
-                        }}>
+                        {/* Contenedor de la Imagen con Soporte de Zoom Completo */}
+                        <div 
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                overflow: 'auto',
+                                width: '100%',
+                                maxHeight: '76vh',
+                                minHeight: '200px',
+                                background: '#020617',
+                                borderRadius: '10px',
+                                padding: zoomModal ? '30px' : '8px',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                position: 'relative'
+                            }}
+                            title={zoomModal ? 'Clic en la imagen para reducir' : 'Clic en la imagen para ampliar'}
+                        >
                             <img
                                 src={modalImagenComprobante}
                                 alt="Comprobante en alta resolución"
                                 style={{
-                                    maxWidth: '88vw',
-                                    maxHeight: '72vh',
+                                    maxWidth: zoomModal ? 'none' : '88vw',
+                                    maxHeight: zoomModal ? 'none' : '72vh',
+                                    width: zoomModal ? '140%' : 'auto',
                                     objectFit: 'contain',
                                     display: 'block',
-                                    borderRadius: '6px'
+                                    borderRadius: '6px',
+                                    cursor: zoomModal ? 'zoom-out' : 'zoom-in',
+                                    transition: 'transform 0.2s ease, width 0.2s ease'
                                 }}
+                                onClick={() => setZoomModal(!zoomModal)}
                                 onError={(e) => {
                                     e.target.style.display = 'none';
                                     if (e.target.nextSibling) {
@@ -4155,37 +4219,57 @@ const WhatsApp = () => {
                                     }
                                 }}
                             />
-                            <div style={{ display: 'none', padding: '30px 20px', textAlign: 'center', color: '#fca5a5' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚠️</div>
-                                <div style={{ fontWeight: 600 }}>No se pudo cargar la imagen directamente</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>
-                                    Es posible que esté en una carpeta diferente o el backend esté reiniciándose.
+                            <div style={{ display: 'none', padding: '40px 20px', textAlign: 'center', color: '#fca5a5' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🖼️</div>
+                                <div style={{ fontWeight: 600, fontSize: '1rem' }}>No se pudo cargar la vista previa directa</div>
+                                <div style={{ fontSize: '0.82rem', opacity: 0.8, marginTop: '6px', maxWidth: '400px' }}>
+                                    Puedes abrir el archivo directamente en tu navegador usando el botón de abajo.
                                 </div>
                             </div>
                         </div>
 
                         {/* Pie del Modal con Acciones */}
-                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', justifyContent: 'center', width: '100%' }}>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => setZoomModal(!zoomModal)}
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.84rem', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                🔍 {zoomModal ? 'Ajustar a pantalla' : 'Ampliar foto'}
+                            </button>
+                            <a
+                                href={modalImagenComprobante}
+                                download
+                                className="btn btn-primary"
+                                style={{ fontSize: '0.84rem', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                            >
+                                📥 Descargar comprobante
+                            </a>
                             <a
                                 href={modalImagenComprobante}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-primary"
+                                className="btn btn-secondary"
                                 style={{ fontSize: '0.84rem', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
                             >
-                                📥 Abrir archivo original en pestaña nueva
+                                🔗 Abrir en pestaña nueva
                             </a>
                             <button
                                 type="button"
-                                onClick={() => setModalImagenComprobante(null)}
-                                className="btn btn-secondary"
-                                style={{ fontSize: '0.84rem', padding: '7px 14px' }}
+                                onClick={() => {
+                                    setModalImagenComprobante(null);
+                                    setZoomModal(false);
+                                }}
+                                className="btn"
+                                style={{ fontSize: '0.84rem', padding: '7px 14px', background: 'rgba(255,255,255,0.1)', color: '#fff' }}
                             >
-                                Cerrar
+                                Cerrar (Esc)
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
             
             {/* Animación de spin para el spinner de carga */}
