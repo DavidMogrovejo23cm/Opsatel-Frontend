@@ -1772,10 +1772,150 @@ const WhatsApp = () => {
                                                                     {esAsistente && <span>🤖 SAM Asistente IA</span>}
                                                                 </div>
 
-                                                                {/* Texto del mensaje */}
-                                                                <div style={{ whiteSpace: 'pre-wrap' }}>
-                                                                    {m.mensaje}
-                                                                </div>
+                                                                {/* Contenido del mensaje (Texto, Imagen/Comprobante o Multimedia) */}
+                                                                {(() => {
+                                                                    const rawMsg = m.mensaje || '';
+                                                                    const urlMatch = rawMsg.match(/(?:https?:\/\/[^\s]+)?(\/uploadscr\/[a-zA-Z0-9_\-\.\/]+)/i);
+                                                                    const esComprobanteGuardado = rawMsg.includes('/uploadscr/') || rawMsg.startsWith('🧾 [Comprobante');
+                                                                    const esNonTextImg = rawMsg.startsWith('[NON_TEXT_MSG] image') || rawMsg === '[NON_TEXT_MSG] image' || rawMsg.includes('[Comprobante / Foto enviada]');
+                                                                    
+                                                                    if (urlMatch || esComprobanteGuardado) {
+                                                                        const imgUrl = urlMatch ? urlMatch[1] : (rawMsg.split(' ')[1] || '').trim();
+                                                                        let textoLimpio = rawMsg
+                                                                            .replace(/🧾\s*\[Comprobante[^\]]*\]/gi, '')
+                                                                            .replace(/(?:https?:\/\/[^\s]+)?\/uploadscr\/[a-zA-Z0-9_\-\.\/]+/gi, '')
+                                                                            .replace(/^[\s\-–—:]+/, '')
+                                                                            .trim();
+
+                                                                        return (
+                                                                            <div>
+                                                                                <div style={{
+                                                                                    marginBottom: '8px',
+                                                                                    borderRadius: '8px',
+                                                                                    overflow: 'hidden',
+                                                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                                                    background: 'rgba(0,0,0,0.3)',
+                                                                                    position: 'relative'
+                                                                                }}>
+                                                                                    <div style={{
+                                                                                        padding: '4px 8px',
+                                                                                        background: 'rgba(30, 58, 138, 0.75)',
+                                                                                        fontSize: '0.72rem',
+                                                                                        fontWeight: 600,
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        justifyContent: 'space-between',
+                                                                                        gap: '6px'
+                                                                                    }}>
+                                                                                        <span>🧾 Comprobante de pago</span>
+                                                                                        <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>uploadscr</span>
+                                                                                    </div>
+                                                                                    <img
+                                                                                        src={imgUrl}
+                                                                                        alt="Comprobante adjunto"
+                                                                                        style={{
+                                                                                            maxWidth: '100%',
+                                                                                            maxHeight: '260px',
+                                                                                            objectFit: 'cover',
+                                                                                            display: 'block',
+                                                                                            cursor: 'pointer',
+                                                                                            transition: 'transform 0.2s',
+                                                                                            borderRadius: '0 0 6px 6px'
+                                                                                        }}
+                                                                                        onClick={() => setModalImagenComprobante(imgUrl)}
+                                                                                        onError={(e) => {
+                                                                                            e.target.style.display = 'none';
+                                                                                            if (e.target.nextSibling) {
+                                                                                                e.target.nextSibling.style.display = 'block';
+                                                                                            }
+                                                                                        }}
+                                                                                    />
+                                                                                    <div style={{ display: 'none', padding: '12px', fontSize: '0.78rem', color: '#fca5a5', textAlign: 'center' }}>
+                                                                                        📷 Comprobante guardado en uploadscr ({imgUrl.split('/').pop()})
+                                                                                    </div>
+                                                                                    <div style={{
+                                                                                        padding: '4px 8px',
+                                                                                        background: 'rgba(0,0,0,0.4)',
+                                                                                        fontSize: '0.7rem',
+                                                                                        display: 'flex',
+                                                                                        justifyContent: 'flex-end',
+                                                                                        gap: '8px'
+                                                                                    }}>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => setModalImagenComprobante(imgUrl)}
+                                                                                            style={{
+                                                                                                background: 'transparent',
+                                                                                                border: 'none',
+                                                                                                color: '#93c5fd',
+                                                                                                cursor: 'pointer',
+                                                                                                fontSize: '0.72rem',
+                                                                                                padding: 0
+                                                                                            }}
+                                                                                        >
+                                                                                            🔍 Ver imagen completa
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                                {textoLimpio && (
+                                                                                    <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>
+                                                                                        {textoLimpio}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (esNonTextImg) {
+                                                                        return (
+                                                                            <div style={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '8px',
+                                                                                padding: '8px 12px',
+                                                                                background: 'rgba(255,255,255,0.08)',
+                                                                                borderRadius: '6px',
+                                                                                border: '1px dashed rgba(255,255,255,0.25)'
+                                                                            }}>
+                                                                                <span style={{ fontSize: '1.4rem' }}>📷</span>
+                                                                                <div>
+                                                                                    <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>Comprobante / Foto enviada</div>
+                                                                                    <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>Descargada automáticamente en uploadscr</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (rawMsg.startsWith('[NON_TEXT_MSG] video')) {
+                                                                        return (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontStyle: 'italic', opacity: 0.85 }}>
+                                                                                <span>🎥</span> <span>[Video adjunto recibido]</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (rawMsg.startsWith('[NON_TEXT_MSG] audio') || rawMsg.startsWith('[NON_TEXT_MSG] ptt')) {
+                                                                        return (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontStyle: 'italic', opacity: 0.85 }}>
+                                                                                <span>🎤</span> <span>[Mensaje de voz / Audio recibido]</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    if (rawMsg.startsWith('[NON_TEXT_MSG] document')) {
+                                                                        return (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontStyle: 'italic', opacity: 0.85 }}>
+                                                                                <span>📄</span> <span>[Documento adjunto recibido]</span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <div style={{ whiteSpace: 'pre-wrap' }}>
+                                                                            {rawMsg}
+                                                                        </div>
+                                                                    );
+                                                                })()}
 
                                                                 {/* Hora */}
                                                                 <div style={{
