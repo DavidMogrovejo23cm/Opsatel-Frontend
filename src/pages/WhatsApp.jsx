@@ -1665,23 +1665,118 @@ const WhatsApp = () => {
     };
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="glass-card glass" 
-            style={{ minHeight: '80vh' }}
-        >
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
-                <div className="page-header-info">
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <h1 style={{ background: 'linear-gradient(90deg, #06b6d4, #06d4af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
-                            📱 Centro de WhatsApp
+        <div className="wa-page-container" style={{ width: '100%', padding: '0', boxSizing: 'border-box' }}>
+            <style>{`
+                @media (min-width: 769px) {
+                    .wa-page-container {
+                        height: calc(100vh - 116px);
+                        max-height: calc(100vh - 116px);
+                        display: flex;
+                        flex-direction: column;
+                        overflow: hidden;
+                        box-sizing: border-box;
+                    }
+                    .wa-content-area {
+                        flex: 1;
+                        min-height: 0;
+                        display: flex;
+                        flex-direction: column;
+                        overflow: hidden;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .wa-page-container {
+                        min-height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .wa-content-area {
+                        flex: 1;
+                    }
+                    .wa-chat-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                }
+                .wa-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                    height: 6px;
+                }
+                .wa-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .wa-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.16);
+                    border-radius: 4px;
+                }
+                .wa-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.3);
+                }
+            `}</style>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '8px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h1 style={{ background: 'linear-gradient(90deg, #06b6d4, #06d4af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, fontSize: '1.35rem', fontWeight: 800 }}>
+                            📱 WhatsApp
                         </h1>
                         {renderConnectionBadge()}
                     </div>
-                    <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-                        Envía y gestiona notificaciones automáticas y masivas usando la pasarela de WhatsApp.
-                    </p>
+
+                    {/* SELECTOR DE SECCIÓN (DROPDOWN) */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.04)', padding: '3px 8px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                        <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                            Sección:
+                        </label>
+                        <select
+                            value={activeTab}
+                            onChange={(e) => setActiveTab(e.target.value)}
+                            className="input"
+                            style={{
+                                padding: '5px 12px',
+                                fontSize: '0.84rem',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                background: '#1e293b',
+                                color: '#38bdf8',
+                                border: '1px solid rgba(56, 189, 248, 0.45)',
+                                cursor: 'pointer',
+                                height: '34px',
+                                marginBottom: 0
+                            }}
+                        >
+                            <option value="Chats en Vivo">💬 Chats en Vivo</option>
+                            <option value="Comprobantes">🧾 Comprobantes {resumenCategorias.total_por_atender > 0 ? `(${resumenCategorias.total_por_atender} pendientes)` : ''}</option>
+                            <option value="Envío Manual">📤 Envío Manual</option>
+                            <option value="Envío Programado">⏰ Envío Programado</option>
+                            <option value="Difusión Masiva">📢 Difusión Masiva</option>
+                            <option value="Historial">📜 Historial</option>
+                            <option value="Conexión QR">🔗 Conexión QR</option>
+                            <option value="Administradores">👥 Administradores</option>
+                        </select>
+
+                        {resumenCategorias.total_por_atender > 0 && activeTab !== 'Comprobantes' && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('Comprobantes')}
+                                style={{
+                                    background: resumenCategorias.confirmacion_recibo > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                    border: `1px solid ${resumenCategorias.confirmacion_recibo > 0 ? '#10b981' : '#f59e0b'}`,
+                                    color: resumenCategorias.confirmacion_recibo > 0 ? '#6ee7b7' : '#fcd34d',
+                                    borderRadius: '8px',
+                                    padding: '3px 8px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                title="Ir a Comprobantes pendientes"
+                            >
+                                <span>🧾 {resumenCategorias.total_por_atender} pendientes</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* BOTÓN Y DROPDOWN EN LA PARTE SUPERIOR DERECHA: REENVÍO OCR */}
@@ -1866,187 +1961,121 @@ const WhatsApp = () => {
                 </div>
             </div>
 
-            {/* BANNER DE NOTIFICACIONES DE COMPROBANTES (CONFIRMACIÓN DE RECIBO, PENDIENTES COMPROBANTE Y YA COBRADOS) */}
-            {(resumenCategorias.confirmacion_recibo > 0 || resumenCategorias.pendientes_comprobante > 0 || resumenCategorias.cobrados > 0) && (
-                <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    marginBottom: '16px',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    background: 'rgba(15, 23, 42, 0.85)',
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '1.2rem' }}>🔔</span>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>
-                            Notificaciones de Comprobantes:
-                        </span>
-                        {resumenCategorias.confirmacion_recibo > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setActiveTab('Comprobantes');
-                                    setSeccionComprobante('CONFIRMACION_RECIBO');
-                                }}
-                                style={{
-                                    background: 'rgba(16, 185, 129, 0.18)',
-                                    border: '1px solid rgba(16, 185, 129, 0.5)',
-                                    color: '#6ee7b7',
-                                    padding: '5px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '0.82rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}
-                            >
-                                <span>✅ Confirmación de Recibo:</span>
-                                <span style={{ background: '#10b981', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem' }}>
-                                    {resumenCategorias.confirmacion_recibo} por cobrar en BD
-                                </span>
-                            </button>
-                        )}
-                        {resumenCategorias.pendientes_comprobante > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setActiveTab('Comprobantes');
-                                    setSeccionComprobante('PENDIENTES_COMPROBANTE');
-                                }}
-                                style={{
-                                    background: 'rgba(245, 158, 11, 0.18)',
-                                    border: '1px solid rgba(245, 158, 11, 0.5)',
-                                    color: '#fcd34d',
-                                    padding: '5px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '0.82rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}
-                            >
-                                <span>⚠️ Pendientes Comprobante:</span>
-                                <span style={{ background: '#f59e0b', color: '#0f172a', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
-                                    {resumenCategorias.pendientes_comprobante} con novedad
-                                </span>
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setActiveTab('Comprobantes');
-                                setSeccionComprobante('COBRADOS');
-                            }}
-                            style={{
-                                background: 'rgba(59, 130, 246, 0.18)',
-                                border: '1px solid rgba(59, 130, 246, 0.5)',
-                                color: '#93c5fd',
-                                padding: '5px 12px',
-                                borderRadius: '20px',
-                                fontSize: '0.82rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                        >
-                            <span>💰 Ya Cobrados:</span>
-                            <span style={{ background: '#3b82f6', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
-                                {resumenCategorias.cobrados ?? resumenCategorias.aprobados ?? 0}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                {['Chats en Vivo', 'Comprobantes', 'Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
-                    <button
-                        key={tab}
-                        className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => setActiveTab(tab)}
-                        style={{ padding: '8px 16px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                    >
-                        <span>{tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab === 'Comprobantes' ? '🧾 Comprobantes' : tab}</span>
-                        {tab === 'Comprobantes' && resumenCategorias.total_por_atender > 0 && (
-                            <span style={{
-                                background: resumenCategorias.confirmacion_recibo > 0 ? '#10b981' : '#f59e0b',
-                                color: '#fff',
-                                fontSize: '0.72rem',
-                                fontWeight: 800,
-                                padding: '1px 7px',
-                                borderRadius: '10px'
-                            }}>
-                                {resumenCategorias.total_por_atender}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '12px' }}>
+            <div className="wa-content-area" style={{
+                background: activeTab === 'Chats en Vivo' ? 'transparent' : 'rgba(0,0,0,0.2)',
+                padding: activeTab === 'Chats en Vivo' ? '0' : '20px',
+                borderRadius: '14px',
+                overflowY: activeTab === 'Chats en Vivo' ? 'hidden' : 'auto',
+                border: activeTab === 'Chats en Vivo' ? 'none' : '1px solid rgba(255, 255, 255, 0.06)'
+            }}>
                 
-                {/* CHATS EN VIVO (HISTORIAL DE MENSAJES CON RETENCIÓN DE 30 MENSAJES) */}
+                {/* CHATS EN VIVO (HISTORIAL DE MENSAJES CON RETENCIÓN DE 100 MENSAJES) */}
                 {activeTab === 'Chats en Vivo' && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    💬 Conversaciones y Chats en Vivo
-                                </h3>
-                                <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
-                                    Historial en tiempo real de clientes con SAM Bot y Operadores. Se conservan automáticamente los <strong>últimos 100 mensajes</strong> por cliente.
-                                </p>
-                            </div>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => { cargarConversaciones(); if (conversacionActiva?.numero) refrescarMensajesActivos(conversacionActiva.numero); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-                            >
-                                🔄 Actualizar
-                            </button>
-                        </div>
-
-                        <div style={{
+                    <div style={{ display: 'flex', flex: 1, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+                        <div className="wa-chat-grid" style={{
                             display: 'grid',
-                            gridTemplateColumns: 'minmax(280px, 340px) 1fr',
-                            gap: '16px',
-                            minHeight: '620px',
-                            height: 'calc(100vh - 280px)',
-                            maxHeight: '750px'
+                            gridTemplateColumns: '360px 1fr',
+                            gap: '0',
+                            flex: 1,
+                            minHeight: 0,
+                            height: '100%',
+                            background: '#111b21',
+                            borderRadius: '14px',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
                         }}>
-                            {/* Panel Izquierdo: Lista de Conversaciones */}
+                            {/* Panel Izquierdo: Lista de Conversaciones estilo WhatsApp */}
                             <div style={{
-                                background: 'rgba(15, 23, 42, 0.65)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '12px',
+                                background: '#111b21',
+                                borderRight: '1px solid rgba(255, 255, 255, 0.08)',
                                 display: 'flex',
                                 flexDirection: 'column',
+                                height: '100%',
                                 overflow: 'hidden'
                             }}>
-                                {/* Buscador */}
-                                <div style={{ padding: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                {/* Cabecera Lista de Chats */}
+                                <div style={{
+                                    padding: '10px 16px',
+                                    background: '#202c33',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    minHeight: '56px',
+                                    boxSizing: 'border-box'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.96rem', color: '#e9edef' }}>Chats</span>
+                                        <span style={{ fontSize: '0.74rem', background: 'rgba(255,255,255,0.08)', color: '#8696a0', padding: '1px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                                            {conversacionesFiltradas.length}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { cargarConversaciones(); if (conversacionActiva?.numero) refrescarMensajesActivos(conversacionActiva.numero); }}
+                                        style={{
+                                            background: 'rgba(255, 255, 255, 0.06)',
+                                            border: 'none',
+                                            color: '#aebac1',
+                                            borderRadius: '50%',
+                                            width: '32px',
+                                            height: '32px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '0.85rem',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title="Actualizar lista de chats"
+                                    >
+                                        🔄
+                                    </button>
+                                </div>
+
+                                {/* Buscador de Chats */}
+                                <div style={{ padding: '8px 12px', background: '#111b21', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', position: 'relative' }}>
                                     <input
                                         type="text"
-                                        className="input"
-                                        placeholder="🔍 Buscar por nombre o teléfono..."
+                                        placeholder="🔍 Buscar o iniciar un chat..."
                                         value={busquedaChat}
                                         onChange={(e) => setBusquedaChat(e.target.value)}
-                                        style={{ fontSize: '0.85rem', width: '100%', padding: '8px 12px' }}
+                                        style={{
+                                            fontSize: '0.84rem',
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            padding: '8px 14px',
+                                            background: '#202c33',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: '#e9edef',
+                                            outline: 'none'
+                                        }}
                                     />
+                                    {busquedaChat && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setBusquedaChat('')}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '22px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#8696a0',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Lista de chats */}
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <div className="wa-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
                                     {cargandoConversaciones && conversaciones.length === 0 ? (
                                         <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                             <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
@@ -2069,20 +2098,20 @@ const WhatsApp = () => {
                                                     key={c.numero}
                                                     onClick={() => seleccionarConversacion(c)}
                                                     style={{
-                                                        padding: '12px 14px',
+                                                        padding: '10px 14px',
                                                         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         gap: '12px',
                                                         alignItems: 'center',
-                                                        background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                                                        borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent',
+                                                        background: isSelected ? '#2a3942' : 'transparent',
+                                                        borderLeft: isSelected ? '4px solid #00a884' : '4px solid transparent',
                                                         transition: 'background 0.15s ease'
                                                     }}
                                                 >
                                                     <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
+                                                        width: '42px',
+                                                        height: '42px',
                                                         borderRadius: '50%',
                                                         background: c.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
                                                         display: 'flex',
@@ -2097,11 +2126,11 @@ const WhatsApp = () => {
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                                                            <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#93c5fd' : '#f1f5f9' }}>
+                                                            <div style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#38bdf8' : '#e9edef' }}>
                                                                 {c.cliente_id && (
                                                                     <span style={{
-                                                                        fontSize: '0.7rem',
-                                                                        background: 'rgba(16, 185, 129, 0.2)',
+                                                                        fontSize: '0.68rem',
+                                                                        background: 'rgba(16, 185, 129, 0.25)',
                                                                         color: '#6ee7b7',
                                                                         padding: '1px 5px',
                                                                         borderRadius: '4px',
@@ -2113,27 +2142,28 @@ const WhatsApp = () => {
                                                                 )}
                                                                 {nombreMostrar}
                                                             </div>
-                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                            <span style={{ fontSize: '0.72rem', color: isSelected ? '#38bdf8' : '#8696a0' }}>
                                                                 {fechaHora}
                                                             </span>
                                                         </div>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }}>
+                                                            <div style={{ fontSize: '0.78rem', color: '#8696a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '190px' }}>
                                                                 {c.ultimo_rol === 'asistente' ? '🤖 SAM: ' : c.ultimo_rol === 'operador' ? '✓ Tú: ' : ''}
                                                                 {c.ultimo_mensaje}
                                                             </div>
                                                             <span style={{
                                                                 fontSize: '0.68rem',
-                                                                background: 'rgba(255, 255, 255, 0.08)',
+                                                                background: isSelected ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.08)',
                                                                 padding: '2px 6px',
                                                                 borderRadius: '10px',
-                                                                color: 'var(--text-muted)'
+                                                                color: isSelected ? '#7dd3fc' : '#8696a0',
+                                                                fontWeight: 600
                                                             }}>
                                                                 {c.total_mensajes}/100
                                                             </span>
                                                         </div>
                                                         {(c.nodo && c.nodo !== 'N/A') || (c.ip && c.ip !== 'N/A') ? (
-                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            <div style={{ fontSize: '0.7rem', color: '#8696a0', marginTop: '2px', display: 'flex', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                                 {c.nodo && c.nodo !== 'N/A' && <span>📍 {c.nodo}</span>}
                                                                 {c.ip && c.ip !== 'N/A' && <span style={{ color: '#38bdf8' }}>🌐 {c.ip}</span>}
                                                             </div>
@@ -2146,32 +2176,33 @@ const WhatsApp = () => {
                                 </div>
                             </div>
 
-                            {/* Panel Derecho: Chat Activo */}
+                            {/* Panel Derecho: Chat Activo estilo WhatsApp */}
                             <div style={{
-                                background: 'rgba(15, 23, 42, 0.45)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '12px',
+                                background: '#0b141a',
                                 display: 'flex',
                                 flexDirection: 'column',
+                                height: '100%',
                                 overflow: 'hidden'
                             }}>
                                 {conversacionActiva ? (
                                     <>
                                         {/* Header del Chat */}
                                         <div style={{
-                                            padding: '12px 18px',
-                                            background: 'rgba(15, 23, 42, 0.75)',
+                                            padding: '8px 18px',
+                                            background: '#202c33',
                                             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
                                             flexWrap: 'wrap',
-                                            gap: '10px'
+                                            gap: '10px',
+                                            minHeight: '56px',
+                                            boxSizing: 'border-box'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{
-                                                    width: '42px',
-                                                    height: '42px',
+                                                    width: '40px',
+                                                    height: '40px',
                                                     borderRadius: '50%',
                                                     background: conversacionActiva.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
                                                     display: 'flex',
@@ -2179,30 +2210,31 @@ const WhatsApp = () => {
                                                     justifyContent: 'center',
                                                     color: '#fff',
                                                     fontWeight: 'bold',
-                                                    fontSize: '1rem'
+                                                    fontSize: '0.95rem',
+                                                    flexShrink: 0
                                                 }}>
                                                     {(conversacionActiva.cliente?.nombre || conversacionActiva.nombre || '').replace(/\s*\(.*\)/, '').trim().charAt(0).toUpperCase() || '📱'}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <div style={{ fontWeight: 700, fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                         {conversacionActiva.cliente?.id && (
                                                             <span style={{
-                                                                fontSize: '0.75rem',
-                                                                padding: '2px 8px',
-                                                                borderRadius: '6px',
-                                                                background: 'rgba(16, 185, 129, 0.2)',
-                                                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                                                fontSize: '0.72rem',
+                                                                padding: '1px 6px',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(16, 185, 129, 0.25)',
+                                                                border: '1px solid rgba(16, 185, 129, 0.5)',
                                                                 color: '#6ee7b7',
-                                                                fontWeight: 700
+                                                                fontWeight: 800
                                                             }}>
                                                                 ID #{conversacionActiva.cliente.id}
                                                             </span>
                                                         )}
-                                                        <span>{conversacionActiva.cliente?.nombre || conversacionActiva.nombre || (conversacionActiva.numero?.includes('@') ? conversacionActiva.numero : `+${conversacionActiva.numero}`)}</span>
+                                                        <span style={{ color: '#e9edef' }}>{conversacionActiva.cliente?.nombre || conversacionActiva.nombre || (conversacionActiva.numero?.includes('@') ? conversacionActiva.numero : `+${conversacionActiva.numero}`)}</span>
                                                         {conversacionActiva.cliente?.estado && (
                                                             <span style={{
-                                                                fontSize: '0.7rem',
-                                                                padding: '2px 6px',
+                                                                fontSize: '0.68rem',
+                                                                padding: '1px 6px',
                                                                 borderRadius: '4px',
                                                                 background: conversacionActiva.cliente.estado.toUpperCase() === 'ACTIVO' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                                                                 color: conversacionActiva.cliente.estado.toUpperCase() === 'ACTIVO' ? '#86efac' : '#fca5a5'
@@ -2211,24 +2243,46 @@ const WhatsApp = () => {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px', alignItems: 'center' }}>
+                                                    <div style={{ fontSize: '0.74rem', color: '#8696a0', display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '2px', alignItems: 'center' }}>
                                                         <span>📞 {conversacionActiva.cliente?.celular && conversacionActiva.cliente.celular !== 'N/A' && !conversacionActiva.cliente.celular.includes('@') && conversacionActiva.cliente.celular !== 'No registrado' ? conversacionActiva.cliente.celular : (conversacionActiva.numero?.includes('@') ? 'Contacto WhatsApp' : conversacionActiva.numero)}</span>
                                                         {conversacionActiva.numero?.includes('@lid') && conversacionActiva.cliente?.celular && !conversacionActiva.cliente.celular.includes('@') && conversacionActiva.cliente.celular !== 'No registrado' && (
-                                                            <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>({conversacionActiva.numero})</span>
+                                                            <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>({conversacionActiva.numero})</span>
                                                         )}
                                                         <span>📦 <strong>Plan:</strong> {conversacionActiva.cliente?.plan || 'No registrado'}</span>
-                                                        <span>📍 <strong>Nodo:</strong> {conversacionActiva.cliente?.nodo || 'N/A'}</span>
-                                                        <span style={{ color: conversacionActiva.cliente?.ip && conversacionActiva.cliente.ip !== 'N/A' ? '#38bdf8' : 'inherit' }}>
-                                                            🌐 <strong>IP:</strong> {conversacionActiva.cliente?.ip || 'N/A'}
-                                                        </span>
+                                                        {conversacionActiva.cliente?.nodo && conversacionActiva.cliente.nodo !== 'N/A' && (
+                                                            <span>📍 {conversacionActiva.cliente.nodo}</span>
+                                                        )}
+                                                        {conversacionActiva.cliente?.ip && conversacionActiva.cliente.ip !== 'N/A' && (
+                                                            <span style={{ color: '#38bdf8' }}>🌐 {conversacionActiva.cliente.ip}</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ fontSize: '0.72rem', background: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.25)', padding: '4px 10px', borderRadius: '12px' }}>
-                                                    🛡️ Retención: {mensajesChat.length}/100 mensajes
+                                                <span style={{ fontSize: '0.72rem', background: '#111b21', color: '#8696a0', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '3px 9px', borderRadius: '12px' }}>
+                                                    🛡️ Retención: {mensajesChat.length}/100
                                                 </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { if (conversacionActiva?.numero) refrescarMensajesActivos(conversacionActiva.numero); }}
+                                                    style={{
+                                                        background: 'rgba(255, 255, 255, 0.06)',
+                                                        border: 'none',
+                                                        color: '#aebac1',
+                                                        borderRadius: '50%',
+                                                        width: '32px',
+                                                        height: '32px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '0.85rem'
+                                                    }}
+                                                    title="Actualizar mensajes de este chat"
+                                                >
+                                                    🔄
+                                                </button>
                                             </div>
                                         </div>
 
@@ -2236,14 +2290,16 @@ const WhatsApp = () => {
                                         <div 
                                             ref={chatContainerRef}
                                             onScroll={manejarScrollChat}
+                                            className="wa-scrollbar"
                                             style={{
                                                 flex: 1,
+                                                minHeight: 0,
                                                 overflowY: 'auto',
-                                                padding: '18px',
+                                                padding: '16px 20px',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                gap: '12px',
-                                                background: 'rgba(10, 15, 29, 0.5)',
+                                                gap: '6px',
+                                                background: '#0b141a',
                                                 position: 'relative'
                                             }}
                                         >
@@ -2273,41 +2329,37 @@ const WhatsApp = () => {
                                                             key={m.id}
                                                             style={{
                                                                 alignSelf: esCliente ? 'flex-start' : 'flex-end',
-                                                                maxWidth: '78%',
+                                                                maxWidth: '82%',
                                                                 display: 'flex',
                                                                 flexDirection: 'column',
                                                                 alignItems: esCliente ? 'flex-start' : 'flex-end'
                                                             }}
                                                         >
-                                                            {/* Burbuja */}
+                                                            {/* Burbuja estilo WhatsApp */}
                                                             <div style={{
-                                                                padding: '10px 14px',
-                                                                borderRadius: esCliente ? '14px 14px 14px 2px' : '14px 14px 2px 14px',
+                                                                padding: '7px 12px 5px 12px',
+                                                                borderRadius: esCliente ? '8px 8px 8px 2px' : '8px 8px 2px 8px',
                                                                 background: esCliente
-                                                                    ? 'rgba(30, 41, 59, 0.95)'
+                                                                    ? '#202c33'
                                                                     : esOperador
-                                                                    ? 'linear-gradient(135deg, #065f46, #047857)'
-                                                                    : 'linear-gradient(135deg, #1e3a8a, #1d4ed8)',
-                                                                border: esCliente
-                                                                    ? '1px solid rgba(255, 255, 255, 0.12)'
-                                                                    : esOperador
-                                                                    ? '1px solid rgba(52, 211, 153, 0.4)'
-                                                                    : '1px solid rgba(96, 165, 250, 0.4)',
-                                                                color: '#f8fafc',
-                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                                    ? '#005c4b'
+                                                                    : '#1d2733',
+                                                                border: esAsistente ? '1px solid rgba(56, 189, 248, 0.3)' : 'none',
+                                                                color: '#e9edef',
+                                                                boxShadow: '0 1px 1px rgba(0,0,0,0.25)',
                                                                 wordBreak: 'break-word',
                                                                 fontSize: '0.9rem',
-                                                                lineHeight: 1.4
+                                                                lineHeight: 1.42
                                                             }}>
                                                                 {/* Cabecera del remitente */}
                                                                 <div style={{
                                                                     fontSize: '0.72rem',
-                                                                    fontWeight: 600,
-                                                                    marginBottom: '4px',
+                                                                    fontWeight: 700,
+                                                                    marginBottom: '3px',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     gap: '4px',
-                                                                    color: esCliente ? '#93c5fd' : esOperador ? '#a7f3d0' : '#bfdbfe'
+                                                                    color: esCliente ? '#53bdeb' : esOperador ? '#a7f3d0' : '#38bdf8'
                                                                 }}>
                                                                     {esCliente && <span>👤 Cliente</span>}
                                                                     {esOperador && <span>👨‍💼 Operador (Tú)</span>}
@@ -2515,20 +2567,26 @@ const WhatsApp = () => {
                                                                     }
 
                                                                     return (
-                                                                        <div style={{ whiteSpace: 'pre-wrap' }}>
+                                                                        <div style={{ whiteSpace: 'pre-wrap', color: '#e9edef' }}>
                                                                             {rawMsg}
                                                                         </div>
                                                                     );
                                                                 })()}
 
-                                                                {/* Hora */}
+                                                                {/* Hora y Ticks estilo WhatsApp */}
                                                                 <div style={{
-                                                                    fontSize: '0.68rem',
-                                                                    opacity: 0.7,
+                                                                    fontSize: '0.66rem',
+                                                                    color: esOperador ? 'rgba(255,255,255,0.7)' : '#8696a0',
                                                                     textAlign: 'right',
-                                                                    marginTop: '4px'
+                                                                    marginTop: '3px',
+                                                                    marginLeft: '14px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'flex-end',
+                                                                    gap: '4px'
                                                                 }}>
-                                                                    {horaFormato} {esOperador && '✓✓'}
+                                                                    <span>{horaFormato}</span>
+                                                                    {esOperador && <span style={{ color: '#53bdeb', fontWeight: 'bold' }}>✓✓</span>}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2564,10 +2622,10 @@ const WhatsApp = () => {
                                             )}
                                         </div>
 
-                                        {/* Barra para Enviar Respuesta */}
+                                        {/* Barra para Enviar Respuesta estilo WhatsApp */}
                                         <form onSubmit={manejarEnviarMensajeChat} style={{
-                                            padding: '12px 16px',
-                                            background: 'rgba(15, 23, 42, 0.85)',
+                                            padding: '8px 16px',
+                                            background: '#202c33',
                                             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                                             display: 'flex',
                                             gap: '10px',
@@ -2576,35 +2634,57 @@ const WhatsApp = () => {
                                             <input
                                                 type="text"
                                                 className="input"
-                                                placeholder={`Responder como operador a ${conversacionActiva.cliente?.nombre || conversacionActiva.nombre || conversacionActiva.numero} (Enter para enviar)...`}
+                                                placeholder={`Escribe un mensaje como operador a ${conversacionActiva.cliente?.nombre || conversacionActiva.nombre || conversacionActiva.numero}...`}
                                                 value={nuevoMensajeChat}
                                                 onChange={(e) => setNuevoMensajeChat(e.target.value)}
                                                 disabled={enviandoMensajeChat}
-                                                style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem' }}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '10px 16px',
+                                                    fontSize: '0.9rem',
+                                                    background: '#2a3942',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    color: '#e9edef',
+                                                    marginBottom: 0
+                                                }}
                                             />
                                             <button
                                                 type="submit"
-                                                className="btn btn-primary"
                                                 disabled={enviandoMensajeChat || !nuevoMensajeChat.trim()}
-                                                style={{ padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                                                style={{
+                                                    width: '42px',
+                                                    height: '42px',
+                                                    borderRadius: '50%',
+                                                    background: nuevoMensajeChat.trim() ? '#00a884' : 'rgba(255, 255, 255, 0.08)',
+                                                    border: 'none',
+                                                    color: '#fff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: nuevoMensajeChat.trim() ? 'pointer' : 'not-allowed',
+                                                    fontSize: '1.05rem',
+                                                    flexShrink: 0,
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: nuevoMensajeChat.trim() ? '0 2px 8px rgba(0, 168, 132, 0.35)' : 'none'
+                                                }}
+                                                title="Enviar mensaje (Enter)"
                                             >
-                                                {enviandoMensajeChat ? 'Enviando...' : '✈️ Enviar'}
+                                                {enviandoMensajeChat ? '⏳' : '✈️'}
                                             </button>
                                         </form>
                                     </>
                                 ) : (
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', padding: '40px' }}>
-                                        <div style={{ fontSize: '3.5rem', marginBottom: '16px', opacity: 0.5 }}>📱</div>
-                                        <h4 style={{ margin: '0 0 8px 0', color: '#e2e8f0' }}>Centro de Chats de WhatsApp</h4>
-                                        <p style={{ margin: 0, textAlign: 'center', maxWidth: '380px', fontSize: '0.88rem' }}>
-                                            Selecciona una conversación de la izquierda para ver el historial y responder directamente al cliente.
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8696a0', padding: '40px', background: '#111b21' }}>
+                                        <div style={{ fontSize: '3.5rem', marginBottom: '16px', opacity: 0.5 }}>💬</div>
+                                        <h4 style={{ margin: '0 0 8px 0', color: '#e9edef', fontWeight: 600 }}>WhatsApp Web de Opsatel</h4>
+                                        <p style={{ margin: 0, textAlign: 'center', maxWidth: '380px', fontSize: '0.88rem', color: '#8696a0', lineHeight: 1.5 }}>
+                                            Selecciona una conversación de la izquierda para ver el historial y responder directamente al cliente en tiempo real.
                                         </p>
                                     </div>
                                 )}
                             </div>
                         </div>
-
-
                     </div>
                 )}
                 
@@ -5435,7 +5515,7 @@ const WhatsApp = () => {
                     100% { transform: rotate(360deg); }
                 }
             `}</style>
-        </motion.div>
+        </div>
     );
 };
 
