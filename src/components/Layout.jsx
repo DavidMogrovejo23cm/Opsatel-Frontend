@@ -3,11 +3,12 @@
  * @description Layout principal de Opsatel con Header empresarial, Acciones Rápidas,
  * Buscador Global (Ctrl + K) y navegación modular optimizada.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import GlobalSearchModal from './GlobalSearchModal';
 import { useAuth } from '../context/AuthContext';
+import { whatsappService } from '../services/whatsappService';
 
 const BREADCRUMB_MAP = {
   '': { title: 'Dashboard', module: 'Principal', icon: '📊' },
@@ -36,9 +37,43 @@ const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [resumenNotif, setResumenNotif] = useState({
+    confirmacion_recibo: 0,
+    pendientes_comprobante: 0,
+    total_por_atender: 0
+  });
+  const notifDropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const cargarResumenNotificaciones = async () => {
+    try {
+      const res = await whatsappService.obtenerComprobantes({ limite: 1 });
+      if (res?.data?.resumen_categorias) {
+        setResumenNotif(res.data.resumen_categorias);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    cargarResumenNotificaciones();
+    const intv = setInterval(cargarResumenNotificaciones, 25000);
+    return () => clearInterval(intv);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOut = (e) => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setNotifDropdownOpen(false);
+      }
+    };
+    if (notifDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOut);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOut);
+  }, [notifDropdownOpen]);
 
   const rawPath = location.pathname.split('/')[1] || '';
   const pageKey = rawPath.toLowerCase();
@@ -189,6 +224,119 @@ const Layout = () => {
                 </button>
               )}
             </div>
+
+            {/* Campana de Notificaciones de Comprobantes (Confirmación de Recibo / Pendientes Comprobante) */}
+            {(user?.rol === 'administrador' || user?.rol === 'secretario') && (
+              <div ref={notifDropdownRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="top-header-icon-btn"
+                  onClick={() => {
+                    setNotifDropdownOpen(prev => !prev);
+                    cargarResumenNotificaciones();
+                  }}
+                  title="Notificaciones de Comprobantes (Confirmación de Recibo y Pendientes Comprobante)"
+                  style={{ position: 'relative' }}
+                >
+                  🔔
+                  {resumenNotif.total_por_atender > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: resumenNotif.confirmacion_recibo > 0 ? '#10b981' : '#f59e0b',
+                      color: '#fff',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 5px',
+                      borderRadius: '10px',
+                      lineHeight: 1.2,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                    }}>
+                      {resumenNotif.total_por_atender}
+                    </span>
+                  )}
+                </button>
+
+                {notifDropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 10px)',
+                    width: '320px',
+                    background: '#0f172a',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    zIndex: 9999,
+                    boxShadow: '0 20px 45px rgba(0,0,0,0.8)'
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f8fafc', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+                      🔔 Notificaciones de Comprobantes
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifDropdownOpen(false);
+                          navigate('/whatsapp?tab=Comprobantes&seccion=CONFIRMACION_RECIBO');
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: 'rgba(16, 185, 129, 0.14)',
+                          border: '1px solid rgba(16, 185, 129, 0.35)',
+                          color: '#6ee7b7',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>✅ Confirmación de Recibo</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Datos y saldo coinciden para aprobar</div>
+                        </div>
+                        <span style={{ background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.78rem', padding: '2px 8px', borderRadius: '10px' }}>
+                          {resumenNotif.confirmacion_recibo || 0}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifDropdownOpen(false);
+                          navigate('/whatsapp?tab=Comprobantes&seccion=PENDIENTES_COMPROBANTE');
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: 'rgba(245, 158, 11, 0.14)',
+                          border: '1px solid rgba(245, 158, 11, 0.35)',
+                          color: '#fcd34d',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>⚠️ Pendientes Comprobante</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Paga de más, otro número o sin cliente</div>
+                        </div>
+                        <span style={{ background: '#f59e0b', color: '#0f172a', fontWeight: 800, fontSize: '0.78rem', padding: '2px 8px', borderRadius: '10px' }}>
+                          {resumenNotif.pendientes_comprobante || 0}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Botón Refrescar Vista */}
             <button

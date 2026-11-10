@@ -89,13 +89,31 @@ const WhatsApp = () => {
     const [mostrarBotonBajar, setMostrarBotonBajar] = useState(false);
     const [busquedaChat, setBusquedaChat] = useState('');
 
-    // Comprobantes descargados en uploadscr
+    // Comprobantes descargados en uploadscr y Secciones de Notificación (Confirmación de Recibo vs Pendientes Comprobante)
     const [comprobantes, setComprobantes] = useState([]);
     const [cargandoComprobantes, setCargandoComprobantes] = useState(false);
+    const [seccionComprobante, setSeccionComprobante] = useState('CONFIRMACION_RECIBO'); // 'CONFIRMACION_RECIBO' | 'PENDIENTES_COMPROBANTE' | 'HISTORIAL' | 'TODOS'
     const [filtroEstadoComprobante, setFiltroEstadoComprobante] = useState('TODOS');
     const [busquedaComprobante, setBusquedaComprobante] = useState('');
+    const [resumenCategorias, setResumenCategorias] = useState({
+        confirmacion_recibo: 0,
+        pendientes_comprobante: 0,
+        total_por_atender: 0,
+        aprobados: 0,
+        rechazados: 0
+    });
     const [modalImagenComprobante, setModalImagenComprobante] = useState(null);
     const [zoomModal, setZoomModal] = useState(false);
+    const [comprobanteExpandidoOCR, setComprobanteExpandidoOCR] = useState(null);
+
+    // Modal de confirmación / vinculación manual para aprobar pago de comprobante
+    const [modalAprobarComp, setModalAprobarComp] = useState(null);
+    const [montoAprobarInput, setMontoAprobarInput] = useState('');
+    const [clienteIdAprobarInput, setClienteIdAprobarInput] = useState('');
+    const [busquedaClienteModal, setBusquedaClienteModal] = useState('');
+    const [observacionesAprobarInput, setObservacionesAprobarInput] = useState('');
+    const [notificarWhatsappAprobar, setNotificarWhatsappAprobar] = useState(true);
+    const [procesandoAprobacionId, setProcesandoAprobacionId] = useState(null);
 
     // Destinos de Reenvío para Comprobantes OCR
     const [destinosOCR, setDestinosOCR] = useState([]);
@@ -192,15 +210,20 @@ const WhatsApp = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [modalImagenComprobante]);
 
-    const cargarComprobantes = async (silencioso = false) => {
+    const cargarComprobantes = async (silencioso = false, categoriaOverride = null) => {
         try {
             if (!silencioso) setCargandoComprobantes(true);
+            const cat = categoriaOverride || seccionComprobante || 'TODOS';
             const res = await whatsappService.obtenerComprobantes({
-                estado: filtroEstadoComprobante,
+                categoria: cat,
+                estado: cat === 'TODOS' ? filtroEstadoComprobante : 'TODOS',
                 q: busquedaComprobante
             });
             if (res && res.data && res.data.success) {
                 setComprobantes(res.data.comprobantes || []);
+                if (res.data.resumen_categorias) {
+                    setResumenCategorias(res.data.resumen_categorias);
+                }
             }
         } catch (e) {
             console.error('Error cargando comprobantes:', e);
@@ -221,6 +244,87 @@ const WhatsApp = () => {
         }
     };
 
+    const abrirModalAprobarComprobante = (comp) => {
+        setModalAprobarComp(comp);
+        const montoSugerido = comp.monto !== null && comp.monto !== undefined
+            ? Number(comp.monto).toFixed(2)
+            : (comp.cliente?.deuda_total_bd ? Number(comp.cliente.deuda_total_bd).toFixed(2) : '');
+        setMontoAprobarInput(montoSugerido);
+        setClienteIdAprobarInput(comp.cliente_id ? String(comp.cliente_id) : (comp.cliente?.id ? String(comp.cliente.id) : ''));
+        setBusquedaClienteModal('');
+        setObservacionesAprobarInput(comp.observaciones || '');
+        setNotificarWhatsappAprobar(true);
+    };
+
+    const aprobarComprobanteDirecto = async (comp) => {
+        const nombreCli = comp.cliente?.nombre || comp.nombre_remitente || 'Cliente';
+        const montoVal = Number(comp.monto || 0);
+        const deudaVal = comp.cliente?.deuda_total_bd !== undefined
+            ? Number(comp.cliente.deuda_total_bd)
+            : Number(comp.saldo_pendiente_bd || 0);
+
+        const conf = await showConfirm(
+            `¿Confirmar y aprobar el pago de $${montoVal.toFixed(2)} para ${nombreCli} (ID #${comp.cliente_id || comp.cliente?.id})?\n\n` +
+            `• Pendiente actual en BD: $${deudaVal.toFixed(2)}\n` +
+            `• Saldo restante tras aprobar: $${Math.max(0, deudaVal - montoVal).toFixed(2)}\n` +
+            `• Banco / Ref: ${comp.banco_origen || comp.banco_destino || 'Transferencia'} - Ref: ${comp.numero_referencia || 'S/N'}`
+        );
+        if (!conf) return;
+
+        try {
+            setProcesandoAprobacionId(comp.id);
+            const res = await whatsappService.aprobarPagoComprobante(comp.id, {
+                cliente_id: comp.cliente_id || comp.cliente?.id,
+                monto_aplicar: montoVal,
+                notificar_cliente: true
+            });
+            if (res && res.data && res.data.success) {
+                showSuccess(res.data.message || 'Pago aprobado y descontado en la base de datos correctamente');
+                cargarComprobantes(true);
+                cargarDatosNodosYClientes();
+            }
+        } catch (e) {
+            showError(e.response?.data?.detail || 'Error al aprobar y aplicar el pago del comprobante');
+        } finally {
+            setProcesandoAprobacionId(null);
+        }
+    };
+
+    const ejecutarAprobarPagoModal = async (e) => {
+        if (e) e.preventDefault();
+        if (!modalAprobarComp) return;
+        const cid = parseInt(clienteIdAprobarInput, 10);
+        if (!cid || isNaN(cid)) {
+            showError('Por favor selecciona o vincula un cliente válido de la base de datos.');
+            return;
+        }
+        const montoNum = parseFloat(montoAprobarInput);
+        if (!montoNum || isNaN(montoNum) || montoNum <= 0) {
+            showError('Ingresa un monto válido mayor a $0.00 para aplicar el pago.');
+            return;
+        }
+
+        try {
+            setProcesandoAprobacionId(modalAprobarComp.id);
+            const res = await whatsappService.aprobarPagoComprobante(modalAprobarComp.id, {
+                cliente_id: cid,
+                monto_aplicar: montoNum,
+                observaciones: observacionesAprobarInput,
+                notificar_cliente: notificarWhatsappAprobar
+            });
+            if (res && res.data && res.data.success) {
+                showSuccess(res.data.message || 'Pago aprobado y registrado exitosamente');
+                setModalAprobarComp(null);
+                cargarComprobantes(true);
+                cargarDatosNodosYClientes();
+            }
+        } catch (err) {
+            showError(err.response?.data?.detail || 'No se pudo aprobar el pago del comprobante');
+        } finally {
+            setProcesandoAprobacionId(null);
+        }
+    };
+
     const handleEliminarComprobante = async (id) => {
         const conf = await showConfirm('¿Estás seguro de eliminar este comprobante del registro?');
         if (conf) {
@@ -238,6 +342,19 @@ const WhatsApp = () => {
 
 
     useEffect(() => {
+        // Revisar si vienen parámetros en la URL (ej. desde la campana de notificaciones del Header)
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const tabParam = params.get('tab');
+            const seccionParam = params.get('seccion');
+            if (tabParam === 'Comprobantes') {
+                setActiveTab('Comprobantes');
+            }
+            if (seccionParam && ['CONFIRMACION_RECIBO', 'PENDIENTES_COMPROBANTE', 'HISTORIAL', 'TODOS'].includes(seccionParam)) {
+                setSeccionComprobante(seccionParam);
+            }
+        } catch (_) {}
+
         cargarConfiguracion();
         cargarHistorial();
         cargarEstadoConexion();
@@ -245,9 +362,13 @@ const WhatsApp = () => {
         cargarDestinosOCR();
         cargarDatosNodosYClientes();
         cargarConversaciones();
+        cargarComprobantes(true);
         
-        // Recargar historial cada 30 segundos
-        const intervalo = setInterval(cargarHistorial, 30000);
+        // Recargar historial y resumen de comprobantes periódicamente
+        const intervalo = setInterval(() => {
+            cargarHistorial(true);
+            cargarComprobantes(true);
+        }, 20000);
         return () => clearInterval(intervalo);
     }, []);
 
@@ -264,9 +385,9 @@ const WhatsApp = () => {
 
     useEffect(() => {
         if (activeTab === 'Comprobantes') {
-            cargarComprobantes();
+            cargarComprobantes(false, seccionComprobante);
         }
-    }, [activeTab, filtroEstadoComprobante]);
+    }, [activeTab, seccionComprobante, filtroEstadoComprobante]);
 
 
     const normalizeLocationKey = (str) => {
@@ -1717,15 +1838,104 @@ const WhatsApp = () => {
                 </div>
             </div>
 
+            {/* BANNER DE NOTIFICACIONES DE COMPROBANTES (CONFIRMACIÓN DE RECIBO Y PENDIENTES COMPROBANTE) */}
+            {(resumenCategorias.confirmacion_recibo > 0 || resumenCategorias.pendientes_comprobante > 0) && (
+                <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    marginBottom: '16px',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(15, 23, 42, 0.85)',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '1.2rem' }}>🔔</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>
+                            Notificaciones de Comprobantes:
+                        </span>
+                        {resumenCategorias.confirmacion_recibo > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab('Comprobantes');
+                                    setSeccionComprobante('CONFIRMACION_RECIBO');
+                                }}
+                                style={{
+                                    background: 'rgba(16, 185, 129, 0.18)',
+                                    border: '1px solid rgba(16, 185, 129, 0.5)',
+                                    color: '#6ee7b7',
+                                    padding: '5px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>✅ Confirmación de Recibo:</span>
+                                <span style={{ background: '#10b981', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem' }}>
+                                    {resumenCategorias.confirmacion_recibo} para aprobar
+                                </span>
+                            </button>
+                        )}
+                        {resumenCategorias.pendientes_comprobante > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab('Comprobantes');
+                                    setSeccionComprobante('PENDIENTES_COMPROBANTE');
+                                }}
+                                style={{
+                                    background: 'rgba(245, 158, 11, 0.18)',
+                                    border: '1px solid rgba(245, 158, 11, 0.5)',
+                                    color: '#fcd34d',
+                                    padding: '5px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>⚠️ Pendientes Comprobante:</span>
+                                <span style={{ background: '#f59e0b', color: '#0f172a', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
+                                    {resumenCategorias.pendientes_comprobante} por revisar
+                                </span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="page-actions" style={{ gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
                 {['Chats en Vivo', 'Comprobantes', 'Envío Manual', 'Envío Programado', 'Difusión Masiva', 'Historial', 'Conexión QR', 'Administradores'].map(tab => (
                     <button
                         key={tab}
                         className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setActiveTab(tab)}
-                        style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
+                        style={{ padding: '8px 16px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                        {tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab === 'Comprobantes' ? '🧾 Comprobantes' : tab}
+                        <span>{tab === 'Chats en Vivo' ? '💬 Chats en Vivo' : tab === 'Comprobantes' ? '🧾 Comprobantes' : tab}</span>
+                        {tab === 'Comprobantes' && resumenCategorias.total_por_atender > 0 && (
+                            <span style={{
+                                background: resumenCategorias.confirmacion_recibo > 0 ? '#10b981' : '#f59e0b',
+                                color: '#fff',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                padding: '1px 7px',
+                                borderRadius: '10px'
+                            }}>
+                                {resumenCategorias.total_por_atender}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -2345,22 +2555,22 @@ const WhatsApp = () => {
                     </div>
                 )}
                 
-                {/* COMPROBANTES DE PAGO (DESCARGADOS AUTOMÁTICAMENTE EN uploadscr) */}
+                {/* COMPROBANTES DE PAGO Y NOTIFICACIONES DE VALIDACIÓN (CONFIRMACIÓN DE RECIBO / PENDIENTES COMPROBANTE) */}
                 {activeTab === 'Comprobantes' && (
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                             <div>
                                 <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    🧾 Comprobantes de Pago Recibidos
+                                    🧾 Notificaciones y Validación de Comprobantes (OCR + Base de Datos)
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
-                                    Imágenes descargadas automáticamente en el servidor (carpeta <code>uploadscr</code>) y guardadas en la tabla <code>comprobantes</code>.
+                                    El sistema compara automáticamente cada recibo con la base de datos: si el número y datos coinciden y el monto es igual o menor a la deuda, pasa a <strong>Confirmación de Recibo</strong>; si hay discrepancias (paga de más, otro número o no registrado), pasa a <strong>Pendientes Comprobante</strong>.
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                     className="btn btn-secondary"
-                                    onClick={() => cargarComprobantes()}
+                                    onClick={() => cargarComprobantes(false, seccionComprobante)}
                                     disabled={cargandoComprobantes}
                                     style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
                                 >
@@ -2369,171 +2579,792 @@ const WhatsApp = () => {
                             </div>
                         </div>
 
+                        {/* TARJETAS / PESTAÑAS DE LAS DOS SECCIONES DE NOTIFICACIÓN */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                            gap: '12px',
+                            marginBottom: '18px'
+                        }}>
+                            {/* SECCIÓN 1: CONFIRMACIÓN DE RECIBO */}
+                            <div
+                                onClick={() => setSeccionComprobante('CONFIRMACION_RECIBO')}
+                                style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    background: seccionComprobante === 'CONFIRMACION_RECIBO'
+                                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12))'
+                                        : 'rgba(15, 23, 42, 0.65)',
+                                    border: seccionComprobante === 'CONFIRMACION_RECIBO'
+                                        ? '2px solid #10b981'
+                                        : '1px solid rgba(16, 185, 129, 0.28)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        ✅ Confirmación de Recibo
+                                    </span>
+                                    <span style={{
+                                        background: '#10b981',
+                                        color: '#fff',
+                                        fontWeight: 800,
+                                        fontSize: '0.82rem',
+                                        padding: '2px 10px',
+                                        borderRadius: '14px'
+                                    }}>
+                                        {resumenCategorias.confirmacion_recibo || 0}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
+                                    Número registrado en BD, titular coincide y el monto que paga coincide o abona a su deuda pendiente. Listos para aprobar con 1 clic.
+                                </div>
+                            </div>
+
+                            {/* SECCIÓN 2: PENDIENTES COMPROBANTE */}
+                            <div
+                                onClick={() => setSeccionComprobante('PENDIENTES_COMPROBANTE')}
+                                style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    background: seccionComprobante === 'PENDIENTES_COMPROBANTE'
+                                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.12))'
+                                        : 'rgba(15, 23, 42, 0.65)',
+                                    border: seccionComprobante === 'PENDIENTES_COMPROBANTE'
+                                        ? '2px solid #f59e0b'
+                                        : '1px solid rgba(245, 158, 11, 0.28)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        ⚠️ Pendientes Comprobante
+                                    </span>
+                                    <span style={{
+                                        background: '#f59e0b',
+                                        color: '#0f172a',
+                                        fontWeight: 800,
+                                        fontSize: '0.82rem',
+                                        padding: '2px 10px',
+                                        borderRadius: '14px'
+                                    }}>
+                                        {resumenCategorias.pendientes_comprobante || 0}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
+                                    Números no registrados, enviados desde otro celular, sin coincidencia en BD, pagos de más sobre la deuda o referencias duplicadas.
+                                </div>
+                            </div>
+
+                            {/* SECCIÓN 3: HISTORIAL PROCESADOS */}
+                            <div
+                                onClick={() => setSeccionComprobante('HISTORIAL')}
+                                style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    background: seccionComprobante === 'HISTORIAL'
+                                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(37, 99, 235, 0.12))'
+                                        : 'rgba(15, 23, 42, 0.65)',
+                                    border: seccionComprobante === 'HISTORIAL'
+                                        ? '2px solid #3b82f6'
+                                        : '1px solid rgba(59, 130, 246, 0.25)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        📋 Historial Procesados
+                                    </span>
+                                    <span style={{
+                                        background: 'rgba(59, 130, 246, 0.3)',
+                                        color: '#bfdbfe',
+                                        fontWeight: 700,
+                                        fontSize: '0.78rem',
+                                        padding: '2px 9px',
+                                        borderRadius: '14px'
+                                    }}>
+                                        {(resumenCategorias.aprobados || 0) + (resumenCategorias.rechazados || 0)}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
+                                    Comprobantes ya aprobados ({resumenCategorias.aprobados || 0}) y descontados en BD o rechazados ({resumenCategorias.rechazados || 0}).
+                                </div>
+                            </div>
+
+                            {/* SECCIÓN 4: TODOS */}
+                            <div
+                                onClick={() => setSeccionComprobante('TODOS')}
+                                style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    background: seccionComprobante === 'TODOS'
+                                        ? 'rgba(148, 163, 184, 0.2)'
+                                        : 'rgba(15, 23, 42, 0.65)',
+                                    border: seccionComprobante === 'TODOS'
+                                        ? '2px solid #94a3b8'
+                                        : '1px solid rgba(255, 255, 255, 0.1)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        📂 Todos los Registros
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
+                                    Vista general de todos los comprobantes recibidos sin importar su bandeja o estado.
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Barra de Filtros y Búsqueda */}
                         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                            <div style={{ flex: '1 1 250px' }}>
+                            <div style={{ flex: '1 1 260px' }}>
                                 <input
                                     type="text"
                                     className="form-control"
-                                    placeholder="🔍 Buscar por cliente, teléfono, mensaje o archivo..."
+                                    placeholder="🔍 Buscar por cédula, ID, nombre, referencia, cuenta, banco o teléfono..."
                                     value={busquedaComprobante}
                                     onChange={(e) => setBusquedaComprobante(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') cargarComprobantes(); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') cargarComprobantes(false, seccionComprobante); }}
                                 />
                             </div>
-                            <div style={{ width: '180px' }}>
-                                <select
-                                    className="form-control"
-                                    value={filtroEstadoComprobante}
-                                    onChange={(e) => setFiltroEstadoComprobante(e.target.value)}
-                                >
-                                    <option value="TODOS">Todos los estados</option>
-                                    <option value="PENDIENTE">⏳ Pendientes</option>
-                                    <option value="REVISADO">👀 Revisados</option>
-                                    <option value="APROBADO">✅ Aprobados</option>
-                                    <option value="RECHAZADO">❌ Rechazados</option>
-                                </select>
-                            </div>
-                            <button className="btn btn-primary" onClick={() => cargarComprobantes()}>
-                                Filtrar
+                            {seccionComprobante === 'TODOS' && (
+                                <div style={{ width: '180px' }}>
+                                    <select
+                                        className="form-control"
+                                        value={filtroEstadoComprobante}
+                                        onChange={(e) => setFiltroEstadoComprobante(e.target.value)}
+                                    >
+                                        <option value="TODOS">Todos los estados</option>
+                                        <option value="PENDIENTE">⏳ Pendientes</option>
+                                        <option value="REVISADO">👀 Revisados</option>
+                                        <option value="APROBADO">✅ Aprobados</option>
+                                        <option value="RECHAZADO">❌ Rechazados</option>
+                                    </select>
+                                </div>
+                            )}
+                            <button className="btn btn-primary" onClick={() => cargarComprobantes(false, seccionComprobante)}>
+                                🔍 Buscar
                             </button>
                         </div>
 
-                        {/* Listado de comprobantes */}
+                        {/* Listado de comprobantes según la sección seleccionada */}
                         {cargandoComprobantes && comprobantes.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                                 ⏳ Cargando comprobantes...
                             </div>
                         ) : comprobantes.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🧾</div>
-                                <h4 style={{ margin: '0 0 6px 0' }}>No hay comprobantes registrados aún</h4>
+                            <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.12)' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
+                                    {seccionComprobante === 'CONFIRMACION_RECIBO' ? '✅' : seccionComprobante === 'PENDIENTES_COMPROBANTE' ? '⚠️' : '🧾'}
+                                </div>
+                                <h4 style={{ margin: '0 0 6px 0' }}>
+                                    {seccionComprobante === 'CONFIRMACION_RECIBO'
+                                        ? 'No hay comprobantes pendientes en Confirmación de Recibo'
+                                        : seccionComprobante === 'PENDIENTES_COMPROBANTE'
+                                        ? 'No hay comprobantes con novedades en Pendientes Comprobante'
+                                        : 'No hay comprobantes registrados en esta vista'}
+                                </h4>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>
-                                    Cuando alguien envíe una imagen por WhatsApp, se descargará automáticamente en <code>uploadscr</code> y aparecerá aquí.
+                                    Cuando un cliente envíe un comprobante por WhatsApp, se analizará con OCR y se clasificará automáticamente aquí.
                                 </p>
                             </div>
                         ) : (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
-                                            <th style={{ padding: '10px' }}>Miniatura</th>
-                                            <th style={{ padding: '10px' }}>Cliente / Remitente</th>
-                                            <th style={{ padding: '10px' }}>Teléfono</th>
-                                            <th style={{ padding: '10px' }}>Mensaje</th>
-                                            <th style={{ padding: '10px' }}>Fecha y Hora</th>
-                                            <th style={{ padding: '10px' }}>Estado</th>
-                                            <th style={{ padding: '10px' }}>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {comprobantes.map(c => {
-                                            const imgUrl = c.url_archivo || `/uploadscr/${c.nombre_archivo}`;
-                                            return (
-                                                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                    <td style={{ padding: '10px', width: '80px' }}>
-                                                        <img
-                                                            src={imgUrl}
-                                                            alt="Comprobante"
-                                                            style={{
-                                                                width: '64px',
-                                                                height: '64px',
-                                                                objectFit: 'cover',
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                {comprobantes.map(c => {
+                                    const imgUrl = c.url_archivo || `/uploadscr/${c.nombre_archivo}`;
+                                    const esConfirmacion = c.categoria_validacion === 'CONFIRMACION_RECIBO';
+                                    const yaAprobado = (c.estado || '').toUpperCase() === 'APROBADO';
+                                    const yaRechazado = (c.estado || '').toUpperCase() === 'RECHAZADO';
+                                    const deudaActualBD = c.cliente?.deuda_total_bd !== undefined && c.cliente?.deuda_total_bd !== null
+                                        ? Number(c.cliente.deuda_total_bd)
+                                        : Number(c.saldo_pendiente_bd || 0);
+                                    const montoPagado = c.monto !== undefined && c.monto !== null ? Number(c.monto) : null;
+                                    const cedulaMostrar = c.cliente?.cedula || c.cedula_cliente || 'No registrada';
+                                    const idClienteMostrar = c.cliente?.id || c.cliente_id || null;
+                                    const nombreClienteMostrar = c.cliente?.nombre || c.nombre_remitente || 'No vinculado en BD';
+                                    const bancoMostrar = c.banco_origen && c.banco_destino && c.banco_origen !== c.banco_destino
+                                        ? `${c.banco_origen} ➔ ${c.banco_destino}`
+                                        : (c.banco_origen || c.banco_destino || 'No detectado');
+
+                                    return (
+                                        <div
+                                            key={c.id}
+                                            style={{
+                                                background: 'rgba(15, 23, 42, 0.8)',
+                                                border: yaAprobado
+                                                    ? '1px solid rgba(16, 185, 129, 0.45)'
+                                                    : yaRechazado
+                                                    ? '1px solid rgba(239, 68, 68, 0.35)'
+                                                    : esConfirmacion
+                                                    ? '1px solid rgba(16, 185, 129, 0.55)'
+                                                    : '1px solid rgba(245, 158, 11, 0.55)',
+                                                borderLeft: yaAprobado
+                                                    ? '5px solid #10b981'
+                                                    : yaRechazado
+                                                    ? '5px solid #ef4444'
+                                                    : esConfirmacion
+                                                    ? '5px solid #10b981'
+                                                    : '5px solid #f59e0b',
+                                                borderRadius: '12px',
+                                                padding: '16px',
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: '16px',
+                                                alignItems: 'flex-start',
+                                                justifyContent: 'space-between',
+                                                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'
+                                            }}
+                                        >
+                                            {/* Columna 1: Miniatura del Comprobante */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '115px', flexShrink: 0 }}>
+                                                <img
+                                                    src={imgUrl}
+                                                    alt="Comprobante"
+                                                    style={{
+                                                        width: '105px',
+                                                        height: '135px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        border: '1px solid rgba(255,255,255,0.2)'
+                                                    }}
+                                                    onClick={() => setModalImagenComprobante(imgUrl)}
+                                                    onError={(e) => { e.target.style.opacity = '0.3'; }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    style={{ width: '100%', padding: '4px 6px', fontSize: '0.74rem' }}
+                                                    onClick={() => setModalImagenComprobante(imgUrl)}
+                                                >
+                                                    🔍 Ver Recibo
+                                                </button>
+                                            </div>
+
+                                            {/* Columna 2:Todos los Datos del Cliente + Datos Bancarios OCR + Motivo Validación */}
+                                            <div style={{ flex: '1 1 420px', minWidth: '280px' }}>
+                                                {/* Encabezado de Validación */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    flexWrap: 'wrap',
+                                                    gap: '8px',
+                                                    marginBottom: '10px',
+                                                    paddingBottom: '8px',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.08)'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                        <span style={{
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 800,
+                                                            padding: '3px 10px',
+                                                            borderRadius: '20px',
+                                                            background: yaAprobado
+                                                                ? 'rgba(16, 185, 129, 0.25)'
+                                                                : yaRechazado
+                                                                ? 'rgba(239, 68, 68, 0.25)'
+                                                                : esConfirmacion
+                                                                ? 'rgba(16, 185, 129, 0.2)'
+                                                                : 'rgba(245, 158, 11, 0.2)',
+                                                            color: yaAprobado
+                                                                ? '#6ee7b7'
+                                                                : yaRechazado
+                                                                ? '#fca5a5'
+                                                                : esConfirmacion
+                                                                ? '#6ee7b7'
+                                                                : '#fcd34d',
+                                                            border: '1px solid currentColor'
+                                                        }}>
+                                                            {yaAprobado
+                                                                ? '✅ PAGO APROBADO Y APLICADO'
+                                                                : yaRechazado
+                                                                ? '❌ COMPROBANTE RECHAZADO'
+                                                                : esConfirmacion
+                                                                ? '✅ CONFIRMACIÓN DE RECIBO'
+                                                                : '⚠️ PENDIENTES COMPROBANTE'}
+                                                        </span>
+                                                        {idClienteMostrar ? (
+                                                            <span style={{
+                                                                fontSize: '0.78rem',
+                                                                fontWeight: 700,
+                                                                background: 'rgba(56, 189, 248, 0.16)',
+                                                                color: '#38bdf8',
+                                                                padding: '2px 8px',
                                                                 borderRadius: '6px',
-                                                                cursor: 'pointer',
-                                                                border: '1px solid rgba(255,255,255,0.2)'
-                                                            }}
-                                                            onClick={() => setModalImagenComprobante(imgUrl)}
-                                                            onError={(e) => {
-                                                                e.target.style.opacity = '0.3';
-                                                            }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: '10px' }}>
-                                                        <div style={{ fontWeight: 'bold' }}>
-                                                            {c.cliente ? c.cliente.nombre : (c.nombre_remitente || 'No vinculado')}
-                                                        </div>
-                                                        {c.cliente && (
-                                                            <div style={{ fontSize: '0.78rem', color: '#10b981' }}>
-                                                                ✓ Cliente ID #{c.cliente.id} {c.cliente.plan ? `(${c.cliente.plan})` : ''}
-                                                            </div>
+                                                                border: '1px solid rgba(56, 189, 248, 0.35)'
+                                                            }}>
+                                                                ID #{idClienteMostrar}
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 700,
+                                                                background: 'rgba(239, 68, 68, 0.18)',
+                                                                color: '#fca5a5',
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px'
+                                                            }}>
+                                                                Sin ID en BD
+                                                            </span>
                                                         )}
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                            {c.nombre_archivo}
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: '10px', fontSize: '0.88rem' }}>
-                                                        {c.numero_telefono ? `+${c.numero_telefono}` : 'N/A'}
-                                                    </td>
-                                                    <td style={{ padding: '10px', fontSize: '0.85rem', maxWidth: '240px', color: 'var(--text-muted)' }}>
-                                                        {c.mensaje_texto ? `"${c.mensaje_texto}"` : <em>Sin texto</em>}
-                                                    </td>
-                                                    <td style={{ padding: '10px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                                                        {c.fecha_hora ? new Date(c.fecha_hora).toLocaleString('es-EC', { hour12: false }) : 'N/A'}
-                                                    </td>
-                                                    <td style={{ padding: '10px' }}>
-                                                        <select
-                                                            className="form-control"
-                                                            value={c.estado || 'PENDIENTE'}
-                                                            onChange={(e) => cambiarEstadoComprobante(c.id, e.target.value)}
+                                                        <span style={{ fontWeight: 700, fontSize: '1rem', color: '#f8fafc' }}>
+                                                            {nombreClienteMostrar}
+                                                        </span>
+                                                    </div>
+                                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                                                        🕒 {c.fecha_hora ? new Date(c.fecha_hora).toLocaleString('es-EC', { hour12: false }) : 'N/A'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Banner con el motivo de validación */}
+                                                {c.motivo_validacion && (
+                                                    <div style={{
+                                                        padding: '8px 12px',
+                                                        borderRadius: '8px',
+                                                        marginBottom: '12px',
+                                                        fontSize: '0.82rem',
+                                                        background: esConfirmacion
+                                                            ? 'rgba(16, 185, 129, 0.1)'
+                                                            : 'rgba(245, 158, 11, 0.12)',
+                                                        border: esConfirmacion
+                                                            ? '1px solid rgba(16, 185, 129, 0.3)'
+                                                            : '1px solid rgba(245, 158, 11, 0.35)',
+                                                        color: esConfirmacion ? '#a7f3d0' : '#fde68a',
+                                                        lineHeight: 1.4
+                                                    }}>
+                                                        <strong>{esConfirmacion ? '✔️ Validación BD:' : '⚠️ Motivo en Pendientes Comprobante:'}</strong> {c.motivo_validacion}
+                                                    </div>
+                                                )}
+
+                                                {/* Grilla de todos los campos solicitados: Cédula, ID, Nombre, Monto, Pendiente BD, Banco, Referencia, Cuenta, Ordenante, Beneficiario */}
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))',
+                                                    gap: '8px 14px',
+                                                    fontSize: '0.83rem',
+                                                    background: 'rgba(2, 6, 23, 0.45)',
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(255,255,255,0.06)'
+                                                }}>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>🪪 Cédula:</span>{' '}
+                                                        <strong style={{ color: '#f1f5f9', fontFamily: 'monospace' }}>{cedulaMostrar}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>🆔 ID Cliente:</span>{' '}
+                                                        <strong style={{ color: '#38bdf8' }}>{idClienteMostrar ? `#${idClienteMostrar}` : 'No registrado'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>👤 Cliente (BD):</span>{' '}
+                                                        <strong style={{ color: '#f1f5f9' }}>{c.cliente?.nombre || 'No vinculado'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>📱 WhatsApp Remitente:</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>
+                                                            {c.numero_telefono ? `+${c.numero_telefono}` : 'N/A'}
+                                                        </strong>
+                                                        {c.nombre_remitente && (
+                                                            <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}> ({c.nombre_remitente})</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>📊 Pendiente en BD:</span>{' '}
+                                                        <strong style={{ color: deudaActualBD > 0 ? '#fca5a5' : '#86efac', fontSize: '0.9rem' }}>
+                                                            ${deudaActualBD.toFixed(2)}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>💰 Monto que Paga:</span>{' '}
+                                                        <strong style={{ color: '#34d399', fontSize: '0.95rem' }}>
+                                                            {montoPagado !== null ? `$${montoPagado.toFixed(2)}` : 'No detectado'}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>🏦 Banco:</span>{' '}
+                                                        <strong style={{ color: '#f1f5f9' }}>{bancoMostrar}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>🔢 N° Referencia:</span>{' '}
+                                                        <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>
+                                                            {c.numero_referencia || 'No detectado'}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>💳 Cuenta Origen:</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>
+                                                            {c.cuenta_origen || 'No detectada'}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>💳 Cuenta Destino:</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>
+                                                            {c.cuenta_destino || 'No detectada'}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>👤 Ordenante (De):</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0' }}>{c.ordenante || 'No especificado'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>🎯 Beneficiario (A):</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0' }}>{c.beneficiario || 'No especificado'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>📅 Fecha Recibo:</span>{' '}
+                                                        <strong style={{ color: '#e2e8f0' }}>{c.fecha_comprobante || 'No detectada'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8' }}>📦 Plan Cliente:</span>{' '}
+                                                        <strong style={{ color: '#cbd5e1' }}>{c.cliente?.plan || 'N/A'}</strong>
+                                                    </div>
+                                                </div>
+
+                                                {/* Texto OCR desplegable */}
+                                                {c.texto_ocr && (
+                                                    <div style={{ marginTop: '8px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setComprobanteExpandidoOCR(comprobanteExpandidoOCR === c.id ? null : c.id)}
                                                             style={{
-                                                                fontSize: '0.8rem',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                background: c.estado === 'APROBADO' ? 'rgba(16, 185, 129, 0.2)' :
-                                                                            c.estado === 'RECHAZADO' ? 'rgba(239, 68, 68, 0.2)' :
-                                                                            c.estado === 'REVISADO' ? 'rgba(59, 130, 246, 0.2)' :
-                                                                            'rgba(245, 158, 11, 0.2)',
-                                                                color: c.estado === 'APROBADO' ? '#34d399' :
-                                                                       c.estado === 'RECHAZADO' ? '#f87171' :
-                                                                       c.estado === 'REVISADO' ? '#60a5fa' :
-                                                                       '#fbbf24',
-                                                                fontWeight: 'bold',
-                                                                border: '1px solid currentColor'
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                color: '#38bdf8',
+                                                                fontSize: '0.78rem',
+                                                                cursor: 'pointer',
+                                                                padding: 0,
+                                                                fontWeight: 600
                                                             }}
                                                         >
-                                                            <option value="PENDIENTE">⏳ PENDIENTE</option>
-                                                            <option value="REVISADO">👀 REVISADO</option>
-                                                            <option value="APROBADO">✅ APROBADO</option>
-                                                            <option value="RECHAZADO">❌ RECHAZADO</option>
-                                                        </select>
-                                                    </td>
-                                                    <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            {comprobanteExpandidoOCR === c.id ? '🔼 Ocultar transcripción OCR completa' : '📄 Ver transcripción OCR completa del recibo'}
+                                                        </button>
+                                                        {comprobanteExpandidoOCR === c.id && (
+                                                            <pre style={{
+                                                                marginTop: '6px',
+                                                                padding: '10px',
+                                                                borderRadius: '6px',
+                                                                background: '#020617',
+                                                                color: '#cbd5e1',
+                                                                fontSize: '0.76rem',
+                                                                whiteSpace: 'pre-wrap',
+                                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                                maxHeight: '180px',
+                                                                overflowY: 'auto'
+                                                            }}>
+                                                                {c.texto_ocr}
+                                                            </pre>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Columna 3: Acciones de Confirmación / Aprobación de Pago */}
+                                            <div style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '8px',
+                                                minWidth: '215px',
+                                                alignItems: 'stretch'
+                                            }}>
+                                                {!yaAprobado && !yaRechazado && (
+                                                    <>
+                                                        {esConfirmacion && idClienteMostrar && montoPagado > 0 ? (
                                                             <button
-                                                                className="btn btn-secondary"
-                                                                style={{ padding: '4px 8px', fontSize: '0.78rem' }}
-                                                                title="Ver imagen completa"
-                                                                onClick={() => setModalImagenComprobante(imgUrl)}
+                                                                type="button"
+                                                                disabled={procesandoAprobacionId === c.id}
+                                                                onClick={() => aprobarComprobanteDirecto(c)}
+                                                                style={{
+                                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                                    color: '#fff',
+                                                                    border: 'none',
+                                                                    padding: '10px 14px',
+                                                                    borderRadius: '8px',
+                                                                    fontWeight: 800,
+                                                                    fontSize: '0.84rem',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: '6px'
+                                                                }}
                                                             >
-                                                                👁️ Ver
+                                                                {procesandoAprobacionId === c.id
+                                                                    ? '⏳ Procesando...'
+                                                                    : `✅ Confirmar y Aprobar ($${montoPagado.toFixed(2)})`}
                                                             </button>
-                                                            <a
-                                                                href={imgUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="btn btn-secondary"
-                                                                style={{ padding: '4px 8px', fontSize: '0.78rem', textDecoration: 'none' }}
-                                                                title="Abrir en pestaña nueva"
-                                                            >
-                                                                🔗
-                                                            </a>
-                                                            <button
-                                                                className="btn btn-danger"
-                                                                style={{ padding: '4px 8px', fontSize: '0.78rem' }}
-                                                                title="Eliminar registro"
-                                                                onClick={() => handleEliminarComprobante(c.id)}
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                        ) : null}
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => abrirModalAprobarComprobante(c)}
+                                                            style={{
+                                                                background: esConfirmacion ? 'rgba(59, 130, 246, 0.18)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                                                color: esConfirmacion ? '#93c5fd' : '#0f172a',
+                                                                border: esConfirmacion ? '1px solid rgba(59, 130, 246, 0.4)' : 'none',
+                                                                padding: '8px 12px',
+                                                                borderRadius: '8px',
+                                                                fontWeight: 700,
+                                                                fontSize: '0.8rem',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '6px'
+                                                            }}
+                                                        >
+                                                            {idClienteMostrar ? '✏️ Revisar / Ajustar y Aprobar' : '🔗 Vincular Cliente y Aprobar'}
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => cambiarEstadoComprobante(c.id, 'RECHAZADO')}
+                                                            style={{
+                                                                background: 'rgba(239, 68, 68, 0.14)',
+                                                                color: '#fca5a5',
+                                                                border: '1px solid rgba(239, 68, 68, 0.35)',
+                                                                padding: '6px 12px',
+                                                                borderRadius: '8px',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.78rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            ❌ Rechazar Comprobante
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {(yaAprobado || yaRechazado) && (
+                                                    <div style={{
+                                                        padding: '8px 10px',
+                                                        borderRadius: '8px',
+                                                        background: yaAprobado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                                        color: yaAprobado ? '#6ee7b7' : '#fca5a5',
+                                                        fontSize: '0.78rem',
+                                                        textAlign: 'center',
+                                                        fontWeight: 700
+                                                    }}>
+                                                        {yaAprobado
+                                                            ? `✅ Aprobado ${c.pago_id ? `(Pago #${c.pago_id})` : ''}`
+                                                            : '❌ Marcado como Rechazado'}
+                                                    </div>
+                                                )}
+
+                                                <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                                                    <select
+                                                        className="form-control"
+                                                        value={c.estado || 'PENDIENTE'}
+                                                        onChange={(e) => cambiarEstadoComprobante(c.id, e.target.value)}
+                                                        style={{ fontSize: '0.76rem', padding: '4px 6px', flex: 1 }}
+                                                    >
+                                                        <option value="PENDIENTE">⏳ PENDIENTE</option>
+                                                        <option value="REVISADO">👀 REVISADO</option>
+                                                        <option value="APROBADO">✅ APROBADO</option>
+                                                        <option value="RECHAZADO">❌ RECHAZADO</option>
+                                                    </select>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-danger"
+                                                        style={{ padding: '4px 8px', fontSize: '0.76rem' }}
+                                                        title="Eliminar registro"
+                                                        onClick={() => handleEliminarComprobante(c.id)}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
+                        )}
+
+                        {/* MODAL PARA VINCULAR CLIENTE / AJUSTAR MONTO Y APROBAR EL PAGO EN BD */}
+                        {modalAprobarComp && createPortal(
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(2, 6, 23, 0.85)',
+                                    backdropFilter: 'blur(6px)',
+                                    zIndex: 99999,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '16px'
+                                }}
+                                onClick={() => setModalAprobarComp(null)}
+                            >
+                                <div
+                                    style={{
+                                        background: '#0f172a',
+                                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                                        borderRadius: '14px',
+                                        width: '100%',
+                                        maxWidth: '580px',
+                                        padding: '22px',
+                                        color: '#f8fafc',
+                                        boxShadow: '0 25px 50px rgba(0,0,0,0.75)',
+                                        maxHeight: '92vh',
+                                        overflowY: 'auto'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+                                        <h4 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            ✅ Confirmar y Aprobar Pago en Base de Datos
+                                        </h4>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalAprobarComp(null)}
+                                            style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+
+                                    {modalAprobarComp.motivo_validacion && (
+                                        <div style={{
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(245, 158, 11, 0.12)',
+                                            border: '1px solid rgba(245, 158, 11, 0.35)',
+                                            color: '#fde68a',
+                                            fontSize: '0.82rem',
+                                            marginBottom: '14px'
+                                        }}>
+                                            <strong>📌 Detalle del comprobante:</strong> {modalAprobarComp.motivo_validacion}
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={ejecutarAprobarPagoModal}>
+                                        <div style={{ marginBottom: '14px' }}>
+                                            <label className="label" style={{ fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', display: 'block' }}>
+                                                👤 Seleccionar / Confirmar Cliente en Base de Datos:
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="🔍 Filtrar cliente por nombre, cédula o ID..."
+                                                value={busquedaClienteModal}
+                                                onChange={(e) => setBusquedaClienteModal(e.target.value)}
+                                                style={{ marginBottom: '8px', fontSize: '0.84rem' }}
+                                            />
+                                            <select
+                                                className="form-control"
+                                                value={clienteIdAprobarInput}
+                                                onChange={(e) => setClienteIdAprobarInput(e.target.value)}
+                                                required
+                                                style={{ fontSize: '0.85rem', background: '#1e293b', color: '#fff' }}
+                                            >
+                                                <option value="">-- Selecciona un cliente de la BD --</option>
+                                                {listaClientes
+                                                    .filter(cl => {
+                                                        if (!busquedaClienteModal.trim()) return true;
+                                                        const q = busquedaClienteModal.toLowerCase();
+                                                        return (
+                                                            String(cl.id).includes(q) ||
+                                                            (cl.nombre || '').toLowerCase().includes(q) ||
+                                                            (cl.cedula || '').toLowerCase().includes(q) ||
+                                                            (cl.celular || '').toLowerCase().includes(q)
+                                                        );
+                                                    })
+                                                    .slice(0, 150)
+                                                    .map(cl => {
+                                                        const deudaCl = (Number(cl.saldo || 0) + Number(cl.plus || 0) + Number(cl.adicional || 0)).toFixed(2);
+                                                        return (
+                                                            <option key={cl.id} value={cl.id}>
+                                                                #{cl.id} - {cl.nombre} | Cédula: {cl.cedula || 'S/N'} | Deuda BD: ${deudaCl}
+                                                            </option>
+                                                        );
+                                                    })}
+                                            </select>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                                            <div>
+                                                <label className="label" style={{ fontSize: '0.84rem', fontWeight: 700 }}>
+                                                    💰 Monto a Descontar ($):
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    className="form-control"
+                                                    value={montoAprobarInput}
+                                                    onChange={(e) => setMontoAprobarInput(e.target.value)}
+                                                    required
+                                                    style={{ marginTop: '6px', fontWeight: 700, color: '#34d399', fontSize: '0.95rem' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="label" style={{ fontSize: '0.84rem', fontWeight: 700 }}>
+                                                    🔢 Referencia / Banco (OCR):
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={`${modalAprobarComp.banco_origen || modalAprobarComp.banco_destino || 'Banco'} - Ref: ${modalAprobarComp.numero_referencia || 'S/N'}`}
+                                                    disabled
+                                                    style={{ marginTop: '6px', opacity: 0.8, fontSize: '0.82rem' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginBottom: '14px' }}>
+                                            <label className="label" style={{ fontSize: '0.84rem', fontWeight: 700 }}>
+                                                📝 Observaciones (Opcional):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={observacionesAprobarInput}
+                                                onChange={(e) => setObservacionesAprobarInput(e.target.value)}
+                                                placeholder="Ej. Pago verificado en cuenta Banco Pichincha..."
+                                                style={{ marginTop: '6px', fontSize: '0.84rem' }}
+                                            />
+                                        </div>
+
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', marginBottom: '18px', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={notificarWhatsappAprobar}
+                                                onChange={(e) => setNotificarWhatsappAprobar(e.target.checked)}
+                                            />
+                                            <span>📲 Enviar mensaje de confirmación de pago recibido al WhatsApp del cliente</span>
+                                        </label>
+
+                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary"
+                                                onClick={() => setModalAprobarComp(null)}
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                                disabled={procesandoAprobacionId === modalAprobarComp.id}
+                                                style={{ background: '#10b981', borderColor: '#059669', fontWeight: 700 }}
+                                            >
+                                                {procesandoAprobacionId === modalAprobarComp.id
+                                                    ? '⏳ Aplicando pago...'
+                                                    : '✅ Confirmar y Aprobar Pago'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>,
+                            document.body
                         )}
                     </div>
                 )}

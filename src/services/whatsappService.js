@@ -176,6 +176,9 @@ export const whatsappService = {
   actualizarComprobante: (id, data) =>
     api.patch(`/whatsapp/comprobantes/${id}`, data),
 
+  aprobarPagoComprobante: (id, data = {}) =>
+    api.post(`/whatsapp/comprobantes/${id}/aprobar-pago`, data),
+
   eliminarComprobante: (id, eliminarArchivo = false) =>
     api.delete(`/whatsapp/comprobantes/${id}`, { params: { eliminar_archivo: eliminarArchivo } }),
 
