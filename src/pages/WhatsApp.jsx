@@ -89,16 +89,23 @@ const WhatsApp = () => {
     const [mostrarBotonBajar, setMostrarBotonBajar] = useState(false);
     const [busquedaChat, setBusquedaChat] = useState('');
 
-    // Comprobantes descargados en uploadscr y Secciones de Notificación (Confirmación de Recibo vs Pendientes Comprobante)
+    // Comprobantes descargados en uploadscr y Secciones de Notificación (Confirmación de Recibo, Pendientes Comprobante y Registro de Comprobantes ya Cobrados)
     const [comprobantes, setComprobantes] = useState([]);
     const [cargandoComprobantes, setCargandoComprobantes] = useState(false);
-    const [seccionComprobante, setSeccionComprobante] = useState('CONFIRMACION_RECIBO'); // 'CONFIRMACION_RECIBO' | 'PENDIENTES_COMPROBANTE' | 'HISTORIAL' | 'TODOS'
+    const [seccionComprobante, setSeccionComprobante] = useState('CONFIRMACION_RECIBO'); // 'CONFIRMACION_RECIBO' | 'PENDIENTES_COMPROBANTE' | 'COBRADOS' | 'TODOS'
     const [filtroEstadoComprobante, setFiltroEstadoComprobante] = useState('TODOS');
     const [busquedaComprobante, setBusquedaComprobante] = useState('');
+    const filtrosComprobanteRef = useRef({
+        seccion: 'CONFIRMACION_RECIBO',
+        estado: 'TODOS',
+        q: ''
+    });
+    const ultimoRequestComprobanteRef = useRef(0);
     const [resumenCategorias, setResumenCategorias] = useState({
         confirmacion_recibo: 0,
         pendientes_comprobante: 0,
         total_por_atender: 0,
+        cobrados: 0,
         aprobados: 0,
         rechazados: 0
     });
@@ -210,17 +217,34 @@ const WhatsApp = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [modalImagenComprobante]);
 
+    // Mantener ref de filtros de comprobantes sincronizado para evitar cierres obsoletos (stale closures) en setInterval
+    useEffect(() => {
+        filtrosComprobanteRef.current = {
+            seccion: seccionComprobante,
+            estado: filtroEstadoComprobante,
+            q: busquedaComprobante
+        };
+    }, [seccionComprobante, filtroEstadoComprobante, busquedaComprobante]);
+
     const cargarComprobantes = async (silencioso = false, categoriaOverride = null) => {
+        const reqId = ++ultimoRequestComprobanteRef.current;
         try {
             if (!silencioso) setCargandoComprobantes(true);
-            const cat = categoriaOverride || seccionComprobante || 'TODOS';
+            const refActual = filtrosComprobanteRef.current || {};
+            const cat = categoriaOverride || refActual.seccion || seccionComprobante || 'CONFIRMACION_RECIBO';
+            const estadoActual = refActual.estado || filtroEstadoComprobante || 'TODOS';
+            const qActual = refActual.q !== undefined ? refActual.q : busquedaComprobante;
+
             const res = await whatsappService.obtenerComprobantes({
                 categoria: cat,
-                estado: cat === 'TODOS' ? filtroEstadoComprobante : 'TODOS',
-                q: busquedaComprobante
+                estado: cat === 'TODOS' ? estadoActual : 'TODOS',
+                q: qActual
             });
-            if (res && res.data && res.data.success) {
-                setComprobantes(res.data.comprobantes || []);
+            // Evitar que una petición antigua o fuera de orden sobrescriba la vista actual
+            if (reqId !== ultimoRequestComprobanteRef.current) return;
+
+            if (res && res.data && res.data.success && Array.isArray(res.data.comprobantes)) {
+                setComprobantes(res.data.comprobantes);
                 if (res.data.resumen_categorias) {
                     setResumenCategorias(res.data.resumen_categorias);
                 }
@@ -228,7 +252,9 @@ const WhatsApp = () => {
         } catch (e) {
             console.error('Error cargando comprobantes:', e);
         } finally {
-            if (!silencioso) setCargandoComprobantes(false);
+            if (!silencioso && reqId === ultimoRequestComprobanteRef.current) {
+                setCargandoComprobantes(false);
+            }
         }
     };
 
@@ -350,8 +376,10 @@ const WhatsApp = () => {
             if (tabParam === 'Comprobantes') {
                 setActiveTab('Comprobantes');
             }
-            if (seccionParam && ['CONFIRMACION_RECIBO', 'PENDIENTES_COMPROBANTE', 'HISTORIAL', 'TODOS'].includes(seccionParam)) {
-                setSeccionComprobante(seccionParam);
+            if (seccionParam && ['CONFIRMACION_RECIBO', 'PENDIENTES_COMPROBANTE', 'COBRADOS', 'HISTORIAL', 'TODOS'].includes(seccionParam)) {
+                const secNorm = seccionParam === 'HISTORIAL' ? 'COBRADOS' : seccionParam;
+                setSeccionComprobante(secNorm);
+                filtrosComprobanteRef.current.seccion = secNorm;
             }
         } catch (_) {}
 
@@ -1838,8 +1866,8 @@ const WhatsApp = () => {
                 </div>
             </div>
 
-            {/* BANNER DE NOTIFICACIONES DE COMPROBANTES (CONFIRMACIÓN DE RECIBO Y PENDIENTES COMPROBANTE) */}
-            {(resumenCategorias.confirmacion_recibo > 0 || resumenCategorias.pendientes_comprobante > 0) && (
+            {/* BANNER DE NOTIFICACIONES DE COMPROBANTES (CONFIRMACIÓN DE RECIBO, PENDIENTES COMPROBANTE Y YA COBRADOS) */}
+            {(resumenCategorias.confirmacion_recibo > 0 || resumenCategorias.pendientes_comprobante > 0 || resumenCategorias.cobrados > 0) && (
                 <div style={{
                     display: 'flex',
                     flexWrap: 'wrap',
@@ -1880,7 +1908,7 @@ const WhatsApp = () => {
                             >
                                 <span>✅ Confirmación de Recibo:</span>
                                 <span style={{ background: '#10b981', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem' }}>
-                                    {resumenCategorias.confirmacion_recibo} para aprobar
+                                    {resumenCategorias.confirmacion_recibo} por cobrar en BD
                                 </span>
                             </button>
                         )}
@@ -1907,10 +1935,35 @@ const WhatsApp = () => {
                             >
                                 <span>⚠️ Pendientes Comprobante:</span>
                                 <span style={{ background: '#f59e0b', color: '#0f172a', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
-                                    {resumenCategorias.pendientes_comprobante} por revisar
+                                    {resumenCategorias.pendientes_comprobante} con novedad
                                 </span>
                             </button>
                         )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveTab('Comprobantes');
+                                setSeccionComprobante('COBRADOS');
+                            }}
+                            style={{
+                                background: 'rgba(59, 130, 246, 0.18)',
+                                border: '1px solid rgba(59, 130, 246, 0.5)',
+                                color: '#93c5fd',
+                                padding: '5px 12px',
+                                borderRadius: '20px',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <span>💰 Ya Cobrados:</span>
+                            <span style={{ background: '#3b82f6', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
+                                {resumenCategorias.cobrados ?? resumenCategorias.aprobados ?? 0}
+                            </span>
+                        </button>
                     </div>
                 </div>
             )}
@@ -2564,7 +2617,7 @@ const WhatsApp = () => {
                                     🧾 Notificaciones y Validación de Comprobantes (OCR + Base de Datos)
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
-                                    El sistema compara automáticamente cada recibo con la base de datos: si el número y datos coinciden y el monto es igual o menor a la deuda, pasa a <strong>Confirmación de Recibo</strong>; si hay discrepancias (paga de más, otro número o no registrado), pasa a <strong>Pendientes Comprobante</strong>.
+                                    Los recibos enviados desde un número registrado en la base de datos se vinculan al cliente y van a <strong>Confirmación de Recibo</strong> (por confirmar para cobrar en BD). Si hubo algún problema (número no registrado, otro número, paga de más o dato no reconocido), van a <strong>Pendientes Comprobante</strong>. Una vez aprobados en cualquiera de las dos, pasan a <strong>Registro de Comprobantes ya Cobrados</strong>.
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
@@ -2579,10 +2632,10 @@ const WhatsApp = () => {
                             </div>
                         </div>
 
-                        {/* TARJETAS / PESTAÑAS DE LAS DOS SECCIONES DE NOTIFICACIÓN */}
+                        {/* TARJETAS / PESTAÑAS DE LAS TRES SECCIONES PRINCIPALES + TODOS */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(235px, 1fr))',
                             gap: '12px',
                             marginBottom: '18px'
                         }}>
@@ -2618,7 +2671,7 @@ const WhatsApp = () => {
                                     </span>
                                 </div>
                                 <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
-                                    Número registrado en BD, titular coincide y el monto que paga coincide o abona a su deuda pendiente. Listos para aprobar con 1 clic.
+                                    Enviados desde un número registrado en la BD y vinculados al cliente. Todavía por confirmar para que se cobren a la base de datos.
                                 </div>
                             </div>
 
@@ -2654,43 +2707,43 @@ const WhatsApp = () => {
                                     </span>
                                 </div>
                                 <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
-                                    Números no registrados, enviados desde otro celular, sin coincidencia en BD, pagos de más sobre la deuda o referencias duplicadas.
+                                    Tuvieron algún problema: número no registrado, otro número distinto al cliente, paga de más, dato no reconocido o referencia duplicada.
                                 </div>
                             </div>
 
-                            {/* SECCIÓN 3: HISTORIAL PROCESADOS */}
+                            {/* SECCIÓN 3: REGISTRO DE COMPROBANTES YA COBRADOS */}
                             <div
-                                onClick={() => setSeccionComprobante('HISTORIAL')}
+                                onClick={() => setSeccionComprobante('COBRADOS')}
                                 style={{
                                     padding: '14px 16px',
                                     borderRadius: '12px',
                                     cursor: 'pointer',
-                                    background: seccionComprobante === 'HISTORIAL'
-                                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(37, 99, 235, 0.12))'
+                                    background: (seccionComprobante === 'COBRADOS' || seccionComprobante === 'HISTORIAL')
+                                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.24), rgba(37, 99, 235, 0.14))'
                                         : 'rgba(15, 23, 42, 0.65)',
-                                    border: seccionComprobante === 'HISTORIAL'
+                                    border: (seccionComprobante === 'COBRADOS' || seccionComprobante === 'HISTORIAL')
                                         ? '2px solid #3b82f6'
-                                        : '1px solid rgba(59, 130, 246, 0.25)',
+                                        : '1px solid rgba(59, 130, 246, 0.28)',
                                     transition: 'all 0.2s ease'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        📋 Historial Procesados
+                                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        💰 Registro de Comprobantes ya Cobrados
                                     </span>
                                     <span style={{
-                                        background: 'rgba(59, 130, 246, 0.3)',
-                                        color: '#bfdbfe',
-                                        fontWeight: 700,
-                                        fontSize: '0.78rem',
-                                        padding: '2px 9px',
+                                        background: '#3b82f6',
+                                        color: '#fff',
+                                        fontWeight: 800,
+                                        fontSize: '0.82rem',
+                                        padding: '2px 10px',
                                         borderRadius: '14px'
                                     }}>
-                                        {(resumenCategorias.aprobados || 0) + (resumenCategorias.rechazados || 0)}
+                                        {resumenCategorias.cobrados ?? resumenCategorias.aprobados ?? 0}
                                     </span>
                                 </div>
                                 <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
-                                    Comprobantes ya aprobados ({resumenCategorias.aprobados || 0}) y descontados en BD o rechazados ({resumenCategorias.rechazados || 0}).
+                                    Comprobantes que ya pasaron por Confirmación de Recibo o Pendientes Comprobante y ya fueron cobrados y aplicados en la base de datos.
                                 </div>
                             </div>
 
@@ -2716,7 +2769,7 @@ const WhatsApp = () => {
                                     </span>
                                 </div>
                                 <div style={{ fontSize: '0.77rem', color: '#cbd5e1', lineHeight: 1.35 }}>
-                                    Vista general de todos los comprobantes recibidos sin importar su bandeja o estado.
+                                    Vista general de todos los comprobantes recibidos sin importar su bandeja o estado ({resumenCategorias.rechazados || 0} rechazados).
                                 </div>
                             </div>
                         </div>
@@ -2761,17 +2814,27 @@ const WhatsApp = () => {
                         ) : comprobantes.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.12)' }}>
                                 <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
-                                    {seccionComprobante === 'CONFIRMACION_RECIBO' ? '✅' : seccionComprobante === 'PENDIENTES_COMPROBANTE' ? '⚠️' : '🧾'}
+                                    {seccionComprobante === 'CONFIRMACION_RECIBO'
+                                        ? '✅'
+                                        : seccionComprobante === 'PENDIENTES_COMPROBANTE'
+                                        ? '⚠️'
+                                        : (seccionComprobante === 'COBRADOS' || seccionComprobante === 'HISTORIAL')
+                                        ? '💰'
+                                        : '🧾'}
                                 </div>
                                 <h4 style={{ margin: '0 0 6px 0' }}>
                                     {seccionComprobante === 'CONFIRMACION_RECIBO'
                                         ? 'No hay comprobantes pendientes en Confirmación de Recibo'
                                         : seccionComprobante === 'PENDIENTES_COMPROBANTE'
                                         ? 'No hay comprobantes con novedades en Pendientes Comprobante'
+                                        : (seccionComprobante === 'COBRADOS' || seccionComprobante === 'HISTORIAL')
+                                        ? 'Aún no hay comprobantes en el Registro de Comprobantes ya Cobrados'
                                         : 'No hay comprobantes registrados en esta vista'}
                                 </h4>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>
-                                    Cuando un cliente envíe un comprobante por WhatsApp, se analizará con OCR y se clasificará automáticamente aquí.
+                                    {(seccionComprobante === 'COBRADOS' || seccionComprobante === 'HISTORIAL')
+                                        ? 'Cuando confirmes un recibo desde Confirmación de Recibo o Pendientes Comprobante, quedará archivado aquí con su referencia de pago.'
+                                        : 'Cuando un cliente envíe un comprobante por WhatsApp, se analizará con OCR y se clasificará automáticamente aquí.'}
                                 </p>
                             </div>
                         ) : (
@@ -2883,11 +2946,11 @@ const WhatsApp = () => {
                                                             border: '1px solid currentColor'
                                                         }}>
                                                             {yaAprobado
-                                                                ? '✅ PAGO APROBADO Y APLICADO'
+                                                                ? '💰 COMPROBANTE YA COBRADO EN BD'
                                                                 : yaRechazado
                                                                 ? '❌ COMPROBANTE RECHAZADO'
                                                                 : esConfirmacion
-                                                                ? '✅ CONFIRMACIÓN DE RECIBO'
+                                                                ? '✅ CONFIRMACIÓN DE RECIBO (POR COBRAR)'
                                                                 : '⚠️ PENDIENTES COMPROBANTE'}
                                                         </span>
                                                         {idClienteMostrar ? (
@@ -3098,7 +3161,7 @@ const WhatsApp = () => {
                                                             >
                                                                 {procesandoAprobacionId === c.id
                                                                     ? '⏳ Procesando...'
-                                                                    : `✅ Confirmar y Aprobar ($${montoPagado.toFixed(2)})`}
+                                                                    : `✅ Confirmar y Cobrar en BD ($${montoPagado.toFixed(2)})`}
                                                             </button>
                                                         ) : null}
 
@@ -3120,7 +3183,7 @@ const WhatsApp = () => {
                                                                 gap: '6px'
                                                             }}
                                                         >
-                                                            {idClienteMostrar ? '✏️ Revisar / Ajustar y Aprobar' : '🔗 Vincular Cliente y Aprobar'}
+                                                            {idClienteMostrar ? '✏️ Revisar / Ajustar y Cobrar' : '🔗 Vincular Cliente y Cobrar en BD'}
                                                         </button>
 
                                                         <button
@@ -3153,7 +3216,7 @@ const WhatsApp = () => {
                                                         fontWeight: 700
                                                     }}>
                                                         {yaAprobado
-                                                            ? `✅ Aprobado ${c.pago_id ? `(Pago #${c.pago_id})` : ''}`
+                                                            ? `💰 Cobrado en BD ${c.pago_id ? `(Pago #${c.pago_id})` : ''}`
                                                             : '❌ Marcado como Rechazado'}
                                                     </div>
                                                 )}

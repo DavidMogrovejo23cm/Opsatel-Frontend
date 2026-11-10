@@ -41,7 +41,9 @@ const Layout = () => {
   const [resumenNotif, setResumenNotif] = useState({
     confirmacion_recibo: 0,
     pendientes_comprobante: 0,
-    total_por_atender: 0
+    total_por_atender: 0,
+    cobrados: 0,
+    aprobados: 0
   });
   const notifDropdownRef = useRef(null);
   const location = useLocation();
@@ -297,7 +299,7 @@ const Layout = () => {
                       >
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>✅ Confirmación de Recibo</div>
-                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Datos y saldo coinciden para aprobar</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Número registrado, por cobrar en BD</div>
                         </div>
                         <span style={{ background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.78rem', padding: '2px 8px', borderRadius: '10px' }}>
                           {resumenNotif.confirmacion_recibo || 0}
@@ -326,10 +328,39 @@ const Layout = () => {
                       >
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>⚠️ Pendientes Comprobante</div>
-                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Paga de más, otro número o sin cliente</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>No registrado, otro número o paga de más</div>
                         </div>
                         <span style={{ background: '#f59e0b', color: '#0f172a', fontWeight: 800, fontSize: '0.78rem', padding: '2px 8px', borderRadius: '10px' }}>
                           {resumenNotif.pendientes_comprobante || 0}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifDropdownOpen(false);
+                          navigate('/whatsapp?tab=Comprobantes&seccion=COBRADOS');
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: 'rgba(59, 130, 246, 0.14)',
+                          border: '1px solid rgba(59, 130, 246, 0.35)',
+                          color: '#93c5fd',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>💰 Registro Ya Cobrados</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>Comprobantes ya cobrados en BD</div>
+                        </div>
+                        <span style={{ background: '#3b82f6', color: '#fff', fontWeight: 800, fontSize: '0.78rem', padding: '2px 8px', borderRadius: '10px' }}>
+                          {resumenNotif.cobrados ?? resumenNotif.aprobados ?? 0}
                         </span>
                       </button>
                     </div>
