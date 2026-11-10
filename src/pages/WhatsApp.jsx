@@ -1265,13 +1265,126 @@ const WhatsApp = () => {
         }
     }, [mensajesChat]);
 
-    const conversacionesFiltradas = conversaciones.filter(c => {
-        if (!busquedaChat.trim()) return true;
+    const matchChat = (c, qRaw) => {
+        if (!qRaw || !qRaw.trim()) return true;
+        const q = qRaw.toLowerCase().trim();
+        const qDigits = q.replace(/\D/g, '');
+
+        // 1. Nombre (tanto c.nombre como c.cliente?.nombre)
+        const nombre = (c.nombre || c.cliente?.nombre || '').toLowerCase();
+        if (nombre.includes(q)) return true;
+
+        // 2. ID de cliente (#123 o 123)
+        if (c.cliente_id) {
+            const idStr = String(c.cliente_id);
+            if (idStr === q || `#${idStr}` === q || q.includes(idStr)) return true;
+        }
+
+        // 3. Cédula
+        const cedula = String(c.cedula || c.cliente?.cedula || '').toLowerCase();
+        if (cedula && cedula.includes(q)) return true;
+
+        // 4. Último mensaje
+        const ultimoMsg = String(c.ultimo_mensaje || '').toLowerCase();
+        if (ultimoMsg && ultimoMsg.includes(q)) return true;
+
+        // 5. Teléfono y celular (búsqueda flexible por dígitos y texto)
+        const numStr = String(c.numero || '').toLowerCase();
+        const celStr = String(c.celular || c.cliente?.celular || '').toLowerCase();
+        if (numStr.includes(q) || celStr.includes(q)) return true;
+
+        if (qDigits && qDigits.length >= 3) {
+            const numDigits = (numStr + ' ' + celStr).replace(/\D/g, '');
+            if (numDigits.includes(qDigits)) return true;
+            const qSinCero = qDigits.startsWith('0') ? qDigits.substring(1) : qDigits;
+            if (numDigits.includes(qSinCero)) return true;
+            const qCon593 = qDigits.startsWith('0') ? ('593' + qDigits.substring(1)) : ('593' + qDigits);
+            if (numDigits.includes(qCon593)) return true;
+        }
+
+        return false;
+    };
+
+    const conversacionesFiltradas = conversaciones.filter(c => matchChat(c, busquedaChat));
+
+    const contactosParaIniciar = useMemo(() => {
+        if (!busquedaChat || !busquedaChat.trim() || busquedaChat.trim().length < 2) return [];
         const q = busquedaChat.toLowerCase().trim();
-        const nombre = (c.cliente?.nombre || '').toLowerCase();
-        const numero = String(c.numero || '').toLowerCase();
-        return nombre.includes(q) || numero.includes(q);
-    });
+        const qDigits = q.replace(/\D/g, '');
+
+        const idsEnChats = new Set(conversacionesFiltradas.map(c => c.cliente_id).filter(Boolean));
+        const telefonosEnChats = new Set(
+            conversacionesFiltradas.map(c => {
+                const n = String(c.numero || c.celular || '').replace(/\D/g, '');
+                return n.startsWith('593') ? ('0' + n.substring(3)) : n;
+            })
+        );
+
+        return (listaClientes || []).filter(cl => {
+            if (idsEnChats.has(cl.id)) return false;
+
+            const celRaw = String(cl.celular || cl.telefono || '').replace(/\D/g, '');
+            const celNorm = celRaw.startsWith('593') ? ('0' + celRaw.substring(3)) : celRaw;
+            if (telefonosEnChats.has(celNorm)) return false;
+
+            const nom = String(cl.nombre || '').toLowerCase();
+            const ced = String(cl.cedula || '').toLowerCase();
+            const idStr = String(cl.id || '');
+
+            if (nom.includes(q) || ced.includes(q) || idStr === q || `#${idStr}` === q) return true;
+
+            if (qDigits && qDigits.length >= 3) {
+                if (celRaw.includes(qDigits)) return true;
+                const qSinCero = qDigits.startsWith('0') ? qDigits.substring(1) : qDigits;
+                if (celRaw.includes(qSinCero)) return true;
+            }
+
+            return false;
+        }).slice(0, 10);
+    }, [busquedaChat, conversacionesFiltradas, listaClientes]);
+
+    const iniciarChatConCliente = (cl) => {
+        let rawNum = String(cl.celular || cl.telefono || '').replace(/\D/g, '');
+        if (!rawNum) {
+            alert(`El cliente ${cl.nombre} no tiene un número celular registrado.`);
+            return;
+        }
+        if (rawNum.startsWith('0')) {
+            rawNum = '593' + rawNum.substring(1);
+        } else if (!rawNum.startsWith('593') && rawNum.length === 9) {
+            rawNum = '593' + rawNum;
+        }
+
+        const existente = conversaciones.find(c => {
+            const cNum = String(c.numero || '').replace(/\D/g, '');
+            const cCel = String(c.celular || '').replace(/\D/g, '');
+            return cNum.includes(rawNum) || rawNum.includes(cNum) || cCel.includes(rawNum) || (c.cliente_id && c.cliente_id === cl.id);
+        });
+
+        if (existente) {
+            seleccionarConversacion(existente);
+        } else {
+            const nuevaConv = {
+                numero: rawNum,
+                cliente_id: cl.id,
+                nombre: cl.nombre,
+                cliente: cl,
+                celular: cl.celular || rawNum,
+                cedula: cl.cedula || 'N/A',
+                plan: cl.plan || 'No especificado',
+                saldo: cl.saldo || 0,
+                estado: cl.estado || 'Activo',
+                nodo: cl.nodo || 'N/A',
+                ip: cl.ip || 'N/A',
+                ultimo_mensaje: 'Haz clic aquí para escribirle por WhatsApp...',
+                ultima_fecha: new Date().toISOString(),
+                total_mensajes: 0
+            };
+            setConversaciones(prev => [nuevaConv, ...prev]);
+            seleccionarConversacion(nuevaConv);
+        }
+        setBusquedaChat('');
+    };
 
     const cancelarEdicion = () => {
         setEditandoConfig(false);
@@ -2081,53 +2194,157 @@ const WhatsApp = () => {
                                             <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
                                             <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>Cargando chats...</div>
                                         </div>
-                                    ) : conversacionesFiltradas.length === 0 ? (
+                                    ) : (conversacionesFiltradas.length === 0 && contactosParaIniciar.length === 0) ? (
                                         <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                             <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💬</div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>No hay conversaciones aún</div>
-                                            <div style={{ fontSize: '0.8rem', marginTop: '4px', opacity: 0.7 }}>Los mensajes que envíes o recibas aparecerán aquí</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#e9edef' }}>
+                                                {busquedaChat ? `No se encontraron chats con "${busquedaChat}"` : 'No hay conversaciones aún'}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', marginTop: '4px', opacity: 0.7 }}>
+                                                {busquedaChat ? 'Puedes buscar por nombre, cédula o número de teléfono' : 'Los mensajes que envíes o recibas aparecerán aquí'}
+                                            </div>
                                         </div>
                                     ) : (
-                                        conversacionesFiltradas.map((c) => {
-                                            const isSelected = conversacionActiva?.numero === c.numero;
-                                            const nombreMostrar = c.cliente?.nombre || c.nombre || (c.numero?.includes('@') ? c.numero : `+${c.numero}`);
-                                            const fechaHora = c.fecha_hora ? new Date(c.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                                            const inicial = (c.cliente?.nombre || c.nombre || '').replace(/\s*\(.*\)/, '').trim().charAt(0).toUpperCase() || '📱';
-                                            return (
-                                                <div
-                                                    key={c.numero}
-                                                    onClick={() => seleccionarConversacion(c)}
-                                                    style={{
-                                                        padding: '10px 14px',
-                                                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        gap: '12px',
-                                                        alignItems: 'center',
-                                                        background: isSelected ? '#2a3942' : 'transparent',
-                                                        borderLeft: isSelected ? '4px solid #00a884' : '4px solid transparent',
-                                                        transition: 'background 0.15s ease'
-                                                    }}
-                                                >
-                                                    <div style={{
-                                                        width: '42px',
-                                                        height: '42px',
-                                                        borderRadius: '50%',
-                                                        background: c.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#fff',
-                                                        fontWeight: 'bold',
-                                                        fontSize: '0.95rem',
-                                                        flexShrink: 0
-                                                    }}>
-                                                        {inicial}
+                                        <>
+                                            {conversacionesFiltradas.map((c) => {
+                                                const isSelected = conversacionActiva?.numero === c.numero;
+                                                const nombreMostrar = c.cliente?.nombre || c.nombre || (c.numero?.includes('@') ? c.numero : `+${c.numero}`);
+                                                const fechaHora = c.fecha_hora ? new Date(c.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                                const inicial = (c.cliente?.nombre || c.nombre || '').replace(/\s*\(.*\)/, '').trim().charAt(0).toUpperCase() || '📱';
+                                                return (
+                                                    <div
+                                                        key={c.numero}
+                                                        onClick={() => seleccionarConversacion(c)}
+                                                        style={{
+                                                            padding: '10px 14px',
+                                                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            gap: '12px',
+                                                            alignItems: 'center',
+                                                            background: isSelected ? '#2a3942' : 'transparent',
+                                                            borderLeft: isSelected ? '4px solid #00a884' : '4px solid transparent',
+                                                            transition: 'background 0.15s ease'
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: '42px',
+                                                            height: '42px',
+                                                            borderRadius: '50%',
+                                                            background: c.cliente ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #64748b, #475569)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#fff',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '0.95rem',
+                                                            flexShrink: 0
+                                                        }}>
+                                                            {inicial}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                                                <div style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#38bdf8' : '#e9edef' }}>
+                                                                    {c.cliente_id && (
+                                                                        <span style={{
+                                                                            fontSize: '0.68rem',
+                                                                            background: 'rgba(16, 185, 129, 0.25)',
+                                                                            color: '#6ee7b7',
+                                                                            padding: '1px 5px',
+                                                                            borderRadius: '4px',
+                                                                            marginRight: '6px',
+                                                                            fontWeight: 'bold'
+                                                                        }}>
+                                                                            #{c.cliente_id}
+                                                                        </span>
+                                                                    )}
+                                                                    {nombreMostrar}
+                                                                </div>
+                                                                <span style={{ fontSize: '0.72rem', color: isSelected ? '#38bdf8' : '#8696a0' }}>
+                                                                    {fechaHora}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <div style={{ fontSize: '0.78rem', color: '#8696a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '190px' }}>
+                                                                    {c.ultimo_rol === 'asistente' ? '🤖 SAM: ' : c.ultimo_rol === 'operador' ? '✓ Tú: ' : ''}
+                                                                    {c.ultimo_mensaje}
+                                                                </div>
+                                                                <span style={{
+                                                                    fontSize: '0.68rem',
+                                                                    background: isSelected ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '10px',
+                                                                    color: isSelected ? '#7dd3fc' : '#8696a0',
+                                                                    fontWeight: 600
+                                                                }}>
+                                                                    {c.total_mensajes}/100
+                                                                </span>
+                                                            </div>
+                                                            {(c.nodo && c.nodo !== 'N/A') || (c.ip && c.ip !== 'N/A') ? (
+                                                                <div style={{ fontSize: '0.7rem', color: '#8696a0', marginTop: '2px', display: 'flex', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                    {c.nodo && c.nodo !== 'N/A' && <span>📍 {c.nodo}</span>}
+                                                                    {c.ip && c.ip !== 'N/A' && <span style={{ color: '#38bdf8' }}>🌐 {c.ip}</span>}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
                                                     </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                                                            <div style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#38bdf8' : '#e9edef' }}>
-                                                                {c.cliente_id && (
+                                                );
+                                            })}
+
+                                            {/* Sección de contactos disponibles para iniciar nuevo chat */}
+                                            {contactosParaIniciar.length > 0 && (
+                                                <div style={{ marginTop: '8px' }}>
+                                                    <div style={{
+                                                        padding: '7px 14px',
+                                                        background: '#182229',
+                                                        fontSize: '0.72rem',
+                                                        fontWeight: 700,
+                                                        color: '#00a884',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px',
+                                                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                                                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between'
+                                                    }}>
+                                                        <span>👥 Clientes para iniciar chat</span>
+                                                        <span style={{ fontSize: '0.68rem', opacity: 0.8 }}>({contactosParaIniciar.length})</span>
+                                                    </div>
+                                                    {contactosParaIniciar.map((cl) => (
+                                                        <div
+                                                            key={`contact-${cl.id}`}
+                                                            onClick={() => iniciarChatConCliente(cl)}
+                                                            style={{
+                                                                padding: '10px 14px',
+                                                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                gap: '12px',
+                                                                alignItems: 'center',
+                                                                background: 'transparent',
+                                                                transition: 'background 0.15s ease'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#202c33'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                        >
+                                                            <div style={{
+                                                                width: '38px',
+                                                                height: '38px',
+                                                                borderRadius: '50%',
+                                                                background: 'linear-gradient(135deg, #059669, #10b981)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: '#fff',
+                                                                fontWeight: 'bold',
+                                                                fontSize: '0.9rem',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                {(cl.nombre || 'C').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontWeight: 600, fontSize: '0.86rem', color: '#e9edef', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                                     <span style={{
                                                                         fontSize: '0.68rem',
                                                                         background: 'rgba(16, 185, 129, 0.25)',
@@ -2137,41 +2354,31 @@ const WhatsApp = () => {
                                                                         marginRight: '6px',
                                                                         fontWeight: 'bold'
                                                                     }}>
-                                                                        #{c.cliente_id}
+                                                                        #{cl.id}
                                                                     </span>
-                                                                )}
-                                                                {nombreMostrar}
-                                                            </div>
-                                                            <span style={{ fontSize: '0.72rem', color: isSelected ? '#38bdf8' : '#8696a0' }}>
-                                                                {fechaHora}
-                                                            </span>
-                                                        </div>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <div style={{ fontSize: '0.78rem', color: '#8696a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '190px' }}>
-                                                                {c.ultimo_rol === 'asistente' ? '🤖 SAM: ' : c.ultimo_rol === 'operador' ? '✓ Tú: ' : ''}
-                                                                {c.ultimo_mensaje}
+                                                                    {cl.nombre}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.74rem', color: '#8696a0', marginTop: '2px', display: 'flex', gap: '8px' }}>
+                                                                    <span>📱 {cl.celular || cl.telefono || 'Sin celular'}</span>
+                                                                    {cl.cedula && <span>• Cédula: {cl.cedula}</span>}
+                                                                </div>
                                                             </div>
                                                             <span style={{
-                                                                fontSize: '0.68rem',
-                                                                background: isSelected ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                                                                padding: '2px 6px',
-                                                                borderRadius: '10px',
-                                                                color: isSelected ? '#7dd3fc' : '#8696a0',
-                                                                fontWeight: 600
+                                                                padding: '4px 10px',
+                                                                background: 'rgba(0, 168, 132, 0.2)',
+                                                                color: '#25d366',
+                                                                border: '1px solid rgba(0, 168, 132, 0.4)',
+                                                                borderRadius: '6px',
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 700
                                                             }}>
-                                                                {c.total_mensajes}/100
+                                                                Chat 💬
                                                             </span>
                                                         </div>
-                                                        {(c.nodo && c.nodo !== 'N/A') || (c.ip && c.ip !== 'N/A') ? (
-                                                            <div style={{ fontSize: '0.7rem', color: '#8696a0', marginTop: '2px', display: 'flex', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                {c.nodo && c.nodo !== 'N/A' && <span>📍 {c.nodo}</span>}
-                                                                {c.ip && c.ip !== 'N/A' && <span style={{ color: '#38bdf8' }}>🌐 {c.ip}</span>}
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
+                                                    ))}
                                                 </div>
-                                            );
-                                        })
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
