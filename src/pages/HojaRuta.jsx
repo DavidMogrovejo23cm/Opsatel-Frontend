@@ -268,6 +268,7 @@ const HojaRuta = () => {
 
     const sortedRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
+        const search = (searchTerm || '').toLowerCase();
         const searchNorm = normalizeOpsatelText(searchTerm || '');
 
         let filtered = registros.filter(r => {
