@@ -11,6 +11,7 @@ import { clienteService, configuracionService, oltService } from '../services/ap
 import OntPotenciaModal from '../components/OntPotenciaModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
+import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 import { processImage, compressImage } from '../utils/imageCompressor';
 
@@ -748,6 +749,9 @@ const General = () => {
       }
       payload = { breach: valToSave, bridge: valToSave };
     } else {
+      if (['nombre', 'direccion', 'parroquia', 'nodo', 'comentarios', 'observaciones', 'notas_pago', 'tecnico', 'activador', 'nap', 'referencia'].includes(col)) {
+        valToSave = normalizeOpsatelText(valToSave);
+      }
       if (valToSave === (original || '')) {
         setEditingCell(null);
         return;
@@ -1116,13 +1120,16 @@ const General = () => {
 
   const filteredClientes = clientes
     .filter(c => {
-      // Filtro por término de búsqueda (ID, Nombre, Cédula, Parroquia, Fecha, IP o Plan)
-      const matchSearch = c.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.cedula?.includes(searchTerm) ||
-        c.id.toString().includes(searchTerm) ||
-        c.parroquia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.ip?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.plan || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Filtro por término de búsqueda (ID, Nombre, Cédula, Parroquia, Fecha, IP o Plan) con estandarización Opsatel
+      const searchNorm = normalizeOpsatelText(searchTerm || '');
+      const matchSearch =
+        normalizeOpsatelText(c.nombre || '').includes(searchNorm) ||
+        (c.cedula || '').includes(searchTerm) ||
+        (c.id != null && c.id.toString().includes(searchTerm)) ||
+        normalizeOpsatelText(c.parroquia || '').includes(searchNorm) ||
+        normalizeOpsatelText(c.direccion || '').includes(searchNorm) ||
+        (c.ip || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        normalizeOpsatelText(c.plan || '').includes(searchNorm) ||
         formatToDMY(c.instalation_date).toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchSearch) return false;

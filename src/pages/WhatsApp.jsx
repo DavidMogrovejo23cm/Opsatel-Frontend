@@ -11,6 +11,7 @@ import { whatsappService } from '../services/whatsappService';
 import { configuracionService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { normalizeOpsatelText } from '../utils/textUtils';
 
 
 const WhatsApp = () => {
@@ -420,7 +421,7 @@ const WhatsApp = () => {
 
     const normalizeLocationKey = (str) => {
         if (!str) return '';
-        return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+        return normalizeOpsatelText(str).trim();
     };
 
     const formatCanonicalLocation = (str) => {
@@ -1268,11 +1269,12 @@ const WhatsApp = () => {
     const matchChat = (c, qRaw) => {
         if (!qRaw || !qRaw.trim()) return true;
         const q = qRaw.toLowerCase().trim();
+        const qNorm = normalizeOpsatelText(qRaw);
         const qDigits = q.replace(/\D/g, '');
 
-        // 1. Nombre (tanto c.nombre como c.cliente?.nombre)
-        const nombre = (c.nombre || c.cliente?.nombre || '').toLowerCase();
-        if (nombre.includes(q)) return true;
+        // 1. Nombre (tanto c.nombre como c.cliente?.nombre) con normalización
+        const nombreNorm = normalizeOpsatelText(c.nombre || c.cliente?.nombre || '');
+        if (nombreNorm.includes(qNorm)) return true;
 
         // 2. ID de cliente (#123 o 123)
         if (c.cliente_id) {
@@ -1327,11 +1329,12 @@ const WhatsApp = () => {
             const celNorm = celRaw.startsWith('593') ? ('0' + celRaw.substring(3)) : celRaw;
             if (telefonosEnChats.has(celNorm)) return false;
 
-            const nom = String(cl.nombre || '').toLowerCase();
+            const nomNorm = normalizeOpsatelText(cl.nombre || '');
             const ced = String(cl.cedula || '').toLowerCase();
             const idStr = String(cl.id || '');
+            const qNorm = normalizeOpsatelText(q);
 
-            if (nom.includes(q) || ced.includes(q) || idStr === q || `#${idStr}` === q) return true;
+            if (nomNorm.includes(qNorm) || ced.includes(q) || idStr === q || `#${idStr}` === q) return true;
 
             if (qDigits && qDigits.length >= 3) {
                 if (celRaw.includes(qDigits)) return true;

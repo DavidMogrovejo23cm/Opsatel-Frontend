@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clienteService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { normalizeOpsatelText } from '../utils/textUtils';
 
 const SYSTEM_PAGES = [
   { title: 'Dashboard / Resumen', path: '/', category: 'Navegación', icon: '📊', roles: ['administrador'] },
@@ -88,16 +89,18 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
 
   const filteredClientes = useMemo(() => {
     if (filterType === 'paginas') return [];
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return [];
+    const qNorm = normalizeOpsatelText(q);
+    const qLower = q.toLowerCase();
     return clientes.filter(c => {
-      const nom = (c.nombre || '').toLowerCase();
+      const nom = normalizeOpsatelText(c.nombre || '');
+      const nod = normalizeOpsatelText(c.nodo || '');
       const ced = (c.cedula || '').toLowerCase();
       const ip = (c.ip || '').toLowerCase();
-      const tel = (c.telefono || '').toLowerCase();
-      const nod = (c.nodo || '').toLowerCase();
+      const tel = (c.telefono || c.celular || '').toLowerCase();
       const id = String(c.id || '');
-      return nom.includes(q) || ced.includes(q) || ip.includes(q) || tel.includes(q) || nod.includes(q) || id === q;
+      return nom.includes(qNorm) || nod.includes(qNorm) || ced.includes(qLower) || ip.includes(qLower) || tel.includes(qLower) || id === q;
     }).slice(0, 10);
   }, [clientes, query, filterType]);
 

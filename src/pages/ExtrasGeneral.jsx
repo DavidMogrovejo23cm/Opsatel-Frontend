@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { extrasService, configuracionService } from '../services/api';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
+import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showConfirm, showToast } from '../utils/alerts';
 
 
@@ -175,6 +176,9 @@ const ExtrasGeneral = () => {
         } else if (field.endsWith('_fecha_pago') || field.endsWith('_fecha_a_pagar') || field === 'fecha_ingreso') {
             payload[field] = valToSave ? normalizeDateInput(valToSave) : '';
         } else {
+            if (['nombre_cliente', 'observaciones', 'proveedor'].includes(field)) {
+                valToSave = normalizeOpsatelText(valToSave);
+            }
             payload[field] = valToSave;
         }
 
@@ -421,12 +425,13 @@ const ExtrasGeneral = () => {
     };
 
     const filtered = extras.filter(e => {
-        const s = searchTerm.toLowerCase();
+        const sNorm = normalizeOpsatelText(searchTerm || '');
+        const s = (searchTerm || '').toLowerCase();
         const matchesSearch = !searchTerm ||
-            e.nombre_cliente?.toLowerCase().includes(s) ||
-            e.cod?.toLowerCase().includes(s) ||
-            e.usuario?.toLowerCase().includes(s) ||
-            e.contacto?.toLowerCase().includes(s);
+            normalizeOpsatelText(e.nombre_cliente || '').includes(sNorm) ||
+            (e.cod || '').toLowerCase().includes(s) ||
+            (e.usuario || '').toLowerCase().includes(s) ||
+            (e.contacto || '').toLowerCase().includes(s);
 
         const eEstado = (e.estado || '').trim().toUpperCase();
         const matchesEstado = selectedEstado === 'TODOS' || eEstado === selectedEstado.toUpperCase();

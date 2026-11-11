@@ -9,6 +9,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { hojaRutaService, clienteService, configuracionService, callCenterService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
+import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 /**
  * Helper para extraer únicamente el primer número telefónico y normalizarlo
@@ -233,12 +234,13 @@ const HojaRuta = () => {
                 }
                 return c.estado?.toUpperCase() === 'ACTIVO';
             })
-            .filter(c =>
-                !term ||
-                c.nombre?.toLowerCase().includes(term) ||
-                String(c.id).includes(term) ||
-                c.parroquia?.toLowerCase().includes(term)
-            )
+            .filter(c => {
+                if (!term) return true;
+                const termNorm = normalizeOpsatelText(term);
+                return normalizeOpsatelText(c.nombre || '').includes(termNorm) ||
+                    String(c.id).includes(term) ||
+                    normalizeOpsatelText(c.parroquia || '').includes(termNorm);
+            })
             .sort((a, b) => a.id - b.id);
     }, [clientes, clientSearchTerm, modalSource, registros, editingId]);
 
@@ -266,12 +268,13 @@ const HojaRuta = () => {
 
     const sortedRegistros = useMemo(() => {
         if (!Array.isArray(registros)) return [];
-        const search = searchTerm.toLowerCase();
+        const searchNorm = normalizeOpsatelText(searchTerm || '');
 
         let filtered = registros.filter(r => {
-            const matchSearch = r.nombre_cliente?.toLowerCase().includes(search) ||
-                r.tecnico?.toLowerCase().includes(search) ||
-                r.parroquia?.toLowerCase().includes(search);
+            const matchSearch = !searchTerm ||
+                normalizeOpsatelText(r.nombre_cliente || '').includes(searchNorm) ||
+                normalizeOpsatelText(r.tecnico || '').includes(searchNorm) ||
+                normalizeOpsatelText(r.parroquia || '').includes(searchNorm);
 
             if (!matchSearch) return false;
 

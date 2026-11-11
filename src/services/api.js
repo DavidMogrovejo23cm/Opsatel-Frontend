@@ -6,6 +6,16 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import axios from 'axios';
+import { normalizePayloadFields } from '../utils/textUtils';
+
+const CLIENTE_TEXT_FIELDS = [
+  'nombre', 'direccion', 'parroquia', 'nodo', 'comentarios',
+  'observaciones', 'notas_pago', 'tecnico', 'activador', 'nap',
+  'referencia', 'bank', 'bank_plus', 'app', 'cuenta', 'arrienda'
+];
+const EXTRAS_TEXT_FIELDS = ['nombre_cliente', 'observaciones', 'proveedor', 'contacto', 'estado'];
+const HOJARUTA_TEXT_FIELDS = ['nombre_cliente', 'ubicacion_cliente', 'ubicacion_caja', 'actividad', 'observacion', 'observacion_tecnico', 'tecnico', 'parroquia'];
+const CALLCENTER_TEXT_FIELDS = ['cliente_nombre', 'direccion', 'a_cargo', 'problema', 'observacion_revision'];
 
 // Firma de Integridad de Runtime y Autoría (David Mogrovejo - 2026)
 export const INTERNAL_SYS_CHECKSUM = 'bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762';
@@ -159,12 +169,14 @@ export const clienteService = {
     return inFlightListarPromise;
   },
   crear: async (data) => {
-    const res = await api.post('/clientes/', data);
+    const cleanData = normalizePayloadFields(data, CLIENTE_TEXT_FIELDS);
+    const res = await api.post('/clientes/', cleanData);
     clearStoredClientesCache();
     return res;
   },
   actualizar: async (id, data) => {
-    const res = await api.patch(`/clientes/${id}`, data);
+    const cleanData = normalizePayloadFields(data, CLIENTE_TEXT_FIELDS);
+    const res = await api.patch(`/clientes/${id}`, cleanData);
     clearStoredClientesCache();
     return res;
   },
@@ -331,8 +343,8 @@ export const backupService = {
 
 export const extrasService = {
   listar: () => api.get('/extras/'),
-  crear: (data) => api.post('/extras/', data),
-  actualizar: (id, data) => api.patch(`/extras/${id}`, data),
+  crear: (data) => api.post('/extras/', normalizePayloadFields(data, EXTRAS_TEXT_FIELDS)),
+  actualizar: (id, data) => api.patch(`/extras/${id}`, normalizePayloadFields(data, EXTRAS_TEXT_FIELDS)),
   eliminar: (id) => api.delete(`/extras/${id}`),
   pagar: (id, data) => api.post(`/extras/${id}/pagar`, data),
   listarPagos: () => api.get('/extras/pagos/historial'),
@@ -414,8 +426,8 @@ export const configuracionService = {
 
 export const hojaRutaService = {
   listar: () => api.get('/hoja-ruta/'),
-  crear: (data) => api.post('/hoja-ruta/', data),
-  actualizar: (id, data) => api.patch(`/hoja-ruta/${id}`, data),
+  crear: (data) => api.post('/hoja-ruta/', normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS)),
+  actualizar: (id, data) => api.patch(`/hoja-ruta/${id}`, normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS)),
   eliminar: (id) => api.delete(`/hoja-ruta/${id}`),
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
@@ -432,8 +444,8 @@ export const ticketsService = {
 
 export const callCenterService = {
   listar: () => api.get('/callcenter/'),
-  crear: (data) => api.post('/callcenter/', data),
-  actualizar: (id, data) => api.patch(`/callcenter/${id}`, data),
+  crear: (data) => api.post('/callcenter/', normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS)),
+  actualizar: (id, data) => api.patch(`/callcenter/${id}`, normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS)),
   eliminar: (id) => api.delete(`/callcenter/${id}`),
 };
 

@@ -9,6 +9,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { clienteService, configuracionService, hojaRutaService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeDateInput, toISODate } from '../services/dateUtils';
+import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 import { processImage, compressImage } from '../utils/imageCompressor';
 
@@ -235,7 +236,11 @@ const Ventas = () => {
         plus: '0'
       });
     } else {
-      setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+      let finalVal = type === 'checkbox' ? checked : value;
+      if (['nombre', 'direccion', 'parroquia', 'nodo', 'comentarios'].includes(name) && typeof finalVal === 'string') {
+        finalVal = normalizeOpsatelText(finalVal);
+      }
+      setFormData({ ...formData, [name]: finalVal });
     }
   };
 
