@@ -31,11 +31,9 @@ const Admin = () => {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedComentariosModal, setSelectedComentariosModal] = useState(null);
 
-  // Estados para Sistema de Backup y Restauración SQL (.sql)
-  const [exportingSql, setExportingSql] = useState(false);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
-  const [sqlFile, setSqlFile] = useState(null);
-  const [importingSql, setImportingSql] = useState(false);
+  // Paginación de Clientes
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // Ancho ajustable horizontalmente para la columna 'Nombre' (estilo Excel) con persistencia
   const [nombreWidth, setNombreWidth] = useState(() => {
@@ -144,11 +142,11 @@ const Admin = () => {
     comentarios: ''
   });
 
-  const fetchData = async (silent = false) => {
+  const fetchData = async (silent = false, forceRefresh = false) => {
     try {
       if (!silent) setLoading(true);
       const [clientesRes, bancosRes, planesRes, hrRes] = await Promise.all([
-        clienteService.listar().catch(err => { console.error("Error clientes:", err); return { data: [] }; }),
+        clienteService.listar(forceRefresh).catch(err => { console.error("Error clientes:", err); return { data: [] }; }),
         configuracionService.getBancos().catch(err => { console.error("Error bancos:", err); return { data: [] }; }),
         configuracionService.getPlanes().catch(err => { console.error("Error planes:", err); return { data: [] }; }),
         hojaRutaService.listar().catch(err => { console.error("Error hoja ruta:", err); return { data: [] }; })
@@ -511,75 +509,6 @@ const Admin = () => {
     }
   };
 
-  // Funciones de Backup y Restauración Integral (.zip / .sql)
-  const handleExportarBackupSql = async () => {
-    setExportingSql(true);
-    try {
-      const response = await backupService.exportZip();
-      if (response.data.type && response.data.type.includes('text/html')) {
-        throw new Error('El servidor web devolvió una página HTML en lugar del archivo de respaldo. Verifique la ruta del backend.');
-      }
-      const blob = new Blob([response.data], { type: 'application/zip' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-      link.setAttribute('download', `backup_opsatel_${stamp}.zip`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      showSuccess('Copia de Seguridad Completa (.zip: Base de Datos + Fotos) descargada correctamente.');
-    } catch (error) {
-      console.error(error);
-      showError('Error al exportar respaldo: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setExportingSql(false);
-    }
-  };
-
-  const handleImportarBackupSql = async () => {
-    if (!sqlFile) {
-      showWarning('Por favor selecciona un archivo con extensión .zip o .sql');
-      return;
-    }
-
-    const confirmado = await showConfirm(
-      '¿Restaurar Respaldo Completo?',
-      '⚠️ Esta acción restaurará la base de datos y todas las imágenes (cédulas, fotos de fachadas, dispositivos).<br/><br/><b>¿Estás totalmente seguro de continuar?</b>',
-      'Sí, restaurar ahora',
-      'Cancelar',
-      'warning'
-    );
-
-    if (!confirmado) return;
-
-    setImportingSql(true);
-    const formData = new FormData();
-    formData.append('file', sqlFile);
-
-    try {
-      const resp = await backupService.importZip(formData);
-      const fotosDetalle = resp.data.imagenes_restauradas !== undefined 
-        ? `<br/><b>Imágenes restauradas:</b> ${resp.data.imagenes_restauradas}` 
-        : '';
-      showSuccess(
-        `${resp.data.message}<br/><b>Sentencias ejecutadas:</b> ${resp.data.total_sentencias}<br/><b>Tablas afectadas:</b> ${resp.data.tablas_afectadas}${fotosDetalle}`,
-        '¡Restauración Completada!'
-      );
-      setShowRestoreModal(false);
-      setSqlFile(null);
-      fetchData();
-    } catch (error) {
-      console.error(error);
-      showError('Error al restaurar respaldo: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setImportingSql(false);
-    }
-  };
-
   const exportPdfSayausi = () => {
     const clientesSayausi = safeClientes
       .filter(c => {
@@ -760,150 +689,366 @@ const Admin = () => {
     })
     .sort((a, b) => a.id - b.id);
 
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card glass" style={{ width: '100%' }}>
-      <div className="page-header pagos-desktop-view">
-        <div className="page-header-info">
-          <h1>Pagos y Cobros</h1>
+  // Cálculos de Paginación
+  const totalItems = filteredClientes.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  const paginatedClientes = React.useMemo(() => {
+    return filteredClientes.slice(startIndex, endIndex);
+  }, [filteredClientes, startIndex, endIndex]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, planFilter]);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxButtons = 5;
+    if (totalPages <= maxButtons + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, safeCurrentPage - 1);
+      let end = Math.min(totalPages - 1, safeCurrentPage + 1);
+
+      if (safeCurrentPage <= 3) end = 4;
+      else if (safeCurrentPage >= totalPages - 2) start = totalPages - 3;
+
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  const renderPagination = (isMobile = false) => (
+    <div style={{
+      flexShrink: 0,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: isMobile ? '10px 14px' : '8px 18px',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+      background: 'rgba(11, 15, 26, 0.98)',
+      flexWrap: 'wrap',
+      gap: '10px',
+      borderRadius: isMobile ? '12px' : '0 0 16px 16px',
+      marginTop: isMobile ? '12px' : '0'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          Mostrando <strong style={{ color: '#fff' }}>{totalItems === 0 ? 0 : startIndex + 1}</strong> - <strong style={{ color: '#fff' }}>{endIndex}</strong> de <strong style={{ color: '#fff' }}>{totalItems}</strong> clientes
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <span>Por página:</span>
+          <select
+            value={itemsPerPage}
+            onChange={e => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            style={{
+              background: '#1a1040',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#fff',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
         </div>
-        <div className="page-actions" style={{ gap: '12px', alignItems: 'center' }}>
-          <button
-            className="btn btn-secondary"
-            onClick={exportPdfSayausi}
-            style={{
-              background: '#1e1b4b',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            📄 PDF Sayausí
-          </button>
+      </div>
 
-          {/* Botones de Backup y Restauración de Sistema Completo (.ZIP) */}
-          <button
-            className="btn btn-secondary"
-            onClick={handleExportarBackupSql}
-            disabled={exportingSql}
-            title="Descargar respaldo completo (Base de Datos + Todas las Fotos) en archivo .zip"
-            style={{
-              background: '#065f46',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              color: '#ecfdf5',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: exportingSql ? 'not-allowed' : 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {exportingSql ? "⏳ Exportando..." : "📥 Descargar Backup (.zip)"}
-          </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <button
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          disabled={safeCurrentPage === 1}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: safeCurrentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+            color: safeCurrentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
+            cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.8rem'
+          }}
+        >
+          ‹
+        </button>
 
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setSqlFile(null);
-              setShowRestoreModal(true);
-            }}
-            title="Restaurar toda la base de datos y fotos desde un archivo .zip o .sql"
-            style={{
-              background: '#831843',
-              border: '1px solid rgba(244, 63, 94, 0.4)',
-              color: '#ffe4e6',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            📤 Restaurar Backup (.zip / .sql)
-          </button>
+        {getPageNumbers().map((p, pIdx) => (
+          p === '...' ? (
+            <span key={`dots-${pIdx}`} style={{ color: 'var(--text-muted)', padding: '0 3px', fontSize: '0.75rem' }}>…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => setCurrentPage(p)}
+              style={{
+                minWidth: '28px',
+                height: '28px',
+                padding: '0 6px',
+                borderRadius: '6px',
+                border: safeCurrentPage === p ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
+                background: safeCurrentPage === p ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.04)',
+                color: safeCurrentPage === p ? '#fff' : 'rgba(255,255,255,0.7)',
+                fontWeight: safeCurrentPage === p ? '800' : '500',
+                cursor: 'pointer',
+                fontSize: '0.74rem'
+              }}
+            >
+              {p}
+            </button>
+          )
+        ))}
 
-          <button
-            className="btn btn-secondary"
-            onClick={() => window.location.href = '/upload-db'}
-            title="Configurar respaldos automáticos programados diarios y ver la bóveda del servidor"
-            style={{
-              background: '#1e1b4b',
-              border: '1px solid rgba(139, 92, 246, 0.4)',
-              color: '#ddd6fe',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            ⏰ Respaldos Automáticos
-          </button>
+        <button
+          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          disabled={safeCurrentPage >= totalPages || totalItems === 0}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+            color: (safeCurrentPage >= totalPages || totalItems === 0) ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)',
+            cursor: (safeCurrentPage >= totalPages || totalItems === 0) ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.8rem'
+          }}
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  );
 
-          <select
-            className="input"
-            style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="TODOS">Todos los Estados</option>
-            <option value="ACTIVO">Solo Activos</option>
-            <option value="INACTIVO">Solo Inactivos</option>
-            <option value="SUSPENDIDO">Solo Suspendidos</option>
-            <option value="JURIDICO">Solo Jurídicos</option>
-            <option value="PROCESO">Solo En Proceso</option>
-          </select>
+  return (
+    <div className="pagos-page-container" style={{ width: '100%', padding: '0' }}>
+      <style>{`
+        @media (min-width: 769px) {
+          .pagos-page-container {
+            height: calc(100vh - 116px);
+            max-height: calc(100vh - 116px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+          }
+          .pagos-card-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            background: rgba(13, 17, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+          }
+          .pagos-table-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: auto;
+          }
+        }
+        @media (max-width: 768px) {
+          .pagos-page-container {
+            width: 100%;
+            padding-bottom: 80px;
+          }
+          .pagos-card-container {
+            background: rgba(13, 17, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px;
+          }
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
 
-          <select
-            className="input"
-            style={{ width: 'auto', marginBottom: 0, background: '#1e1b4b' }}
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-          >
-            <option value="TODOS">Todos los Planes</option>
-            {availablePlans.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+      <div className="pagos-card-container">
+        <div className="page-header pagos-desktop-view" style={{
+          padding: '14px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(15, 20, 36, 0.85)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          margin: 0
+        }}>
+          <div className="page-header-info" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <h1 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>💰 Pagos y Cobros</span>
+            </h1>
+            <span style={{
+              background: 'rgba(139, 92, 246, 0.15)',
+              border: '1px solid rgba(139, 92, 246, 0.35)',
+              color: '#c4b5fd',
+              padding: '3px 10px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: 700
+            }}>
+              {totalItems} clientes {searchTerm || statusFilter !== 'TODOS' || planFilter !== 'TODOS' ? '(filtrados)' : ''}
+            </span>
+          </div>
 
-          <input
-            className="input"
-            placeholder="Buscar por ID, Nombre o IP..."
-            style={{
-              maxWidth: '250px',
-              marginBottom: 0,
-              flex: 1
-            }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => fetchData(false, true)}
+              title="Recargar datos frescos desde el servidor"
+              style={{
+                background: 'rgba(139, 92, 246, 0.15)',
+                border: '1px solid rgba(139, 92, 246, 0.35)',
+                color: '#c4b5fd',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                padding: '6px 14px',
+                borderRadius: '8px'
+              }}
+            >
+              🔄 Actualizar
+            </button>
 
-          {isAdmin && (
-            <>
+            <button
+              className="btn btn-secondary"
+              onClick={exportPdfSayausi}
+              style={{
+                background: '#1e1b4b',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                padding: '6px 14px',
+                borderRadius: '8px'
+              }}
+            >
+              📄 PDF Sayausí
+            </button>
+
+            <select
+              className="input"
+              style={{ width: 'auto', marginBottom: 0, background: '#171433', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.82rem', padding: '6px 12px', borderRadius: '8px' }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="TODOS">Todos los Estados ({safeClientes.length})</option>
+              <option value="ACTIVO">Solo Activos</option>
+              <option value="INACTIVO">Solo Inactivos</option>
+              <option value="SUSPENDIDO">Solo Suspendidos</option>
+              <option value="JURIDICO">Solo Jurídicos</option>
+              <option value="PROCESO">Solo En Proceso</option>
+            </select>
+
+            <select
+              className="input"
+              style={{ width: 'auto', marginBottom: 0, background: '#171433', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.82rem', padding: '6px 12px', borderRadius: '8px' }}
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+            >
+              <option value="TODOS">Todos los Planes</option>
+              {availablePlans.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                className="input"
+                placeholder="Buscar por ID, Nombre o IP..."
+                style={{
+                  maxWidth: '240px',
+                  marginBottom: 0,
+                  background: '#171433',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  fontSize: '0.82rem',
+                  padding: '6px 12px',
+                  borderRadius: '8px'
+                }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {isAdmin && (
               <button
                 className="btn btn-secondary"
                 onClick={ejecutarFacturacion}
                 disabled={facturando || cooldown > 0}
-                style={{ opacity: (facturando || cooldown > 0) ? 0.7 : 1, cursor: (facturando || cooldown > 0) ? 'not-allowed' : 'pointer' }}
+                style={{
+                  opacity: (facturando || cooldown > 0) ? 0.7 : 1,
+                  cursor: (facturando || cooldown > 0) ? 'not-allowed' : 'pointer',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  whiteSpace: 'nowrap'
+                }}
               >
                 {facturando ? "⏳ Facturando..." : cooldown > 0 ? `⚙️ Facturación (${cooldown}s)` : "⚙️ Facturación Mensual"}
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
-      </div>
 
-      {loading ? <p>Cargando clientes...</p> : (
+        {loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ width: '38px', height: '38px', border: '3px solid rgba(139,92,246,0.2)', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem', fontWeight: 500 }}>Cargando clientes y saldos...</span>
+          </div>
+        ) : (
         <>
-          <div className="pagos-desktop-view">
-            <div className="table-container" style={{ maxHeight: 'calc(100vh - 210px)', overflowY: 'auto', overflowX: 'auto', borderRadius: '12px' }}>
+          <div className="pagos-desktop-view" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="table-container pagos-table-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left' }}>
             <thead style={{ position: 'sticky', top: 0, background: '#15122e', zIndex: 20 }}>
               <tr style={{ background: '#15122e' }}>
@@ -980,10 +1125,18 @@ const Admin = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredClientes.map(c => (
+              {paginatedClientes.map((c, idx) => (
                 <tr key={c.id} style={{
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                  opacity: c.estado?.toUpperCase() === 'PENDIENTE' ? 0.7 : 1,
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.06)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
                 }}>
                   <td style={{ position: 'sticky', left: 0, zIndex: 15, background: '#130f26', padding: '12px 10px', whiteSpace: 'nowrap' }}>{c.id}</td>
                   <td
@@ -1196,9 +1349,14 @@ const Admin = () => {
             </tbody>
           </table>
           {filteredClientes.length === 0 && !loading && (
-            <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No se encontraron clientes.</p>
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔍</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#f1f5f9' }}>No se encontraron clientes</div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>Intenta ajustar los filtros de búsqueda o estado</div>
+            </div>
           )}
         </div>
+        {renderPagination(false)}
       </div>
 
       {/* Vista Móvil de Pagos y Cobros (Fiel a Imagen 1) */}
@@ -1238,7 +1396,8 @@ const Admin = () => {
               No se encontraron clientes.
             </div>
           ) : (
-            filteredClientes.map((c) => {
+            <>
+              {paginatedClientes.map((c) => {
               const clientHR = (hojaRutaList || []).filter(h => Number(h.cliente_id) === Number(c.id));
               const instRecord = clientHR.find(h => h.actividad?.toUpperCase() === 'INSTALACION');
               const fInstalacion = instRecord ? instRecord.fecha : (c.instalation_date || '-');
@@ -1329,7 +1488,9 @@ const Admin = () => {
                   </div>
                 </div>
               );
-            })
+            })}
+            {renderPagination(true)}
+            </>
           )}
         </div>
       </div>
@@ -1913,133 +2074,8 @@ const Admin = () => {
         document.body
       )}
 
-      {/* Modal para Restaurar Base de Datos desde .sql */}
-      {showRestoreModal && createPortal(
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10000, padding: '20px'
-        }}>
-          <div style={{
-            background: '#151030', border: '1px solid rgba(244, 63, 94, 0.4)',
-            borderRadius: '16px', padding: '24px', maxWidth: '580px', width: '100%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.4rem' }}>🗄️</span>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#f43f5e', fontWeight: 'bold' }}>
-                  Restaurar Sistema Completo (.zip / .sql)
-                </h3>
-              </div>
-              {!importingSql && (
-                <button
-                  onClick={() => setShowRestoreModal(false)}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '10px',
-              padding: '14px',
-              marginBottom: '18px'
-            }}>
-              <p style={{ margin: '0 0 6px 0', color: '#fca5a5', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                ⚠️ ADVERTENCIA DE RESTAURACIÓN:
-              </p>
-              <p style={{ margin: 0, color: '#fecaca', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                Si seleccionas un archivo <b>.zip</b>, se restaurará toda la base de datos y se desempacarán automáticamente todas las fotos e imágenes (cédulas, fachadas, dispositivos). También se aceptan archivos <b>.sql</b> tradicionales.
-                <br /><br />
-                <b>Se recomienda descargar un respaldo previo (.zip) antes de proceder.</b>
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '8px' }}>
-                Selecciona el archivo de respaldo (.zip o .sql):
-              </label>
-              <input
-                id="admin-sql-backup-input"
-                type="file"
-                accept=".zip,.sql"
-                disabled={importingSql}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    setSqlFile(e.target.files[0]);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px dashed rgba(244, 63, 94, 0.5)',
-                  borderRadius: '10px',
-                  color: 'white',
-                  cursor: importingSql ? 'not-allowed' : 'pointer'
-                }}
-              />
-              {sqlFile && (
-                <div style={{ marginTop: '10px', fontSize: '0.85rem', color: '#34d399', background: 'rgba(52, 211, 153, 0.1)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
-                  📄 <b>Archivo seleccionado:</b> {sqlFile.name} ({(sqlFile.size / 1024).toFixed(1)} KB)
-                </div>
-              )}
-            </div>
-
-            {importingSql && (
-              <div style={{
-                textAlign: 'center',
-                padding: '16px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                borderRadius: '10px',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                marginBottom: '16px'
-              }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: '6px' }}>⏳ Restaurando base de datos e imágenes...</div>
-                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-                  Desempacando archivos, ejecutando sentencias SQL y verificando integridad. Por favor espere sin cerrar la ventana...
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
-              <button
-                className="btn btn-secondary"
-                disabled={importingSql}
-                onClick={() => {
-                  setShowRestoreModal(false);
-                  setSqlFile(null);
-                }}
-                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
-                disabled={!sqlFile || importingSql}
-                onClick={handleImportarBackupSql}
-                style={{
-                  background: (!sqlFile || importingSql) ? '#4b5563' : '#e11d48',
-                  borderColor: '#e11d48',
-                  padding: '8px 22px',
-                  fontSize: '0.85rem',
-                  fontWeight: 'bold',
-                  cursor: (!sqlFile || importingSql) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {importingSql ? '⏳ Restaurando...' : '🚀 Iniciar Restauración (.zip)'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

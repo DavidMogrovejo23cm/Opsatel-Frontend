@@ -46,6 +46,65 @@ api.interceptors.response.use(
   }
 );
 
+// ─── CACHE GLOBAL DE CLIENTES (LOCALSTORAGE + MEMORIA) ───
+const CLIENTES_CACHE_KEY = 'opsatel_cached_clientes';
+const CLIENTES_CACHE_TIME_KEY = 'opsatel_cached_clientes_time';
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos de validez en caché
+
+let memoryClientesCache = null;
+let memoryClientesCacheTime = 0;
+let inFlightListarPromise = null;
+
+export const clearStoredClientesCache = () => {
+  memoryClientesCache = null;
+  memoryClientesCacheTime = 0;
+  inFlightListarPromise = null;
+  try {
+    localStorage.removeItem(CLIENTES_CACHE_KEY);
+    localStorage.removeItem(CLIENTES_CACHE_TIME_KEY);
+  } catch (e) {
+    // ignorar error de acceso a storage
+  }
+};
+
+export const getStoredClientesCache = () => {
+  const now = Date.now();
+  if (memoryClientesCache && (now - memoryClientesCacheTime) < CACHE_TTL_MS) {
+    return memoryClientesCache;
+  }
+  try {
+    const rawTime = localStorage.getItem(CLIENTES_CACHE_TIME_KEY);
+    const rawData = localStorage.getItem(CLIENTES_CACHE_KEY);
+    if (rawData && rawTime) {
+      const savedTime = parseInt(rawTime, 10);
+      if (!isNaN(savedTime) && (now - savedTime) < CACHE_TTL_MS) {
+        const parsed = JSON.parse(rawData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryClientesCache = parsed;
+          memoryClientesCacheTime = savedTime;
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error al leer caché de clientes en localStorage:', e);
+  }
+  return null;
+};
+
+export const setStoredClientesCache = (data) => {
+  if (!Array.isArray(data)) return;
+  const now = Date.now();
+  memoryClientesCache = data;
+  memoryClientesCacheTime = now;
+  try {
+    localStorage.setItem(CLIENTES_CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(CLIENTES_CACHE_TIME_KEY, now.toString());
+  } catch (e) {
+    console.warn('No se pudo persistir clientes en localStorage (posible límite de cuota):', e);
+  }
+};
+
 export const authService = {
   login: async (username, password) => {
     const response = await api.post('/auth/login', { username, password });
@@ -56,6 +115,7 @@ export const authService = {
         rol: response.data.rol
       }));
       localStorage.setItem('last_activity', Date.now().toString());
+      clearStoredClientesCache();
     }
     return response.data;
   },
@@ -63,6 +123,7 @@ export const authService = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('last_activity');
+    clearStoredClientesCache();
   },
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
@@ -71,28 +132,109 @@ export const authService = {
 };
 
 export const clienteService = {
-  listar: () => api.get('/clientes/'),
-  crear: (data) => api.post('/clientes/', data),
-  actualizar: (id, data) => api.patch(`/clientes/${id}`, data),
+  listar: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = getStoredClientesCache();
+      if (cached) {
+        return { data: cached, status: 200, fromCache: true };
+      }
+    }
+
+    if (inFlightListarPromise) {
+      return inFlightListarPromise;
+    }
+
+    inFlightListarPromise = (async () => {
+      try {
+        const res = await api.get('/clientes/');
+        if (res && Array.isArray(res.data)) {
+          setStoredClientesCache(res.data);
+        }
+        return res;
+      } finally {
+        inFlightListarPromise = null;
+      }
+    })();
+
+    return inFlightListarPromise;
+  },
+  crear: async (data) => {
+    const res = await api.post('/clientes/', data);
+    clearStoredClientesCache();
+    return res;
+  },
+  actualizar: async (id, data) => {
+    const res = await api.patch(`/clientes/${id}`, data);
+    clearStoredClientesCache();
+    return res;
+  },
   getById: (id) => api.get(`/clientes/${id}`),
-  eliminar: (id) => api.delete(`/clientes/${id}`),
-  borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
-  suspenderServicio: (id) => api.post(`/clientes/${id}/suspender-mikrotik`),
-  reactivarServicio: (id) => api.post(`/clientes/${id}/reactivar-mikrotik`),
-  uploadCedula: (id, formData) => api.post(`/clientes/${id}/upload-cedula`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  uploadFachada: (id, formData) => api.post(`/clientes/${id}/upload-fachada`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  uploadDispositivo: (id, formData) => api.post(`/clientes/${id}/upload-dispositivo`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  migrar: (id) => api.post(`/clientes/${id}/migrar`),
-  pasarActivacion: (id) => api.patch(`/clientes/${id}/pasar-a-activacion`),
-  activar: (id, data) => api.patch(`/clientes/${id}/configuracion-tecnica`, data),
-  updateAdmin: (id, data) => api.patch(`/clientes/${id}/administracion`, data),
-  pagar: (id, data) => api.post(`/clientes/${id}/pagar`, data),
+  eliminar: async (id) => {
+    const res = await api.delete(`/clientes/${id}`);
+    clearStoredClientesCache();
+    return res;
+  },
+  borrarDeOlt: async (id) => {
+    const res = await api.post(`/clientes/${id}/borrar-de-olt`);
+    clearStoredClientesCache();
+    return res;
+  },
+  suspenderServicio: async (id) => {
+    const res = await api.post(`/clientes/${id}/suspender-mikrotik`);
+    clearStoredClientesCache();
+    return res;
+  },
+  reactivarServicio: async (id) => {
+    const res = await api.post(`/clientes/${id}/reactivar-mikrotik`);
+    clearStoredClientesCache();
+    return res;
+  },
+  uploadCedula: async (id, formData) => {
+    const res = await api.post(`/clientes/${id}/upload-cedula`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
+  uploadFachada: async (id, formData) => {
+    const res = await api.post(`/clientes/${id}/upload-fachada`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
+  uploadDispositivo: async (id, formData) => {
+    const res = await api.post(`/clientes/${id}/upload-dispositivo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
+  migrar: async (id) => {
+    const res = await api.post(`/clientes/${id}/migrar`);
+    clearStoredClientesCache();
+    return res;
+  },
+  pasarActivacion: async (id) => {
+    const res = await api.patch(`/clientes/${id}/pasar-a-activacion`);
+    clearStoredClientesCache();
+    return res;
+  },
+  activar: async (id, data) => {
+    const res = await api.patch(`/clientes/${id}/configuracion-tecnica`, data);
+    clearStoredClientesCache();
+    return res;
+  },
+  updateAdmin: async (id, data) => {
+    const res = await api.patch(`/clientes/${id}/administracion`, data);
+    clearStoredClientesCache();
+    return res;
+  },
+  pagar: async (id, data) => {
+    const res = await api.post(`/clientes/${id}/pagar`, data);
+    clearStoredClientesCache();
+    return res;
+  },
   getNextTecnicoValues: (nodo, puerto, mac = '', nombre = '', hasBreach = false, cliente_id = '') =>
     api.get('/clientes/siguiente-valor-tecnico', {
       params: {
@@ -104,32 +246,62 @@ export const clienteService = {
         cliente_id
       }
     }),
-  facturacionGlobal: () => api.post('/clientes/facturacion-mensual-global'),
-  cierreMensualGlobal: () => api.post('/clientes/cierre-mensual-global'),
-  pagoGlobalTest: () => api.post('/clientes/pago-global-test'),
+  facturacionGlobal: async () => {
+    const res = await api.post('/clientes/facturacion-mensual-global');
+    clearStoredClientesCache();
+    return res;
+  },
+  cierreMensualGlobal: async () => {
+    const res = await api.post('/clientes/cierre-mensual-global');
+    clearStoredClientesCache();
+    return res;
+  },
+  pagoGlobalTest: async () => {
+    const res = await api.post('/clientes/pago-global-test');
+    clearStoredClientesCache();
+    return res;
+  },
   listarPagos: () => api.get('/clientes/pagos/historial'),
   getHistorialReportes: () => api.get('/clientes/reportes/historial'),
   generarReporte: () => api.post('/clientes/reportes/generar'),
   getDashboardStats: () => api.get('/clientes/dashboard-stats'),
   getPendientesCount: () => api.get('/clientes/pendientes-count'),
   getContador: (estado = 'TODOS') => api.get('/clientes/contador', { params: { estado } }),
-  actualizarConFotos: (id, formData) => api.patch(`/clientes/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  uploadDatabase: (formData) => api.post('/clientes/upload-db', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  actualizarConFotos: async (id, formData) => {
+    const res = await api.patch(`/clientes/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
+  uploadDatabase: async (formData) => {
+    const res = await api.post('/clientes/upload-db', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
   downloadDatabase: () => api.get('/clientes/descargar-completo', {
     responseType: 'blob'
   }),
   parseSmart: (text) => api.post('/clientes/parse-smart', { text }),
   borrarDeOlt: (id) => api.post(`/clientes/${id}/borrar-de-olt`),
   exportSqlBackup: () => api.get('/clientes/backup/export-sql', { responseType: 'blob' }),
-  importSqlBackup: (formData) => api.post('/clientes/backup/import-sql', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  eliminarCompletamente: (id, data) => api.post(`/clientes/${id}/eliminar-completamente`, data),
+  importSqlBackup: async (formData) => {
+    const res = await api.post('/clientes/backup/import-sql', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearStoredClientesCache();
+    return res;
+  },
+  eliminarCompletamente: async (id, data) => {
+    const res = await api.post(`/clientes/${id}/eliminar-completamente`, data);
+    clearStoredClientesCache();
+    return res;
+  },
   listarEliminados: () => api.get('/clientes/eliminados'),
+  clearCache: clearStoredClientesCache,
+  invalidateCache: clearStoredClientesCache,
 };
 
 export const backupService = {
