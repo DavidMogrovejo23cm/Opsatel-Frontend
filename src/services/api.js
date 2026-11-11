@@ -20,7 +20,7 @@ const api = axios.create({
   },
 });
 
-// Interceptor para inyectar Token en cada petición
+// Interceptor para inyecgitar Token en cada petición
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -525,7 +525,7 @@ export const oltService = {
   // MikroTik config por OLT
   updateMikrotikConfig: (id, data) => api.put(`/olt-tasks/config/${id}/mikrotik`, data),
   testMikrotikConfig: (id) => api.post(`/olt-tasks/config/${id}/mikrotik/test`),
-  
+
   // Bulk y Confirmaciones
   bulkActivate: (items, provisionType) => api.post('/olt-tasks/bulk/activate', { items, provision_type: provisionType }),
   getBulkStatus: (bulkId) => api.get(`/olt-tasks/bulk/${bulkId}/status`),
@@ -538,22 +538,22 @@ export const oltService = {
 
 export const libreqosService = {
   // Servidores LibreQoS
-  listServers:   ()         => api.get('/libreqos/servers'),
-  createServer:  (data)     => api.post('/libreqos/servers', data),
-  updateServer:  (id, data) => api.put(`/libreqos/servers/${id}`, data),
-  deleteServer:  (id)       => api.delete(`/libreqos/servers/${id}`),
-  testServer:    (id)       => api.post(`/libreqos/servers/${id}/test`),
-  syncServer:    (id)       => api.post(`/libreqos/servers/${id}/sync`),
-  cleanDuplicates: (id)     => api.post(`/libreqos/servers/${id}/clean-duplicates`),
-  regenerateServer: (id)    => api.post(`/libreqos/servers/${id}/regenerate`),
-  addCustomIp: (id, data)   => api.post(`/libreqos/servers/${id}/add-custom-ip`, data),
-  syncMissingClients: (id)  => api.post(`/libreqos/servers/${id}/sync-missing-clients`),
+  listServers: () => api.get('/libreqos/servers'),
+  createServer: (data) => api.post('/libreqos/servers', data),
+  updateServer: (id, data) => api.put(`/libreqos/servers/${id}`, data),
+  deleteServer: (id) => api.delete(`/libreqos/servers/${id}`),
+  testServer: (id) => api.post(`/libreqos/servers/${id}/test`),
+  syncServer: (id) => api.post(`/libreqos/servers/${id}/sync`),
+  cleanDuplicates: (id) => api.post(`/libreqos/servers/${id}/clean-duplicates`),
+  regenerateServer: (id) => api.post(`/libreqos/servers/${id}/regenerate`),
+  addCustomIp: (id, data) => api.post(`/libreqos/servers/${id}/add-custom-ip`, data),
+  syncMissingClients: (id) => api.post(`/libreqos/servers/${id}/sync-missing-clients`),
   // Cola de trabajos
-  listJobs:      (status)   => api.get('/libreqos/jobs', { params: status ? { status } : {} }),
-  retryJob:      (id)       => api.post(`/libreqos/jobs/${id}/retry`),
+  listJobs: (status) => api.get('/libreqos/jobs', { params: status ? { status } : {} }),
+  retryJob: (id) => api.post(`/libreqos/jobs/${id}/retry`),
   // Estado QoS del cliente
-  getClientQoS:  (id)       => api.get(`/libreqos/clients/${id}/qos`),
-  syncClientNow: (id)       => api.post(`/libreqos/clients/${id}/sync-now`),
+  getClientQoS: (id) => api.get(`/libreqos/clients/${id}/qos`),
+  syncClientNow: (id) => api.post(`/libreqos/clients/${id}/sync-now`),
 };
 
 export default api;
