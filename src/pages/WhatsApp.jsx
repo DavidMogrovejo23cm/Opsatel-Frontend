@@ -3240,6 +3240,57 @@ const WhatsApp = () => {
                                                                 ? '✅ CONFIRMACIÓN DE RECIBO (POR COBRAR)'
                                                                 : '⚠️ PENDIENTES COMPROBANTE'}
                                                         </span>
+                                                        {c.es_duplicado && (
+                                                            <span style={{
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 900,
+                                                                padding: '3px 10px',
+                                                                borderRadius: '20px',
+                                                                background: 'rgba(239, 68, 68, 0.3)',
+                                                                color: '#f87171',
+                                                                border: '1px solid #ef4444'
+                                                            }}>
+                                                                🚨 DUPLICADO
+                                                            </span>
+                                                        )}
+                                                        {c.score_autenticidad !== undefined && c.score_autenticidad !== null && (
+                                                            <span style={{
+                                                                fontSize: '0.74rem',
+                                                                fontWeight: 800,
+                                                                padding: '3px 8px',
+                                                                borderRadius: '20px',
+                                                                background: c.score_autenticidad >= 80 
+                                                                    ? 'rgba(16, 185, 129, 0.2)' 
+                                                                    : c.score_autenticidad >= 50 
+                                                                    ? 'rgba(56, 189, 248, 0.2)' 
+                                                                    : 'rgba(239, 68, 68, 0.2)',
+                                                                color: c.score_autenticidad >= 80 
+                                                                    ? '#34d399' 
+                                                                    : c.score_autenticidad >= 50 
+                                                                    ? '#38bdf8' 
+                                                                    : '#fca5a5',
+                                                                border: '1px solid currentColor'
+                                                            }} title={`Score de autenticidad: ${c.score_autenticidad}%`}>
+                                                                🛡️ {c.score_autenticidad >= 80 ? 'Real Verificado' : c.score_autenticidad >= 50 ? 'Certeza Media' : 'Dudoso'} ({c.score_autenticidad}%)
+                                                            </span>
+                                                        )}
+                                                        {Boolean(
+                                                            (c.beneficiario && /bryan|solano|opsatel|0105905251/i.test(c.beneficiario)) ||
+                                                            (c.cuenta_destino && /2206388858|406060337400|8858|7400/.test(c.cuenta_destino)) ||
+                                                            (c.motivo_validacion && c.motivo_validacion.includes('Cuenta Opsatel Verificada'))
+                                                        ) && (
+                                                            <span style={{
+                                                                fontSize: '0.74rem',
+                                                                fontWeight: 700,
+                                                                padding: '3px 8px',
+                                                                borderRadius: '20px',
+                                                                background: 'rgba(99, 102, 241, 0.22)',
+                                                                color: '#818cf8',
+                                                                border: '1px solid rgba(99, 102, 241, 0.45)'
+                                                            }}>
+                                                                🏛️ Cuenta Opsatel
+                                                            </span>
+                                                        )}
                                                         {idClienteMostrar ? (
                                                             <span style={{
                                                                 fontSize: '0.78rem',
@@ -3272,6 +3323,23 @@ const WhatsApp = () => {
                                                         🕒 {c.fecha_hora ? new Date(c.fecha_hora).toLocaleString('es-EC', { hour12: false }) : 'N/A'}
                                                     </span>
                                                 </div>
+
+                                                {/* Banner especial de duplicado detectado */}
+                                                {c.es_duplicado && (
+                                                    <div style={{
+                                                        padding: '9px 12px',
+                                                        borderRadius: '8px',
+                                                        marginBottom: '10px',
+                                                        fontSize: '0.83rem',
+                                                        background: 'rgba(239, 68, 68, 0.18)',
+                                                        border: '1px solid rgba(239, 68, 68, 0.55)',
+                                                        color: '#fca5a5',
+                                                        fontWeight: 600,
+                                                        lineHeight: 1.4
+                                                    }}>
+                                                        🚨 <strong>COMPROBANTE DUPLICADO:</strong> {c.duplicado_detalle || 'Esta referencia o imagen ya consta previamente en el sistema.'}
+                                                    </div>
+                                                )}
 
                                                 {/* Banner con el motivo de validación */}
                                                 {c.motivo_validacion && (
