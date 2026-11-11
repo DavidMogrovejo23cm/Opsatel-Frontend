@@ -6,7 +6,7 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import axios from 'axios';
-import { normalizePayloadFields } from '../utils/textUtils';
+import { normalizePayloadFields, replaceEnesRecursively } from '../utils/textUtils';
 
 const CLIENTE_TEXT_FIELDS = [
   'nombre', 'direccion', 'parroquia', 'nodo', 'comentarios',
@@ -30,19 +30,32 @@ const api = axios.create({
   },
 });
 
-// Interceptor para inyecgitar Token en cada petición
+// Interceptor para inyecgitar Token en cada petición y estandarizar automáticamente ñ/Ñ -> N
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   config.headers['X-Client-Build'] = SYS_BUILD_SIG;
+
+  // Transformación automática recursiva de ñ/Ñ a N en payloads y parámetros
+  if (config.data && !(config.data instanceof FormData) && !(config.data instanceof Blob)) {
+    config.data = replaceEnesRecursively(config.data);
+  }
+  if (config.params) {
+    config.params = replaceEnesRecursively(config.params);
+  }
   return config;
 });
 
-// Interceptor para capturar expiración de sesión (401) y redirigir limpiamente a login
+// Interceptor para capturar expiración de sesión (401) y estandarizar respuestas entrantes (ñ/Ñ -> N)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response && response.data) {
+      response.data = replaceEnesRecursively(response.data);
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');

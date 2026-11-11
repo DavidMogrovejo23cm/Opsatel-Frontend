@@ -227,7 +227,7 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
     const rangeSpread = +(max - min).toFixed(2);
 
     let status = 'stable';
-    let label = `Señal Estable (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+    let label = `Senal Estable (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
     let icon = '🟢';
     let color = '#10b981';
     let badgeBg = 'rgba(16, 185, 129, 0.15)';
@@ -235,7 +235,7 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
 
     if (rangeSpread > 1.2 || Math.abs(delta) >= 0.8) {
       status = 'unstable';
-      label = `Señal Inestable / Fluctuando (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+      label = `Senal Inestable / Fluctuando (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
       icon = '⚠️';
       color = '#ef4444';
       badgeBg = 'rgba(239, 68, 68, 0.18)';
@@ -243,14 +243,14 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
     } else if (rangeSpread > 0.35 || Math.abs(delta) >= 0.25) {
       if (delta > 0) {
         status = 'improving';
-        label = `Señal Subiendo (+${delta} dBm)`;
+        label = `Senal Subiendo (+${delta} dBm)`;
         icon = '↗️';
         color = '#38bdf8';
         badgeBg = 'rgba(56, 189, 248, 0.15)';
         description = 'La potencia óptica está subiendo (menor atenuación).';
       } else {
         status = 'attenuating';
-        label = `Señal Atenuando (${delta} dBm)`;
+        label = `Senal Atenuando (${delta} dBm)`;
         icon = '↘️';
         color = '#f59e0b';
         badgeBg = 'rgba(245, 158, 11, 0.15)';
@@ -589,7 +589,7 @@ const OntPotenciaModal = ({ isOpen, cliente, onClose, onUpdatePotencia }) => {
                           letterSpacing: '-0.02em',
                           lineHeight: 1.1
                         }}>
-                          {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Señal'}
+                          {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Senal'}
                         </div>
                         <div style={{
                           display: 'inline-block',

@@ -89,7 +89,7 @@ const TECdt = () => {
     const rangeSpread = +(max - min).toFixed(2);
 
     let status = 'stable';
-    let label = `Señal Estable (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+    let label = `Senal Estable (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
     let icon = '🟢';
     let color = '#10b981';
     let badgeBg = 'rgba(16, 185, 129, 0.15)';
@@ -97,7 +97,7 @@ const TECdt = () => {
 
     if (rangeSpread > 1.2 || Math.abs(delta) >= 0.8) {
       status = 'unstable';
-      label = `Señal Inestable / Fluctuando (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
+      label = `Senal Inestable / Fluctuando (Δ ${delta >= 0 ? '+' : ''}${delta} dBm)`;
       icon = '⚠️';
       color = '#ef4444';
       badgeBg = 'rgba(239, 68, 68, 0.18)';
@@ -105,14 +105,14 @@ const TECdt = () => {
     } else if (rangeSpread > 0.35 || Math.abs(delta) >= 0.25) {
       if (delta > 0) {
         status = 'improving';
-        label = `Señal Subiendo (+${delta} dBm)`;
+        label = `Senal Subiendo (+${delta} dBm)`;
         icon = '↗️';
         color = '#38bdf8';
         badgeBg = 'rgba(56, 189, 248, 0.15)';
         description = 'La potencia óptica está subiendo (menor atenuación).';
       } else {
         status = 'attenuating';
-        label = `Señal Atenuando (${delta} dBm)`;
+        label = `Senal Atenuando (${delta} dBm)`;
         icon = '↘️';
         color = '#f59e0b';
         badgeBg = 'rgba(245, 158, 11, 0.15)';
@@ -504,10 +504,10 @@ const TECdt = () => {
               borderColor: showAllPasswords ? 'var(--primary)' : 'var(--glass-border)',
               color: showAllPasswords ? '#a5b4fc' : 'var(--text-main)'
             }}
-            title={showAllPasswords ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+            title={showAllPasswords ? 'Ocultar contrasenas' : 'Mostrar contrasenas'}
           >
             <span>{showAllPasswords ? '🙈' : '👁️'}</span>
-            <span>{showAllPasswords ? 'Ocultar Contraseñas' : 'Mostrar Contraseñas'}</span>
+            <span>{showAllPasswords ? 'Ocultar Contrasenas' : 'Mostrar Contrasenas'}</span>
           </button>
 
           <motion.button
@@ -558,7 +558,7 @@ const TECdt = () => {
             <input
               type="text"
               className="input"
-              placeholder="Buscar por Nombre, ID, Número, Red, Contraseña, IP, NAP o Ubicación..."
+              placeholder="Buscar por Nombre, ID, Número, Red, Contrasena, IP, NAP o Ubicación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -669,7 +669,7 @@ const TECdt = () => {
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '220px' }}>CLIENTE</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>NÚMERO</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>RED</th>
-                  <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>CONTRASEÑA</th>
+                  <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '150px' }}>CONTRASENA</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '140px' }}>IP</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '100px' }}>NAP</th>
                   <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontWeight: '700', minWidth: '240px' }}>UBICACIÓN</th>
@@ -807,12 +807,12 @@ const TECdt = () => {
                         )}
                       </td>
 
-                      {/* CONTRASEÑA */}
+                      {/* CONTRASENA */}
                       <td style={{ padding: '12px 16px' }}>
                         {contrasena !== '-' ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span
-                              onClick={() => handleCopy(contrasena, `Contraseña de ${nombre}`)}
+                              onClick={() => handleCopy(contrasena, `Contrasena de ${nombre}`)}
                               style={{
                                 fontFamily: 'monospace',
                                 color: '#f472b6',
@@ -823,7 +823,7 @@ const TECdt = () => {
                                 cursor: 'pointer',
                                 letterSpacing: isPassVisible ? 'normal' : '0.15em'
                               }}
-                              title="Click para copiar contraseña"
+                              title="Click para copiar contrasena"
                             >
                               {isPassVisible ? contrasena : '••••••••'}
                             </span>
@@ -1082,7 +1082,7 @@ const TECdt = () => {
                             {c.nombre || '-'}
                           </div>
                           <div className="tecdt-mobile-subinfo">
-                            ID #{c.id} · Nodo: {c.nodo || c.nap || 'BAÑOS'}
+                            ID #{c.id} · Nodo: {c.nodo || c.nap || 'BANOS'}
                           </div>
                         </div>
                         <div className={`pagos-mobile-status-badge ${isActivo ? 'activo' : 'inactivo'}`}>
@@ -1131,7 +1131,7 @@ const TECdt = () => {
                         </div>
                       </div>
 
-                      {/* Acordeón Datos Técnicos (Red y Contraseña) */}
+                      {/* Acordeón Datos Técnicos (Red y Contrasena) */}
                       <div className={`tecdt-mobile-accordion ${isTecOpen ? 'open' : ''}`}>
                         <div
                           className="tecdt-mobile-accordion-head"
@@ -1144,7 +1144,7 @@ const TECdt = () => {
                             <div>
                               <div className="tecdt-mobile-accordion-title">Datos técnicos</div>
                               <div className="tecdt-mobile-accordion-sub">
-                                {isTecOpen ? 'Red y contraseña' : 'Red y contraseña ocultas'}
+                                {isTecOpen ? 'Red y contrasena' : 'Red y contrasena ocultas'}
                               </div>
                             </div>
                           </div>
@@ -1184,12 +1184,12 @@ const TECdt = () => {
                               </div>
                             </div>
 
-                            {/* Contraseña */}
+                            {/* Contrasena */}
                             <div className="tecdt-mobile-cred-item">
                               <div className="tecdt-mobile-cred-left">
                                 <span>🔒</span>
                                 <div>
-                                  <span className="tecdt-mobile-cred-label">Contraseña</span>
+                                  <span className="tecdt-mobile-cred-label">Contrasena</span>
                                   <span className="tecdt-mobile-cred-val">{passVal}</span>
                                 </div>
                               </div>
@@ -1198,15 +1198,15 @@ const TECdt = () => {
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
                                   onClick={() => togglePasswordVisibility(id)}
-                                  title="Mostrar/Ocultar Contraseña"
+                                  title="Mostrar/Ocultar Contrasena"
                                 >
                                   {revealedPasswords[id] ? '👁️‍🗨️' : '👁️'}
                                 </button>
                                 <button
                                   type="button"
                                   className="tecdt-mobile-icon-btn"
-                                  onClick={() => handleCopy(c.clave || c.contrasena || c.iptv_pass, 'Contraseña')}
-                                  title="Copiar Contraseña"
+                                  onClick={() => handleCopy(c.clave || c.contrasena || c.iptv_pass, 'Contrasena')}
+                                  title="Copiar Contrasena"
                                 >
                                   📋
                                 </button>
@@ -1413,7 +1413,7 @@ const TECdt = () => {
                           lineHeight: 1.1,
                           marginTop: '4px'
                         }}>
-                          {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Señal'}
+                          {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Senal'}
                         </div>
                         <div style={{
                           display: 'inline-block',
@@ -1426,7 +1426,7 @@ const TECdt = () => {
                           fontWeight: '700',
                           color: statusColor
                         }}>
-                          {isOptimal ? '🟢 POTENCIA ÓPTIMA' : isAcceptable ? '🟡 ATENUADA / RIESGO' : hasValidRx ? '🔴 CRÍTICA' : '⚪ SIN SEÑAL'}
+                          {isOptimal ? '🟢 POTENCIA ÓPTIMA' : isAcceptable ? '🟡 ATENUADA / RIESGO' : hasValidRx ? '🔴 CRÍTICA' : '⚪ SIN SENAL'}
                         </div>
                       </div>
 
@@ -1555,7 +1555,7 @@ const TECdt = () => {
                     {selectedMobileClient.nombre}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>
-                    ID #{selectedMobileClient.id} · Nodo: {selectedMobileClient.nodo || selectedMobileClient.nap || 'BAÑOS'}
+                    ID #{selectedMobileClient.id} · Nodo: {selectedMobileClient.nodo || selectedMobileClient.nap || 'BANOS'}
                   </div>
                 </div>
               </div>
@@ -1918,7 +1918,7 @@ const TECdt = () => {
                               letterSpacing: '-0.02em',
                               lineHeight: 1
                             }}>
-                              {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Señal'}
+                              {hasValidRx ? `${rxNum.toFixed(2)} dBm` : 'Sin Senal'}
                             </div>
                             <div style={{
                               display: 'inline-block',

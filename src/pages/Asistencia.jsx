@@ -579,7 +579,7 @@ const Asistencia = () => {
                 <thead>
                   <tr>
                     <th>Empleado</th>
-                    <th>Entrada 1 (Mañana)</th>
+                    <th>Entrada 1 (Manana)</th>
                     <th>Salida 1 (Almuerzo)</th>
                     <th>Entrada 2 (Tarde)</th>
                     <th>Salida 2 (Jornada)</th>
@@ -620,7 +620,7 @@ const Asistencia = () => {
                   <form onSubmit={handleSaveHorario}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
                       <div>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Entrada Mañana:</label>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Entrada Manana:</label>
                         <input
                           type="time"
                           className="input"

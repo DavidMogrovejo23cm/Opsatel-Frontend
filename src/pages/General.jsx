@@ -541,7 +541,7 @@ const General = () => {
     const p = iptvModalPass.trim();
 
     if (!u || !p) {
-      showWarning('Por favor ingrese tanto el usuario como la contraseña de la cuenta IPTV.');
+      showWarning('Por favor ingrese tanto el usuario como la contrasena de la cuenta IPTV.');
       return;
     }
 
@@ -3583,12 +3583,12 @@ const General = () => {
 
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
-                  🔑 Contraseña IPTV <span style={{ color: '#f87171' }}>*</span>
+                  🔑 Contrasena IPTV <span style={{ color: '#f87171' }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="input"
-                  placeholder="Ingrese la contraseña IPTV..."
+                  placeholder="Ingrese la contrasena IPTV..."
                   value={iptvModalPass}
                   onChange={(e) => setIptvModalPass(e.target.value)}
                   style={{ width: '100%', marginBottom: 0, background: '#1e1b4b', borderColor: 'rgba(255,255,255,0.15)' }}

@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
    OPSATEL — SISTEMA DE RESPONSIVE DESIGN ESTÁNDAR
    Breakpoints oficiales:
-   • Móviles pequeños: 320px (<= 359px)
+   • Móviles pequenos: 320px (<= 359px)
    • Smartphones estándar / móviles grandes: 360px – 480px
    • Tabletas: 768px (481px – 768px / hasta 1024px)
-   • Ordenadores de sobremesa / portátiles pequeños: 1024px – 1366px
+   • Ordenadores de sobremesa / portátiles pequenos: 1024px – 1366px
    • Monitores grandes de escritorio: 1440px en adelante
      (con contenedores principales centrados de 1140px a 1200px)
    ═══════════════════════════════════════════════════════════════ */
@@ -41,7 +41,7 @@ html, body {
 
 /* ─────────────────────────────────────────────────────────────
    1. MONITORES GRANDES DE ESCRITORIO (1440px en adelante)
-   Diseño fluido al 100%: rellena toda la pantalla eliminando espacios vacíos
+   Diseno fluido al 100%: rellena toda la pantalla eliminando espacios vacíos
    ───────────────────────────────────────────────────────────── */
 @media (min-width: 1440px) {
   .app-main-layout {
@@ -72,7 +72,7 @@ html, body {
     flex-wrap: wrap !important;
   }
 
-  /* Botones accesibles con tamaño óptimo */
+  /* Botones accesibles con tamano óptimo */
   .btn, .hr-btn, .hr-btn-secondary {
     min-height: 40px;
     padding: 8px 18px;
@@ -126,7 +126,7 @@ html, body {
     min-width: 160px;
   }
 
-  /* Tablas: tamaño de celda optimizado para laptops */
+  /* Tablas: tamano de celda optimizado para laptops */
   .hr-table th, .hr-table td,
   table th, table td {
     padding: 10px 8px !important;
@@ -483,8 +483,8 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   5. MÓVILES PEQUEÑOS (320px – 359px)
-   Diseñado para pantallas ultracompactas (iPhone SE 1ra gen, mini Androids)
+   5. MÓVILES PEQUENOS (320px – 359px)
+   Disenado para pantallas ultracompactas (iPhone SE 1ra gen, mini Androids)
    Asegura que absolutamente todo se lea, se acople y sea clickeable
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 359.98px) {

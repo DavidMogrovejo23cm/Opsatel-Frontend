@@ -761,7 +761,7 @@ const ExtrasGeneral = () => {
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTACTO</th>
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>PROVEEDOR</th>
                                 <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>USUARIO</th>
-                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTRASEÑA</th>
+                                <th rowSpan="2" style={{ width: '130px', padding: '15px' }}>CONTRASENA</th>
                                 <th rowSpan="2" style={{ width: '80px', padding: '15px' }}>CUENTAS</th>
                                 <th rowSpan="2" style={{ width: '160px', padding: '15px' }}>MAC SMART ONE</th>
                                 <th rowSpan="2" style={{ width: '180px', padding: '15px' }}>OBSERVACIONES</th>
@@ -906,12 +906,12 @@ const ExtrasGeneral = () => {
                                             )}
                                         </td>
 
-                                        {/* CONTRASEÑA */}
+                                        {/* CONTRASENA */}
                                         <td 
                                             className={`editable-td ${editingCell?.id === e.id && editingCell?.field === 'contrasena' ? 'editable-td-active' : ''}`}
                                             onClick={() => handleStartEdit(e, 'contrasena', e.contrasena)}
                                             style={{ width: '130px', padding: editingCell?.id === e.id && editingCell?.field === 'contrasena' ? '3px' : '14px', borderRight: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                            title="Clic para editar Contraseña"
+                                            title="Clic para editar Contrasena"
                                         >
                                             {editingCell?.id === e.id && editingCell?.field === 'contrasena' ? (
                                                 <input
@@ -1371,7 +1371,7 @@ const ExtrasGeneral = () => {
                                         <input className="input" name="usuario" value={formData.usuario} onChange={e => setFormData({ ...formData, usuario: e.target.value })} />
                                     </div>
                                     <div className="form-group">
-                                        <label className="label">CONTRASEÑA</label>
+                                        <label className="label">CONTRASENA</label>
                                         <input className="input" type="text" name="contrasena" value={formData.contrasena} onChange={e => setFormData({ ...formData, contrasena: e.target.value })} />
                                     </div>
                                     <div className="form-group">

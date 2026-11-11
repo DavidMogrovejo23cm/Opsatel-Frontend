@@ -919,7 +919,7 @@ const ExtraPagos = () => {
                           </span>
                           <button
                             onClick={() => openRefModal(e)}
-                            title="Añadir comentario o referencia"
+                            title="Agregar comentario o referencia"
                             style={{
                               background: 'transparent',
                               border: '1px dashed rgba(255,255,255,0.2)',

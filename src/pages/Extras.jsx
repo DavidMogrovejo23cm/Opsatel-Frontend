@@ -207,7 +207,7 @@ const Extras = () => {
                   <input className="input" name="usuario" placeholder="Username" value={formData.usuario} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label">Contraseña</label>
+                  <label className="label">Contrasena</label>
                   <input className="input" name="contrasena" type="text" placeholder="Password" value={formData.contrasena} onChange={handleChange} />
                 </div>
 

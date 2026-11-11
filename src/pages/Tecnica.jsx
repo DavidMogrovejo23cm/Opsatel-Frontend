@@ -424,7 +424,7 @@ const Tecnica = () => {
                 </select>
                 {getPuertosDisponibles().length === 0 && (
                   <span style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
-                    ⚠️ Este nodo no tiene puertos. Vaya a Configuraciones → Puertos para añadir uno.
+                    ⚠️ Este nodo no tiene puertos. Vaya a Configuraciones → Puertos para agregar uno.
                   </span>
                 )}
               </div>
@@ -541,7 +541,7 @@ const Tecnica = () => {
                   const cajasFiltradas = nodoObj ? cajasNapList.filter(c => c.nodo_id === nodoObj.id) : cajasNapList;
                   if (cajasFiltradas.length === 0) return (
                     <span style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
-                      ⚠️ Sin cajas para este nodo. Añádalas en Configuraciones → Cajas NAP.
+                      ⚠️ Sin cajas para este nodo. Agréguelas en Configuraciones → Cajas NAP.
                     </span>
                   );
                   return null;

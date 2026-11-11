@@ -275,9 +275,9 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                             <span className="search-tech-badge" title="ID Port">⚡ ID Port: {c.id_port}</span>
                           )}
 
-                          {/* Clave / Contraseña WiFi o PPPoE */}
+                          {/* Clave / Contrasena WiFi o PPPoE */}
                           {(c.clave || c.password || c.contrasena) && (
-                            <span className="search-tech-badge key" title="Clave / Contraseña">
+                            <span className="search-tech-badge key" title="Clave / Contrasena">
                               🔑 Clave: {c.clave || c.password || c.contrasena}
                             </span>
                           )}

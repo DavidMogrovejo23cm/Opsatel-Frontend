@@ -27,7 +27,7 @@ const LoginPage = () => {
       await login(username, password);
       navigate('/');
     } catch (err) {
-      setError('Usuario o contraseña incorrectos');
+      setError('Usuario o contrasena incorrectos');
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Contraseña"
+                  placeholder="Contrasena"
                   className="login-clean-input"
                   autoComplete="current-password"
                 />
@@ -155,8 +155,8 @@ const LoginPage = () => {
                   type="button"
                   className="login-password-toggle-btn"
                   onClick={() => setShowPassword(prev => !prev)}
-                  title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-                  aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                  title={showPassword ? "Ocultar contrasena" : "Ver contrasena"}
+                  aria-label={showPassword ? "Ocultar contrasena" : "Ver contrasena"}
                 >
                   {showPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

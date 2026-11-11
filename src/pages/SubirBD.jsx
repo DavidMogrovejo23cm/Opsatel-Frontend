@@ -932,7 +932,7 @@ const SubirBD = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Contraseña de Aplicación</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Contrasena de Aplicación</label>
                   <input
                     type="password"
                     placeholder="••••••••••••"
@@ -1064,7 +1064,7 @@ const SubirBD = () => {
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
                   <th style={{ padding: '12px 14px' }}>Archivo de Respaldo</th>
                   <th style={{ padding: '12px 14px' }}>Fecha y Hora</th>
-                  <th style={{ padding: '12px 14px' }}>Tamaño</th>
+                  <th style={{ padding: '12px 14px' }}>Tamano</th>
                   <th style={{ padding: '12px 14px', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
@@ -1156,7 +1156,7 @@ const SubirBD = () => {
             </div>
             <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', lineHeight: '1.6' }}>
               Descarga un respaldo completo y unificado de toda la información almacenada en el sistema.
-              El archivo Excel generado contendrá pestañas individuales para:
+              El archivo Excel generado contendrá pestanas individuales para:
             </p>
             <ul style={{ color: 'rgba(255,255,255,0.6)', paddingLeft: '20px', marginBottom: '32px', lineHeight: '1.8', fontSize: '0.95rem' }}>
               <li>Clientes en cualquier estado (Activos, Suspendidos, Retirados y Eliminados)</li>
@@ -1248,7 +1248,7 @@ const SubirBD = () => {
               {file ? file.name : 'Arrastra tu archivo Excel aquí o haz clic'}
             </h3>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
-              {file ? `Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Formatos permitidos: .xlsx, .xls'}
+              {file ? `Tamano: ${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Formatos permitidos: .xlsx, .xls'}
             </p>
           </div>
 
@@ -1340,7 +1340,7 @@ const SubirBD = () => {
                 <span>📥</span> Descargar Excel Extras
               </h3>
               <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem', lineHeight: '1.5', marginBottom: '20px' }}>
-                Exporta el libro de Excel con la cuadrícula completa de Extras (Enero a Diciembre), pagos registrados, saldos, usuarios y contraseñas.
+                Exporta el libro de Excel con la cuadrícula completa de Extras (Enero a Diciembre), pagos registrados, saldos, usuarios y contrasenas.
               </p>
             </div>
             <button

@@ -105,7 +105,7 @@ const Reportes = () => {
               <thead style={{ background: 'rgba(15, 23, 42, 0.95)' }}>
                 <tr>
                   <th style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}># ID</th>
-                  <th style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}>Mes / Año</th>
+                  <th style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}>Mes / Anio</th>
                   <th style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textAlign: 'left' }}>Fecha y Hora de Cierre</th>
                   <th style={{ padding: '12px', borderBottom: '1px solid var(--glass-border)', textAlign: 'center' }}>Acción</th>
                 </tr>

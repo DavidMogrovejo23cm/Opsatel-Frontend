@@ -1866,7 +1866,7 @@ const CallCenter = () => {
                 </div>
 
                 {/* ═════════════════════════════════════════════
-                    COLUMNA 2: CONVERSACIÓN DE WHATSAPP (MATCH CON DISEÑO)
+                    COLUMNA 2: CONVERSACIÓN DE WHATSAPP (MATCH CON DISENO)
                 ═════════════════════════════════════════════ */}
                 <div style={{
                   background: 'rgba(15, 20, 36, 0.65)',
@@ -1937,7 +1937,7 @@ const CallCenter = () => {
                         ⌛ Cargando mensajes de WhatsApp...
                       </div>
                     ) : chatMensajes.length === 0 ? (
-                      /* Empty State idéntico al diseño del usuario */
+                      /* Empty State idéntico al diseno del usuario */
                       <div style={{
                         flex: 1, display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center',

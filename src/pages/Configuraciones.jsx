@@ -97,7 +97,7 @@ const Configuraciones = () => {
     const [selectedClienteExentoId, setSelectedClienteExentoId] = useState('');
     const [searchExentoText, setSearchExentoText] = useState('');
 
-    // --- Estados para Pestaña Backup / Respaldos Automáticos ---
+    // --- Estados para Pestana Backup / Respaldos Automáticos ---
     const [backupConfig, setBackupConfig] = useState({
         enabled: false,
         frecuencia: 'cada_dia', // 'cada_5min', 'cada_hora', 'cada_dia', 'cada_semana', 'cada_mes'
@@ -423,7 +423,7 @@ const Configuraciones = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Cargar datos de LibreQoS cuando se entra a esa pestaña
+    // Cargar datos de LibreQoS cuando se entra a esa pestana
     const [activeTab, setActiveTab] = useState('Nodos');
     useEffect(() => {
         if (activeTab === 'LibreQoS') fetchLqData();
@@ -1349,7 +1349,7 @@ const Configuraciones = () => {
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '12px' }}>
                 {activeTab === 'Nodos' && (
                     <div>
-                        <h3>Añadir Nodo</h3>
+                        <h3>Agregar Nodo</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre</label>
@@ -1370,11 +1370,11 @@ const Configuraciones = () => {
 
                 {activeTab === 'Parroquias' && (
                     <div>
-                        <h3>Añadir Parroquia</h3>
+                        <h3>Agregar Parroquia</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre de la Parroquia</label>
-                                <input className="input" style={{ margin: 0 }} value={newParroquia.nombre} onChange={e => setNewParroquia({ nombre: e.target.value.toUpperCase() })} placeholder="Ej. BAÑOS" />
+                                <input className="input" style={{ margin: 0 }} value={newParroquia.nombre} onChange={e => setNewParroquia({ nombre: e.target.value.toUpperCase() })} placeholder="Ej. BANOS" />
                             </div>
                             <button className="btn btn-primary" onClick={() => handleCreate('Parroquias')}>{isEditingParroquia ? 'Actualizar' : 'Guardar'}</button>
                             {isEditingParroquia && (
@@ -1387,7 +1387,7 @@ const Configuraciones = () => {
 
                 {activeTab === 'Cajas NAP' && (
                     <div>
-                        <h3>Añadir Caja NAP</h3>
+                        <h3>Agregar Caja NAP</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre de la Caja NAP</label>
@@ -1422,7 +1422,7 @@ const Configuraciones = () => {
 
                 {activeTab === 'Planes' && (
                     <div>
-                        <h3>Añadir Plan</h3>
+                        <h3>Agregar Plan</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre del Plan</label>
@@ -1451,7 +1451,7 @@ const Configuraciones = () => {
 
                 {activeTab === 'Bancos' && (
                     <div>
-                        <h3>Añadir Banco</h3>
+                        <h3>Agregar Banco</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nombre</label>
@@ -1468,7 +1468,7 @@ const Configuraciones = () => {
 
                 {activeTab === 'Puertos' && (
                     <div>
-                        <h3>Añadir Puerto por Nodo</h3>
+                        <h3>Agregar Puerto por Nodo</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Nodo</label>
@@ -1525,7 +1525,7 @@ const Configuraciones = () => {
 
                 {activeTab === 'Usuarios' && (
                     <div>
-                        <h3>{isEditingUser ? 'Editar Usuario' : 'Añadir Usuario'}</h3>
+                        <h3>{isEditingUser ? 'Editar Usuario' : 'Agregar Usuario'}</h3>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label className="label">Username</label>
@@ -1895,11 +1895,11 @@ const Configuraciones = () => {
                             </h3>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '850px', lineHeight: 1.5 }}>
                                 Estas operaciones ejecutan limpiezas masivas y reinicios en la base de datos del sistema. 
-                                <strong> Todas estas acciones son irreversibles</strong> y requieren ingresar la contraseña de administrador para desbloquearse.
+                                <strong> Todas estas acciones son irreversibles</strong> y requieren ingresar la contrasena de administrador para desbloquearse.
                             </p>
                         </div>
 
-                        {/* Contraseña de Confirmación */}
+                        {/* Contrasena de Confirmación */}
                         <div style={{
                             background: 'rgba(239, 68, 68, 0.08)',
                             border: '1px solid rgba(239, 68, 68, 0.25)',
@@ -1909,20 +1909,20 @@ const Configuraciones = () => {
                             marginBottom: '28px'
                         }}>
                             <label className="label" style={{ color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                🔒 Contraseña de Administrador para Desbloquear
+                                🔒 Contrasena de Administrador para Desbloquear
                             </label>
                             <input
                                 type="password"
                                 className="input"
                                 value={passwordDeleteClientes}
                                 onChange={e => setPasswordDeleteClientes(e.target.value)}
-                                placeholder="Ingresa contraseña de admin..."
+                                placeholder="Ingresa contrasena de admin..."
                                 style={{ marginTop: '8px' }}
                             />
                             <div style={{ fontSize: '0.78rem', marginTop: '6px', color: passwordDeleteClientes === 'admin1.@' ? '#34d399' : '#94a3b8' }}>
                                 {passwordDeleteClientes === 'admin1.@' 
                                     ? '✅ Acciones desbloqueadas correctamente' 
-                                    : 'ℹ️ Ingresa la contraseña de confirmación para habilitar los botones.'}
+                                    : 'ℹ️ Ingresa la contrasena de confirmación para habilitar los botones.'}
                             </div>
                         </div>
 
@@ -1954,7 +1954,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2017,7 +2017,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2080,7 +2080,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2150,7 +2150,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2224,7 +2224,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2305,7 +2305,7 @@ const Configuraciones = () => {
                                     disabled={passwordDeleteClientes !== 'admin1.@' || actionLoading}
                                     onClick={async () => {
                                         if (passwordDeleteClientes !== 'admin1.@') {
-                                            showError('Contraseña incorrecta');
+                                            showError('Contrasena incorrecta');
                                             return;
                                         }
                                         const c1 = await showConfirm(
@@ -2369,7 +2369,7 @@ const Configuraciones = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
                                 <div className="input-group" style={{ margin: 0 }}>
                                     <label className="label">Nombre</label>
-                                    <input className="input" style={{ margin: 0 }} value={newOlt.nombre} onChange={e => setNewOlt({ ...newOlt, nombre: e.target.value.toUpperCase() })} placeholder="Ej. OLT-BAÑOS" />
+                                    <input className="input" style={{ margin: 0 }} value={newOlt.nombre} onChange={e => setNewOlt({ ...newOlt, nombre: e.target.value.toUpperCase() })} placeholder="Ej. OLT-BANOS" />
                                 </div>
                                 <div className="input-group" style={{ margin: 0 }}>
                                     <label className="label">Host / IP</label>
@@ -2570,7 +2570,7 @@ const Configuraciones = () => {
                                             <div className="input-group" style={{ margin: 0 }}>
                                                 <label className="label" style={{ color: '#cbd5e1' }}>Método Auth</label>
                                                 <select className="input" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} value={lqForm.auth_method} onChange={e => setLqForm({ ...lqForm, auth_method: e.target.value })}>
-                                                    <option value="password">Contraseña</option>
+                                                    <option value="password">Contrasena</option>
                                                     <option value="key">Clave Privada</option>
                                                 </select>
                                             </div>
@@ -2681,7 +2681,7 @@ const Configuraciones = () => {
                             </div>
                         </div>
 
-                        {/* Grid de Servidores LibreQoS (Baños, Sayausí, etc.) */}
+                        {/* Grid de Servidores LibreQoS (Banos, Sayausí, etc.) */}
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
@@ -2701,7 +2701,7 @@ const Configuraciones = () => {
                                     <div style={{ fontSize: '2rem', marginBottom: 8 }}>🌐 🔌</div>
                                     <h4 style={{ color: '#38bdf8', marginBottom: 6 }}>No hay servidores LibreQoS registrados</h4>
                                     <p style={{ fontSize: '0.85rem', marginBottom: 16 }}>
-                                        Registra tus servidores para Baños y Sayausí para poder gestionar el shaper y eliminar duplicados.
+                                        Registra tus servidores para Banos y Sayausí para poder gestionar el shaper y eliminar duplicados.
                                     </p>
                                     <button
                                         className="btn btn-primary"
@@ -2821,7 +2821,7 @@ const Configuraciones = () => {
                                                         {lqCleaning === server.id ? '⏳ Limpiando...' : '🧹 Limpiar Duplicados'}
                                                     </button>
 
-                                                    {/* Botón 2: Añadir IPs Sueltas */}
+                                                    {/* Botón 2: Agregar IPs Sueltas */}
                                                     <button
                                                         className="btn"
                                                         onClick={() => handleOpenCustomIpModal(server)}
@@ -2840,9 +2840,9 @@ const Configuraciones = () => {
                                                             justifyContent: 'center',
                                                             gap: 6
                                                         }}
-                                                        title="Añadir una IP suelta individual o sincronizar clientes faltantes"
+                                                        title="Agregar una IP suelta individual o sincronizar clientes faltantes"
                                                     >
-                                                        ➕ Añadir IPs Sueltas
+                                                        ➕ Agregar IPs Sueltas
                                                     </button>
                                                 </div>
 
@@ -2971,8 +2971,8 @@ const Configuraciones = () => {
                                 <strong style={{ color: '#38bdf8' }}>Gestión Inteligente de IPs y Duplicados:</strong>
                                 <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>
                                     • <strong>🧹 Limpiar Duplicados:</strong> Elimina las repeticiones, sincroniza los planes con la BD y conserva intactas las IPs libres o externas.<br />
-                                    • <strong>➕ Añadir IPs Sueltas:</strong> Permite ingresar cualquier IP manual o cliente individual con su velocidad de bajada/subida.<br />
-                                    • <strong>📥 Sincronizar Faltantes:</strong> Añade todas las IPs de clientes activos de la BD que aún no figuren en el shaper.
+                                    • <strong>➕ Agregar IPs Sueltas:</strong> Permite ingresar cualquier IP manual o cliente individual con su velocidad de bajada/subida.<br />
+                                    • <strong>📥 Sincronizar Faltantes:</strong> Agrega todas las IPs de clientes activos de la BD que aún no figuren en el shaper.
                                 </div>
                             </div>
                         </div>
@@ -2980,7 +2980,7 @@ const Configuraciones = () => {
                 )}
 
                 {/* ========================================================= */}
-                {/* PESTAÑA: BACKUP Y RESPALDOS AUTOMÁTICOS PROGRAMADOS */}
+                {/* PESTANA: BACKUP Y RESPALDOS AUTOMÁTICOS PROGRAMADOS */}
                 {/* ========================================================= */}
                 {activeTab === 'Backup' && (
                     <div style={{ animation: 'fadeIn 0.25s ease-in-out' }}>
@@ -3913,7 +3913,7 @@ const Configuraciones = () => {
                                         <span>📋</span> Historial de Envíos Realizados ({backupConfig.historial?.length || 0})
                                     </h4>
                                     <p style={{ margin: '2px 0 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>
-                                        Registro de cada respaldo ejecutado, fecha, tamaño y el ID de Telegram a quien fue despachado
+                                        Registro de cada respaldo ejecutado, fecha, tamano y el ID de Telegram a quien fue despachado
                                     </p>
                                 </div>
 
@@ -3957,7 +3957,7 @@ const Configuraciones = () => {
                                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
                                                 <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
                                                 <th style={{ padding: '10px 12px' }}>Archivo</th>
-                                                <th style={{ padding: '10px 12px' }}>Tamaño</th>
+                                                <th style={{ padding: '10px 12px' }}>Tamano</th>
                                                 <th style={{ padding: '10px 12px' }}>Canal</th>
                                                 <th style={{ padding: '10px 12px' }}>Destinatario (Chat ID)</th>
                                                 <th style={{ padding: '10px 12px' }}>Estado</th>
@@ -4060,7 +4060,7 @@ const Configuraciones = () => {
                                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
                                                 <th style={{ padding: '10px 12px' }}>Archivo</th>
                                                 <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
-                                                <th style={{ padding: '10px 12px' }}>Tamaño</th>
+                                                <th style={{ padding: '10px 12px' }}>Tamano</th>
                                                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Acciones</th>
                                             </tr>
                                         </thead>
@@ -4113,12 +4113,12 @@ const Configuraciones = () => {
                 )}
 
 
-                {/* Modal emergente para Añadir IPs Sueltas */}
+                {/* Modal emergente para Agregar IPs Sueltas */}
                 {showCustomIpModal && selectedServerForCustomIp && (
                     <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                         <div className="modal" style={{ background: '#1e293b', border: '1px solid rgba(16,185,129,0.3)', padding: 24, borderRadius: 12, width: '480px', maxWidth: '95%' }}>
                             <h3 style={{ color: '#fff', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                ➕ Añadir IP Suelta a: {selectedServerForCustomIp.name}
+                                ➕ Agregar IP Suelta a: {selectedServerForCustomIp.name}
                             </h3>
                             <p style={{ fontSize: '0.84rem', color: '#94a3b8', marginBottom: 18 }}>
                                 Ingresa la IP. Si la IP pertenece a un cliente registrado en Opsatel, se autocompletará su nombre y su plan de megas automáticamente.
@@ -4188,7 +4188,7 @@ const Configuraciones = () => {
                                     disabled={customIpSaving}
                                     style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', fontWeight: 600 }}
                                 >
-                                    {customIpSaving ? 'Guardando...' : '➕ Añadir a LibreQoS'}
+                                    {customIpSaving ? 'Guardando...' : '➕ Agregar a LibreQoS'}
                                 </button>
                             </div>
                         </div>

@@ -4118,7 +4118,7 @@ const Balance = () => {
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28, background: 'rgba(255,255,255,0.03)', padding: '12px 20px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
-          <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>📆 Año Contable:</label>
+          <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>📆 Anio Contable:</label>
           <select value={anio} onChange={e => setAnio(parseInt(e.target.value, 10))}
             style={{ ...IS, width: 'auto' }}>
             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y} style={OS}>{y}</option>)}
@@ -5296,7 +5296,7 @@ const Balance = () => {
           />
         </div>
 
-        {/* SUB-PESTAÑAS DE HOJAS */}
+        {/* SUB-PESTANAS DE HOJAS */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{
             display: 'flex',
@@ -5952,7 +5952,7 @@ const Balance = () => {
               })}
             </div>
 
-            {/* Nivel 2: Sub-pestañas activas */}
+            {/* Nivel 2: Sub-pestanas activas */}
             <div style={{
               display: 'flex',
               gap: 6,

@@ -44,3 +44,27 @@ export function normalizePayloadFields(obj, fields = []) {
   }
   return copy;
 }
+
+/**
+ * Reemplaza de forma recursiva cualquier 'ñ' o 'Ñ' por 'N' en cualquier estructura (strings, arrays, objetos).
+ * @param {any} obj
+ * @returns {any}
+ */
+export function replaceEnesRecursively(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    return obj.replace(/ñ/g, 'N').replace(/Ñ/g, 'N');
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(replaceEnesRecursively);
+  }
+  if (typeof obj === 'object' && !(obj instanceof FormData) && !(obj instanceof Blob)) {
+    const out = {};
+    for (const k of Object.keys(obj)) {
+      const cleanKey = k.replace(/ñ/g, 'N').replace(/Ñ/g, 'N');
+      out[cleanKey] = replaceEnesRecursively(obj[k]);
+    }
+    return out;
+  }
+  return obj;
+}

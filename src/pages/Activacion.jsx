@@ -49,9 +49,9 @@ const Activacion = () => {
   const [refreshStep, setRefreshStep] = useState('');
   const [refreshingPower, setRefreshingPower] = useState(false);
 
-  // Modal de Red, Contraseña y Fotos de Equipos Post-Activación
+  // Modal de Red, Clave y Fotos de Equipos Post-Activación
   const [showWifiModal, setShowWifiModal] = useState(false);
-  const [wifiStep, setWifiStep] = useState(1); // 1: Red y Contraseña, 2: Fotos de Equipos
+  const [wifiStep, setWifiStep] = useState(1); // 1: Red y Clave, 2: Fotos de Equipos
   const [wifiData, setWifiData] = useState({ clienteId: null, clienteNombre: '', red: '', clave: '', ip: '' });
   const [savingWifi, setSavingWifi] = useState(false);
   const [deviceOntFile, setDeviceOntFile] = useState(null);
@@ -404,7 +404,7 @@ const Activacion = () => {
       const msg = res.data?.message || 'Activación confirmada y Hoja de Ruta actualizada a Realizado.';
       notify(msg, 'success');
       
-      // Abrir inmediatamente modal para ingresar red, contraseña y fotos de equipos
+      // Abrir inmediatamente modal para ingresar red, clave y fotos de equipos
       setWifiStep(1);
       setDeviceOntFile(null);
       setDeviceRouterFile(null);
@@ -511,12 +511,12 @@ const Activacion = () => {
       };
       if (payload.red || payload.clave) {
         await clienteService.actualizar(wifiData.clienteId, payload);
-        notify('✓ Red y contraseña guardadas correctamente.', 'success');
+        notify('✓ Red y clave guardadas correctamente.', 'success');
       }
       setWifiStep(2);
     } catch (e) {
       console.error(e);
-      notify('Error al guardar red y contraseña: ' + (e.response?.data?.detail || e.message), 'error');
+      notify('Error al guardar red y clave: ' + (e.response?.data?.detail || e.message), 'error');
     } finally {
       setSavingWifi(false);
     }
@@ -768,14 +768,14 @@ const Activacion = () => {
     setBulkError(null);
     setBulkStatus(null);
     try {
-      // Intentar obtener candidatos autofind usando nodo BAÑOS por defecto
+      // Intentar obtener candidatos autofind usando nodo BANOS por defecto
       // Usamos un cliente id ficticio (0) para no asociar a ningún cliente real
-      const res = await oltService.getMacCandidates(0, 'BAÑOS', null, 50).catch(() => null);
+      const res = await oltService.getMacCandidates(0, 'BANOS', null, 50).catch(() => null);
       if (res && res.data && res.data.candidates && res.data.candidates.length > 0) {
         setMacList(res.data.candidates);
         setShowBulkModal(true);
       } else {
-        notify('No se detectaron ONTs pendientes en el Autofind de la OLT Baños en este momento.', 'warning');
+        notify('No se detectaron ONTs pendientes en el Autofind de la OLT Banos en este momento.', 'warning');
       }
     } catch (e) {
       console.error(e);
@@ -1353,14 +1353,14 @@ const Activacion = () => {
         </div>
       )}
 
-      {/* Modal de Ingreso de Red, Contraseña y Fotos de Equipos (Post-Activación) */}
+      {/* Modal de Ingreso de Red, Clave y Fotos de Equipos (Post-Activación) */}
       {showWifiModal && (
         <div className="modal-overlay" style={{ zIndex: 11000 }}>
           <div className="modal" style={{ width: wifiStep === 2 ? '680px' : '480px', maxWidth: '94%', padding: '24px', transition: 'width 0.3s ease' }}>
             {/* Cabecera */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.15rem' }}>
-                {wifiStep === 1 ? '📶 Ingrese Red y Contraseña (Paso 1 de 2)' : '📷 Fotos y Acceso Remoto (Paso 2 de 2)'}
+                {wifiStep === 1 ? '📶 Ingrese Red y Clave (Paso 1 de 2)' : '📷 Fotos y Acceso Remoto (Paso 2 de 2)'}
               </h3>
               <button
                 onClick={() => closePostActivationModal(false)}
@@ -1397,7 +1397,7 @@ const Activacion = () => {
               </div>
             )}
 
-            {/* PASO 1: RED Y CONTRASEÑA */}
+            {/* PASO 1: RED Y CLAVE */}
             {wifiStep === 1 && (
               <form onSubmit={(e) => { e.preventDefault(); handleSaveWifi(true); }}>
                 <div style={{ marginBottom: 16 }}>
@@ -1425,7 +1425,7 @@ const Activacion = () => {
 
                 <div style={{ marginBottom: 24 }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1', marginBottom: 6, textTransform: 'uppercase' }}>
-                    Contraseña (Clave WiFi)
+                    Clave (Clave WiFi)
                   </label>
                   <input
                     type="text"

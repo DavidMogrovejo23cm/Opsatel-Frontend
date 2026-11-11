@@ -890,7 +890,7 @@ const HojaRuta = () => {
                         </table>
                     </div>
 
-                    {/* VISTA MÓVIL: Tarjetas adaptadas al diseño de celular solicitado */}
+                    {/* VISTA MÓVIL: Tarjetas adaptadas al diseno de celular solicitado */}
                     <div className="hr-mobile-view">
                         {sortedRegistros.length === 0 ? (
                             <div className="hr-mobile-empty">

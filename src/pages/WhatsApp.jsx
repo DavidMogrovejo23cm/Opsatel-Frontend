@@ -171,7 +171,7 @@ const WhatsApp = () => {
                 nuevoNombreOCR.trim() || 'Receptor OCR',
                 true
             );
-            showSuccess("Número añadido para reenvío de comprobantes OCR");
+            showSuccess("Número agregado para reenvío de comprobantes OCR");
             setNuevoNombreOCR("");
             setNuevoNumeroOCR("");
             cargarDestinosOCR();
@@ -401,7 +401,7 @@ const WhatsApp = () => {
         return () => clearInterval(intervalo);
     }, []);
 
-    // Polling acelerado a 4s mientras haya campañas o envíos en proceso
+    // Polling acelerado a 4s mientras haya campanas o envíos en proceso
     useEffect(() => {
         const hayEnProceso = difusiones.some(d => d.estado === 'en_proceso');
         if (hayEnProceso) {
@@ -427,8 +427,8 @@ const WhatsApp = () => {
     const formatCanonicalLocation = (str) => {
         if (!str) return '';
         const key = normalizeLocationKey(str);
-        if (key.includes("SAYAUSI")) return "Sayausí";
-        if (key.includes("BANOS")) return "Baños";
+        if (key.includes("SAYAUSI")) return "Sayausi";
+        if (key.includes("BANOS")) return "Banos";
         if (key.includes("CENTRO")) return "Centro";
         const trimmed = str.toString().trim();
         return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
@@ -450,8 +450,8 @@ const WhatsApp = () => {
             setPuertosConfigList(rawPuertos);
 
             const map = new Map(); // key -> canonical display name
-            map.set("SAYAUSI", "Sayausí");
-            map.set("BANOS", "Baños");
+            map.set("SAYAUSI", "Sayausi");
+            map.set("BANOS", "Banos");
 
             rawNodos.forEach(n => {
                 const val = typeof n === 'string' ? n : (n.nombre || n.nodo);
@@ -1030,7 +1030,7 @@ const WhatsApp = () => {
         </div>
     );
 
-    // Polling del estado de conexión cuando estamos en la pestaña de Conexión o si no está conectado
+    // Polling del estado de conexión cuando estamos en la pestana de Conexión o si no está conectado
     useEffect(() => {
         let intervaloConexion;
         
@@ -1588,7 +1588,7 @@ const WhatsApp = () => {
             batchSize = 5;
             batchPauseMin = 1800.0; // 30 minutos
             batchPauseMax = 3600.0; // 1 hora
-            ritmoTexto = '🗓️ Campaña Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 minutos a lo largo del día (Máxima Seguridad para 20-30 clientes)';
+            ritmoTexto = '🗓️ Campana Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 minutos a lo largo del día (Máxima Seguridad para 20-30 clientes)';
         } else if (velocidadEnvio === 'espaciado_lento') {
             delayMin = 120.0; // 2 minutos
             delayMax = 240.0; // 4 minutos
@@ -1626,7 +1626,7 @@ const WhatsApp = () => {
 
         const confirmacion2 = await showConfirm(
             '🚨 CONFIRMACIÓN DE DOBLE SEGURIDAD',
-            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}${puertosInfoConfirm}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.\n\n💡 Podrás cancelar el envío en cualquier momento desde la pestaña de Historial.`,
+            `¿Confirmas la ejecución de la difusión para ${count} clientes ${rangoIdsTexto}${puertosInfoConfirm}?\n\nEste proceso correrá en segundo plano (asíncrono) en el servidor y podrás seguir navegando y usando el sistema sin problemas.\n\n💡 Podrás cancelar el envío en cualquier momento desde la pestana de Historial.`,
             'Sí, ejecutar difusión',
             'Cancelar'
         );
@@ -1965,10 +1965,10 @@ const WhatsApp = () => {
                                 </button>
                             </div>
 
-                            {/* Formulario para Añadir Número */}
+                            {/* Formulario para Agregar Número */}
                             <form onSubmit={guardarDestinoOCR} style={{ marginBottom: '14px', background: 'rgba(255, 255, 255, 0.04)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
                                 <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>
-                                    ➕ Añadir número de reenvío
+                                    ➕ Agregar número de reenvío
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                     <input
@@ -2922,7 +2922,7 @@ const WhatsApp = () => {
                             </div>
                         </div>
 
-                        {/* TARJETAS / PESTAÑAS DE LAS TRES SECCIONES PRINCIPALES + TODOS */}
+                        {/* TARJETAS / PESTANAS DE LAS TRES SECCIONES PRINCIPALES + TODOS */}
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(235px, 1fr))',
@@ -3849,7 +3849,7 @@ const WhatsApp = () => {
                                 }}
                             >
                                 {!isConnected 
-                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
+                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestana Conexión QR)' 
                                     : (enviando ? '⏳ Enviando...' : '✉️ Enviar Mensaje desde Servidor')
                                 }
                             </button>
@@ -4447,7 +4447,7 @@ const WhatsApp = () => {
                         }}>
                             <span style={{ fontSize: '1.5rem' }}>🛡️</span>
                             <div style={{ fontSize: '0.85rem', color: '#d1fae5', lineHeight: '1.4' }}>
-                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Inteligente y Control Diario:</strong> Ahora puedes limitar tus campañas a <strong>20 mensajes por día</strong> intercalados cada 15-30 minutos y <strong>continuar desde un ID específico</strong> (ej. retomar desde el cliente 50). Esto simula actividad humana 100% natural y minimiza al máximo el riesgo de restricciones en WhatsApp.
+                                <strong style={{ color: '#34d399' }}>Protección Anti-Bloqueo Inteligente y Control Diario:</strong> Ahora puedes limitar tus campanas a <strong>20 mensajes por día</strong> intercalados cada 15-30 minutos y <strong>continuar desde un ID específico</strong> (ej. retomar desde el cliente 50). Esto simula actividad humana 100% natural y minimiza al máximo el riesgo de restricciones en WhatsApp.
                             </div>
                         </div>
 
@@ -4671,7 +4671,7 @@ const WhatsApp = () => {
                                 }}>
                                     <label className="label" style={{ color: '#fb923c', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span>🎯</span> Límite por Campaña
+                                            <span>🎯</span> Límite por Campana
                                         </span>
                                         <span style={{ fontSize: '0.72rem', color: '#fed7aa' }}>
                                             Recomendado: 20
@@ -4728,7 +4728,7 @@ const WhatsApp = () => {
                                         <option value="moderado">⏱️ Modo Rápido Seguro: Grupos de 10 (15 a 30s c/u + pausa 2-3 min)</option>
                                         <option value="prudente">🔒 Modo Prudente: Grupos de 8 (40 a 90s c/u + pausa 5-8 min)</option>
                                         <option value="espaciado_lento">🐢 Espaciado Lento: 1 mensaje cada 2 a 4 min (Pausa 5-10 min c/5 clientes)</option>
-                                        <option value="diario_20">🗓️ Campaña Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 min (20-30 clientes al día)</option>
+                                        <option value="diario_20">🗓️ Campana Diaria Ultra-Lenta: 1 mensaje cada 15 a 30 min (20-30 clientes al día)</option>
                                     </select>
                                 </div>
                             </div>
@@ -4819,7 +4819,7 @@ const WhatsApp = () => {
                                 }}
                             >
                                 {!isConnected 
-                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestaña Conexión QR)' 
+                                    ? '🔌 WhatsApp Desconectado (Vincula la cuenta en la pestana Conexión QR)' 
                                     : (enviandoGlobal ? '⏳ Difundiendo en background...' : `🚀 Lanzar Difusión Masiva (${getClientesDestinoCount()} Destinatarios)`)
                                 }
                             </button>
@@ -5767,7 +5767,7 @@ const WhatsApp = () => {
                                 className="btn btn-secondary"
                                 style={{ fontSize: '0.84rem', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
                             >
-                                🔗 Abrir en pestaña nueva
+                                🔗 Abrir en pestana nueva
                             </a>
                             <button
                                 type="button"
