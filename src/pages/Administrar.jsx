@@ -94,7 +94,6 @@ const Administrar = () => {
     fetchSelects();
 
     return () => {
-      clearInterval(interval);
       clearInterval(tickInterval);
     };
   }, []);
