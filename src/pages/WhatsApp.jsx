@@ -12,6 +12,13 @@ import { configuracionService, clienteService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 import { normalizeOpsatelText } from '../utils/textUtils';
+import { useRealtimeSync } from '../services/realtimeService';
+import {
+  comprobantesCache,
+  conversacionesCache,
+  whatsappAdminsCache,
+  whatsappDestinosCache
+} from '../utils/storageCache';
 
 
 const WhatsApp = () => {
@@ -69,7 +76,7 @@ const WhatsApp = () => {
     const [cancelandoTodo, setCancelandoTodo] = useState(false);
 
     // Administradores autorizados
-    const [administradores, setAdministradores] = useState([]);
+    const [administradores, setAdministradores] = useState(() => whatsappAdminsCache.get() || []);
     const [nombreAdmin, setNombreAdmin] = useState('');
     const [numeroAdmin, setNumeroAdmin] = useState('');
     const [permisosAdmin, setPermisosAdmin] = useState('admin_total');
@@ -77,7 +84,7 @@ const WhatsApp = () => {
     const [cargandoAdmins, setCargandoAdmins] = useState(false);
 
     // Chat interactivo en vivo (Historial de 100 mensajes por cliente)
-    const [conversaciones, setConversaciones] = useState([]);
+    const [conversaciones, setConversaciones] = useState(() => conversacionesCache.get() || []);
     const [conversacionActiva, setConversacionActiva] = useState(null);
     const [mensajesChat, setMensajesChat] = useState([]);
     const [cargandoConversaciones, setCargandoConversaciones] = useState(false);
@@ -91,7 +98,7 @@ const WhatsApp = () => {
     const [busquedaChat, setBusquedaChat] = useState('');
 
     // Comprobantes descargados en uploadscr y Secciones de Notificación (Confirmación de Recibo, Pendientes Comprobante y Registro de Comprobantes ya Cobrados)
-    const [comprobantes, setComprobantes] = useState([]);
+    const [comprobantes, setComprobantes] = useState(() => comprobantesCache.get() || []);
     const [cargandoComprobantes, setCargandoComprobantes] = useState(false);
     const [seccionComprobante, setSeccionComprobante] = useState('CONFIRMACION_RECIBO'); // 'CONFIRMACION_RECIBO' | 'PENDIENTES_COMPROBANTE' | 'COBRADOS' | 'TODOS'
     const [filtroEstadoComprobante, setFiltroEstadoComprobante] = useState('TODOS');
@@ -124,7 +131,7 @@ const WhatsApp = () => {
     const [procesandoAprobacionId, setProcesandoAprobacionId] = useState(null);
 
     // Destinos de Reenvío para Comprobantes OCR
-    const [destinosOCR, setDestinosOCR] = useState([]);
+    const [destinosOCR, setDestinosOCR] = useState(() => whatsappDestinosCache.get() || []);
     const [cargandoDestinosOCR, setCargandoDestinosOCR] = useState(false);
     const [mostrarDropdownOCR, setMostrarDropdownOCR] = useState(false);
     const [nuevoNombreOCR, setNuevoNombreOCR] = useState('');
@@ -400,6 +407,13 @@ const WhatsApp = () => {
         }, 20000);
         return () => clearInterval(intervalo);
     }, []);
+
+    // Sincronización instantánea en tiempo real para WhatsApp y Comprobantes
+    useRealtimeSync('whatsapp', () => {
+        cargarComprobantes(true);
+        cargarConversaciones(true);
+        cargarHistorial(true);
+    });
 
     // Polling acelerado a 4s mientras haya campanas o envíos en proceso
     useEffect(() => {

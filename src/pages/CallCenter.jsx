@@ -5,11 +5,13 @@
  * @notice Developed with AI assistance.
  */
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { callCenterService, clienteService, hojaRutaService, configuracionService } from '../services/api';
+import { callCenterService, clienteService, hojaRutaService, configuracionService, getStoredClientesCache } from '../services/api';
 import { whatsappService } from '../services/whatsappService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
 import { showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
+import { callCenterCache } from '../utils/storageCache';
 
 /* ────────────────────────────────────────────
    ESTADO CONFIG
@@ -125,10 +127,13 @@ const EstadoBadge = ({ estado }) => {
    MAIN CALL CENTER COMPONENT
 ────────────────────────────────────────────── */
 const CallCenter = () => {
-  const [tickets, setTickets]       = useState([]);
-  const [clientes, setClientes]     = useState([]);
+  const cachedTickets = useMemo(() => callCenterCache.get() || [], []);
+  const cachedClientes = useMemo(() => getStoredClientesCache() || [], []);
+
+  const [tickets, setTickets]       = useState(() => cachedTickets);
+  const [clientes, setClientes]     = useState(() => cachedClientes);
   const [tecnicos, setTecnicos]     = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [loading, setLoading]       = useState(() => cachedTickets.length === 0);
   const [showModal, setShowModal]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,6 +239,10 @@ const CallCenter = () => {
     const interval = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useRealtimeSync(['callcenter', 'clientes', 'hoja_ruta'], () => {
+    fetchData(true);
+  });
 
   /* ────────────────────────────────────────────
      ASOCIAR TICKETS A CLIENTES (Y PRESERVAR EXISTENTES)

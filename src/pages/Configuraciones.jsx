@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { configuracionService, oltService, libreqosService, clienteService, backupService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
 
 
 const Configuraciones = () => {
@@ -422,6 +423,10 @@ const Configuraciones = () => {
         const interval = setInterval(fetchData, 30000); // Auto-refresh cada 30 segundos
         return () => clearInterval(interval);
     }, []);
+
+    useRealtimeSync(['configuraciones', 'olt', 'libreqos'], () => {
+        fetchData();
+    });
 
     // Cargar datos de LibreQoS cuando se entra a esa pestana
     const [activeTab, setActiveTab] = useState('Nodos');

@@ -12,6 +12,7 @@ import { clienteService, configuracionService, hojaRutaService, backupService } 
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
 
 
 const Admin = () => {
@@ -167,6 +168,10 @@ const Admin = () => {
     const interval = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useRealtimeSync(['clientes', 'configuraciones', 'balance'], () => {
+    fetchData(true);
+  });
 
   // Sincronizar parámetro search si proviene desde el Buscador Global (Ctrl + K)
   useEffect(() => {

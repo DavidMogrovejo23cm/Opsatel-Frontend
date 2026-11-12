@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import { clienteService, oltService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRealtimeSync } from '../services/realtimeService';
 
 const TECdt = () => {
   const [clientes, setClientes] = useState([]);
@@ -350,6 +351,10 @@ const TECdt = () => {
     const interval = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useRealtimeSync(['clientes', 'olt'], () => {
+    fetchData(true);
+  });
 
   const handleCopy = (text, label) => {
     if (!text || text === '-') return;

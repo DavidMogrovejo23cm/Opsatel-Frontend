@@ -7,13 +7,15 @@
  */
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { clienteService, configuracionService, oltService } from '../services/api';
+import { clienteService, configuracionService, oltService, getStoredClientesCache } from '../services/api';
+import { planesCache } from '../utils/storageCache';
 import OntPotenciaModal from '../components/OntPotenciaModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput } from '../services/dateUtils';
 import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 import { processImage, compressImage } from '../utils/imageCompressor';
+import { useRealtimeSync } from '../services/realtimeService';
 
 const General = () => {
   const [searchParams] = useSearchParams();
@@ -29,8 +31,21 @@ const General = () => {
     }
   }, []);
 
-  const [clientes, setClientes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Carga instantánea desde localStorage (Stale-While-Revalidate)
+  const cachedClientes = useMemo(() => {
+    try {
+      const c = getStoredClientesCache();
+      return (c || []).map(item => ({
+        ...item,
+        bridge: (item.bridge !== undefined && item.bridge !== null && item.bridge !== '') ? item.bridge : (item.breach || '')
+      }));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const [clientes, setClientes] = useState(() => cachedClientes);
+  const [loading, setLoading] = useState(() => cachedClientes.length === 0);
 
   // Estado para Modal de Medición de Potencia Óptica ONT en Tiempo Real
   const [selectedClientForPower, setSelectedClientForPower] = useState(null);
@@ -272,15 +287,15 @@ const General = () => {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     try {
-      const response = await clienteService.listar();
+      const response = await clienteService.listar(forceRefresh);
       const mapped = (response.data || []).map(c => ({
         ...c,
         bridge: (c.bridge !== undefined && c.bridge !== null && c.bridge !== '') ? c.bridge : (c.breach || '')
       }));
       setClientes(mapped);
-      const planesResp = await configuracionService.getPlanes();
+      const planesResp = await configuracionService.getPlanes(forceRefresh);
       setPlanesList(planesResp.data);
     } catch (error) {
       console.error(error);
@@ -292,6 +307,11 @@ const General = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Sincronización en tiempo real: auto-actualizar tabla sin recargar página (F5)
+  useRealtimeSync(['clientes', 'configuraciones'], () => {
+    fetchData(true);
+  });
 
   useEffect(() => {
     const handleKeyClose = (e) => {

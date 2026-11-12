@@ -10,12 +10,17 @@ import { extrasService, configuracionService } from '../services/api';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showConfirm, showToast } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
+import { extrasCache, bancosCache } from '../utils/storageCache';
 
 
 const ExtrasGeneral = () => {
-    const [extras, setExtras] = useState([]);
-    const [bancosList, setBancosList] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const cachedExtras = useMemo(() => extrasCache.get() || [], []);
+    const cachedBancos = useMemo(() => bancosCache.get() || [], []);
+
+    const [extras, setExtras] = useState(() => cachedExtras);
+    const [bancosList, setBancosList] = useState(() => cachedBancos);
+    const [loading, setLoading] = useState(() => cachedExtras.length === 0);
     const [submitting, setSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEstado, setSelectedEstado] = useState('TODOS');
@@ -278,11 +283,11 @@ const ExtrasGeneral = () => {
         return 0;
     };
 
-    const fetchData = async () => {
+    const fetchData = async (forceRefresh = false) => {
         try {
-            setLoading(true);
-            const res = await extrasService.listar();
-            const banksResp = await configuracionService.getBancos();
+            if (extras.length === 0) setLoading(true);
+            const res = await extrasService.listar(forceRefresh);
+            const banksResp = await configuracionService.getBancos(forceRefresh);
             setExtras(res.data || []);
             setBancosList(banksResp.data || []);
         } catch (err) {
@@ -295,6 +300,10 @@ const ExtrasGeneral = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useRealtimeSync('extras', () => {
+        fetchData(true);
+    });
 
     const getNextCod = () => {
         if (!extras || extras.length === 0) return '1C';

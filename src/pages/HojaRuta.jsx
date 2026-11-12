@@ -6,11 +6,13 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { hojaRutaService, clienteService, configuracionService, callCenterService } from '../services/api';
+import { hojaRutaService, clienteService, configuracionService, callCenterService, getStoredClientesCache } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY, normalizeDateInput, toISODate } from '../services/dateUtils';
 import { normalizeOpsatelText } from '../utils/textUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
+import { hojaRutaCache, planesCache } from '../utils/storageCache';
 /**
  * Helper para extraer únicamente el primer número telefónico y normalizarlo
  * tanto para llamadas directas (tel:) como para WhatsApp (wa.me),
@@ -114,12 +116,16 @@ const getCallCenterTicketId = (r) => {
 };
 
 const HojaRuta = () => {
-    const [registros, setRegistros] = useState([]);
-    const [clientes, setClientes] = useState([]);
+    const cachedRegistros = useMemo(() => hojaRutaCache.get() || [], []);
+    const cachedClientes = useMemo(() => getStoredClientesCache() || [], []);
+    const cachedPlanes = useMemo(() => planesCache.get() || [], []);
+
+    const [registros, setRegistros] = useState(() => cachedRegistros);
+    const [clientes, setClientes] = useState(() => cachedClientes);
     const [cajasNap, setCajasNap] = useState([]);
-    const [planesList, setPlanesList] = useState([]);
+    const [planesList, setPlanesList] = useState(() => cachedPlanes);
     const [tecnicosList, setTecnicosList] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => cachedRegistros.length === 0);
     const [showModal, setShowModal] = useState(false);
     const [showObsModal, setShowObsModal] = useState(false);
     const [showAdminObsModal, setShowAdminObsModal] = useState(false);
@@ -184,12 +190,17 @@ const HojaRuta = () => {
         }
     };
 
-    // Auto-refresh cada 30 segundos
+    // Auto-refresh periódico como respaldo
     useEffect(() => {
         fetchData();
         const interval = setInterval(() => fetchData(true), 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Sincronización instantánea en tiempo real sin F5
+    useRealtimeSync(['hoja_ruta', 'clientes', 'callcenter'], () => {
+        fetchData(true);
+    });
 
     // Bloquear scroll del fondo cuando el modal está abierto
     useEffect(() => {

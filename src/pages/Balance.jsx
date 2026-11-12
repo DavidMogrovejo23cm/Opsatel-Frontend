@@ -13,6 +13,7 @@ import {
   PieChart, Pie
 } from 'recharts';
 import { balanceService, clienteService } from '../services/api';
+import { useRealtimeSync } from '../services/realtimeService';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
 
 
@@ -2693,6 +2694,31 @@ const Balance = () => {
   useEffect(() => { if (vista === 'colchon') fetchResumenColchon(); }, [vista, fetchResumenColchon]);
   useEffect(() => { fetchGastosFijos(); fetchResumenColchon(); }, [fetchGastosFijos, fetchResumenColchon]);
   useEffect(() => { if (vista === 'reporte') fetchReporteArcotel(mes); }, [vista, mes, fetchReporteArcotel]);
+
+  // Sincronización en tiempo real para todos los estados de Balance y Caja sin F5
+  useRealtimeSync(['balance', 'caja', 'clientes'], () => {
+    if (vista === 'mensual') {
+      fetchMensual();
+      fetchMovsInternos();
+      fetchPlataforma();
+      fetchResumenColchon();
+    } else if (vista === 'plataforma') {
+      fetchPlataforma();
+    } else if (vista === 'movimientos-internos') {
+      fetchMovsInternos();
+      fetchPlataforma();
+      fetchResumenColchon();
+    } else if (vista === 'anual') {
+      fetchAnual();
+    } else if (vista === 'egresos') {
+      fetchEgresos(mes);
+      fetchGastosFijos();
+    } else if (vista === 'proyectos') {
+      fetchProyectos();
+    } else if (vista === 'colchon') {
+      fetchResumenColchon();
+    }
+  }, [vista, mes, anio]);
 
   useEffect(() => {
     // Sincronizar cartera pendiente exactamente con los clientes activos con saldo (igual que en Dashboard)

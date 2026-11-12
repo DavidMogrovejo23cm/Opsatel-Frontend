@@ -9,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { clienteService, configuracionService, libreqosService, asistenciaService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
 
 
 import { useAuth } from '../context/AuthContext';
@@ -94,6 +95,10 @@ const Administrar = () => {
       clearInterval(tickInterval);
     };
   }, []);
+
+  useRealtimeSync(['clientes', 'configuraciones'], () => {
+    fetchData(true);
+  });
 
   const startEdit = (cliente) => {
     setEditingId(cliente.id);

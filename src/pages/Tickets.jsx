@@ -10,6 +10,7 @@ import { ticketsService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatToDMY } from '../services/dateUtils';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
 
 const Tickets = () => {
     const [tickets, setTickets] = useState([]);
@@ -34,6 +35,10 @@ const Tickets = () => {
     useEffect(() => {
         fetchTickets();
     }, []);
+
+    useRealtimeSync('tickets', () => {
+        fetchTickets();
+    });
 
     const handleSave = async () => {
         if (!titulo || !contentRef.current.innerHTML) {

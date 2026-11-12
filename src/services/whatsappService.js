@@ -6,6 +6,12 @@
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
 import api from './api';
+import {
+  comprobantesCache,
+  conversacionesCache,
+  whatsappAdminsCache,
+  whatsappDestinosCache
+} from '../utils/storageCache';
 
 export const whatsappService = {
   // Envío manual
@@ -111,76 +117,146 @@ export const whatsappService = {
     }),
 
   // Administradores de WhatsApp
-  obtenerAdministradores: () =>
-    api.get('/whatsapp/administradores'),
+  obtenerAdministradores: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = whatsappAdminsCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/whatsapp/administradores');
+    if (res && Array.isArray(res.data)) whatsappAdminsCache.set(res.data);
+    return res;
+  },
 
-  crearAdministrador: (numero, nombre, permisos = 'admin_total', activo = true) =>
-    api.post('/whatsapp/administradores', {
+  crearAdministrador: async (numero, nombre, permisos = 'admin_total', activo = true) => {
+    const res = await api.post('/whatsapp/administradores', {
       numero: numero,
       nombre: nombre,
       permisos: permisos,
       activo: activo
-    }),
+    });
+    whatsappAdminsCache.clear();
+    return res;
+  },
 
-  actualizarAdministrador: (admin_id, data) =>
-    api.patch(`/whatsapp/administradores/${admin_id}`, data),
+  actualizarAdministrador: async (admin_id, data) => {
+    const res = await api.patch(`/whatsapp/administradores/${admin_id}`, data);
+    whatsappAdminsCache.clear();
+    return res;
+  },
 
-  eliminarAdministrador: (admin_id) =>
-    api.delete(`/whatsapp/administradores/${admin_id}`),
+  eliminarAdministrador: async (admin_id) => {
+    const res = await api.delete(`/whatsapp/administradores/${admin_id}`);
+    whatsappAdminsCache.clear();
+    return res;
+  },
 
   // Destinos de Reenvío para Comprobantes OCR
-  obtenerDestinosOCR: () =>
-    api.get('/whatsapp/destinos-ocr'),
+  obtenerDestinosOCR: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = whatsappDestinosCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/whatsapp/destinos-ocr');
+    if (res && Array.isArray(res.data)) whatsappDestinosCache.set(res.data);
+    return res;
+  },
 
-  crearDestinoOCR: (numero, nombre, activo = true) =>
-    api.post('/whatsapp/destinos-ocr', {
+  crearDestinoOCR: async (numero, nombre, activo = true) => {
+    const res = await api.post('/whatsapp/destinos-ocr', {
       numero: numero,
       nombre: nombre,
       activo: activo
-    }),
+    });
+    whatsappDestinosCache.clear();
+    return res;
+  },
 
-  toggleActivoDestinoOCR: (destino_id) =>
-    api.patch(`/whatsapp/destinos-ocr/${destino_id}/toggle-activo`),
+  toggleActivoDestinoOCR: async (destino_id) => {
+    const res = await api.patch(`/whatsapp/destinos-ocr/${destino_id}/toggle-activo`);
+    whatsappDestinosCache.clear();
+    return res;
+  },
 
-  eliminarDestinoOCR: (destino_id) =>
-    api.delete(`/whatsapp/destinos-ocr/${destino_id}`),
+  eliminarDestinoOCR: async (destino_id) => {
+    const res = await api.delete(`/whatsapp/destinos-ocr/${destino_id}`);
+    whatsappDestinosCache.clear();
+    return res;
+  },
 
   // Conversaciones y Chat en vivo (Historial de 30 mensajes por cliente)
-  obtenerConversaciones: () =>
-    api.get('/whatsapp/conversaciones'),
+  obtenerConversaciones: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = conversacionesCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/whatsapp/conversaciones');
+    if (res && Array.isArray(res.data)) conversacionesCache.set(res.data);
+    return res;
+  },
 
   obtenerChat: (numero) =>
     api.get(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`),
 
-  enviarMensajeChat: (numero, mensaje) =>
-    api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/enviar`, { mensaje: mensaje }),
+  enviarMensajeChat: async (numero, mensaje) => {
+    const res = await api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/enviar`, { mensaje: mensaje });
+    conversacionesCache.clear();
+    return res;
+  },
 
-  vincularClienteChat: (numero, cliente_id) =>
-    api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/vincular-cliente`, { cliente_id: cliente_id }),
+  vincularClienteChat: async (numero, cliente_id) => {
+    const res = await api.post(`/whatsapp/conversaciones/${encodeURIComponent(numero)}/vincular-cliente`, { cliente_id: cliente_id });
+    conversacionesCache.clear();
+    return res;
+  },
 
   buscarClientesChat: (q) =>
     api.get('/whatsapp/buscar-clientes-chat', { params: { q: q } }),
 
   // Eliminar todas las conversaciones y chats en vivo
-  deleteAllConversaciones: () =>
-    api.delete('/whatsapp/conversaciones/all'),
+  deleteAllConversaciones: async () => {
+    const res = await api.delete('/whatsapp/conversaciones/all');
+    conversacionesCache.clear();
+    return res;
+  },
 
   // Eliminar una conversación individual
-  eliminarConversacion: (numero) =>
-    api.delete(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`),
+  eliminarConversacion: async (numero) => {
+    const res = await api.delete(`/whatsapp/conversaciones/${encodeURIComponent(numero)}`);
+    conversacionesCache.clear();
+    return res;
+  },
 
   // Comprobantes de pago descargados en uploadscr
-  obtenerComprobantes: (params = {}) =>
-    api.get('/whatsapp/comprobantes', { params }),
+  obtenerComprobantes: async (params = {}, forceRefresh = false) => {
+    const isDefaultQuery = !params || Object.keys(params).length === 0 || (Object.keys(params).length === 1 && params.categoria === 'CONFIRMACION_RECIBO');
+    if (!forceRefresh && isDefaultQuery) {
+      const cached = comprobantesCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/whatsapp/comprobantes', { params });
+    if (res && Array.isArray(res.data) && isDefaultQuery) {
+      comprobantesCache.set(res.data);
+    }
+    return res;
+  },
 
-  actualizarComprobante: (id, data) =>
-    api.patch(`/whatsapp/comprobantes/${id}`, data),
+  actualizarComprobante: async (id, data) => {
+    const res = await api.patch(`/whatsapp/comprobantes/${id}`, data);
+    comprobantesCache.clear();
+    return res;
+  },
 
-  aprobarPagoComprobante: (id, data = {}) =>
-    api.post(`/whatsapp/comprobantes/${id}/aprobar-pago`, data),
+  aprobarPagoComprobante: async (id, data = {}) => {
+    const res = await api.post(`/whatsapp/comprobantes/${id}/aprobar-pago`, data);
+    comprobantesCache.clear();
+    return res;
+  },
 
-  eliminarComprobante: (id, eliminarArchivo = false) =>
-    api.delete(`/whatsapp/comprobantes/${id}`, { params: { eliminar_archivo: eliminarArchivo } }),
+  eliminarComprobante: async (id, eliminarArchivo = false) => {
+    const res = await api.delete(`/whatsapp/comprobantes/${id}`, { params: { eliminar_archivo: eliminarArchivo } });
+    comprobantesCache.clear();
+    return res;
+  },
 
   // Obtener usuario actual
   getCurrentUser: () => {

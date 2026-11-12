@@ -10,12 +10,18 @@ import { createPortal } from 'react-dom';
 import { extrasService, configuracionService } from '../services/api';
 import { motion } from 'framer-motion';
 import { showSuccess, showError } from '../utils/alerts';
+import { useRealtimeSync } from '../services/realtimeService';
+import { extrasCache, extrasPagosCache, bancosCache } from '../utils/storageCache';
 
 const ExtraPagos = () => {
-  const [extras, setExtras] = useState([]);
-  const [bancosList, setBancosList] = useState([]);
-  const [pagosHistory, setPagosHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedExtras = useMemo(() => extrasCache.get() || [], []);
+  const cachedPagos = useMemo(() => extrasPagosCache.get() || [], []);
+  const cachedBancos = useMemo(() => bancosCache.get() || [], []);
+
+  const [extras, setExtras] = useState(() => cachedExtras);
+  const [bancosList, setBancosList] = useState(() => cachedBancos);
+  const [pagosHistory, setPagosHistory] = useState(() => cachedPagos);
+  const [loading, setLoading] = useState(() => cachedExtras.length === 0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEstado, setSelectedEstado] = useState('TODOS');
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -137,12 +143,13 @@ const ExtraPagos = () => {
     return getSaldoMes(e, listMonths[currentMonthIdx]);
   };
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     try {
+      if (extras.length === 0) setLoading(true);
       const [extrasResp, banksResp, pagosResp] = await Promise.all([
-        extrasService.listar(),
-        configuracionService.getBancos().catch(() => ({ data: [] })),
-        extrasService.listarPagos().catch(() => ({ data: [] }))
+        extrasService.listar(forceRefresh),
+        configuracionService.getBancos(forceRefresh).catch(() => ({ data: [] })),
+        extrasService.listarPagos(forceRefresh).catch(() => ({ data: [] }))
       ]);
       setExtras(extrasResp.data || []);
       setBancosList(banksResp.data || []);
@@ -158,6 +165,10 @@ const ExtraPagos = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useRealtimeSync('extras', () => {
+    fetchData(true);
+  });
 
   // Lista de estados disponibles para filtrar
   const availableEstados = useMemo(() => {

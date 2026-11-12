@@ -7,6 +7,16 @@
  */
 import axios from 'axios';
 import { normalizePayloadFields, replaceEnesRecursively } from '../utils/textUtils';
+import {
+  extrasCache,
+  extrasPagosCache,
+  hojaRutaCache,
+  callCenterCache,
+  nodosCache,
+  planesCache,
+  bancosCache,
+  parroquiasCache
+} from '../utils/storageCache';
 
 const CLIENTE_TEXT_FIELDS = [
   'nombre', 'direccion', 'parroquia', 'nodo', 'comentarios',
@@ -355,35 +365,140 @@ export const backupService = {
 
 
 export const extrasService = {
-  listar: () => api.get('/extras/'),
-  crear: (data) => api.post('/extras/', normalizePayloadFields(data, EXTRAS_TEXT_FIELDS)),
-  actualizar: (id, data) => api.patch(`/extras/${id}`, normalizePayloadFields(data, EXTRAS_TEXT_FIELDS)),
-  eliminar: (id) => api.delete(`/extras/${id}`),
-  pagar: (id, data) => api.post(`/extras/${id}/pagar`, data),
-  listarPagos: () => api.get('/extras/pagos/historial'),
-  uploadDatabase: (formData) => api.post('/extras/upload-db', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  listar: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = extrasCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        return { data: cached, status: 200, fromCache: true };
+      }
+    }
+    const res = await api.get('/extras/');
+    if (res && Array.isArray(res.data)) {
+      extrasCache.set(res.data);
+    }
+    return res;
+  },
+  crear: async (data) => {
+    const res = await api.post('/extras/', normalizePayloadFields(data, EXTRAS_TEXT_FIELDS));
+    extrasCache.clear();
+    return res;
+  },
+  actualizar: async (id, data) => {
+    const res = await api.patch(`/extras/${id}`, normalizePayloadFields(data, EXTRAS_TEXT_FIELDS));
+    extrasCache.clear();
+    return res;
+  },
+  eliminar: async (id) => {
+    const res = await api.delete(`/extras/${id}`);
+    extrasCache.clear();
+    return res;
+  },
+  pagar: async (id, data) => {
+    const res = await api.post(`/extras/${id}/pagar`, data);
+    extrasCache.clear();
+    extrasPagosCache.clear();
+    return res;
+  },
+  listarPagos: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = extrasPagosCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        return { data: cached, status: 200, fromCache: true };
+      }
+    }
+    const res = await api.get('/extras/pagos/historial');
+    if (res && Array.isArray(res.data)) {
+      extrasPagosCache.set(res.data);
+    }
+    return res;
+  },
+  uploadDatabase: async (formData) => {
+    const res = await api.post('/extras/upload-db', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    extrasCache.clear();
+    return res;
+  },
   downloadDatabase: () => api.get('/extras/download-db', { responseType: 'blob' }),
 };
 
 
 export const configuracionService = {
   // Nodos
-  getNodos: () => api.get('/configuraciones/nodos'),
-  crearNodo: (data) => api.post('/configuraciones/nodos', data),
-  actualizarNodo: (id, data) => api.patch(`/configuraciones/nodos/${id}`, data),
-  eliminarNodo: (id) => api.delete(`/configuraciones/nodos/${id}`),
+  getNodos: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = nodosCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/configuraciones/nodos');
+    if (res && Array.isArray(res.data)) nodosCache.set(res.data);
+    return res;
+  },
+  crearNodo: async (data) => {
+    const res = await api.post('/configuraciones/nodos', data);
+    nodosCache.clear();
+    return res;
+  },
+  actualizarNodo: async (id, data) => {
+    const res = await api.patch(`/configuraciones/nodos/${id}`, data);
+    nodosCache.clear();
+    return res;
+  },
+  eliminarNodo: async (id) => {
+    const res = await api.delete(`/configuraciones/nodos/${id}`);
+    nodosCache.clear();
+    return res;
+  },
   // Planes
-  getPlanes: () => api.get('/configuraciones/planes'),
-  crearPlan: (data) => api.post('/configuraciones/planes', data),
-  actualizarPlan: (id, data) => api.patch(`/configuraciones/planes/${id}`, data),
-  eliminarPlan: (id) => api.delete(`/configuraciones/planes/${id}`),
+  getPlanes: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = planesCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/configuraciones/planes');
+    if (res && Array.isArray(res.data)) planesCache.set(res.data);
+    return res;
+  },
+  crearPlan: async (data) => {
+    const res = await api.post('/configuraciones/planes', data);
+    planesCache.clear();
+    return res;
+  },
+  actualizarPlan: async (id, data) => {
+    const res = await api.patch(`/configuraciones/planes/${id}`, data);
+    planesCache.clear();
+    return res;
+  },
+  eliminarPlan: async (id) => {
+    const res = await api.delete(`/configuraciones/planes/${id}`);
+    planesCache.clear();
+    return res;
+  },
   // Bancos
-  getBancos: () => api.get('/configuraciones/bancos'),
-  crearBanco: (data) => api.post('/configuraciones/bancos', data),
-  actualizarBanco: (id, data) => api.patch(`/configuraciones/bancos/${id}`, data),
-  eliminarBanco: (id) => api.delete(`/configuraciones/bancos/${id}`),
+  getBancos: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = bancosCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/configuraciones/bancos');
+    if (res && Array.isArray(res.data)) bancosCache.set(res.data);
+    return res;
+  },
+  crearBanco: async (data) => {
+    const res = await api.post('/configuraciones/bancos', data);
+    bancosCache.clear();
+    return res;
+  },
+  actualizarBanco: async (id, data) => {
+    const res = await api.patch(`/configuraciones/bancos/${id}`, data);
+    bancosCache.clear();
+    return res;
+  },
+  eliminarBanco: async (id) => {
+    const res = await api.delete(`/configuraciones/bancos/${id}`);
+    bancosCache.clear();
+    return res;
+  },
   // Puertos
   getPuertos: (nodo_id) => api.get('/configuraciones/puertos' + (nodo_id ? `?nodo_id=${nodo_id}` : '')),
   crearPuerto: (data) => api.post('/configuraciones/puertos', data),
@@ -399,10 +514,30 @@ export const configuracionService = {
   getFinanzasBase: () => api.get('/configuraciones/finanzas-base'),
   actualizarFinanzasBase: (data) => api.put('/configuraciones/finanzas-base', data),
   // Parroquias
-  getParroquias: () => api.get('/configuraciones/parroquias'),
-  crearParroquia: (data) => api.post('/configuraciones/parroquias', data),
-  actualizarParroquia: (id, data) => api.patch(`/configuraciones/parroquias/${id}`, data),
-  eliminarParroquia: (id) => api.delete(`/configuraciones/parroquias/${id}`),
+  getParroquias: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = parroquiasCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/configuraciones/parroquias');
+    if (res && Array.isArray(res.data)) parroquiasCache.set(res.data);
+    return res;
+  },
+  crearParroquia: async (data) => {
+    const res = await api.post('/configuraciones/parroquias', data);
+    parroquiasCache.clear();
+    return res;
+  },
+  actualizarParroquia: async (id, data) => {
+    const res = await api.patch(`/configuraciones/parroquias/${id}`, data);
+    parroquiasCache.clear();
+    return res;
+  },
+  eliminarParroquia: async (id) => {
+    const res = await api.delete(`/configuraciones/parroquias/${id}`);
+    parroquiasCache.clear();
+    return res;
+  },
   // Cajas NAP
   getCajasNap: () => api.get('/configuraciones/cajas-nap'),
   crearCajaNap: (data) => api.post('/configuraciones/cajas-nap', data),
@@ -438,10 +573,30 @@ export const configuracionService = {
 };
 
 export const hojaRutaService = {
-  listar: () => api.get('/hoja-ruta/'),
-  crear: (data) => api.post('/hoja-ruta/', normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS)),
-  actualizar: (id, data) => api.patch(`/hoja-ruta/${id}`, normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS)),
-  eliminar: (id) => api.delete(`/hoja-ruta/${id}`),
+  listar: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = hojaRutaCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/hoja-ruta/');
+    if (res && Array.isArray(res.data)) hojaRutaCache.set(res.data);
+    return res;
+  },
+  crear: async (data) => {
+    const res = await api.post('/hoja-ruta/', normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS));
+    hojaRutaCache.clear();
+    return res;
+  },
+  actualizar: async (id, data) => {
+    const res = await api.patch(`/hoja-ruta/${id}`, normalizePayloadFields(data, HOJARUTA_TEXT_FIELDS));
+    hojaRutaCache.clear();
+    return res;
+  },
+  eliminar: async (id) => {
+    const res = await api.delete(`/hoja-ruta/${id}`);
+    hojaRutaCache.clear();
+    return res;
+  },
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
@@ -456,10 +611,30 @@ export const ticketsService = {
 };
 
 export const callCenterService = {
-  listar: () => api.get('/callcenter/'),
-  crear: (data) => api.post('/callcenter/', normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS)),
-  actualizar: (id, data) => api.patch(`/callcenter/${id}`, normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS)),
-  eliminar: (id) => api.delete(`/callcenter/${id}`),
+  listar: async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = callCenterCache.get();
+      if (cached && Array.isArray(cached) && cached.length > 0) return { data: cached, status: 200, fromCache: true };
+    }
+    const res = await api.get('/callcenter/');
+    if (res && Array.isArray(res.data)) callCenterCache.set(res.data);
+    return res;
+  },
+  crear: async (data) => {
+    const res = await api.post('/callcenter/', normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS));
+    callCenterCache.clear();
+    return res;
+  },
+  actualizar: async (id, data) => {
+    const res = await api.patch(`/callcenter/${id}`, normalizePayloadFields(data, CALLCENTER_TEXT_FIELDS));
+    callCenterCache.clear();
+    return res;
+  },
+  eliminar: async (id) => {
+    const res = await api.delete(`/callcenter/${id}`);
+    callCenterCache.clear();
+    return res;
+  },
 };
 
 export const balanceService = {
