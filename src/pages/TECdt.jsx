@@ -332,10 +332,10 @@ const TECdt = () => {
     iniciarStreamPotencia(cliente || selectedClientForPower);
   };
 
-  const fetchData = async (silent = false) => {
+  const fetchData = async (silent = false, forceRefresh = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await clienteService.listar();
+      const res = await clienteService.listar(forceRefresh);
       const list = res.data || [];
       list.sort((a, b) => a.id - b.id);
       setClientes(list);
@@ -348,12 +348,12 @@ const TECdt = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(true), 30000);
+    const interval = setInterval(() => fetchData(true, true), 30000);
     return () => clearInterval(interval);
   }, []);
 
   useRealtimeSync(['clientes', 'olt'], () => {
-    fetchData(true);
+    fetchData(true, true);
   });
 
   const handleCopy = (text, label) => {

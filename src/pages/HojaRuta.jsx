@@ -165,14 +165,14 @@ const HojaRuta = () => {
     const [formData, setFormData] = useState(initialForm);
     const [editingId, setEditingId] = useState(null);
 
-    const fetchData = async (silent = false) => {
+    const fetchData = async (silent = false, forceRefresh = false) => {
         try {
             if (!silent) setLoading(true);
             const [hrRes, clRes, cnRes, plRes, usrRes] = await Promise.all([
-                hojaRutaService.listar(),
-                clienteService.listar(),
+                hojaRutaService.listar(forceRefresh),
+                clienteService.listar(forceRefresh),
                 configuracionService.getCajasNap().catch(e => ({ data: [] })),
-                configuracionService.getPlanes().catch(e => ({ data: [] })),
+                configuracionService.getPlanes(forceRefresh).catch(e => ({ data: [] })),
                 configuracionService.getUsuarios().catch(e => ({ data: [] }))
             ]);
             setRegistros(hrRes.data || []);
@@ -199,7 +199,7 @@ const HojaRuta = () => {
 
     // Sincronización instantánea en tiempo real sin F5
     useRealtimeSync(['hoja_ruta', 'clientes', 'callcenter'], () => {
-        fetchData(true);
+        fetchData(true, true);
     });
 
     // Bloquear scroll del fondo cuando el modal está abierto

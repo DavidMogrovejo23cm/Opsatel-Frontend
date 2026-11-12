@@ -125,13 +125,37 @@ export const getStoredClientesCache = () => {
   return null;
 };
 
+const sanitizeClientesForStorage = (data) => {
+  if (!Array.isArray(data)) return [];
+  return data.map(c => {
+    let clean = { ...c };
+    if (typeof clean.cedula_frontal === 'string' && clean.cedula_frontal.startsWith('data:') && clean.cedula_frontal.length > 300) {
+      clean.cedula_frontal = 'data:image/cached;has_photo=true';
+    }
+    if (typeof clean.cedula_posterior === 'string' && clean.cedula_posterior.startsWith('data:') && clean.cedula_posterior.length > 300) {
+      clean.cedula_posterior = 'data:image/cached;has_photo=true';
+    }
+    if (typeof clean.foto_fachada === 'string' && clean.foto_fachada.startsWith('data:') && clean.foto_fachada.length > 300) {
+      clean.foto_fachada = 'data:image/cached;has_photo=true';
+    }
+    if (typeof clean.device_foto_ont === 'string' && clean.device_foto_ont.startsWith('data:') && clean.device_foto_ont.length > 300) {
+      clean.device_foto_ont = 'data:image/cached;has_photo=true';
+    }
+    if (typeof clean.device_foto_router === 'string' && clean.device_foto_router.startsWith('data:') && clean.device_foto_router.length > 300) {
+      clean.device_foto_router = 'data:image/cached;has_photo=true';
+    }
+    return clean;
+  });
+};
+
 export const setStoredClientesCache = (data) => {
   if (!Array.isArray(data)) return;
   const now = Date.now();
   memoryClientesCache = data;
   memoryClientesCacheTime = now;
   try {
-    localStorage.setItem(CLIENTES_CACHE_KEY, JSON.stringify(data));
+    const sanitized = sanitizeClientesForStorage(data);
+    localStorage.setItem(CLIENTES_CACHE_KEY, JSON.stringify(sanitized));
     localStorage.setItem(CLIENTES_CACHE_TIME_KEY, now.toString());
   } catch (e) {
     console.warn('No se pudo persistir clientes en localStorage (posible límite de cuota):', e);

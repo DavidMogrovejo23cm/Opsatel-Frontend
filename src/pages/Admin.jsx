@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { clienteService, configuracionService, hojaRutaService, backupService } from '../services/api';
+import { clienteService, configuracionService, hojaRutaService, backupService, getStoredClientesCache } from '../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { showAlert, showSuccess, showError, showWarning, showConfirm } from '../utils/alerts';
@@ -22,10 +22,11 @@ const Admin = () => {
 
   const { user } = useAuth();
   const isAdmin = user?.rol === 'administrador';
-  const [clientes, setClientes] = useState([]);
+  const cachedClientes = useMemo(() => getStoredClientesCache() || [], []);
+  const [clientes, setClientes] = useState(() => cachedClientes);
   const [bancosList, setBancosList] = useState([]);
   const [planesList, setPlanesList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cachedClientes.length === 0);
   const [hojaRutaList, setHojaRutaList] = useState([]);
   const [searchTerm, setSearchTerm] = useState(() => urlSearch || '');
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -164,13 +165,14 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => fetchData(true), 30000);
-    return () => clearInterval(interval);
+    const cached = getStoredClientesCache();
+    if (!cached || cached.length === 0) {
+      fetchData();
+    }
   }, []);
 
   useRealtimeSync(['clientes', 'configuraciones', 'balance'], () => {
-    fetchData(true);
+    fetchData(true, true);
   });
 
   // Sincronizar parámetro search si proviene desde el Buscador Global (Ctrl + K)
@@ -441,7 +443,7 @@ const Admin = () => {
 
       setShowPagoModal(false);
       showSuccess("Pago registrado correctamente");
-      fetchData();
+      fetchData(true, true);
     } catch (error) {
       showError("Error al registrar pago: " + (error.response?.data?.detail || error.message));
     }
@@ -478,7 +480,7 @@ const Admin = () => {
     try {
       await clienteService.updateAdmin(clienteId, { plan: nuevoPlan });
       showSuccess("Plan actualizado correctamente");
-      fetchData();
+      fetchData(true, true);
     } catch (error) {
       showError("Error al actualizar plan");
     }
@@ -506,7 +508,7 @@ const Admin = () => {
       const resp = await clienteService.facturacionGlobal();
       showSuccess(resp.data.message);
       setCooldown(60);
-      fetchData();
+      fetchData(true, true);
     } catch (error) {
       showError(error.response?.data?.detail || "Error en facturación");
     } finally {
@@ -925,27 +927,6 @@ const Admin = () => {
           <div className="page-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn btn-secondary"
-              onClick={() => fetchData(false, true)}
-              title="Recargar datos frescos desde el servidor"
-              style={{
-                background: 'rgba(139, 92, 246, 0.15)',
-                border: '1px solid rgba(139, 92, 246, 0.35)',
-                color: '#c4b5fd',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                padding: '6px 14px',
-                borderRadius: '8px'
-              }}
-            >
-              🔄 Actualizar
-            </button>
-
-            <button
-              className="btn btn-secondary"
               onClick={exportPdfSayausi}
               style={{
                 background: '#1e1b4b',
@@ -1228,7 +1209,7 @@ const Admin = () => {
                             iptv_max_conn: val,
                             plus: newPlus
                           });
-                          fetchData();
+                          fetchData(true, true);
                         } catch (error) {
                           console.error(error);
                         }
@@ -1552,7 +1533,7 @@ const Admin = () => {
                         comentarios: pagoData.comentarios_edit ?? selectedCliente?.comentarios ?? ''
                       });
                       showSuccess('Comentarios del contrato guardados correctamente.');
-                      fetchData();
+                      fetchData(true, true);
                     } catch (err) {
                       showError('Error al guardar comentarios.');
                     }

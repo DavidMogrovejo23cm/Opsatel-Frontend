@@ -5,8 +5,8 @@
  * @notice Developed with AI assistance.‍​‌​​​‌​​​‌‌​​​​‌​‌‌‌​‌‌​​‌‌​‌​​‌​‌‌​​‌​​​​‌​​​​​​‌​​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌​​​​​​​‌​‌​​​​‌‌​​​‌‌​​‌​‌​​‌​​‌​​​​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​​​‌​‌‌‌​​​‌​​​​​​‌​​​​​‌​‌‌​‌‌​​​‌‌​‌‌​​​​‌​​​​​​‌​‌​​‌​​‌‌​‌​​‌​‌‌​​‌‌‌​‌‌​‌​​​​‌‌‌​‌​​​‌‌‌​​‌‌​​‌​​​​​​‌​‌​​‌​​‌‌​​‌​‌​‌‌‌​​‌‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​​​​‌​‌‌‌​​​‌​​​​​​‌​​​‌​​​‌‌​​‌​‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌‌​​​‌‌​‌‌‌‌​‌‌‌​​​​​‌‌​​‌​‌​‌‌​​‌​​​​‌​​​​​​‌‌‌​‌‌‌​‌‌​‌​​‌​‌‌‌​‌​​​‌‌​‌​​​​​‌​​​​​​‌​​​​​‌​‌​​‌​​‌​​‌​​​​​​‌‌​​​​‌​‌‌‌​​‌‌​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌‌​​‌‌​‌‌‌​‌​​​‌‌​​​​‌​‌‌​‌‌‌​​‌‌​​​‌‌​‌‌​​‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌‌​​‌‌‌​‌​​​‌‌​​​​‌​‌‌​​​‌‌​‌‌‌​‌​​​​‌‌‌​‌​​​‌​​​​​​‌‌​​‌​​​‌‌​‌‌​‌​‌‌​‌‌‌‌​‌‌​​‌‌‌​‌‌‌​​‌​​‌‌​‌‌‌‌​‌‌‌​‌‌​​‌‌​​‌​‌​‌‌​‌​‌​​‌‌​‌‌‌‌​​‌‌‌​​​​​‌‌​‌‌‌​‌​​​​​​​‌‌​​‌‌‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌​‌​​‌​‌‌​‌‌​​​​‌​‌‌‌​​‌‌​​​‌‌​‌‌​‌‌‌‌​‌‌​‌‌​‌​​‌​‌‌‌​​​‌​​​​​​‌​​​‌‌​​‌‌​‌‌‌‌​‌‌‌​​‌​​‌‌​​‌​‌​‌‌​‌‌‌​​‌‌‌​​‌‌​‌‌​‌​​‌​‌‌​​​‌‌​​‌​​​​​​‌​‌​​‌‌​‌‌​‌​​‌​‌‌​​‌‌‌​​‌‌‌​‌​​​‌​​​​​​‌‌​​​‌​​‌‌​​‌‌​​​‌‌​​‌​​​‌‌​‌‌​​‌‌​​‌​‌​‌‌​​‌​‌​​‌‌​​​​​​‌‌​​‌‌​​‌‌​​‌‌​​‌‌​‌​​​​‌‌​​​‌​​‌‌‌​​​​‌‌​​‌​​​​‌‌​‌​‌​‌‌​​‌​​​‌‌​​​‌‌‍
  * @hash bf26ee033418d5dcd984ad8115334e7ce788cfb5d2bd456cf6e6ee21b877a762
  */
-import React, { useEffect, useState } from 'react';
-import { clienteService, configuracionService, libreqosService, asistenciaService } from '../services/api';
+import React, { useEffect, useState, useMemo } from 'react';
+import { clienteService, configuracionService, libreqosService, asistenciaService, getStoredClientesCache } from '../services/api';
 import { motion } from 'framer-motion';
 import { showAlert, showSuccess, showError, showWarning, showConfirm, showToast } from '../utils/alerts';
 import { useRealtimeSync } from '../services/realtimeService';
@@ -17,8 +17,9 @@ import { useAuth } from '../context/AuthContext';
 const Administrar = () => {
   const { user } = useAuth();
   const isTecnico = user?.rol === 'tecnico';
-  const [clientes, setClientes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedClientes = useMemo(() => getStoredClientesCache() || [], []);
+  const [clientes, setClientes] = useState(() => cachedClientes);
+  const [loading, setLoading] = useState(() => cachedClientes.length === 0);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSearchChange = async (val) => {
@@ -54,10 +55,10 @@ const Administrar = () => {
 
     // Estados para fotos en edición
   
-    const fetchData = async (silent = false) => {
+    const fetchData = async (silent = false, forceRefresh = false) => {
     try {
       if (!silent) setLoading(true);
-      const response = await clienteService.listar();
+      const response = await clienteService.listar(forceRefresh);
       const sorted = (response.data || []).sort((a, b) => a.id - b.id);
       setClientes(sorted);
     } catch (error) {
@@ -68,8 +69,10 @@ const Administrar = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => fetchData(true), 30000);
+    const cached = getStoredClientesCache();
+    if (!cached || cached.length === 0) {
+      fetchData();
+    }
     const tickInterval = setInterval(() => setNowTick(Date.now()), 5000);
     
     const fetchSelects = async () => {
@@ -97,7 +100,7 @@ const Administrar = () => {
   }, []);
 
   useRealtimeSync(['clientes', 'configuraciones'], () => {
-    fetchData(true);
+    fetchData(true, true);
   });
 
   const startEdit = (cliente) => {

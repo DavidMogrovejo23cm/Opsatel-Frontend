@@ -138,29 +138,9 @@ class RealtimeClient {
   }
 
   invalidateCacheForModule(module) {
-    if (module === 'clientes' || module === 'all') {
-      clearStoredClientesCache();
-    }
-    if (module === 'extras' || module === 'all') {
-      extrasCache.clear();
-      extrasPagosCache.clear();
-    }
-    if (module === 'hoja_ruta' || module === 'all') {
-      hojaRutaCache.clear();
-    }
-    if (module === 'callcenter' || module === 'all') {
-      callCenterCache.clear();
-    }
-    if (module === 'whatsapp' || module === 'all') {
-      comprobantesCache.clear();
-      conversacionesCache.clear();
-    }
-    if (module === 'configuraciones' || module === 'all') {
-      nodosCache.clear();
-      planesCache.clear();
-      bancosCache.clear();
-      parroquiasCache.clear();
-    }
+    // No eliminamos localStorage aquí para evitar dejar la UI vacía al navegar entre secciones.
+    // Los componentes activos suscritos al evento 'opsatel:realtime' se encargan de
+    // solicitar los datos frescos y actualizar/sobrescribir la caché en segundo plano.
   }
 
   async checkVersionsAgainstServer() {

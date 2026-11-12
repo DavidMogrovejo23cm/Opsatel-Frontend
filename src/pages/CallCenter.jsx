@@ -214,12 +214,12 @@ const CallCenter = () => {
   /* ────────────────────────────────────────────
      FETCH DATA
   ────────────────────────────────────────────── */
-  const fetchData = async (silent = false) => {
+  const fetchData = async (silent = false, forceRefresh = false) => {
     try {
       if (!silent) setLoading(true);
       const [tkRes, clRes, usrRes] = await Promise.all([
-        callCenterService.listar(),
-        clienteService.listar(),
+        callCenterService.listar(forceRefresh),
+        clienteService.listar(forceRefresh),
         configuracionService.getUsuarios().catch(() => ({ data: [] })),
       ]);
       setTickets(tkRes.data || []);
@@ -236,12 +236,12 @@ const CallCenter = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(true), 30000);
+    const interval = setInterval(() => fetchData(true, true), 30000);
     return () => clearInterval(interval);
   }, []);
 
   useRealtimeSync(['callcenter', 'clientes', 'hoja_ruta'], () => {
-    fetchData(true);
+    fetchData(true, true);
   });
 
   /* ────────────────────────────────────────────

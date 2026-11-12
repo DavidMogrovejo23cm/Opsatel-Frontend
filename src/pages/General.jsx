@@ -305,7 +305,11 @@ const General = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    // Si ya existen clientes persistidos en localStorage, no repetir petición GET al entrar
+    const cached = getStoredClientesCache();
+    if (!cached || cached.length === 0) {
+      fetchData();
+    }
   }, []);
 
   // Sincronización en tiempo real: auto-actualizar tabla sin recargar página (F5)
